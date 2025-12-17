@@ -1,0 +1,918 @@
+================================================================================
+                    SCREENGRAM - DIGITAL SIGNAGE SYSTEM
+                        COMPREHENSIVE SYSTEM OVERVIEW
+================================================================================
+
+Generated: 2024
+Last Updated: 2024
+System Version: 1.0
+Backend Framework: Django 5.2+ with Django REST Framework, Django Channels (WebSocket)
+Frontend Framework: Vue.js 3.4+ with Vite, Pinia, Vue Router, Tailwind CSS
+
+================================================================================
+INTRODUCTION - WHAT IS SCREENGRAM?
+================================================================================
+
+ScreenGram یک سیستم جامع مدیریت و کنترل نمایشگرهای دیجیتال (Digital Signage) است که 
+برای مدیریت، نظارت و کنترل از راه دور نمایشگرهای فیزیکی در محیط‌های مختلف طراحی شده است.
+
+هدف اصلی سیستم:
+--------------
+ScreenGram به سازمان‌ها و کسب‌وکارها امکان می‌دهد تا:
+• نمایشگرهای دیجیتال خود را از یک پنل مرکزی مدیریت کنند
+• محتوا (تصاویر، ویدیوها، متن‌ها) را به صورت خودکار روی نمایشگرها منتشر کنند
+• برنامه‌های زمانی برای نمایش محتوا تنظیم کنند
+• وضعیت نمایشگرها را به صورت لحظه‌ای نظارت کنند
+• دستورات را از راه دور به نمایشگرها ارسال کنند (ریستارت، تغییر قالب، همگام‌سازی)
+
+کاربردهای عملی:
+--------------
+• تابلوهای تبلیغاتی در فروشگاه‌ها، رستوران‌ها و مراکز تجاری
+• نمایش اطلاعات در فرودگاه‌ها، ایستگاه‌های قطار و مترو
+• تابلوهای راهنمایی در بیمارستان‌ها و مراکز درمانی
+• نمایش منو و اطلاعات در رستوران‌ها و کافه‌ها
+• تابلوهای اطلاع‌رسانی در ادارات و سازمان‌ها
+• سیستم‌های نمایش اطلاعات در سالن‌های کنفرانس
+
+معماری کلی:
+-----------
+سیستم از دو بخش اصلی تشکیل شده است:
+
+1. Backend (سرور مرکزی):
+   - Django REST API برای مدیریت داده‌ها
+   - WebSocket برای ارتباط لحظه‌ای با نمایشگرها
+   - سیستم احراز هویت و امنیت چندلایه
+   - مدیریت کاربران با سطوح دسترسی مختلف
+
+2. Frontend (پنل مدیریت):
+   - رابط کاربری مدرن با Vue.js
+   - به‌روزرسانی‌های لحظه‌ای از طریق WebSocket
+   - مدیریت قالب‌ها، محتوا و برنامه‌های زمانی
+
+3. Screen Client (نرم‌افزار روی نمایشگرها):
+   - اتصال به سرور از طریق WebSocket یا HTTP
+   - دریافت و اجرای دستورات
+   - ارسال وضعیت و سلامت سیستم
+   - دانلود و نمایش محتوا
+
+جریان کاری کلی:
+--------------
+1. مدیر سیستم قالب‌های نمایشی را ایجاد می‌کند (Template)
+2. محتوا (تصاویر، ویدیوها) به قالب‌ها اضافه می‌شود
+3. نمایشگرها در سیستم ثبت می‌شوند و احراز هویت می‌شوند
+4. قالب‌ها به نمایشگرها اختصاص داده می‌شوند
+5. محتوا به صورت خودکار روی نمایشگرها دانلود می‌شود
+6. نمایشگرها محتوا را نمایش می‌دهند
+7. سیستم به صورت لحظه‌ای وضعیت نمایشگرها را نظارت می‌کند
+8. مدیر می‌تواند دستورات را از راه دور ارسال کند (ریستارت، تغییر قالب)
+9. برنامه‌های زمانی برای تغییر خودکار قالب‌ها تنظیم می‌شوند
+
+================================================================================
+A) HIGH-LEVEL CAPABILITIES
+================================================================================
+
+سیستم ScreenGram قابلیت‌های زیر را ارائه می‌دهد:
+
+1. SCREEN MANAGEMENT
+   - Register and manage physical display devices (Screens)
+   - Real-time status monitoring (online/offline, heartbeat tracking)
+   - Device authentication and security (auth_token, secret_key)
+   - Health monitoring (CPU, memory, latency tracking)
+   - IP address tracking and device information management
+
+2. TEMPLATE & CONTENT MANAGEMENT
+   - Create hierarchical templates (Template → Layer → Widget → Content)
+   - Support for multiple content types (image, video, text, webview, chart, json)
+   - Template activation on screens with automatic content synchronization
+   - Content download and caching system with retry mechanisms
+   - Template versioning and metadata management
+
+3. COMMAND EXECUTION
+   - Queue and execute commands on screens (restart, refresh, change_template, 
+     display_message, sync_content, custom)
+   - Priority-based command queuing
+   - Command expiration and retry logic
+   - Real-time command status tracking
+
+4. SCHEDULING SYSTEM
+   - Time-based template scheduling on screens
+   - Support for one-time, daily, weekly, and monthly schedules
+   - Priority-based conflict resolution
+   - Automatic schedule execution via management commands
+
+5. USER & ROLE MANAGEMENT
+   - Custom user model with role-based access control (RBAC)
+   - Five role levels: SuperAdmin, Admin, Operator, Manager, Viewer
+   - Multi-tenant organization support
+   - JWT-based authentication
+   - Permission-based resource access
+
+6. COMPREHENSIVE LOGGING
+   - Automatic logging of screen status changes
+   - Content download tracking with success/failure logs
+   - Command execution logs with timing and error tracking
+   - Analytics and reporting capabilities
+
+7. API INTEGRATION
+   - RESTful API for all operations
+   - Screen-to-server communication endpoints (heartbeat, command pull, 
+     command response, content sync)
+   - Role-based API access control
+   - Comprehensive serializers for data validation
+
+8. WEBSOCKET COMMUNICATION
+   - Real-time bidirectional communication with screens
+   - WebSocket connection registry for active screen tracking
+   - Automatic connection management and cleanup
+   - Command delivery via WebSocket with HTTP fallback
+   - Screen authentication during WebSocket handshake
+
+9. CONTENT STORAGE SYSTEM
+   - Support for Local File System and Amazon S3 storage backends
+   - Automatic backend selection based on configuration
+   - File type and size validation
+   - Hash-based integrity checking (SHA-256)
+   - Secure signed URLs for S3 content
+   - File upload handling with metadata tracking
+
+10. SECURITY FEATURES
+    - HMAC-SHA256 signature generation and validation for commands
+    - Timestamp validation (reject stale messages)
+    - Nonce-based replay attack protection
+    - Rate limiting per screen (configurable)
+    - Secure payload signing for command delivery
+    - Screen authentication via auth_token and secret_key
+
+11. ADMIN DASHBOARD & REAL-TIME UPDATES
+    - WebSocket-based admin dashboard for real-time monitoring
+    - JWT authentication for dashboard connections
+    - Role-based data filtering and organization isolation
+    - Real-time command status updates
+    - Live content sync progress tracking
+    - Screen status and health monitoring
+    - Automatic event broadcasting via Django signals
+
+12. FRONTEND APPLICATION
+    - Vue.js 3 frontend with modern UI
+    - Real-time WebSocket integration
+    - Pinia state management
+    - Vue Router for navigation
+    - Tailwind CSS for styling
+    - Auto-reconnect WebSocket composable
+    - Responsive design with Heroicons
+
+13. LOG MANAGEMENT
+    - Automated log cleanup management command
+    - Log export functionality (CSV/JSON)
+    - Date range filtering for exports
+    - Screen-specific log filtering
+
+================================================================================
+B) FEATURES PER APP
+================================================================================
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. SIGNAGE APP (Screen Management)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+MODELS:
+  • Screen
+    - Core: id (UUID), name, device_id (unique), location, description
+    - Relations: active_template (FK), assigned_schedules (M2M), owner (FK to User)
+    - Security: auth_token (unique, auto-generated), secret_key (unique, auto-generated)
+    - Status: is_online, last_heartbeat_at, is_busy, last_command_sent_at, 
+              last_command_received_at, last_template_update_at
+    - Technical: app_version, os_version, device_model, screen_width, screen_height,
+                 brightness, orientation (landscape/portrait/reverse)
+    - Logs: last_error_message, last_sync_status, last_download_error
+    - Metadata: registration_date, created_at, updated_at, last_ip
+
+KEY METHODS:
+  • update_heartbeat(latency, cpu_usage, memory_usage, ip_address)
+    - Updates screen heartbeat and creates ScreenStatusLog entry
+  • mark_offline()
+    - Marks screen as offline and creates log entry
+  • authenticate(auth_token, secret_key)
+    - Validates screen authentication credentials
+  • activate_template(template, sync_content=True)
+    - Activates template on screen and optionally syncs content
+  • sync_template_content(template=None)
+    - Syncs all content from template to screen, creates ContentDownloadLog entries
+  • is_heartbeat_stale(timeout_minutes=5)
+    - Checks if heartbeat is stale
+  • get_online_duration()
+    - Calculates how long screen has been online
+  • health_check()
+    - Returns comprehensive health status dictionary
+  • get_pending_commands(limit=None)
+    - Gets pending commands for screen, ordered by priority
+  • queue_command(command_type, payload, priority, expire_at, created_by)
+    - Queues a command for execution on screen
+
+VIEWS & API ENDPOINTS:
+  • ScreenViewSet (ModelViewSet)
+    - Standard CRUD operations with role-based filtering
+    - GET /api/screens/ - List screens (filtered by permissions)
+    - POST /api/screens/ - Create screen
+    - GET /api/screens/{id}/ - Get screen details
+    - PUT/PATCH /api/screens/{id}/ - Update screen
+    - DELETE /api/screens/{id}/ - Delete screen
+    - POST /api/screens/{id}/heartbeat/ - Screen heartbeat endpoint
+
+  • Standalone Endpoints (AllowAny for screen authentication):
+    - POST /api/screens/heartbeat/ - Heartbeat with auth_token/secret_key
+    - GET /api/screens/command-pull/ - Pull pending commands
+    - POST /api/screens/command-response/ - Send command execution response
+    - POST /api/screens/content-sync/ - Request content sync or report status
+    - GET /api/screens/health-check/ - Get screen health status
+
+MANAGEMENT COMMANDS:
+  • check_heartbeats
+    - Checks screen heartbeats and marks offline screens
+    - Options: --timeout (minutes), --dry-run
+    - Usage: python manage.py check_heartbeats
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+2. TEMPLATES APP (Template, Layer, Widget, Content, Schedule)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+MODELS:
+
+  • Template
+    - Core: id (UUID), name, description, orientation, width, height, thumbnail
+    - Relations: created_by (FK to User), screens (M2M), assigned_schedules (M2M)
+    - Status: is_active, version, created_at, updated_at
+    - Config: config_json (required), meta_data (optional)
+
+  KEY METHODS:
+    • get_layers() - Get all layers for template
+    • get_widgets() - Get all widgets across all layers
+    • get_all_contents() - Get all content across all widgets
+    • activate_on_screen(screen, sync_content=True) - Activate template on screen
+
+  • Layer
+    - Core: id (UUID), name, description
+    - Position: x, y, width, height, z_index
+    - Appearance: background_color, opacity, animation_type, animation_duration
+    - Relations: template (FK), widgets (reverse relation)
+    - Status: is_active, created_at, updated_at
+
+  KEY METHODS:
+    • get_widgets() - Get all widgets for layer
+    • get_active_widgets() - Get only active widgets, ordered by z_index
+
+  • Widget
+    - Core: id (UUID), name
+    - Type: type (text, image, video, clock, webview, chart)
+    - Content: content_url, content_json, font_size, color, alignment, autoplay
+    - Position: x, y, width, height, z_index
+    - Relations: layer (FK), contents (reverse relation)
+    - Status: is_active, created_at, updated_at
+
+  KEY METHODS:
+    • get_active_contents() - Get active contents, ordered by order field
+    • get_contents_count() - Get total content count
+
+  • Content
+    - Core: id (UUID), name, description
+    - Type: type (image, video, text, webview, chart, json)
+    - Data: file_url, content_json, duration, autoplay, order
+    - Storage: storage_path, file_size, file_hash, hash_algorithm
+    - Relations: widget (FK)
+    - Status: is_active, downloaded, download_status, retry_count, 
+              last_download_attempt, created_at, updated_at
+
+  KEY METHODS:
+    • mark_downloaded() - Mark content as downloaded
+    • mark_failed() - Mark download as failed, increment retry_count
+    • update_status(status, downloaded=None) - Update download status
+    • reset_download_status() - Reset download status to pending
+    • is_downloaded() - Check if content is downloaded
+    • needs_download() - Check if content needs download
+    • download_to_screen(screen, max_retries=3, timeout=30)
+      - Downloads content to screen using secure URLs, creates ContentDownloadLog entry
+    • retry_download(screen, max_retries=3) - Retry failed download
+    • validate_content() - Validate content data
+    • save_uploaded_file(file_obj, user=None) - Save uploaded file using ContentStorageManager
+    • get_secure_url(expiration=None) - Get secure URL (signed URL for S3)
+    • verify_integrity(file_obj=None) - Verify file integrity using hash
+    • estimated_size_mb - Property: estimated file size
+    • file_extension - Property: extract file extension from file_url
+    • is_media_file - Property: check if content is a media file
+
+  • Schedule
+    - Core: id (UUID), name, description
+    - Relations: template (FK), screens (M2M)
+    - Scheduling: start_time, end_time, is_active, repeat_type (none/daily/weekly/monthly),
+                  priority
+    - Status: last_executed_at, is_currently_running, created_at, updated_at
+
+  KEY METHODS:
+    • activate() - Activate schedule
+    • deactivate() - Deactivate schedule
+    • is_conflicting(other_schedule) - Check for schedule conflicts
+    • next_run() - Calculate next scheduled run time
+    • mark_executed() - Mark schedule as executed
+    • mark_completed() - Mark schedule as completed
+    • execute_on_screens(force=False) - Execute schedule on all assigned screens
+    • _get_conflicting_schedules_for_screen(screen) - Get conflicts for screen
+    • resolve_conflicts() - Resolve conflicts by deactivating lower priority schedules
+    • duration - Property: schedule duration in seconds
+    • is_past - Property: check if schedule has passed
+    • is_running_now - Property: check if schedule should run now
+    • screens_count - Property: count of assigned screens
+
+VIEWS & API ENDPOINTS:
+  • TemplateViewSet: CRUD + POST /api/templates/{id}/activate_on_screen/
+  • LayerViewSet: CRUD operations با permission filtering
+  • WidgetViewSet: CRUD operations با permission filtering
+  • ContentViewSet: CRUD + download_to_screen, retry_download, upload, download, verify_integrity
+  • ScheduleViewSet: CRUD + execute, due_schedules, conflicting
+
+MANAGEMENT COMMANDS:
+  • execute_schedules
+    - Executes schedules that are due to run
+    - Options: --dry-run, --schedule-id, --force
+    - Usage: python manage.py execute_schedules
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+3. COMMANDS APP (Command Execution)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+MODELS:
+
+  • Command
+    - Core: id (UUID), name, created_at, updated_at
+    - Relations: screen (FK), created_by (FK to User)
+    - Command: type (restart, refresh, change_template, display_message, 
+                     sync_content, custom), payload (JSONField)
+    - Priority: priority, expire_at
+    - Status: status (pending, executing, done, failed), executed_at, 
+              completed_at, last_attempt_at, attempt_count, error_message
+
+  KEY METHODS:
+    • mark_done() - Mark command as successfully executed
+    • mark_failed(error_message=None) - Mark command as failed
+    • get_status() - Get comprehensive status information dictionary
+    • reset_status() - Reset status to pending for retry
+    • is_expired() - Check if command has expired
+    • can_retry(max_retries=3) - Check if command can be retried
+    • execute(screen=None) - Execute command on screen, creates CommandExecutionLog
+    • execute_command() - Backward compatibility wrapper
+    • _execute_by_type_for_screen(screen) - Execute based on command type
+    • _send_to_screen(screen, command_type, data) - Send command via WebSocket (primary) or HTTP (fallback)
+      - Uses ScreenConnectionRegistry to check WebSocket connection
+      - Creates signed payload using ScreenSecurity
+      - Falls back to HTTP POST if WebSocket unavailable
+    • queue_command() - Class method to queue command
+    • get_pending_commands() - Class method to get pending commands
+    • get_executable_commands() - Class method to get executable commands
+    • is_pending - Property: check if pending
+    • is_executable - Property: check if executable
+    • time_until_expiry - Property: time until expiry in seconds
+    • payload_summary - Property: human-readable payload summary
+
+VIEWS & API ENDPOINTS:
+  • CommandViewSet: CRUD + execute, retry, status, pending
+    - Create: Operator+ only
+    - Update/Delete: Admin+ only
+
+MANAGEMENT COMMANDS:
+  • execute_pending_commands
+    - Executes pending commands on online screens
+    - Options: --screen-id, --limit, --dry-run
+    - Usage: python manage.py execute_pending_commands
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+4. ACCOUNTS APP (User & Role Management)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+MODELS:
+  • User (extends AbstractUser)
+    - Core: username, email (unique), full_name, phone_number
+    - Role: SuperAdmin, Admin, Operator, Manager, Viewer (default: Viewer)
+    - Organization: organization_name (multi-tenant support)
+    - Status: is_active, date_joined, last_login, last_seen
+
+  KEY METHODS:
+    • Role checks: is_superadmin(), is_admin(), is_operator(), is_manager(), is_viewer()
+    • Permission checks: has_full_access(), can_manage_own_resources(), 
+                         can_execute_commands(), can_manage_templates(), can_view_reports()
+    • Resource counts: active_screens_count, total_screens_count, 
+                        active_templates_count, total_templates_count
+    • Organization: get_organization_users(), can_access_user_resource()
+    • update_last_seen() - Update last seen timestamp
+
+  SIGNALS:
+    • post_migrate: ایجاد Groups پیش‌فرض برای هر نقش با permissions مناسب
+
+VIEWS & API ENDPOINTS:
+  • UserViewSet: CRUD operations با role-based filtering
+    - GET /api/users/, POST /api/users/, GET /api/users/{id}/, PUT/PATCH/DELETE
+    - GET /api/users/me/ - Get current user profile
+    - PUT/PATCH /api/users/update_me/ - Update current user profile
+    - POST /api/users/{id}/change_password/ - Change password
+    - POST /api/users/{id}/change_role/ - Change role (Admin+ only)
+
+  • Authentication:
+    - POST /api/auth/login/ - Login and get JWT tokens
+    - POST /api/auth/logout/ - Logout and blacklist token
+    - POST /api/auth/token/ - Get JWT token pair
+    - POST /api/auth/token/refresh/ - Refresh JWT token
+
+  • Role Management:
+    - GET /api/roles/ - Get available roles (Admin+ only)
+
+MANAGEMENT COMMANDS:
+  • create_superuser - Create superuser
+  • create_user - Create regular user
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+5. LOG APP (Operational Logging)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+MODELS:
+  • ScreenStatusLog: ردیابی وضعیت online/offline، latency، CPU، memory
+  • ContentDownloadLog: ردیابی دانلود محتوا، retry_count، file_size، error_message
+  • CommandExecutionLog: ردیابی اجرای دستورات، execution_time، response_payload
+
+  KEY METHODS (همه مدل‌ها):
+    • filter_by_screen/content/command(), filter_by_status(), filter_by_date_range()
+    • get_summary_stats() - آمار خلاصه با aggregation
+
+VIEWS & API ENDPOINTS (Admin/SuperAdmin only):
+  • ScreenStatusLogViewSet: GET /api/logs/screen-status/ (list, detail, summary)
+  • ContentDownloadLogViewSet: GET /api/logs/content-download/ (list, detail, summary)
+  • CommandExecutionLogViewSet: GET /api/logs/command-execution/ (list, detail, summary)
+  • Query params: screen_id, status, start_date, end_date, page, page_size
+  • Pagination: 50 items per page (max 1000)
+
+MANAGEMENT COMMANDS:
+  • cleanup_logs: حذف لاگ‌های قدیمی (--days, --type, --dry-run)
+  • export_logs: خروجی CSV/JSON (--type, --format, --output, --start-date, --end-date)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+6. WEBSOCKET & COMMUNICATION INFRASTRUCTURE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+COMPONENTS:
+  • ScreenConsumer: WebSocket برای نمایشگرها
+    - URL: ws://server/ws/screen/?auth_token=xxx&secret_key=yyy
+    - احراز هویت در handshake، مدیریت command delivery و status updates
+
+  • AdminDashboardConsumer: WebSocket برای dashboard
+    - URL: ws://server/ws/dashboard/?token=<JWT_TOKEN>
+    - JWT authentication، RBAC، organization filtering
+    - Events: command_status_update, content_sync_progress, screen_status_update
+
+  • ScreenConnectionRegistry: ردیابی اتصالات فعال (screen_id → channel_name)
+  • ScreenSecurity: HMAC-SHA256، timestamp validation، nonce protection، rate limiting
+  • ContentStorageManager: مدیریت فایل (Local/S3)، validation، hash checking، signed URLs
+  • Real-time Broadcasting: توابع broadcast برای رویدادها
+  • Signal Handlers: Django signals برای broadcast خودکار
+
+CONFIGURATION:
+  • ASGI: Screengram.asgi.application
+  • Routing: ws://server/ws/screen/ و ws://server/ws/dashboard/
+  • Channel Layers: In-memory (dev) یا Redis (production)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+7. FRONTEND APPLICATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+TECHNOLOGY STACK:
+  • Vue.js 3.4+, Vue Router 4.3+, Pinia 2.1+, Vite 5.1+
+  • Tailwind CSS 3.4+, Heroicons 2.1+, @vueuse/motion 2.0+
+
+FEATURES:
+  • WebSocket real-time integration با useWebSocket composable
+  • Auto-reconnect با exponential backoff (max 30s)
+  • Ping/pong heartbeat، event-based architecture
+  • Responsive design، component-based architecture
+
+COMPONENTS:
+  • useWebSocket: connect(), disconnect(), send(), on(), off(), 
+                  subscribeScreen(), unsubscribeScreen(), subscribeCommand()
+  • Home page: Navbar, Footer, FeatureCard, BenefitCard, ArchitectureStep, 
+               InfoCard, SectionHeader, TechnologyBadge
+
+ROUTING & STATE:
+  • SPA architecture با Vue Router
+  • Pinia stores برای state management
+
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+5. LOG APP (Operational Logging)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+MODELS:
+
+  • ScreenStatusLog
+    - Tracks: screen (FK), status (online/offline), heartbeat_latency, 
+              cpu_usage, memory_usage, recorded_at
+    - Indexes: screen, status, recorded_at
+
+  KEY METHODS:
+    • filter_by_screen(screen) - Filter logs by screen
+    • filter_by_status(status) - Filter logs by status
+    • filter_by_date_range(start_date, end_date) - Filter by date range
+    • get_summary_stats(screen, start_date, end_date) - Get statistics
+
+  • ContentDownloadLog
+    - Tracks: content (FK), screen (FK), status (pending/success/failed),
+              retry_count, file_size, error_message, downloaded_at, created_at
+    - Indexes: content, screen, status, created_at
+
+  KEY METHODS:
+    • filter_by_content(content) - Filter logs by content
+    • filter_by_screen(screen) - Filter logs by screen
+    • filter_by_status(status) - Filter logs by status
+    • filter_by_date_range(start_date, end_date) - Filter by date range
+    • get_summary_stats(content, screen, start_date, end_date) - Get statistics
+
+  • CommandExecutionLog
+    - Tracks: command (FK), screen (FK), status (pending/running/done/failed),
+              started_at, finished_at, response_payload, error_message, created_at
+    - Indexes: command, screen, status, created_at
+
+  KEY METHODS:
+    • execution_time - Property: execution duration in seconds
+    • filter_by_command(command) - Filter logs by command
+    • filter_by_screen(screen) - Filter logs by screen
+    • filter_by_status(status) - Filter logs by status
+    • filter_by_date_range(start_date, end_date) - Filter by date range
+    • get_summary_stats(command, screen, start_date, end_date) - Get statistics
+
+VIEWS & API ENDPOINTS (Admin/SuperAdmin only):
+  • ScreenStatusLogViewSet: GET /api/logs/screen-status/ (list, detail, summary)
+    - Query params: screen_id, status, start_date, end_date, page, page_size
+  
+  • ContentDownloadLogViewSet: GET /api/logs/content-download/ (list, detail, summary)
+    - Query params: content_id, screen_id, status, start_date, end_date, 
+                    downloaded_from, downloaded_to, page, page_size
+  
+  • CommandExecutionLogViewSet: GET /api/logs/command-execution/ (list, detail, summary)
+    - Query params: command_id, screen_id, status, start_date, end_date,
+                    started_from, started_to, finished_from, finished_to, page, page_size
+
+ADMIN INTERFACE:
+  • همه مدل‌های لاگ دارای admin interface read-only با فیلترهای پیشرفته
+
+================================================================================
+C) API ENDPOINTS
+================================================================================
+
+AUTHENTICATION & USERS:
+  POST   /api/auth/login/              - Login and get JWT tokens
+  POST   /api/auth/logout/              - Logout and blacklist token
+  POST   /api/auth/token/               - Get JWT token pair
+  POST   /api/auth/token/refresh/      - Refresh JWT token
+  GET    /api/users/                   - List users (filtered by permissions)
+  POST   /api/users/                   - Create user (Admin+ only)
+  GET    /api/users/{id}/              - Get user details
+  PUT    /api/users/{id}/              - Update user
+  PATCH  /api/users/{id}/              - Partial update user
+  DELETE /api/users/{id}/              - Delete user (Admin+ only)
+  GET    /api/users/me/                 - Get current user profile
+  PUT    /api/users/update_me/          - Update current user profile
+  POST   /api/users/{id}/change_password/ - Change password
+  POST   /api/users/{id}/change_role/  - Change role (Admin+ only)
+  GET    /api/roles/                   - Get available roles (Admin+ only)
+
+SCREENS:
+  GET    /api/screens/                 - List screens (filtered by permissions)
+  POST   /api/screens/                 - Create screen
+  GET    /api/screens/{id}/            - Get screen details
+  PUT    /api/screens/{id}/            - Update screen
+  PATCH  /api/screens/{id}/            - Partial update screen
+  DELETE /api/screens/{id}/            - Delete screen
+  POST   /api/screens/{id}/heartbeat/  - Screen heartbeat (alternative)
+  POST   /api/screens/heartbeat/       - Heartbeat endpoint (auth_token/secret_key)
+  GET    /api/screens/command-pull/    - Pull pending commands
+  POST   /api/screens/command-response/ - Send command response
+  POST   /api/screens/content-sync/    - Content sync request/status
+  GET    /api/screens/health-check/    - Health check endpoint
+  POST   /api/screens/command-receive/ - HTTP fallback endpoint for command receiving
+
+TEMPLATES:
+  GET    /api/templates/               - List templates
+  POST   /api/templates/                - Create template
+  GET    /api/templates/{id}/           - Get template details
+  PUT    /api/templates/{id}/           - Update template
+  PATCH  /api/templates/{id}/           - Partial update template
+  DELETE /api/templates/{id}/          - Delete template
+  POST   /api/templates/{id}/activate_on_screen/ - Activate template on screen
+
+LAYERS:
+  GET    /api/layers/                  - List layers
+  POST   /api/layers/                  - Create layer
+  GET    /api/layers/{id}/             - Get layer details
+  PUT    /api/layers/{id}/             - Update layer
+  PATCH  /api/layers/{id}/             - Partial update layer
+  DELETE /api/layers/{id}/             - Delete layer
+
+WIDGETS:
+  GET    /api/widgets/                 - List widgets
+  POST   /api/widgets/                 - Create widget
+  GET    /api/widgets/{id}/            - Get widget details
+  PUT    /api/widgets/{id}/            - Update widget
+  PATCH  /api/widgets/{id}/            - Partial update widget
+  DELETE /api/widgets/{id}/            - Delete widget
+
+CONTENTS:
+  GET    /api/contents/                - List contents
+  POST   /api/contents/                - Create content
+  GET    /api/contents/{id}/           - Get content details
+  PUT    /api/contents/{id}/            - Update content
+  PATCH  /api/contents/{id}/           - Partial update content
+  DELETE /api/contents/{id}/           - Delete content
+  POST   /api/contents/{id}/download_to_screen/ - Download to screen
+  POST   /api/contents/{id}/retry_download/ - Retry download
+  POST   /api/contents/{id}/upload/   - Upload file for content (multipart/form-data)
+  GET    /api/contents/{id}/download/  - Get secure download URL
+  POST   /api/contents/{id}/verify_integrity/ - Verify file integrity
+
+SCHEDULES:
+  GET    /api/schedules/               - List schedules
+  POST   /api/schedules/                - Create schedule
+  GET    /api/schedules/{id}/           - Get schedule details
+  PUT    /api/schedules/{id}/           - Update schedule
+  PATCH  /api/schedules/{id}/           - Partial update schedule
+  DELETE /api/schedules/{id}/          - Delete schedule
+  POST   /api/schedules/{id}/execute/   - Execute schedule
+  GET    /api/schedules/due_schedules/  - Get due schedules
+  GET    /api/schedules/conflicting/    - Get conflicts (Admin+ only)
+
+COMMANDS:
+  GET    /api/commands/                 - List commands
+  POST   /api/commands/                 - Create command (Operator+ only)
+  GET    /api/commands/{id}/            - Get command details
+  PUT    /api/commands/{id}/            - Update command (Admin+ only)
+  PATCH  /api/commands/{id}/            - Partial update command (Admin+ only)
+  DELETE /api/commands/{id}/            - Delete command (Admin+ only)
+  POST   /api/commands/{id}/execute/    - Execute command
+  POST   /api/commands/{id}/retry/      - Retry command
+  GET    /api/commands/status/          - Get command status(es)
+  GET    /api/commands/pending/         - Get pending commands
+  POST   /api/screens/command-receive/ - HTTP fallback for screens to receive commands
+
+LOGS (Admin/SuperAdmin only):
+  GET    /api/logs/screen-status/        - List screen status logs
+  GET    /api/logs/screen-status/{id}/  - Get specific log entry
+  GET    /api/logs/screen-status/summary/ - Get summary statistics
+  GET    /api/logs/content-download/    - List content download logs
+  GET    /api/logs/content-download/{id}/ - Get specific log entry
+  GET    /api/logs/content-download/summary/ - Get summary statistics
+  GET    /api/logs/command-execution/   - List command execution logs
+  GET    /api/logs/command-execution/{id}/ - Get specific log entry
+  GET    /api/logs/command-execution/summary/ - Get summary statistics
+
+================================================================================
+E) OPERATIONAL BEHAVIORS
+================================================================================
+
+AUTOMATIC LOGGING:
+  ✓ Screen Status Logging
+    - Automatically created when screen.update_heartbeat() is called
+    - Automatically created when screen.mark_offline() is called
+    - Logs include: status, latency, CPU usage, memory usage, timestamp
+
+  ✓ Content Download Logging
+    - Automatically created in content.download_to_screen() on success/failure
+    - Automatically created in screen.sync_template_content() for each content
+    - Logs include: status, file_size, retry_count, error_message, downloaded_at
+
+  ✓ Command Execution Logging
+    - Automatically created in command.execute() at start (status='running')
+    - Updated on completion (status='done' or 'failed')
+    - Logs include: started_at, finished_at, response_payload, error_message
+
+RETRY MECHANISMS:
+  ✓ Content Download Retry
+    - Content model tracks retry_count
+    - retry_download() method with max_retries parameter
+    - Automatic retry in download_to_screen() if retry_count < max_retries
+
+  ✓ Command Retry
+    - Command model tracks attempt_count
+    - can_retry() method checks if retry is possible
+    - reset_status() method to reset for retry
+    - API endpoint /api/commands/{id}/retry/ for manual retry
+
+CONFLICT RESOLUTION:
+  ✓ Schedule Conflicts
+    - is_conflicting() method checks for time and screen overlaps
+    - Priority-based resolution (higher priority wins)
+    - resolve_conflicts() method deactivates lower priority schedules
+    - execute_on_screens() checks conflicts before execution
+
+CONTENT SYNC:
+  ✓ Automatic Content Sync
+    - screen.activate_template() can sync content automatically
+    - screen.sync_template_content() syncs all content from template
+    - Content.download_to_screen() handles individual downloads
+    - API endpoint /api/screens/content-sync/ for screen-initiated sync
+
+SCHEDULE EXECUTION:
+  ✓ Automatic Schedule Execution
+    - Management command execute_schedules runs periodically
+    - is_running_now property checks if schedule should run
+    - execute_on_screens() executes on all assigned screens
+    - Handles conflicts and priority resolution
+
+ROLE-BASED PERMISSIONS:
+  ✓ Permission Enforcement
+    - All ViewSets filter querysets based on user role
+    - perform_create/update/destroy methods check permissions
+    - RolePermissions helper class for permission checks
+    - API endpoints enforce role-based access
+
+  ✓ Role Hierarchy:
+    - SuperAdmin: Full access to everything
+    - Admin: Full resource management, user management
+    - Operator: Command execution, resource management
+    - Manager: Resource management, viewing reports
+    - Viewer: Read-only access
+
+================================================================================
+F) CURRENT STATUS
+================================================================================
+
+FULLY IMPLEMENTED:
+  ✓ Screen Management: مدل کامل، heartbeat tracking، authentication، health check، command queuing
+  ✓ Template System: ساختار سلسله‌مراتبی (Template → Layer → Widget → Content)، CRUD کامل
+  ✓ Scheduling System: Schedule model، recurring schedules، conflict resolution، priority-based execution
+  ✓ Command System: Command model کامل، queuing، retry logic، status tracking
+  ✓ User & Role Management: User model با 5 سطح نقش، multi-tenant، JWT authentication
+  ✓ Logging System: 3 مدل لاگ، automatic logging، API ViewSets با filtering و pagination
+  ✓ API Infrastructure: RESTful API برای همه مدل‌ها، role-based permissions
+  ✓ WebSocket Infrastructure: Django Channels، ScreenConsumer، AdminDashboardConsumer
+  ✓ Security Infrastructure: HMAC signatures، timestamp validation، nonce protection، rate limiting
+  ✓ Storage Infrastructure: ContentStorageManager با Local/S3، validation، hash checking، signed URLs
+  ✓ Management Commands: check_heartbeats، execute_pending_commands، execute_schedules، 
+                         create_superuser/user، cleanup_logs، export_logs
+  ✓ Frontend Application: Vue.js 3 SPA، WebSocket integration، Tailwind CSS
+  ✓ Real-time Broadcasting: Django signals، automatic event broadcasting، organization filtering
+
+PARTIALLY IMPLEMENTED / FUTURE ENHANCEMENTS:
+  ⚠ Schedule Recurrence Logic
+    - منطق فعلی برای recurring schedules ساده است
+    - پیشنهاد: استفاده از dateutil برای محاسبه دقیق‌تر recurrence
+
+  ⚠ Notification System
+    - سیستم اطلاع‌رسانی برای خطاها و هشدارها وجود ندارد
+    - پیشنهاد: افزودن ایمیل/SMS/webhook برای رویدادهای مهم
+
+  ⚠ Analytics Dashboard
+    - متدهای analytics وجود دارد اما dashboard کامل نیست
+    - پیشنهاد: ایجاد API endpoints برای dashboard تحلیلی
+
+  ⚠ Bulk Operations
+    - پشتیبانی محدود از عملیات دسته‌ای
+    - پیشنهاد: افزودن bulk command execution و bulk content download
+
+  ⚠ Testing
+    - فایل‌های تست پیاده‌سازی نشده‌اند
+    - پیشنهاد: افزودن test suite جامع
+
+  ⚠ API Documentation
+    - مستندات API (Swagger/OpenAPI) وجود ندارد
+    - پیشنهاد: افزودن مستندات خودکار
+
+  ⚠ Caching
+    - سیستم cache برای داده‌های پراستفاده وجود ندارد
+    - پیشنهاد: پیاده‌سازی caching layer
+
+  ⚠ Audit Logging
+    - لاگ‌گذاری audit برای عملیات حساس وجود ندارد
+    - پیشنهاد: افزودن audit trail
+
+  ⚠ Backup & Restore
+    - قابلیت backup و restore وجود ندارد
+    - پیشنهاد: افزودن سیستم backup خودکار
+
+  ⚠ CDN Integration
+    - یکپارچه‌سازی CDN برای تحویل سریع‌تر محتوا
+    - پیشنهاد: افزودن پشتیبانی از CDN
+
+  ⚠ Multi-Region S3
+    - پشتیبانی از S3 چندمنطقه‌ای برای توزیع جهانی
+    - پیشنهاد: افزودن پشتیبانی multi-region
+
+================================================================================
+G) INTEGRATION POINTS
+================================================================================
+
+SCREEN ↔ TEMPLATE:
+  - Screen.active_template (FK to Template)
+  - screen.activate_template() activates template
+  - template.activate_on_screen() convenience method
+  - screen.sync_template_content() syncs all content
+
+SCREEN ↔ COMMAND:
+  - Command.screen (FK to Screen)
+  - screen.queue_command() creates command
+  - screen.get_pending_commands() gets commands
+  - command.execute() executes on screen
+
+SCREEN ↔ LOG:
+  - ScreenStatusLog.screen (FK to Screen)
+  - ContentDownloadLog.screen (FK to Screen)
+  - CommandExecutionLog.screen (FK to Screen)
+  - Automatic logging in screen methods
+
+TEMPLATE → CONTENT:
+  - Template → Layer → Widget → Content hierarchy
+  - template.get_all_contents() gets all content
+  - Content download creates ContentDownloadLog
+
+COMMAND → LOG:
+  - CommandExecutionLog.command (FK to Command)
+  - Automatic logging in command.execute()
+
+SCHEDULE → TEMPLATE → SCREEN:
+  - Schedule.template (FK to Template)
+  - Schedule.screens (M2M to Screen)
+  - schedule.execute_on_screens() activates template on screens
+
+USER → RESOURCES:
+  - User owns Screens (Screen.owner)
+  - User creates Templates (Template.created_by)
+  - User creates Commands (Command.created_by)
+  - Role-based access control throughout
+
+WEBSOCKET → SCREEN:
+  - ScreenConsumer handles WebSocket connections
+  - ScreenConnectionRegistry tracks active connections
+  - Commands delivered via WebSocket groups
+  - HTTP fallback when WebSocket unavailable
+
+WEBSOCKET → DASHBOARD:
+  - AdminDashboardConsumer handles dashboard connections
+  - JWT authentication for user access
+  - Real-time event broadcasting via channel groups
+  - Organization-based data filtering
+  - Automatic event broadcasting via Django signals
+
+SIGNALS → BROADCASTING:
+  - Command post_save signal triggers broadcast_command_created
+  - Command status updates trigger broadcast_command_status_update
+  - Real-time updates sent to dashboard_updates channel group
+  - All connected dashboard users receive filtered updates
+
+SECURITY → COMMANDS:
+  - ScreenSecurity creates signed payloads
+  - HMAC-SHA256 signatures for command integrity
+  - Timestamp and nonce validation
+  - Rate limiting prevents abuse
+
+STORAGE → CONTENT:
+  - ContentStorageManager handles file operations
+  - Local or S3 backend based on configuration
+  - Secure signed URLs for content access
+  - Hash verification ensures file integrity
+
+================================================================================
+H) TECHNICAL ARCHITECTURE
+================================================================================
+
+COMMUNICATION FLOW:
+  1. Screen → WebSocket connection (ws://server/ws/screen/?auth_token=xxx&secret_key=yyy)
+  2. ScreenConsumer authenticates و connection را register می‌کند
+  3. Command queue می‌شود → Django signal broadcast می‌کند → Dashboard users به‌روزرسانی می‌گیرند
+  4. Command.execute() → _send_to_screen() → WebSocket (اولویت) یا HTTP (fallback)
+  5. Screen command را دریافت می‌کند، signature را validate می‌کند، اجرا می‌کند
+  6. Screen status update می‌فرستد → Signal broadcast می‌کند → Dashboard به‌روزرسانی می‌گیرد
+
+DASHBOARD REAL-TIME FLOW:
+  1. User login → JWT token → Frontend WebSocket connection (ws://server/ws/dashboard/?token=...)
+  2. AdminDashboardConsumer JWT را validate می‌کند → User به dashboard_updates group اضافه می‌شود
+  3. User می‌تواند subscribe کند به screens/commands خاص
+  4. Backend events خودکار broadcast می‌شوند → فیلتر بر اساس role و organization
+  5. Frontend real-time updates دریافت می‌کند → Auto-reconnect با exponential backoff
+
+CONTENT DELIVERY FLOW:
+  1. Upload: API یا save_uploaded_file() → ContentStorageManager validation → Save (Local/S3)
+  2. Hash calculation و storage برای integrity checking
+  3. download_to_screen() → Secure URL generation (signed URL برای S3)
+  4. Download command via Command system (WebSocket/HTTP) → Screen download می‌کند
+  5. Hash verification → ContentDownloadLog creation → Status report via content-sync endpoint
+
+SECURITY LAYERS:
+  1. Authentication: auth_token + secret_key برای screen، JWT برای users
+  2. Authorization: Role-based access control
+  3. Message Integrity: HMAC-SHA256 signatures
+  4. Replay Protection: Nonce-based tracking
+  5. Timestamp Validation: 5-minute window
+  6. Rate Limiting: 60 commands/minute per screen
+  7. File Integrity: SHA-256 hash verification
+  8. Secure URLs: Signed URLs با expiration
+
+STORAGE BACKENDS:
+  • Local File System: MEDIA_ROOT/content/{content_id}/ - مناسب برای development
+  • Amazon S3: Private bucket با signed URLs - مناسب برای production و multi-region
+
+================================================================================
+END OF REPORT
+================================================================================
+

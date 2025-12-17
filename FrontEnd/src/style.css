@@ -1,0 +1,65 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  
+  body {
+    @apply bg-white text-neutral-900;
+  }
+  
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  
+  .hover-lift {
+    @apply transition-all duration-300 ease-out;
+  }
+  
+  .hover-lift:hover {
+    @apply -translate-y-2 scale-[1.03] shadow-xl;
+  }
+  
+  .card-hover {
+    @apply transition-all duration-300 ease-out cursor-pointer;
+  }
+  
+  .card-hover:hover {
+    @apply -translate-y-2 scale-[1.03] shadow-xl border-orange-500/50;
+  }
+  
+  .icon-hover {
+    @apply transition-all duration-300 ease-out;
+  }
+  
+  .icon-hover:hover {
+    @apply scale-110 rotate-3;
+  }
+  
+  .orange-glow {
+    box-shadow: 0 0 20px rgba(249, 115, 22, 0.3);
+  }
+  
+  .orange-glow-hover:hover {
+    box-shadow: 0 0 30px rgba(249, 115, 22, 0.5);
+  }
+}
