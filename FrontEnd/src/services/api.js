@@ -27,15 +27,31 @@ api.interceptors.request.use(
 // Response interceptor for error handling
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
+  async (error) => {
+    const status = error.response?.status
+    
+    if (status === 401) {
       // Handle unauthorized - redirect to login
       localStorage.removeItem('auth_token')
       localStorage.removeItem('refresh_token')
-      if (window.location.pathname !== '/login' && window.location.pathname !== '/') {
-        window.location.href = '/login'
+      if (window.location.pathname !== '/login' && 
+          window.location.pathname !== '/' &&
+          !window.location.pathname.startsWith('/401')) {
+        window.location.href = '/401'
+      }
+    } else if (status === 403) {
+      // Handle forbidden - redirect to 403 page
+      if (!window.location.pathname.startsWith('/403')) {
+        window.location.href = '/403'
+      }
+    } else if (status >= 500) {
+      // Handle server errors - redirect to 500 page
+      if (!window.location.pathname.startsWith('/500')) {
+        const errorMsg = error.response?.data?.error || error.response?.data?.detail || error.message
+        window.location.href = `/500?error=${encodeURIComponent(errorMsg)}`
       }
     }
+    
     return Promise.reject(error)
   }
 )
@@ -183,6 +199,100 @@ export const logsAPI = {
     list: (params) => api.get('/logs/command-execution/', { params }),
     detail: (id) => api.get(`/logs/command-execution/${id}/`),
     summary: (params) => api.get('/logs/command-execution/summary/', { params }),
+  },
+}
+
+// Analytics API
+export const analyticsAPI = {
+  screenStatistics: (params) => api.get('/analytics/screens/', { params }),
+  screenDetail: (id) => api.get(`/analytics/screens/${id}/`),
+  commandStatistics: (params) => api.get('/analytics/commands/', { params }),
+  contentStatistics: (params) => api.get('/analytics/content/', { params }),
+  templateStatistics: (params) => api.get('/analytics/templates/', { params }),
+  activityTrends: (params) => api.get('/analytics/activity/', { params }),
+}
+
+// Bulk Operations API
+export const bulkOperationsAPI = {
+  // Screens
+  screensDelete: (data) => api.post('/screens/bulk/delete/', data),
+  screensUpdate: (data) => api.post('/screens/bulk/update/', data),
+  screensActivateTemplate: (data) => api.post('/screens/bulk/activate_template/', data),
+  screensSendCommand: (data) => api.post('/screens/bulk/send_command/', data),
+  
+  // Templates
+  templatesDelete: (data) => api.post('/templates/bulk/delete/', data),
+  templatesUpdate: (data) => api.post('/templates/bulk/update/', data),
+  templatesActivate: (data) => api.post('/templates/bulk/activate/', data),
+  templatesActivateOnScreens: (data) => api.post('/templates/bulk/activate_on_screens/', data),
+  
+  // Contents
+  contentsDelete: (data) => api.post('/contents/bulk/delete/', data),
+  contentsUpdate: (data) => api.post('/contents/bulk/update/', data),
+  contentsDownload: (data) => api.post('/contents/bulk/download/', data),
+  contentsRetry: (data) => api.post('/contents/bulk/retry/', data),
+  
+  // Schedules
+  schedulesDelete: (data) => api.post('/schedules/bulk/delete/', data),
+  schedulesUpdate: (data) => api.post('/schedules/bulk/update/', data),
+  schedulesActivate: (data) => api.post('/schedules/bulk/activate/', data),
+  schedulesExecute: (data) => api.post('/schedules/bulk/execute/', data),
+  
+  // Commands
+  commandsDelete: (data) => api.post('/commands/bulk/delete/', data),
+  commandsExecute: (data) => api.post('/commands/bulk/execute/', data),
+  commandsRetry: (data) => api.post('/commands/bulk/retry/', data),
+}
+
+// Content Validation API
+export const contentValidationAPI = {
+  validate: (file, contentType, filename) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('content_type', contentType)
+    if (filename) {
+      formData.append('filename', filename)
+    }
+    return api.post('/content-validation/validate/', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+  },
+  validateBulk: (files, contentTypes, filenames) => {
+    const formData = new FormData()
+    files.forEach((file, index) => {
+      formData.append('files', file)
+    })
+    if (contentTypes) {
+      contentTypes.forEach((type, index) => {
+        formData.append('content_types', type)
+      })
+    }
+    if (filenames) {
+      filenames.forEach((name, index) => {
+        formData.append('filenames', name)
+      })
+    }
+    return api.post('/content-validation/bulk/', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    })
+  },
+}
+
+// Core Infrastructure API
+export const coreAPI = {
+  // Audit Logs
+  auditLogs: {
+    list: (params) => api.get('/core/audit-logs/', { params }),
+    detail: (id) => api.get(`/core/audit-logs/${id}/`),
+    summary: (params) => api.get('/core/audit-logs/summary/', { params }),
+  },
+  // Backups
+  backups: {
+    list: (params) => api.get('/core/backups/', { params }),
+    detail: (id) => api.get(`/core/backups/${id}/`),
+    trigger: (data) => api.post('/core/backups/trigger/', data),
+    verify: (id) => api.post(`/core/backups/${id}/verify/`),
+    cleanup: () => api.post('/core/backups/cleanup/'),
   },
 }
 

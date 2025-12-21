@@ -56,7 +56,7 @@ class UserAdmin(BaseUserAdmin):
     )
     
     # Read-only fields
-    readonly_fields = ['last_login', 'date_joined', 'last_seen']
+    readonly_fields = ['last_login', 'date_joined', 'last_seen', 'failed_login_attempts', 'locked_until']
     
     # Ordering
     ordering = ['-date_joined']

@@ -3,12 +3,21 @@
     <div class="space-y-6">
       <div class="flex justify-between items-center">
         <h1 class="text-2xl font-bold text-gray-900">Screens</h1>
-        <button
-          @click="showCreateModal = true"
-          class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
-        >
-          Add Screen
-        </button>
+        <div class="flex items-center space-x-3">
+          <button
+            v-if="selectedItems.length > 0"
+            @click="showBulkModal = true"
+            class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
+          >
+            Bulk Operations ({{ selectedItems.length }})
+          </button>
+          <button
+            @click="showCreateModal = true"
+            class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
+          >
+            Add Screen
+          </button>
+        </div>
       </div>
       
       <!-- Filters -->

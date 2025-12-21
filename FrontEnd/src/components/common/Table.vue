@@ -10,7 +10,7 @@
           >
             {{ column.label }}
           </th>
-          <th v-if="actions" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+          <th v-if="actions && actions.length > 0" class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
             Actions
           </th>
         </tr>
@@ -26,12 +26,19 @@
               {{ row[column.key] }}
             </slot>
           </td>
-          <td v-if="actions" class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+          <td v-if="actions && actions.length > 0" class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
             <slot name="actions" :row="row">
+              <button
+                v-if="actions.includes('view')"
+                @click="$emit('view', row)"
+                class="text-indigo-600 hover:text-indigo-900 mr-3"
+              >
+                View
+              </button>
               <button
                 v-if="actions.includes('edit')"
                 @click="$emit('edit', row)"
-                class="text-indigo-600 hover:text-indigo-900 mr-3"
+                class="text-blue-600 hover:text-blue-900 mr-3"
               >
                 Edit
               </button>
@@ -47,8 +54,12 @@
         </tr>
       </tbody>
     </table>
-    <div v-if="data.length === 0" class="text-center py-8 text-gray-500">
+    <div v-if="data.length === 0 && !loading" class="text-center py-8 text-gray-500">
       No data available
+    </div>
+    <div v-if="loading" class="text-center py-8">
+      <div class="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-600"></div>
+      <p class="mt-2 text-sm text-gray-600">Loading...</p>
     </div>
   </div>
 </template>
@@ -71,7 +82,11 @@ defineProps({
     type: String,
     default: 'id',
   },
+  loading: {
+    type: Boolean,
+    default: false,
+  },
 })
 
-defineEmits(['edit', 'delete'])
+defineEmits(['edit', 'delete', 'view'])
 </script>

@@ -3,6 +3,7 @@ from django.db import models
 from django.db.models import Avg, Sum
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils import timezone
+import json
 
 
 def default_json_dict():
@@ -255,9 +256,9 @@ class ContentDownloadLog(models.Model):
         """Filter logs by date range"""
         queryset = cls.objects.all()
         if start_date:
-            queryset = queryset.filter(created_at__gte=start_date)
+            queryset = queryset.filter(recorded_at__gte=start_date)
         if end_date:
-            queryset = queryset.filter(created_at__lte=end_date)
+            queryset = queryset.filter(recorded_at__lte=end_date)
         return queryset
     
     @classmethod
@@ -430,9 +431,9 @@ class CommandExecutionLog(models.Model):
         """Filter logs by date range"""
         queryset = cls.objects.all()
         if start_date:
-            queryset = queryset.filter(created_at__gte=start_date)
+            queryset = queryset.filter(recorded_at__gte=start_date)
         if end_date:
-            queryset = queryset.filter(created_at__lte=end_date)
+            queryset = queryset.filter(recorded_at__lte=end_date)
         return queryset
     
     @classmethod
@@ -491,3 +492,203 @@ class CommandExecutionLog(models.Model):
             'success_rate': (done_count / total_count * 100) if total_count > 0 else 0,
             'average_execution_time_seconds': round(avg_execution_time, 2),
         }
+
+
+class BulkOperationLog(models.Model):
+    """
+    Tracks bulk operations for auditing purposes.
+    
+    Records who performed bulk operations, what items were affected,
+    success/failure counts, and timestamps.
+    """
+    
+    id = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False,
+        help_text="Unique identifier for the bulk operation log entry"
+    )
+    user_id = models.IntegerField(
+        db_index=True,
+        help_text="ID of user who performed the operation"
+    )
+    username = models.CharField(
+        max_length=150,
+        db_index=True,
+        help_text="Username who performed the operation"
+    )
+    operation_type = models.CharField(
+        max_length=100,
+        db_index=True,
+        help_text="Type of operation (e.g., 'bulk_delete', 'bulk_update', 'bulk_activate')"
+    )
+    module = models.CharField(
+        max_length=50,
+        db_index=True,
+        help_text="Module name (e.g., 'screens', 'templates', 'contents')"
+    )
+    item_ids = models.JSONField(
+        default=list,
+        help_text="List of item IDs affected by the operation"
+    )
+    item_count = models.PositiveIntegerField(
+        help_text="Total number of items in the operation"
+    )
+    success_count = models.PositiveIntegerField(
+        default=0,
+        help_text="Number of successful operations"
+    )
+    failure_count = models.PositiveIntegerField(
+        default=0,
+        help_text="Number of failed operations"
+    )
+    details = models.JSONField(
+        default=default_json_dict,
+        blank=True,
+        help_text="Additional details about the operation"
+    )
+    timestamp = models.DateTimeField(
+        auto_now_add=True,
+        db_index=True,
+        help_text="When the operation was performed"
+    )
+    
+    class Meta:
+        db_table = 'log_bulk_operation'
+        verbose_name = 'Bulk Operation Log'
+        verbose_name_plural = 'Bulk Operation Logs'
+        ordering = ['-timestamp']
+        indexes = [
+            models.Index(fields=['user_id', 'timestamp']),
+            models.Index(fields=['module', 'timestamp']),
+            models.Index(fields=['operation_type', 'timestamp']),
+            models.Index(fields=['username', 'timestamp']),
+        ]
+    
+    def __str__(self):
+        """Return string representation"""
+        return f"{self.username} - {self.operation_type} on {self.module} ({self.success_count}/{self.item_count} succeeded)"
+    
+    @property
+    def success_rate(self):
+        """Calculate success rate percentage"""
+        if self.item_count == 0:
+            return 0
+        return round((self.success_count / self.item_count) * 100, 2)
+
+
+class ContentValidationLog(models.Model):
+    """
+    Tracks content validation attempts for auditing and security.
+    
+    Records who uploaded what content, validation results, and errors.
+    """
+    
+    VALIDATION_STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('valid', 'Valid'),
+        ('invalid', 'Invalid'),
+        ('security_risk', 'Security Risk'),
+    ]
+    
+    id = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False,
+        help_text="Unique identifier for the validation log entry"
+    )
+    user_id = models.IntegerField(
+        db_index=True,
+        help_text="ID of user who uploaded the content"
+    )
+    username = models.CharField(
+        max_length=150,
+        db_index=True,
+        help_text="Username who uploaded the content"
+    )
+    content_id = models.UUIDField(
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text="Content ID (if saved after validation)"
+    )
+    filename = models.CharField(
+        max_length=500,
+        help_text="Original filename"
+    )
+    sanitized_filename = models.CharField(
+        max_length=500,
+        blank=True,
+        null=True,
+        help_text="Sanitized filename after validation"
+    )
+    content_type = models.CharField(
+        max_length=50,
+        db_index=True,
+        help_text="Content type (image, video, text, etc.)"
+    )
+    file_size = models.PositiveBigIntegerField(
+        null=True,
+        blank=True,
+        help_text="File size in bytes"
+    )
+    mime_type = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        help_text="Detected MIME type"
+    )
+    validation_status = models.CharField(
+        max_length=20,
+        choices=VALIDATION_STATUS_CHOICES,
+        default='pending',
+        db_index=True,
+        help_text="Validation status"
+    )
+    is_valid = models.BooleanField(
+        default=False,
+        help_text="Whether validation passed"
+    )
+    validation_errors = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="List of validation errors"
+    )
+    validation_warnings = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="List of validation warnings"
+    )
+    metadata = models.JSONField(
+        default=default_json_dict,
+        blank=True,
+        help_text="Extracted metadata (dimensions, format, etc.)"
+    )
+    security_flags = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="Security flags raised during validation"
+    )
+    timestamp = models.DateTimeField(
+        auto_now_add=True,
+        db_index=True,
+        help_text="When validation was performed"
+    )
+    
+    class Meta:
+        db_table = 'log_content_validation'
+        verbose_name = 'Content Validation Log'
+        verbose_name_plural = 'Content Validation Logs'
+        ordering = ['-timestamp']
+        indexes = [
+            models.Index(fields=['user_id', 'timestamp']),
+            models.Index(fields=['content_type', 'timestamp']),
+            models.Index(fields=['validation_status', 'timestamp']),
+            models.Index(fields=['is_valid', 'timestamp']),
+            models.Index(fields=['username', 'timestamp']),
+        ]
+    
+    def __str__(self):
+        """Return string representation"""
+        status = "✓" if self.is_valid else "✗"
+        return f"{status} {self.username} - {self.filename} ({self.content_type})"

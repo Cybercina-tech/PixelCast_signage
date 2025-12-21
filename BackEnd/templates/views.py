@@ -446,7 +446,10 @@ class ContentViewSet(viewsets.ModelViewSet):
         file_obj = request.FILES['file']
         
         try:
-            # Save uploaded file
+            # Validate content before saving (comprehensive validation is done in storage.py)
+            # Additional pre-save checks can be added here if needed
+            
+            # Save uploaded file (includes comprehensive validation)
             metadata = content.save_uploaded_file(file_obj, user)
             
             # Log upload operation

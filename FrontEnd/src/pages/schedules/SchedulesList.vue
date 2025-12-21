@@ -196,7 +196,8 @@ const handleExecute = async (row) => {
     await schedulesStore.executeSchedule(row.id)
     toastStore.success('Schedule executed')
   } catch (error) {
-    toastStore.error('Failed to execute schedule')
+    const errorMsg = error.response?.data?.detail || error.response?.data?.message || error.message || 'Failed to execute schedule'
+    toastStore.error(errorMsg)
   }
 }
 
@@ -206,7 +207,8 @@ const handleDelete = async (row) => {
       await schedulesStore.deleteSchedule(row.id)
       toastStore.success('Schedule deleted')
     } catch (error) {
-      toastStore.error('Failed to delete schedule')
+      const errorMsg = error.response?.data?.detail || error.response?.data?.message || error.message || 'Failed to delete schedule'
+      toastStore.error(errorMsg)
     }
   }
 }
@@ -222,7 +224,8 @@ const handleSubmit = async () => {
     }
     closeModal()
   } catch (error) {
-    toastStore.error('Operation failed')
+    const errorMsg = error.response?.data?.detail || error.response?.data?.message || error.message || 'Operation failed'
+    toastStore.error(errorMsg)
   }
 }
 

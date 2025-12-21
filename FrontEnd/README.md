@@ -1,288 +1,344 @@
 # ScreenGram Frontend
 
-A production-ready Vue.js 3 frontend application for the ScreenGram Digital Signage Management System.
+Complete Vue.js 3 frontend for ScreenGram Digital Signage Management System.
 
-## Features
-
-- **Complete Dashboard** with real-time status cards, charts, and activity feed
-- **Screen Management** - List, view details, health monitoring, command queue, and logs
-- **Template Management** - Create, edit templates with hierarchical structure (Template → Layer → Widget → Content)
-- **Content Management** - Upload, manage, and track content downloads
-- **Schedule Management** - Create and manage time-based schedules with repeat options
-- **Command Management** - Send commands to screens, track execution status
-- **User & Role Management** - Manage users with role-based access control
-- **Logs & Reports** - View and export logs (Screen Status, Content Download, Command Execution)
-- **Settings** - Configure API, WebSocket, storage, security, and notifications
-
-## Technology Stack
-
-- **Vue.js 3.4+** - Progressive JavaScript framework
-- **Vue Router 4.3+** - Official router for Vue.js
-- **Pinia 2.1+** - State management library
-- **Tailwind CSS 3.4+** - Utility-first CSS framework
-- **Chart.js** - Charting library for metrics visualization
-- **Axios** - HTTP client for API requests
-- **Heroicons** - Beautiful SVG icons
-- **Vite 5.1+** - Next-generation frontend build tool
-
-## Project Structure
-
-```
-FrontEnd/
-├── src/
-│   ├── components/
-│   │   ├── common/          # Reusable components (Table, Modal, Card, Chart, Toast)
-│   │   ├── home/            # Landing page components
-│   │   └── layout/          # Layout components (AppLayout, Navbar, Sidebar, Footer)
-│   ├── composables/         # Vue composables (useWebSocket)
-│   ├── pages/               # Page components
-│   │   ├── screens/         # Screen management pages
-│   │   ├── templates/       # Template management pages
-│   │   ├── contents/        # Content management pages
-│   │   ├── schedules/       # Schedule management pages
-│   │   ├── commands/        # Command management pages
-│   │   ├── users/           # User management pages
-│   │   └── logs/            # Logs and reports pages
-│   ├── router/              # Vue Router configuration
-│   ├── services/            # API service layer
-│   ├── stores/              # Pinia stores (state management)
-│   ├── App.vue              # Root component
-│   └── main.js              # Application entry point
-├── package.json
-├── vite.config.js
-├── tailwind.config.js
-└── README.md
-```
-
-## Setup Instructions
+## 🚀 Quick Start
 
 ### Prerequisites
 
-- Node.js 18+ and npm/yarn
-- Backend API running (see BackEnd README)
+- Node.js 16+ and npm/yarn
+- Python backend running (see BackEnd/README.md)
+- Backend API accessible at `http://localhost:8000/api` (or configure via environment variables)
 
 ### Installation
 
-1. **Navigate to the FrontEnd directory:**
-   ```bash
-   cd FrontEnd
-   ```
+```bash
+cd FrontEnd
+npm install
+```
 
-2. **Install dependencies:**
-   ```bash
-   npm install
-   # or
-   yarn install
-   ```
+### Configuration
 
-3. **Configure environment variables:**
-   
-   Create a `.env` file in the `FrontEnd` directory:
-   ```env
-   VITE_API_BASE_URL=http://localhost:8000/api
-   VITE_WS_HOST=ws://localhost:8000
-   ```
-   
-   For production, update these values to match your backend server:
-   ```env
-   VITE_API_BASE_URL=https://api.yourdomain.com/api
-   VITE_WS_HOST=wss://api.yourdomain.com
-   ```
+Create a `.env` file in the FrontEnd directory (optional):
 
-4. **Start the development server:**
-   ```bash
-   npm run dev
-   # or
-   yarn dev
-   ```
-   
-   The application will be available at `http://localhost:5173` (or the port shown in the terminal).
+```env
+VITE_API_BASE_URL=http://localhost:8000/api
+VITE_WS_HOST=ws://localhost:8000
+```
 
-5. **Build for production:**
-   ```bash
-   npm run build
-   # or
-   yarn build
-   ```
-   
-   The production build will be in the `dist` directory.
+### Development Server
 
-## Backend API Configuration
+```bash
+npm run dev
+```
 
-The frontend is designed to work with the ScreenGram Django backend. Ensure the backend is running and accessible at the URL specified in your `.env` file.
+The application will be available at `http://localhost:5173` (Vite default port)
 
-### API Endpoints
+### Build for Production
 
-The frontend uses the following API endpoints (configured in `src/services/api.js`):
+```bash
+npm run build
+```
 
-- **Authentication:** `/api/auth/login/`, `/api/auth/logout/`, `/api/auth/token/`
-- **Users:** `/api/users/`, `/api/users/{id}/`, `/api/users/me/`
-- **Screens:** `/api/screens/`, `/api/screens/{id}/`
-- **Templates:** `/api/templates/`, `/api/templates/{id}/activate_on_screen/`
-- **Layers:** `/api/layers/`
-- **Widgets:** `/api/widgets/`
-- **Contents:** `/api/contents/`, `/api/contents/{id}/upload/`
-- **Schedules:** `/api/schedules/`, `/api/schedules/{id}/execute/`
-- **Commands:** `/api/commands/`, `/api/commands/{id}/retry/`
-- **Logs:** `/api/logs/screen-status/`, `/api/logs/content-download/`, `/api/logs/command-execution/`
+Build output will be in `dist/` directory.
 
-### WebSocket Configuration
+### Preview Production Build
 
-For real-time updates, configure WebSocket connection:
+```bash
+npm run preview
+```
 
-- **Dashboard WebSocket:** `ws://your-backend/ws/dashboard/?token=<JWT_TOKEN>`
-- **Screen WebSocket:** `ws://your-backend/ws/screen/?auth_token=xxx&secret_key=yyy`
+## 📁 Project Structure
 
-The WebSocket URL is configured via `VITE_WS_HOST` environment variable.
+```
+FrontEnd/src/
+├── components/
+│   ├── common/          # Reusable components (Card, Table, Modal, Chart, Toast)
+│   ├── layout/          # Layout components (AppLayout, Sidebar, Navbar, Footer)
+│   ├── home/            # Landing page components
+│   ├── analytics/       # Analytics dashboard components
+│   ├── content/         # Content management components
+│   └── logs/            # Log viewing components
+├── pages/
+│   ├── Dashboard.vue
+│   ├── Login.vue
+│   ├── Landing.vue
+│   ├── screens/         # Screen management pages
+│   ├── templates/       # Template management pages
+│   ├── contents/        # Content management pages
+│   ├── schedules/       # Schedule management pages
+│   ├── commands/        # Command management pages
+│   ├── users/           # User management pages
+│   ├── logs/            # Log viewing pages
+│   ├── analytics/       # Analytics dashboard
+│   └── errors/          # Error pages (404, 401, 403, 500)
+├── stores/              # Pinia stores for state management
+│   ├── auth.js          # Authentication state
+│   ├── screens.js       # Screen state
+│   ├── templates.js     # Template state
+│   ├── content.js       # Content state
+│   ├── schedules.js     # Schedule state
+│   ├── commands.js      # Command state
+│   ├── users.js         # User state
+│   ├── analytics.js     # Analytics state
+│   ├── bulkOperations.js # Bulk operations state
+│   ├── contentValidation.js # Content validation state
+│   ├── logs.js          # Logs state
+│   ├── dashboard.js     # Dashboard state
+│   ├── toast.js         # Toast notifications
+│   └── app.js           # App-wide state
+├── services/
+│   └── api.js           # API service with all endpoints
+├── router/
+│   └── index.js         # Vue Router configuration
+├── composables/
+│   └── useWebSocket.js  # WebSocket composable
+└── main.js              # Application entry point
+```
 
-## Authentication
+## 🔐 Authentication
 
-The frontend uses JWT (JSON Web Tokens) for authentication:
+The frontend uses JWT authentication. Tokens are stored in localStorage and automatically included in API requests.
 
-1. User logs in via `/login` page
-2. Backend returns JWT access token (and optionally refresh token)
-3. Token is stored in localStorage and included in API requests
-4. Token is automatically refreshed when expired (if refresh token is available)
+### Login Flow
 
-## State Management
+1. User enters credentials on `/login`
+2. Backend validates and returns JWT tokens (access + refresh)
+3. Tokens stored in localStorage
+4. All subsequent requests include `Authorization: Bearer <token>` header
+5. Token expires after 60 minutes (configurable in backend)
+6. Refresh token used to get new access token
 
-The application uses Pinia stores for state management:
+### Protected Routes
 
-- **auth** - Authentication state and user info
-- **screens** - Screen data and operations
-- **templates** - Template, layer, and widget data
-- **content** - Content data and upload operations
-- **schedules** - Schedule data and execution
-- **commands** - Command queue and execution status
-- **users** - User management
-- **logs** - Log data and filtering
-- **dashboard** - Dashboard statistics and metrics
-- **toast** - Toast notification system
+All routes except `/`, `/login`, `/signup` require authentication. The router guard automatically:
+- Checks for valid token
+- Redirects to login if not authenticated
+- Checks role permissions for specific routes (e.g., Analytics requires Manager/Admin)
 
-## Key Features
+## 📱 Pages Overview
+
+### Public Pages
+
+- **Landing** (`/`) - Landing page
+- **Login** (`/login`) - User authentication
+- **Signup** (`/signup`) - User registration
+
+### Protected Pages
+
+- **Dashboard** (`/dashboard`) - Overview and quick stats
+- **Screens** (`/screens`, `/screens/:id`) - Screen management
+- **Templates** (`/templates`, `/templates/:id`) - Template management
+- **Contents** (`/contents`, `/contents/:id`) - Content management
+- **Schedules** (`/schedules`, `/schedules/:id`) - Schedule management
+- **Commands** (`/commands`, `/commands/:id`) - Command management
+- **Users** (`/users`, `/users/:id`) - User and role management
+- **Logs** (`/logs`) - System logs and reports
+- **Analytics** (`/analytics`) - Analytics dashboard (Manager/Admin only)
+- **Settings** (`/settings`) - Application settings
+
+### Error Pages
+
+- **404** (`/404`) - Page not found
+- **401** (`/401`) - Unauthorized
+- **403** (`/403`) - Forbidden
+- **500** (`/500`) - Server error
+
+## 🏪 State Management (Pinia Stores)
+
+### Auth Store (`stores/auth.js`)
+
+Manages authentication state:
+- `user`, `token`, `refreshToken`, `isAuthenticated`
+- Actions: `login()`, `logout()`, `fetchMe()`, `refreshAccessToken()`
+
+### Screen Store (`stores/screens.js`)
+
+Manages screen data:
+- `screens`, `currentScreen`, `loading`, `error`, `filters`
+- Actions: `fetchScreens()`, `fetchScreen()`, `createScreen()`, `updateScreen()`, `deleteScreen()`
+
+Similar stores exist for: Templates, Contents, Schedules, Commands, Users, Logs
+
+### Analytics Store (`stores/analytics.js`)
+
+Manages analytics data:
+- Screen, command, content, template statistics
+- Activity trends
+- Actions: `fetchScreenStatistics()`, `fetchCommandStatistics()`, etc.
+
+### Bulk Operations Store (`stores/bulkOperations.js`)
+
+Manages bulk operations:
+- Actions for bulk delete, update, activate operations across all modules
+
+### Content Validation Store (`stores/contentValidation.js`)
+
+Manages content validation:
+- Single file and bulk validation
+- Validation results and errors
+
+## 🔌 API Integration
+
+All API calls are centralized in `services/api.js`. The API service:
+
+- Automatically adds JWT token to requests
+- Handles 401/403/500 errors with redirects
+- Provides typed API functions for each module
+
+### Example Usage
+
+```javascript
+import { screensAPI } from '@/services/api'
+
+// List screens
+const response = await screensAPI.list({ page: 1, page_size: 50 })
+
+// Create screen
+const newScreen = await screensAPI.create({
+  name: 'Screen 1',
+  device_id: 'device-001'
+})
+```
+
+## 🎨 Components
+
+### Common Components
+
+- **Card** - Container component with optional title
+- **Table** - Data table with columns, actions, slots
+- **Modal** - Modal dialog with header, body, footer slots
+- **Chart** - Chart.js wrapper for visualizations
+- **Toast** - Toast notification component
+- **ToastContainer** - Container for toasts
+
+### Layout Components
+
+- **AppLayout** - Main application layout (sidebar + navbar)
+- **Sidebar** - Navigation sidebar
+- **Navbar** - Top navigation bar
+- **Footer** - Page footer
+
+## 🔄 Features
+
+### Bulk Operations
+
+All list pages support bulk operations:
+- Bulk delete
+- Bulk update
+- Bulk activate
+- Select multiple items with checkboxes
+- Confirm before executing
+
+### Content Validation
+
+- File upload with automatic validation
+- Validation errors displayed inline
+- Bulk file validation
+- Visual feedback for valid/invalid files
 
 ### Real-time Updates
 
-The application supports real-time updates via WebSocket connections. The `useWebSocket` composable handles:
-- Automatic connection management
-- Reconnection with exponential backoff
-- Event subscription/unsubscription
-- Heartbeat/ping-pong mechanism
-
-### Responsive Design
-
-All pages are responsive and work on:
-- Desktop (1920px+)
-- Tablet (768px - 1919px)
-- Mobile (< 768px)
+- WebSocket integration for live updates
+- Dashboard auto-refreshes every 30 seconds
+- Screen status updates in real-time
 
 ### Error Handling
 
-- API errors are caught and displayed via toast notifications
-- Network errors trigger automatic retries where appropriate
-- 401 errors automatically redirect to login page
+- Global error interceptor in API service
+- Automatic redirects for 401/403/500 errors
+- Toast notifications for user feedback
+- Graceful degradation when backend unavailable
 
-### Data Filtering & Search
+## 🧪 Testing Integration
 
-Most list pages support:
-- Text search across relevant fields
-- Status/type filtering
-- Date range filtering (for logs)
-- Real-time filter application
+The frontend is designed to work with the backend testing suite. All API endpoints are tested in the backend.
 
-## Development
-
-### Adding New Pages
-
-1. Create component in `src/pages/`
-2. Add route in `src/router/index.js`
-3. Create/update Pinia store if needed
-4. Add navigation link in `src/components/layout/Sidebar.vue`
-
-### Adding New API Endpoints
-
-1. Add endpoint function in `src/services/api.js`
-2. Add corresponding action in relevant Pinia store
-3. Use in component/page
-
-### Styling
-
-The project uses Tailwind CSS. Custom styles can be added in:
-- `src/style.css` - Global styles
-- Component `<style>` blocks - Component-specific styles
-
-## Production Deployment
-
-1. **Build the application:**
-   ```bash
-   npm run build
-   ```
-
-2. **Deploy the `dist` directory** to your web server (nginx, Apache, etc.)
-
-3. **Configure reverse proxy** to handle API requests and WebSocket connections
-
-4. **Set environment variables** on your hosting platform
-
-### Example Nginx Configuration
-
-```nginx
-server {
-    listen 80;
-    server_name yourdomain.com;
-    
-    # Frontend
-    location / {
-        root /var/www/screengram-frontend/dist;
-        try_files $uri $uri/ /index.html;
-    }
-    
-    # Backend API
-    location /api {
-        proxy_pass http://localhost:8000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-    }
-    
-    # WebSocket
-    location /ws {
-        proxy_pass http://localhost:8000;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-        proxy_set_header Host $host;
-    }
-}
+For frontend-specific testing (if added later):
+```bash
+npm run test  # When test framework is configured
 ```
 
-## Troubleshooting
+## 📦 Build & Deploy
+
+### Development Build
+
+```bash
+npm run dev
+```
+
+### Production Build
+
+```bash
+npm run build
+```
+
+### Environment Variables
+
+Create `.env.production`:
+
+```env
+VITE_API_BASE_URL=https://api.yourdomain.com/api
+VITE_WS_HOST=wss://api.yourdomain.com
+```
+
+## 🔧 Troubleshooting
 
 ### API Connection Issues
 
-- Verify `VITE_API_BASE_URL` is correct
-- Check CORS settings on backend
-- Ensure backend is running and accessible
+1. Check backend is running: `http://localhost:8000/api`
+2. Check CORS settings in backend
+3. Verify `VITE_API_BASE_URL` in `.env`
 
-### WebSocket Connection Issues
+### Authentication Issues
 
-- Verify `VITE_WS_HOST` is correct
-- Check WebSocket URL format (ws:// or wss://)
-- Ensure backend WebSocket server is running
-- Check firewall/network settings
+1. Check token in localStorage: `localStorage.getItem('auth_token')`
+2. Verify token expiration (60 minutes)
+3. Try logging out and logging in again
 
-### Build Issues
+### Build Errors
 
-- Clear `node_modules` and reinstall: `rm -rf node_modules && npm install`
-- Clear Vite cache: `rm -rf node_modules/.vite`
-- Check Node.js version (requires 18+)
+1. Clear node_modules and reinstall: `rm -rf node_modules package-lock.json && npm install`
+2. Check Node.js version (16+)
+3. Review build output for specific errors
 
-## Support
+## 📚 Integration with Backend
 
-For issues and questions:
-- Check backend API documentation
-- Review browser console for errors
-- Check network tab for API request/response details
+### Required Backend Endpoints
 
-## License
+The frontend expects these backend endpoints:
 
-See main project LICENSE file.
+- `/api/auth/token/` - JWT token generation
+- `/api/auth/token/refresh/` - Token refresh
+- `/api/screens/` - Screen CRUD
+- `/api/templates/` - Template CRUD
+- `/api/contents/` - Content CRUD
+- `/api/schedules/` - Schedule CRUD
+- `/api/commands/` - Command CRUD
+- `/api/users/` - User management
+- `/api/logs/` - Log viewing
+- `/api/analytics/` - Analytics data
+- `/api/{module}/bulk/*` - Bulk operations
+- `/api/content-validation/*` - Content validation
+
+### Backend Configuration
+
+Ensure backend has:
+- CORS enabled for frontend origin
+- JWT authentication configured
+- All modules installed and migrated
+- WebSocket support (for real-time features)
+
+## 🎯 Next Steps
+
+1. **Customize Styling**: Modify Tailwind classes for branding
+2. **Add Features**: Extend components as needed
+3. **Performance**: Add lazy loading for large lists
+4. **Accessibility**: Add ARIA labels and keyboard navigation
+5. **Testing**: Add unit and E2E tests
+
+## 📞 Support
+
+For backend API documentation, see `BackEnd/api_docs/README.md`
+
+For backend testing, see `BackEnd/TESTING.md`

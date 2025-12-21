@@ -171,7 +171,7 @@ class ContentStorageManager:
     @classmethod
     def save_content(cls, content_instance, file_obj: UploadedFile, user=None) -> Tuple[str, dict]:
         """
-        Save content file to storage backend.
+        Save content file to storage backend with comprehensive validation.
         
         Args:
             content_instance: Content model instance
@@ -185,15 +185,77 @@ class ContentStorageManager:
             StorageError: If validation or save fails
         """
         try:
-            # Validate file type
-            is_valid, error = cls._validate_file_type(file_obj, content_instance.type)
-            if not is_valid:
-                raise StorageError(error)
+            # Use comprehensive content validator
+            try:
+                from content_validation.validators import ContentValidator, ValidationError, SecurityValidationError
+                from content_validation.utils import log_validation
+                
+                # Get filename
+                filename = file_obj.name if hasattr(file_obj, 'name') else 'unknown'
+                
+                # Comprehensive validation
+                validation_result = ContentValidator.validate_content(
+                    file_obj=file_obj,
+                    content_type=content_instance.type,
+                    filename=filename
+                )
+                
+                # Use sanitized filename
+                sanitized_filename = validation_result.get('sanitized_filename', filename)
+                
+                # Log validation
+                if user:
+                    log_validation(
+                        user_id=user.id if hasattr(user, 'id') else None,
+                        username=user.username if hasattr(user, 'username') else 'unknown',
+                        filename=filename,
+                        sanitized_filename=sanitized_filename,
+                        content_type=content_instance.type,
+                        validation_result=validation_result
+                    )
+                
+                # Merge validation metadata
+                metadata_from_validation = validation_result.get('metadata', {})
+                
+            except ImportError:
+                # Fallback to basic validation if content_validation not available
+                logger.warning("content_validation module not available, using basic validation")
+                
+                # Basic validation
+                is_valid, error = cls._validate_file_type(file_obj, content_instance.type)
+                if not is_valid:
+                    raise StorageError(error)
+                
+                is_valid, error = cls._validate_file_size(file_obj)
+                if not is_valid:
+                    raise StorageError(error)
+                
+                metadata_from_validation = {}
+                sanitized_filename = file_obj.name if hasattr(file_obj, 'name') else 'unknown'
             
-            # Validate file size
-            is_valid, error = cls._validate_file_size(file_obj)
-            if not is_valid:
-                raise StorageError(error)
+            except (ValidationError, SecurityValidationError) as e:
+                # Log validation failure
+                if user:
+                    try:
+                        from content_validation.utils import log_validation
+                        log_validation(
+                            user_id=user.id if hasattr(user, 'id') else None,
+                            username=user.username if hasattr(user, 'username') else 'unknown',
+                            filename=filename,
+                            sanitized_filename=filename,
+                            content_type=content_instance.type,
+                            validation_result={
+                                'is_valid': False,
+                                'errors': [str(e)],
+                                'warnings': [],
+                                'metadata': {},
+                                'sanitized_filename': filename
+                            }
+                        )
+                    except:
+                        pass
+                
+                raise StorageError(f"Validation failed: {str(e)}")
             
             # Calculate hash for integrity checking
             content_storage = getattr(settings, 'CONTENT_STORAGE', {})
@@ -204,11 +266,15 @@ class ContentStorageManager:
             if enable_hash:
                 file_hash = cls._calculate_hash(file_obj, hash_algorithm)
             
-            # Generate storage path
+            # Use file hash from validation if available
+            if metadata_from_validation.get('file_hash'):
+                file_hash = metadata_from_validation['file_hash']
+            
+            # Generate storage path with sanitized filename
             storage_path = cls._generate_storage_path(content_instance)
             
-            # Store filename for later use
-            content_instance._uploaded_file_name = file_obj.name if hasattr(file_obj, 'name') else os.path.basename(storage_path)
+            # Store sanitized filename for later use
+            content_instance._uploaded_file_name = sanitized_filename
             
             # Save file to storage backend
             storage = cls._get_storage_backend()
@@ -228,15 +294,17 @@ class ContentStorageManager:
             # For now, file_url might be a relative path for local storage
             # or a public URL for S3 (if configured)
             
-            # Prepare metadata
+            # Prepare metadata (merge with validation metadata)
             metadata = {
                 'storage_path': saved_path,
                 'file_url': file_url,
                 'file_size': file_size,
                 'file_hash': file_hash,
                 'hash_algorithm': hash_algorithm if file_hash else None,
-                'content_type': getattr(file_obj, 'content_type', ''),
+                'content_type': metadata_from_validation.get('mime_type') or getattr(file_obj, 'content_type', ''),
                 'saved_at': timezone.now().isoformat(),
+                'sanitized_filename': sanitized_filename,
+                **{k: v for k, v in metadata_from_validation.items() if k not in ['file_size', 'file_hash', 'mime_type']}
             }
             
             logger.info(f"Content file saved: {saved_path} (size: {file_size} bytes, hash: {file_hash})")

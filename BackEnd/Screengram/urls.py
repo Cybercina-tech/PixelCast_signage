@@ -23,5 +23,10 @@ urlpatterns = [
     path('api/', include('signage.urls')),
     path('api/', include('templates.urls')),
     path('api/', include('commands.urls')),
+    path('api/', include('bulk_operations.urls')),  # Bulk operations endpoints
+    path('api/', include('content_validation.urls')),  # Content validation endpoints
+    path('api/', include('analytics.urls')),  # Analytics dashboard endpoints
+    path('api/core/', include('core.urls')),  # Core infrastructure (audit, backup)
     path('api/logs/', include('log.urls')),
+    path('', include('api_docs.urls')),  # API documentation (Swagger/OpenAPI)
 ]

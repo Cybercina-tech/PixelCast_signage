@@ -27,12 +27,18 @@ except ImportError:
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-7szgl4mmm9n0!&u3d4-=iut39ffowsvlr^r9img3r!izj=n3tq'
+# In production, set SECRET_KEY as an environment variable
+SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-7szgl4mmm9n0!&u3d4-=iut39ffowsvlr^r9img3r!izj=n3tq')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get('DEBUG', 'True').lower() == 'true'
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '').split(',') if os.environ.get('ALLOWED_HOSTS') else []
+
+# Account Lockout Configuration
+ACCOUNT_LOCKOUT_ENABLED = os.environ.get('ACCOUNT_LOCKOUT_ENABLED', 'True').lower() == 'true'
+MAX_LOGIN_ATTEMPTS = int(os.environ.get('MAX_LOGIN_ATTEMPTS', '5'))
+LOCKOUT_DURATION = int(os.environ.get('LOCKOUT_DURATION', '900'))  # 15 minutes
 
 
 # Application definition
@@ -47,12 +53,18 @@ INSTALLED_APPS = [
     'channels',  # Django Channels for WebSocket support
     'rest_framework',  # Django REST Framework
     'rest_framework_simplejwt',  # JWT Authentication
+    'core',  # Core infrastructure (caching, rate limiting, audit, backup)
     'accounts',  # App for User management (must be before other apps)
     'signage',  # App for Screen management
     'templates',  # App for Template management
     'commands',  # App for Command management
     'log',  # App for centralized logging and monitoring
     'notifications',  # App for notification system
+    'bulk_operations',  # App for bulk operations
+    'content_validation',  # App for content validation
+    'analytics',  # App for analytics dashboard
+    'drf_spectacular',  # OpenAPI/Swagger documentation
+    'api_docs',  # API documentation configuration
 ]
 
 MIDDLEWARE = [
@@ -61,6 +73,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'core.rate_limiting.RateLimitMiddleware',  # Rate limiting middleware
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -102,9 +115,16 @@ DATABASES = {
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+        'OPTIONS': {
+            'user_attributes': ('username', 'email', 'full_name'),
+            'max_similarity': 0.7,
+        }
     },
     {
         'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        'OPTIONS': {
+            'min_length': 8,
+        }
     },
     {
         'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
@@ -167,6 +187,7 @@ REST_FRAMEWORK = {
         'rest_framework.parsers.FormParser',
         'rest_framework.parsers.MultiPartParser',
     ],
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
 
 # JWT Settings
@@ -272,3 +293,115 @@ CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = TIME_ZONE
+
+# OpenAPI/Swagger Documentation Settings
+try:
+    from .schema_settings import SPECTACULAR_SETTINGS
+except ImportError:
+    # Fallback if schema_settings doesn't exist yet
+    SPECTACULAR_SETTINGS = {
+        'TITLE': 'ScreenGram API',
+        'DESCRIPTION': 'ScreenGram Digital Signage Management API',
+        'VERSION': '1.0.0',
+        'SCHEMA_PATH_PREFIX': '/api/',
+    }
+
+# Caching Configuration
+# For production: use Redis
+# For development: use LocMemCache (fallback)
+USE_REDIS_CACHE = os.environ.get('USE_REDIS_CACHE', 'False').lower() == 'true'
+
+if USE_REDIS_CACHE:
+    # Use Django's built-in Redis cache backend (Django 5.2+)
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+            'LOCATION': os.environ.get('REDIS_CACHE_URL', 'redis://127.0.0.1:6379/1'),
+            'OPTIONS': {
+                # Optional: uncomment if using django-redis
+                # 'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            },
+            'KEY_PREFIX': 'screengram',
+            'TIMEOUT': 300,  # Default timeout: 5 minutes
+        }
+    }
+else:
+    # Development: use in-memory cache
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+            'LOCATION': 'screengram-cache',
+        }
+    }
+
+# Rate Limiting Configuration
+RATE_LIMITING = {
+    'ENABLED': os.environ.get('RATE_LIMITING_ENABLED', 'True').lower() == 'true',
+    'STRATEGY': 'combined',  # 'user', 'ip', 'role', 'endpoint', 'combined'
+    'DEFAULT_PER_MINUTE': 60,
+    'DEFAULT_PER_HOUR': 1000,
+    'DEFAULT_PER_DAY': 10000,
+    
+    # Per-role rate limits (overrides defaults)
+    'PER_ROLE_LIMITS': {
+        'SuperAdmin': {
+            'per_minute': 200,
+            'per_hour': 5000,
+            'per_day': 50000,
+        },
+        'Admin': {
+            'per_minute': 150,
+            'per_hour': 3000,
+            'per_day': 30000,
+        },
+        'Manager': {
+            'per_minute': 100,
+            'per_hour': 2000,
+            'per_day': 20000,
+        },
+        'Operator': {
+            'per_minute': 60,
+            'per_hour': 1000,
+            'per_day': 10000,
+        },
+        'Viewer': {
+            'per_minute': 30,
+            'per_hour': 500,
+            'per_day': 5000,
+        },
+    },
+    
+    # Endpoint-specific limits (optional)
+    'ENDPOINTS': {
+        # '/api/analytics/': {
+        #     'strategy': 'user',
+        #     'limits': {
+        #         'per_minute': 30,
+        #         'per_hour': 500,
+        #     },
+        # },
+    },
+}
+
+# Backup Configuration
+BACKUP_CONFIG = {
+    'BACKUP_DIR': os.environ.get('BACKUP_DIR', BASE_DIR / 'backups'),
+    'RETENTION_DAYS': int(os.environ.get('BACKUP_RETENTION_DAYS', '30')),
+    'ENABLE_AUTO_BACKUP': os.environ.get('ENABLE_AUTO_BACKUP', 'False').lower() == 'true',
+    'AUTO_BACKUP_SCHEDULE': {
+        'database': 'daily',  # 'daily', 'weekly', 'monthly'
+        'media': 'weekly',
+        'full': 'monthly',
+    },
+    'BACKUP_TIME': '02:00',  # Time to run scheduled backups (UTC)
+    'COMPRESSION': True,
+    'ENCRYPTION': os.environ.get('BACKUP_ENCRYPTION', 'False').lower() == 'true',
+}
+
+# Audit Logging Configuration
+AUDIT_LOGGING = {
+    'ENABLED': os.environ.get('AUDIT_LOGGING_ENABLED', 'True').lower() == 'true',
+    'LOG_READS': os.environ.get('AUDIT_LOG_READS', 'False').lower() == 'true',  # Log read operations
+    'RETENTION_DAYS': int(os.environ.get('AUDIT_RETENTION_DAYS', '365')),  # Keep logs for 1 year
+    'AUTO_CLEANUP': os.environ.get('AUDIT_AUTO_CLEANUP', 'True').lower() == 'true',
+}

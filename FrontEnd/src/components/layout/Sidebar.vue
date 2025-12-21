@@ -18,7 +18,7 @@
             <router-link
               :to="item.path"
               class="flex items-center px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors"
-              :class="{ 'bg-gray-800': $route.path.startsWith(item.path) }"
+              :class="{ 'bg-gray-800': $route.path === item.path || ($route.path.startsWith(item.path) && item.path !== '/') }"
             >
               <component :is="item.icon" class="w-5 h-5 mr-3" />
               <span>{{ item.label }}</span>
@@ -49,7 +49,11 @@ import {
   UsersIcon,
   DocumentReportIcon,
   Cog6ToothIcon,
+  ChartBarIcon,
+  ShieldCheckIcon,
+  ServerIcon,
 } from '@heroicons/vue/24/outline'
+import { useAuthStore } from '@/stores/auth'
 
 defineProps({
   isOpen: {
@@ -60,6 +64,22 @@ defineProps({
 
 defineEmits(['close'])
 
+const authStore = useAuthStore()
+
+// Check if user has permission for analytics (Manager or Admin)
+const canAccessAnalytics = () => {
+  if (!authStore.user) return false
+  const role = authStore.user.role
+  return role === 'Manager' || role === 'Admin' || role === 'SuperAdmin'
+}
+
+// Check if user has permission for core infrastructure (Manager or Admin)
+const canAccessCore = () => {
+  if (!authStore.user) return false
+  const role = authStore.user.role
+  return role === 'Manager' || role === 'Admin' || role === 'SuperAdmin'
+}
+
 const menuItems = [
   { path: '/dashboard', label: 'Dashboard', icon: HomeIcon },
   { path: '/screens', label: 'Screens', icon: TvIcon },
@@ -69,6 +89,11 @@ const menuItems = [
   { path: '/commands', label: 'Commands', icon: CommandLineIcon },
   { path: '/users', label: 'Users & Roles', icon: UsersIcon },
   { path: '/logs', label: 'Logs & Reports', icon: DocumentReportIcon },
+  ...(canAccessAnalytics() ? [{ path: '/analytics', label: 'Analytics', icon: ChartBarIcon }] : []),
+  ...(canAccessCore() ? [
+    { path: '/core/audit-logs', label: 'Audit Logs', icon: ShieldCheckIcon },
+    { path: '/core/backups', label: 'Backups', icon: ServerIcon },
+  ] : []),
   { path: '/settings', label: 'Settings', icon: Cog6ToothIcon },
 ]
 </script>

@@ -67,11 +67,17 @@ export const useAuthStore = defineStore('auth', {
       try {
         const response = await usersAPI.me()
         this.user = response.data
+        this.isAuthenticated = true
         return response.data
       } catch (error) {
         // If fetch fails, clear auth
-        if (error.response?.status === 401) {
-          await this.logout()
+        if (error.response?.status === 401 || error.response?.status === 403) {
+          this.token = null
+          this.refreshToken = null
+          this.user = null
+          this.isAuthenticated = false
+          localStorage.removeItem('auth_token')
+          localStorage.removeItem('refresh_token')
         }
         throw error
       }

@@ -1,7 +1,12 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser, Group, Permission
 from django.core.validators import RegexValidator, EmailValidator
+from django.core.exceptions import ValidationError
 from django.utils import timezone
+import logging
+from .validators import validate_username_format, validate_phone_number, validate_organization_name
+
+logger = logging.getLogger(__name__)
 
 
 # Validators
@@ -25,19 +30,21 @@ class User(AbstractUser):
     email = models.EmailField(
         unique=True,
         validators=[email_validator],
-        help_text="User email address (required and unique)"
+        help_text="User email address (required and unique)",
+        db_index=True,
     )
     full_name = models.CharField(
         max_length=255,
         blank=True,
         null=True,
-        help_text="User's full name"
+        help_text="User's full name",
+        db_index=True,
     )
     phone_number = models.CharField(
         max_length=20,
         blank=True,
         null=True,
-        validators=[phone_validator],
+        validators=[validate_phone_number],
         help_text="User's phone number"
     )
     
@@ -62,7 +69,19 @@ class User(AbstractUser):
         blank=True,
         null=True,
         db_index=True,
+        validators=[validate_organization_name],
         help_text="Organization name for multi-tenant support"
+    )
+    
+    # Security fields
+    failed_login_attempts = models.IntegerField(
+        default=0,
+        help_text="Number of consecutive failed login attempts"
+    )
+    locked_until = models.DateTimeField(
+        blank=True,
+        null=True,
+        help_text="Account lockout expiration time"
     )
     
     # Status & Metadata
@@ -202,12 +221,48 @@ class User(AbstractUser):
         self.last_seen = timezone.now()
         self.save(update_fields=['last_seen'])
     
+    def clean(self):
+        """Validate model fields"""
+        from django.core.exceptions import ValidationError
+        
+        # Validate username format
+        if self.username:
+            try:
+                validate_username_format(self.username)
+            except ValidationError as e:
+                raise ValidationError({'username': e.messages})
+        
+        # Validate email
+        if self.email:
+            self.email = self.email.lower()
+        
+        # Validate organization name
+        if self.organization_name:
+            try:
+                validate_organization_name(self.organization_name)
+            except ValidationError as e:
+                raise ValidationError({'organization_name': e.messages})
+        
+        super().clean()
+    
     # Override save to ensure email is unique and lowercase
     def save(self, *args, **kwargs):
+        # Run clean validation
+        self.full_clean()
+        
         if self.email:
             self.email = self.email.lower()
         if not self.username:
             self.username = self.email
+        
+        # Validate username format on save
+        if self.username:
+            try:
+                validate_username_format(self.username)
+            except ValidationError:
+                # If username validation fails, log but don't crash (for backward compatibility)
+                logger.warning(f'Username validation warning for user {self.username}')
+        
         super().save(*args, **kwargs)
 
 
