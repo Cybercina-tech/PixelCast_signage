@@ -1,0 +1,353 @@
+# ScreenGram - Future Plans & Roadmap
+
+This document outlines planned improvements, fixes, and enhancements for the ScreenGram Digital Signage Management System.
+
+## 1. Short-Term Fixes (Critical)
+
+### Upload System Stabilization
+**Priority**: 🔴 High  
+**Status**: Partially fixed
+
+- ✅ Fixed Content-Type header boundary issue
+- ❌ Investigate remaining 400 errors
+- ❌ Improve error messages and logging
+- ❌ Add comprehensive file validation
+- ❌ Fix file path generation edge cases
+- ❌ Test with various file types and sizes
+- ❌ Add retry logic for failed uploads
+
+**Impact**: Users cannot reliably upload content, blocking core functionality.
+
+### Media Storage Refactor
+**Priority**: 🔴 High  
+**Status**: Not started
+
+- ❌ Standardize storage path generation
+- ❌ Add storage backend abstraction layer
+- ❌ Implement per-user quota management
+- ❌ Add storage cleanup for orphaned files
+- ❌ Improve S3 integration and testing
+- ❌ Add storage migration tools
+- ❌ Document storage configuration
+
+**Impact**: Prevents storage issues and makes S3 integration reliable.
+
+### Preview Reliability
+**Priority**: 🔴 High  
+**Status**: Not started
+
+- ❌ Fix file_url generation
+- ❌ Ensure MEDIA_URL is properly configured
+- ❌ Add file existence verification
+- ❌ Implement proper CORS for media files
+- ❌ Add preview caching
+- ❌ Support for video previews
+- ❌ Add preview error handling
+
+**Impact**: Users cannot verify uploaded content before activating on screens.
+
+### Auth & Heartbeat Fixes
+**Priority**: 🔴 High  
+**Status**: Partially fixed
+
+- ✅ Added multiple credential extraction methods
+- ✅ Added request body parsing fallbacks
+- ❌ Fully resolve 401 authentication issues
+- ❌ Test all credential scenarios (screen_id, auth_token/secret_key, URL params, env vars)
+- ❌ Add comprehensive logging and monitoring
+- ❌ Improve error messages for debugging
+- ❌ Add automatic retry with exponential backoff
+
+**Impact**: Screens cannot reliably report status, breaking monitoring and command execution.
+
+### Screen Pairing Robustness
+**Priority**: 🟡 Medium  
+**Status**: Partially implemented
+
+- ✅ Pairing session creation and binding
+- ✅ Screen credential generation
+- ❌ Improve pairing expiration handling
+- ❌ Add pairing session cleanup automation
+- ❌ Improve error messages for pairing failures
+- ❌ Add pairing retry mechanism
+- ❌ Test pairing flow edge cases
+- ❌ Add pairing session monitoring
+
+**Impact**: Users may experience pairing failures, requiring manual intervention.
+
+## 2. Mid-Term Improvements
+
+### Proper Template + Widget + Layer System
+**Priority**: 🔴 High  
+**Status**: Models exist, rendering incomplete
+
+- ❌ Implement all widget type renderers (video, text, webview, chart, clock)
+- ❌ Add widget animation support
+- ❌ Implement layer animations
+- ❌ Add widget positioning tools
+- ❌ Improve widget resize/snap functionality
+- ❌ Add widget templates/library
+- ❌ Implement widget data binding for dynamic content
+
+**Impact**: Limited widget types available, reducing content flexibility.
+
+### Dynamic Data Fields (Prices, Menus, etc.)
+**Priority**: 🟡 Medium  
+**Status**: Not started
+
+- ❌ Design dynamic data field system
+- ❌ Add data source integration (API, CSV, database)
+- ❌ Implement data refresh mechanisms
+- ❌ Add data validation and error handling
+- ❌ Create widget data binding UI
+- ❌ Add caching for external data sources
+- ❌ Document data field API
+
+**Impact**: Templates cannot display dynamic/real-time data (prices, menus, weather, etc.).
+
+### Better Responsive Web Player (TV Sizes)
+**Priority**: 🟡 Medium  
+**Status**: Basic implementation exists
+
+- ✅ Responsive scaling implemented
+- ❌ Improve scaling algorithm for large displays (8K+)
+- ❌ Add display-specific optimizations
+- ❌ Implement adaptive quality based on screen size
+- ❌ Add performance monitoring
+- ❌ Optimize rendering for low-end devices
+- ❌ Add display calibration tools
+
+**Impact**: May not render optimally on very large displays or low-end devices.
+
+### Monitoring (CPU / RAM / Latency)
+**Priority**: 🟢 Low  
+**Status**: Partially implemented
+
+- ✅ Heartbeat accepts optional metrics (CPU, RAM, latency)
+- ❌ Add metrics dashboard in admin
+- ❌ Implement metrics alerting
+- ❌ Add historical metrics storage
+- ❌ Create metrics visualization
+- ❌ Add performance benchmarking
+- ❌ Document metrics collection
+
+**Impact**: Limited visibility into screen performance and health.
+
+### Content Scheduling Enhancements
+**Priority**: 🟡 Medium  
+**Status**: Basic scheduling exists
+
+- ✅ Basic scheduling with repeat types
+- ❌ Improve schedule conflict resolution
+- ❌ Add schedule preview/validation
+- ❌ Implement timezone support
+- ❌ Add schedule templates
+- ❌ Improve recurrence calculation accuracy
+- ❌ Add schedule analytics
+
+**Impact**: Scheduling may not work correctly for complex scenarios.
+
+### Template Preview & Designer
+**Priority**: 🟡 Medium  
+**Status**: Not started
+
+- ❌ Implement visual template preview in dashboard
+- ❌ Create drag-and-drop template designer
+- ❌ Add layer/widget positioning tools
+- ❌ Implement template templates/library
+- ❌ Add template export/import (JSON)
+- ❌ Create template versioning UI
+- ❌ Add template collaboration features
+
+**Impact**: Users must create templates via forms without visual feedback.
+
+## 3. Long-Term Vision
+
+### Scalability
+**Priority**: 🔴 High  
+**Status**: Not started
+
+- ❌ Database optimization (indexes, query optimization)
+- ❌ Implement database connection pooling
+- ❌ Add horizontal scaling support
+- ❌ Implement load balancing
+- ❌ Add caching layers (Redis for sessions, templates)
+- ❌ Optimize media delivery (CDN integration)
+- ❌ Add database read replicas
+- ❌ Implement message queue for async operations
+
+**Impact**: System may not handle large numbers of screens/users efficiently.
+
+### Multi-Screen Management
+**Priority**: 🟡 Medium  
+**Status**: Basic support exists
+
+- ✅ Screen CRUD operations
+- ❌ Add screen groups/organizations
+- ❌ Implement bulk operations UI
+- ❌ Add screen templates/profiles
+- ❌ Create screen assignment workflows
+- ❌ Add screen location mapping
+- ❌ Implement screen hierarchy
+
+**Impact**: Managing many screens is cumbersome without grouping/organization.
+
+### Content Scheduling Enhancements
+**Priority**: 🟡 Medium  
+**Status**: Basic scheduling exists
+
+- ✅ Schedule creation and execution
+- ❌ Add advanced scheduling (complex recurrences, timezone support)
+- ❌ Implement schedule preview
+- ❌ Add schedule analytics and reporting
+- ❌ Create schedule templates
+- ❌ Implement conditional scheduling
+- ❌ Add schedule conflict prevention
+
+**Impact**: Limited scheduling flexibility may not meet all use cases.
+
+### Analytics & Reporting
+**Priority**: 🟢 Low  
+**Status**: Basic analytics exist
+
+- ✅ Basic analytics dashboard
+- ❌ Add comprehensive reporting system
+- ❌ Implement custom report builder
+- ❌ Add export functionality (PDF, CSV, Excel)
+- ❌ Create report scheduling
+- ❌ Add data visualization improvements
+- ❌ Implement analytics API
+
+**Impact**: Limited insights into system usage and performance.
+
+### Offline / Fallback Modes
+**Priority**: 🟡 Medium  
+**Status**: Not implemented
+
+- ❌ Implement offline content caching on screens
+- ❌ Add fallback template support
+- ❌ Create offline mode detection
+- ❌ Implement content sync on reconnection
+- ❌ Add offline diagnostics
+- ❌ Create offline playback mode
+- ❌ Document offline behavior
+
+**Impact**: Screens may not display content when network is unavailable.
+
+### Advanced Features
+**Priority**: 🟢 Low  
+**Status**: Not started
+
+- ❌ Multi-language support
+- ❌ Custom branding/theming
+- ❌ White-label options
+- ❌ API rate limiting per user/organization
+- ❌ Webhook support for events
+- ❌ Third-party integrations
+- ❌ Plugin system for custom widgets
+
+**Impact**: Limited customization and integration options.
+
+## 4. Technical Suggestions
+
+### Folder Structure Improvements
+**Priority**: 🟢 Low  
+**Status**: Current structure is acceptable
+
+- Consider separating API apps more clearly
+- Add shared utilities module
+- Better organization of serializers
+- Separate business logic from views
+
+### Media Storage Per-User
+**Priority**: 🟡 Medium  
+**Status**: Partially implemented
+
+- ✅ User-based directory structure exists
+- ❌ Add user quota management
+- ❌ Implement storage cleanup for deleted users
+- ❌ Add storage usage reporting
+- ❌ Implement storage migration tools
+
+### API Consistency
+**Priority**: 🟡 Medium  
+**Status**: Generally consistent
+
+- Standardize error response format
+- Implement consistent pagination
+- Add API versioning
+- Improve API documentation
+- Add API deprecation strategy
+
+### Validation & Error Handling
+**Priority**: 🟡 Medium  
+**Status**: Basic validation exists
+
+- Add comprehensive input validation
+- Implement consistent error responses
+- Add validation error aggregation
+- Improve client-side validation
+- Add server-side validation testing
+
+### Security Improvements
+**Priority**: 🔴 High  
+**Status**: Good security foundation
+
+- ✅ JWT authentication, RBAC, account lockout implemented
+- ❌ Add rate limiting per user (currently per role)
+- ❌ Implement API key authentication for screens
+- ❌ Add request signing for screen commands
+- ❌ Improve CORS configuration
+- ❌ Add security headers (CSP, HSTS, etc.)
+- ❌ Implement audit log retention policies
+- ❌ Add security monitoring and alerting
+
+### Testing
+**Priority**: 🟡 Medium  
+**Status**: Limited testing
+
+- Add comprehensive unit tests
+- Implement integration tests
+- Add end-to-end tests
+- Create test data fixtures
+- Add performance/load testing
+- Document testing strategy
+
+### Documentation
+**Priority**: 🟡 Medium  
+**Status**: Basic documentation exists
+
+- ✅ README.md and FuturePlans.md created
+- ❌ Add API documentation (beyond Swagger)
+- ❌ Create deployment guide
+- ❌ Add development setup guide
+- ❌ Document database schema
+- ❌ Create troubleshooting guide
+- ❌ Add architecture diagrams
+
+### Database Migration Strategy
+**Priority**: 🟡 Medium  
+**Status**: Django migrations exist
+
+- Document migration procedure
+- Add rollback procedures
+- Create migration testing strategy
+- Document schema changes
+- Add migration monitoring
+
+### Performance Optimization
+**Priority**: 🟡 Medium  
+**Status**: Basic optimization exists
+
+- Add database query optimization
+- Implement caching strategy
+- Optimize media delivery
+- Add lazy loading where appropriate
+- Implement pagination consistently
+- Add performance monitoring
+
+---
+
+**Last Updated**: 2024  
+**Priority Legend**: 🔴 High | 🟡 Medium | 🟢 Low
+

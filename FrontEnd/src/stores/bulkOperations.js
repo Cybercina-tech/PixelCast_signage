@@ -4,7 +4,7 @@
  */
 import { defineStore } from 'pinia'
 import { bulkOperationsAPI } from '../services/api'
-import { useToastStore } from './toast'
+import { useNotificationStore } from './notification'
 
 export const useBulkOperationsStore = defineStore('bulkOperations', {
   state: () => ({
@@ -20,16 +20,16 @@ export const useBulkOperationsStore = defineStore('bulkOperations', {
     async bulkDeleteScreens(itemIds) {
       this.loading = true
       this.error = null
-      const toastStore = useToastStore()
+      const notifyStore = useNotificationStore()
       
       try {
         const response = await bulkOperationsAPI.screensDelete({ item_ids: itemIds })
         this.lastResult = response.data
-        toastStore.success(`Deleted ${response.data.success_count || 0} screens`)
+        notifyStore.success(`Deleted ${response.data.success_count || 0} screens`)
         return response.data
       } catch (error) {
         this.error = error.response?.data?.error || error.response?.data?.detail || error.message
-        toastStore.error('Failed to delete screens: ' + this.error)
+        notifyStore.error('Failed to delete screens: ' + this.error)
         throw error
       } finally {
         this.loading = false
@@ -42,7 +42,7 @@ export const useBulkOperationsStore = defineStore('bulkOperations', {
     async bulkUpdateScreens(itemIds, updateData) {
       this.loading = true
       this.error = null
-      const toastStore = useToastStore()
+      const notifyStore = useNotificationStore()
       
       try {
         const response = await bulkOperationsAPI.screensUpdate({
@@ -50,11 +50,11 @@ export const useBulkOperationsStore = defineStore('bulkOperations', {
           update_data: updateData,
         })
         this.lastResult = response.data
-        toastStore.success(`Updated ${response.data.success_count || 0} screens`)
+        notifyStore.success(`Updated ${response.data.success_count || 0} screens`)
         return response.data
       } catch (error) {
         this.error = error.response?.data?.error || error.response?.data?.detail || error.message
-        toastStore.error('Failed to update screens: ' + this.error)
+        notifyStore.error('Failed to update screens: ' + this.error)
         throw error
       } finally {
         this.loading = false
@@ -67,7 +67,7 @@ export const useBulkOperationsStore = defineStore('bulkOperations', {
     async bulkActivateTemplateOnScreens(screenIds, templateId, syncContent = true) {
       this.loading = true
       this.error = null
-      const toastStore = useToastStore()
+      const notifyStore = useNotificationStore()
       
       try {
         const response = await bulkOperationsAPI.screensActivateTemplate({
@@ -76,11 +76,11 @@ export const useBulkOperationsStore = defineStore('bulkOperations', {
           sync_content: syncContent,
         })
         this.lastResult = response.data
-        toastStore.success(`Activated template on ${response.data.success_count || 0} screens`)
+        notifyStore.success(`Activated template on ${response.data.success_count || 0} screens`)
         return response.data
       } catch (error) {
         this.error = error.response?.data?.error || error.response?.data?.detail || error.message
-        toastStore.error('Failed to activate template: ' + this.error)
+        notifyStore.error('Failed to activate template: ' + this.error)
         throw error
       } finally {
         this.loading = false
@@ -93,7 +93,7 @@ export const useBulkOperationsStore = defineStore('bulkOperations', {
     async bulkSendCommandToScreens(screenIds, commandType, payload = {}, priority = 0) {
       this.loading = true
       this.error = null
-      const toastStore = useToastStore()
+      const notifyStore = useNotificationStore()
       
       try {
         const response = await bulkOperationsAPI.screensSendCommand({
@@ -103,11 +103,11 @@ export const useBulkOperationsStore = defineStore('bulkOperations', {
           priority: priority,
         })
         this.lastResult = response.data
-        toastStore.success(`Sent command to ${response.data.success_count || 0} screens`)
+        notifyStore.success(`Sent command to ${response.data.success_count || 0} screens`)
         return response.data
       } catch (error) {
         this.error = error.response?.data?.error || error.response?.data?.detail || error.message
-        toastStore.error('Failed to send command: ' + this.error)
+        notifyStore.error('Failed to send command: ' + this.error)
         throw error
       } finally {
         this.loading = false
@@ -120,16 +120,16 @@ export const useBulkOperationsStore = defineStore('bulkOperations', {
     async bulkDeleteTemplates(itemIds) {
       this.loading = true
       this.error = null
-      const toastStore = useToastStore()
+      const notifyStore = useNotificationStore()
       
       try {
         const response = await bulkOperationsAPI.templatesDelete({ item_ids: itemIds })
         this.lastResult = response.data
-        toastStore.success(`Deleted ${response.data.success_count || 0} templates`)
+        notifyStore.success(`Deleted ${response.data.success_count || 0} templates`)
         return response.data
       } catch (error) {
         this.error = error.response?.data?.error || error.response?.data?.detail || error.message
-        toastStore.error('Failed to delete templates: ' + this.error)
+        notifyStore.error('Failed to delete templates: ' + this.error)
         throw error
       } finally {
         this.loading = false
@@ -142,7 +142,7 @@ export const useBulkOperationsStore = defineStore('bulkOperations', {
     async bulkUpdateTemplates(itemIds, updateData) {
       this.loading = true
       this.error = null
-      const toastStore = useToastStore()
+      const notifyStore = useNotificationStore()
       
       try {
         const response = await bulkOperationsAPI.templatesUpdate({
@@ -150,11 +150,11 @@ export const useBulkOperationsStore = defineStore('bulkOperations', {
           update_data: updateData,
         })
         this.lastResult = response.data
-        toastStore.success(`Updated ${response.data.success_count || 0} templates`)
+        notifyStore.success(`Updated ${response.data.success_count || 0} templates`)
         return response.data
       } catch (error) {
         this.error = error.response?.data?.error || error.response?.data?.detail || error.message
-        toastStore.error('Failed to update templates: ' + this.error)
+        notifyStore.error('Failed to update templates: ' + this.error)
         throw error
       } finally {
         this.loading = false
@@ -167,16 +167,16 @@ export const useBulkOperationsStore = defineStore('bulkOperations', {
     async bulkActivateTemplates(itemIds) {
       this.loading = true
       this.error = null
-      const toastStore = useToastStore()
+      const notifyStore = useNotificationStore()
       
       try {
         const response = await bulkOperationsAPI.templatesActivate({ item_ids: itemIds })
         this.lastResult = response.data
-        toastStore.success(`Activated ${response.data.success_count || 0} templates`)
+        notifyStore.success(`Activated ${response.data.success_count || 0} templates`)
         return response.data
       } catch (error) {
         this.error = error.response?.data?.error || error.response?.data?.detail || error.message
-        toastStore.error('Failed to activate templates: ' + this.error)
+        notifyStore.error('Failed to activate templates: ' + this.error)
         throw error
       } finally {
         this.loading = false
@@ -189,7 +189,7 @@ export const useBulkOperationsStore = defineStore('bulkOperations', {
     async bulkActivateTemplatesOnScreens(templateIds, screenIds) {
       this.loading = true
       this.error = null
-      const toastStore = useToastStore()
+      const notifyStore = useNotificationStore()
       
       try {
         const response = await bulkOperationsAPI.templatesActivateOnScreens({
@@ -197,11 +197,11 @@ export const useBulkOperationsStore = defineStore('bulkOperations', {
           screen_ids: screenIds,
         })
         this.lastResult = response.data
-        toastStore.success(`Activated templates on ${response.data.success_count || 0} screens`)
+        notifyStore.success(`Activated templates on ${response.data.success_count || 0} screens`)
         return response.data
       } catch (error) {
         this.error = error.response?.data?.error || error.response?.data?.detail || error.message
-        toastStore.error('Failed to activate templates on screens: ' + this.error)
+        notifyStore.error('Failed to activate templates on screens: ' + this.error)
         throw error
       } finally {
         this.loading = false
@@ -214,16 +214,16 @@ export const useBulkOperationsStore = defineStore('bulkOperations', {
     async bulkDeleteContents(itemIds) {
       this.loading = true
       this.error = null
-      const toastStore = useToastStore()
+      const notifyStore = useNotificationStore()
       
       try {
         const response = await bulkOperationsAPI.contentsDelete({ item_ids: itemIds })
         this.lastResult = response.data
-        toastStore.success(`Deleted ${response.data.success_count || 0} contents`)
+        notifyStore.success(`Deleted ${response.data.success_count || 0} contents`)
         return response.data
       } catch (error) {
         this.error = error.response?.data?.error || error.response?.data?.detail || error.message
-        toastStore.error('Failed to delete contents: ' + this.error)
+        notifyStore.error('Failed to delete contents: ' + this.error)
         throw error
       } finally {
         this.loading = false
@@ -236,7 +236,7 @@ export const useBulkOperationsStore = defineStore('bulkOperations', {
     async bulkUpdateContents(itemIds, updateData) {
       this.loading = true
       this.error = null
-      const toastStore = useToastStore()
+      const notifyStore = useNotificationStore()
       
       try {
         const response = await bulkOperationsAPI.contentsUpdate({
@@ -244,11 +244,11 @@ export const useBulkOperationsStore = defineStore('bulkOperations', {
           update_data: updateData,
         })
         this.lastResult = response.data
-        toastStore.success(`Updated ${response.data.success_count || 0} contents`)
+        notifyStore.success(`Updated ${response.data.success_count || 0} contents`)
         return response.data
       } catch (error) {
         this.error = error.response?.data?.error || error.response?.data?.detail || error.message
-        toastStore.error('Failed to update contents: ' + this.error)
+        notifyStore.error('Failed to update contents: ' + this.error)
         throw error
       } finally {
         this.loading = false
@@ -261,7 +261,7 @@ export const useBulkOperationsStore = defineStore('bulkOperations', {
     async bulkDownloadContents(itemIds, screenIds) {
       this.loading = true
       this.error = null
-      const toastStore = useToastStore()
+      const notifyStore = useNotificationStore()
       
       try {
         const response = await bulkOperationsAPI.contentsDownload({
@@ -269,11 +269,11 @@ export const useBulkOperationsStore = defineStore('bulkOperations', {
           screen_ids: screenIds,
         })
         this.lastResult = response.data
-        toastStore.success(`Downloaded ${response.data.success_count || 0} contents`)
+        notifyStore.success(`Downloaded ${response.data.success_count || 0} contents`)
         return response.data
       } catch (error) {
         this.error = error.response?.data?.error || error.response?.data?.detail || error.message
-        toastStore.error('Failed to download contents: ' + this.error)
+        notifyStore.error('Failed to download contents: ' + this.error)
         throw error
       } finally {
         this.loading = false
@@ -286,16 +286,16 @@ export const useBulkOperationsStore = defineStore('bulkOperations', {
     async bulkRetryContents(itemIds) {
       this.loading = true
       this.error = null
-      const toastStore = useToastStore()
+      const notifyStore = useNotificationStore()
       
       try {
         const response = await bulkOperationsAPI.contentsRetry({ item_ids: itemIds })
         this.lastResult = response.data
-        toastStore.success(`Retried ${response.data.success_count || 0} content downloads`)
+        notifyStore.success(`Retried ${response.data.success_count || 0} content downloads`)
         return response.data
       } catch (error) {
         this.error = error.response?.data?.error || error.response?.data?.detail || error.message
-        toastStore.error('Failed to retry content downloads: ' + this.error)
+        notifyStore.error('Failed to retry content downloads: ' + this.error)
         throw error
       } finally {
         this.loading = false
@@ -308,16 +308,16 @@ export const useBulkOperationsStore = defineStore('bulkOperations', {
     async bulkDeleteSchedules(itemIds) {
       this.loading = true
       this.error = null
-      const toastStore = useToastStore()
+      const notifyStore = useNotificationStore()
       
       try {
         const response = await bulkOperationsAPI.schedulesDelete({ item_ids: itemIds })
         this.lastResult = response.data
-        toastStore.success(`Deleted ${response.data.success_count || 0} schedules`)
+        notifyStore.success(`Deleted ${response.data.success_count || 0} schedules`)
         return response.data
       } catch (error) {
         this.error = error.response?.data?.error || error.response?.data?.detail || error.message
-        toastStore.error('Failed to delete schedules: ' + this.error)
+        notifyStore.error('Failed to delete schedules: ' + this.error)
         throw error
       } finally {
         this.loading = false
@@ -330,7 +330,7 @@ export const useBulkOperationsStore = defineStore('bulkOperations', {
     async bulkUpdateSchedules(itemIds, updateData) {
       this.loading = true
       this.error = null
-      const toastStore = useToastStore()
+      const notifyStore = useNotificationStore()
       
       try {
         const response = await bulkOperationsAPI.schedulesUpdate({
@@ -338,11 +338,11 @@ export const useBulkOperationsStore = defineStore('bulkOperations', {
           update_data: updateData,
         })
         this.lastResult = response.data
-        toastStore.success(`Updated ${response.data.success_count || 0} schedules`)
+        notifyStore.success(`Updated ${response.data.success_count || 0} schedules`)
         return response.data
       } catch (error) {
         this.error = error.response?.data?.error || error.response?.data?.detail || error.message
-        toastStore.error('Failed to update schedules: ' + this.error)
+        notifyStore.error('Failed to update schedules: ' + this.error)
         throw error
       } finally {
         this.loading = false
@@ -355,16 +355,16 @@ export const useBulkOperationsStore = defineStore('bulkOperations', {
     async bulkActivateSchedules(itemIds) {
       this.loading = true
       this.error = null
-      const toastStore = useToastStore()
+      const notifyStore = useNotificationStore()
       
       try {
         const response = await bulkOperationsAPI.schedulesActivate({ item_ids: itemIds })
         this.lastResult = response.data
-        toastStore.success(`Activated ${response.data.success_count || 0} schedules`)
+        notifyStore.success(`Activated ${response.data.success_count || 0} schedules`)
         return response.data
       } catch (error) {
         this.error = error.response?.data?.error || error.response?.data?.detail || error.message
-        toastStore.error('Failed to activate schedules: ' + this.error)
+        notifyStore.error('Failed to activate schedules: ' + this.error)
         throw error
       } finally {
         this.loading = false
@@ -377,16 +377,16 @@ export const useBulkOperationsStore = defineStore('bulkOperations', {
     async bulkExecuteSchedules(itemIds) {
       this.loading = true
       this.error = null
-      const toastStore = useToastStore()
+      const notifyStore = useNotificationStore()
       
       try {
         const response = await bulkOperationsAPI.schedulesExecute({ item_ids: itemIds })
         this.lastResult = response.data
-        toastStore.success(`Executed ${response.data.success_count || 0} schedules`)
+        notifyStore.success(`Executed ${response.data.success_count || 0} schedules`)
         return response.data
       } catch (error) {
         this.error = error.response?.data?.error || error.response?.data?.detail || error.message
-        toastStore.error('Failed to execute schedules: ' + this.error)
+        notifyStore.error('Failed to execute schedules: ' + this.error)
         throw error
       } finally {
         this.loading = false
@@ -399,16 +399,16 @@ export const useBulkOperationsStore = defineStore('bulkOperations', {
     async bulkDeleteCommands(itemIds) {
       this.loading = true
       this.error = null
-      const toastStore = useToastStore()
+      const notifyStore = useNotificationStore()
       
       try {
         const response = await bulkOperationsAPI.commandsDelete({ item_ids: itemIds })
         this.lastResult = response.data
-        toastStore.success(`Deleted ${response.data.success_count || 0} commands`)
+        notifyStore.success(`Deleted ${response.data.success_count || 0} commands`)
         return response.data
       } catch (error) {
         this.error = error.response?.data?.error || error.response?.data?.detail || error.message
-        toastStore.error('Failed to delete commands: ' + this.error)
+        notifyStore.error('Failed to delete commands: ' + this.error)
         throw error
       } finally {
         this.loading = false
@@ -421,16 +421,16 @@ export const useBulkOperationsStore = defineStore('bulkOperations', {
     async bulkExecuteCommands(itemIds) {
       this.loading = true
       this.error = null
-      const toastStore = useToastStore()
+      const notifyStore = useNotificationStore()
       
       try {
         const response = await bulkOperationsAPI.commandsExecute({ item_ids: itemIds })
         this.lastResult = response.data
-        toastStore.success(`Executed ${response.data.success_count || 0} commands`)
+        notifyStore.success(`Executed ${response.data.success_count || 0} commands`)
         return response.data
       } catch (error) {
         this.error = error.response?.data?.error || error.response?.data?.detail || error.message
-        toastStore.error('Failed to execute commands: ' + this.error)
+        notifyStore.error('Failed to execute commands: ' + this.error)
         throw error
       } finally {
         this.loading = false
@@ -443,16 +443,16 @@ export const useBulkOperationsStore = defineStore('bulkOperations', {
     async bulkRetryCommands(itemIds) {
       this.loading = true
       this.error = null
-      const toastStore = useToastStore()
+      const notifyStore = useNotificationStore()
       
       try {
         const response = await bulkOperationsAPI.commandsRetry({ item_ids: itemIds })
         this.lastResult = response.data
-        toastStore.success(`Retried ${response.data.success_count || 0} commands`)
+        notifyStore.success(`Retried ${response.data.success_count || 0} commands`)
         return response.data
       } catch (error) {
         this.error = error.response?.data?.error || error.response?.data?.detail || error.message
-        toastStore.error('Failed to retry commands: ' + this.error)
+        notifyStore.error('Failed to retry commands: ' + this.error)
         throw error
       } finally {
         this.loading = false

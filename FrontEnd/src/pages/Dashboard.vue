@@ -6,8 +6,8 @@
         <Card>
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-sm text-gray-600">Online Screens</p>
-              <p class="text-3xl font-bold text-green-600">{{ dashboardStore.stats.online_screens }}</p>
+              <p class="text-sm font-medium text-zinc-600 dark:text-zinc-400">Online Screens</p>
+              <p class="text-3xl font-semibold text-green-600 dark:text-green-500 mt-1">{{ dashboardStore.stats.online_screens }}</p>
             </div>
             <div class="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center">
               <TvIcon class="w-6 h-6 text-green-600" />
@@ -18,8 +18,8 @@
         <Card>
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-sm text-gray-600">Offline Screens</p>
-              <p class="text-3xl font-bold text-red-600">{{ dashboardStore.stats.offline_screens }}</p>
+              <p class="text-sm font-medium text-zinc-600 dark:text-zinc-400">Offline Screens</p>
+              <p class="text-3xl font-semibold text-red-600 dark:text-red-500 mt-1">{{ dashboardStore.stats.offline_screens }}</p>
             </div>
             <div class="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
               <TvIcon class="w-6 h-6 text-red-600" />
@@ -30,8 +30,8 @@
         <Card>
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-sm text-gray-600">Commands in Queue</p>
-              <p class="text-3xl font-bold text-yellow-600">{{ dashboardStore.stats.commands_in_queue }}</p>
+              <p class="text-sm font-medium text-zinc-600 dark:text-zinc-400">Commands in Queue</p>
+              <p class="text-3xl font-semibold text-yellow-600 dark:text-yellow-500 mt-1">{{ dashboardStore.stats.commands_in_queue }}</p>
             </div>
             <div class="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
               <CommandLineIcon class="w-6 h-6 text-yellow-600" />
@@ -42,8 +42,8 @@
         <Card>
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-sm text-gray-600">Content Downloading</p>
-              <p class="text-3xl font-bold text-blue-600">{{ dashboardStore.stats.content_downloading }}</p>
+              <p class="text-sm font-medium text-zinc-600 dark:text-zinc-400">Content Downloading</p>
+              <p class="text-3xl font-semibold text-blue-600 dark:text-blue-500 mt-1">{{ dashboardStore.stats.content_downloading }}</p>
             </div>
             <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
               <ArrowDownTrayIcon class="w-6 h-6 text-blue-600" />
@@ -82,31 +82,38 @@
       <!-- Recent Activities & Quick Actions -->
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card title="Recent Activities">
-          <div class="space-y-4">
+          <div v-if="dashboardStore.loading && (!dashboardStore.activities || dashboardStore.activities.length === 0)" class="text-center text-muted py-8">
+            Loading activities...
+          </div>
+          <div v-else-if="dashboardStore.error && (!dashboardStore.activities || dashboardStore.activities.length === 0)" class="text-center text-error py-8">
+            {{ dashboardStore.error }}
+          </div>
+          <div v-else-if="!dashboardStore.activities || dashboardStore.activities.length === 0" class="text-center text-muted py-8">
+            No recent activities
+          </div>
+          <div v-else class="space-y-4 max-h-[600px] overflow-y-auto">
             <div
               v-for="activity in dashboardStore.activities.slice(0, 10)"
               :key="activity.id"
-              class="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg"
+              class="flex items-start space-x-3 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl transition-all duration-200 hover:bg-slate-100 dark:hover:bg-slate-800"
             >
               <div class="flex-shrink-0">
                 <div
                   :class="[
                     'w-2 h-2 rounded-full mt-2',
                     activity.type === 'command' ? 'bg-blue-500' : '',
-                    activity.type === 'content' ? 'bg-green-500' : '',
-                    activity.type === 'template' ? 'bg-purple-500' : '',
+                    activity.type === 'content' ? 'bg-emerald-500' : '',
+                    activity.type === 'screen' ? 'bg-purple-500' : '',
+                    activity.type === 'template' ? 'bg-indigo-500' : '',
                   ]"
                 ></div>
               </div>
               <div class="flex-1 min-w-0">
-                <p class="text-sm text-gray-900">{{ activity.message }}</p>
-                <p class="text-xs text-gray-500 mt-1">
+                <p class="text-sm text-primary">{{ activity.message }}</p>
+                <p class="text-xs text-muted mt-1">
                   {{ formatDate(activity.timestamp) }}
                 </p>
               </div>
-            </div>
-            <div v-if="dashboardStore.activities.length === 0" class="text-center text-gray-500 py-8">
-              No recent activities
             </div>
           </div>
         </Card>
@@ -115,25 +122,25 @@
           <div class="space-y-3">
             <router-link
               to="/screens"
-              class="block w-full px-4 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition text-center"
+              class="block w-full px-4 py-3 btn-primary rounded-xl text-center transition-all duration-200"
             >
               Manage Screens
             </router-link>
             <router-link
               to="/templates"
-              class="block w-full px-4 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition text-center"
+              class="block w-full px-4 py-3 bg-gradient-to-r from-purple-600 to-purple-500 dark:from-purple-500 dark:to-purple-400 text-white dark:text-slate-900 rounded-xl hover:from-purple-700 hover:to-purple-600 dark:hover:from-purple-400 dark:hover:to-purple-300 transition-all duration-200 text-center font-semibold shadow-lg hover:shadow-xl"
             >
               Create Template
             </router-link>
             <router-link
               to="/commands"
-              class="block w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition text-center"
+              class="block w-full px-4 py-3 btn-secondary rounded-xl text-center transition-all duration-200"
             >
               Send Command
             </router-link>
             <router-link
               to="/contents"
-              class="block w-full px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition text-center"
+              class="block w-full px-4 py-3 btn-success rounded-xl text-center transition-all duration-200"
             >
               Upload Content
             </router-link>
@@ -145,7 +152,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, onUnmounted } from 'vue'
 import { useDashboardStore } from '@/stores/dashboard'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import Card from '@/components/common/Card.vue'
@@ -176,7 +183,7 @@ const chartOptions = {
 }
 
 const cpuChartData = computed(() => {
-  const metrics = dashboardStore.metrics.cpu.slice(-20) || []
+  const metrics = (dashboardStore.metrics?.cpu || []).slice(-20)
   return {
     labels: metrics.map(m => new Date(m.time).toLocaleTimeString()),
     datasets: [
@@ -192,7 +199,7 @@ const cpuChartData = computed(() => {
 })
 
 const memoryChartData = computed(() => {
-  const metrics = dashboardStore.metrics.memory.slice(-20) || []
+  const metrics = (dashboardStore.metrics?.memory || []).slice(-20)
   return {
     labels: metrics.map(m => new Date(m.time).toLocaleTimeString()),
     datasets: [
@@ -208,7 +215,7 @@ const memoryChartData = computed(() => {
 })
 
 const latencyChartData = computed(() => {
-  const metrics = dashboardStore.metrics.latency.slice(-20) || []
+  const metrics = (dashboardStore.metrics?.latency || []).slice(-20)
   return {
     labels: metrics.map(m => new Date(m.time).toLocaleTimeString()),
     datasets: [
@@ -223,16 +230,33 @@ const latencyChartData = computed(() => {
   }
 })
 
+let refreshInterval = null
+
 onMounted(async () => {
-  await dashboardStore.fetchStats()
-  await dashboardStore.fetchMetrics()
-  await dashboardStore.fetchActivities()
+  // Initial load
+  await Promise.all([
+    dashboardStore.fetchStats(),
+    dashboardStore.fetchMetrics(),
+    dashboardStore.fetchActivities(),
+  ])
   
   // Refresh stats every 30 seconds
-  setInterval(() => {
-    dashboardStore.fetchStats()
-    dashboardStore.fetchMetrics()
-    dashboardStore.fetchActivities()
+  refreshInterval = setInterval(async () => {
+    try {
+      await Promise.all([
+        dashboardStore.fetchStats(),
+        dashboardStore.fetchMetrics(),
+        dashboardStore.fetchActivities(),
+      ])
+    } catch (error) {
+      console.error('Error refreshing dashboard data:', error)
+    }
   }, 30000)
+})
+
+onUnmounted(() => {
+  if (refreshInterval) {
+    clearInterval(refreshInterval)
+  }
 })
 </script>

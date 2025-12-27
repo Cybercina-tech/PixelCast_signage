@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.utils import timezone
-from .models import ScreenStatusLog, ContentDownloadLog, CommandExecutionLog
+from .models import ScreenStatusLog, ContentDownloadLog, CommandExecutionLog, ErrorLog
 
 
 class ScreenStatusLogSerializer(serializers.ModelSerializer):
@@ -129,3 +129,26 @@ class LogSummarySerializer(serializers.Serializer):
     done_count = serializers.IntegerField(required=False, allow_null=True)
     running_count = serializers.IntegerField(required=False, allow_null=True)
     average_execution_time_seconds = serializers.FloatField(required=False, allow_null=True)
+
+
+class ErrorLogSerializer(serializers.ModelSerializer):
+    """
+    Serializer for ErrorLog model.
+    Includes all relevant fields and user information.
+    """
+    user_username = serializers.CharField(source='user.username', read_only=True)
+    user_email = serializers.CharField(source='user.email', read_only=True)
+    user_id = serializers.IntegerField(source='user.id', read_only=True)
+    level_display = serializers.CharField(source='get_level_display', read_only=True)
+    resolved_by_username = serializers.CharField(source='resolved_by.username', read_only=True)
+    
+    class Meta:
+        model = ErrorLog
+        fields = [
+            'id', 'timestamp', 'level', 'level_display', 'message', 'user',
+            'user_id', 'user_username', 'user_email', 'stack_trace', 'endpoint',
+            'request_method', 'ip_address', 'user_agent', 'exception_type',
+            'metadata', 'is_resolved', 'resolved_at', 'resolved_by',
+            'resolved_by_username'
+        ]
+        read_only_fields = ['id', 'timestamp']

@@ -155,8 +155,9 @@ class Template(models.Model):
             return self.layers.all()
         except AttributeError:
             # Layer model doesn't exist yet, return empty queryset
-            from django.db.models.query import EmptyQuerySet
-            return EmptyQuerySet(model=None)
+            # Import here to avoid circular import (Layer is defined later in this file)
+            from templates.models import Layer
+            return Layer.objects.none()
     
     def get_widgets(self):
         """
@@ -167,8 +168,10 @@ class Template(models.Model):
         """
         layers = self.get_layers()
         if not layers.exists():
-            from django.db.models.query import EmptyQuerySet
-            return EmptyQuerySet(model=None)
+            # Return empty queryset using Widget model
+            # Import here to avoid circular import (Widget is defined later in this file)
+            from templates.models import Widget
+            return Widget.objects.none()
         
         # Get all widgets from all layers using layer IDs
         layer_ids = layers.values_list('id', flat=True)
@@ -184,8 +187,10 @@ class Template(models.Model):
         """
         widgets = self.get_widgets()
         if not widgets.exists():
-            from django.db.models.query import EmptyQuerySet
-            return EmptyQuerySet(model=None)
+            # Return empty queryset using Content model
+            # Import here to avoid circular import (Content is defined later in this file)
+            from templates.models import Content
+            return Content.objects.none()
         
         # Get all contents from all widgets using widget IDs
         widget_ids = widgets.values_list('id', flat=True)
@@ -539,6 +544,11 @@ class Content(models.Model):
         blank=True,
         help_text="Dynamic or structured data for content"
     )
+    text_content = models.TextField(
+        blank=True,
+        null=True,
+        help_text="Manual text content for text type (alternative to file upload)"
+    )
     duration = models.FloatField(
         blank=True,
         null=True,
@@ -888,48 +898,91 @@ class Content(models.Model):
             
             # Create download command for screen
             from commands.models import Command
-            command = Command.objects.create(
-                screen=screen,
-                type='sync_content',
-                payload={
-                    'content_id': str(self.id),
-                    'content_url': secure_url,
-                    'content_type': self.type,
-                    'file_size': self.file_size,
-                    'file_hash': self.file_hash,
-                    'hash_algorithm': self.hash_algorithm,
-                },
-                priority=5
-            )
+            from django.db import transaction
+            
+            # Use atomic transaction for command creation and status update
+            with transaction.atomic():
+                command = Command.objects.create(
+                    screen=screen,
+                    type='sync_content',
+                    payload={
+                        'content_id': str(self.id),
+                        'content_url': secure_url,
+                        'content_type': self.type,
+                        'file_size': self.file_size,
+                        'file_hash': self.file_hash,
+                        'hash_algorithm': self.hash_algorithm,
+                    },
+                    priority=5
+                )
             
             # Execute command (this will send via WebSocket or HTTP)
+            # Note: We mark as pending here, actual download status will be updated
+            # when screen confirms receipt via status update
             try:
-                command.execute()
+                success = command.execute()
                 
-                # Mark as downloaded
-                self.mark_downloaded()
-                # Reset retry count on success
-                self.retry_count = 0
-                self.save(update_fields=['retry_count'])
-                
-                # Create success download log entry
-                from log.models import ContentDownloadLog
-                ContentDownloadLog.objects.create(
-                    content=self,
-                    screen=screen,
-                    status='success',
-                    file_size=self.file_size,
-                    downloaded_at=timezone.now()
-                )
-                
-                return True
+                if success:
+                    # Use atomic transaction for status update and log creation
+                    with transaction.atomic():
+                        # Command was sent successfully, but don't mark as downloaded yet
+                        # The screen needs to confirm receipt. We'll mark as pending.
+                        # The status will be updated when screen sends confirmation
+                        self.download_status = 'pending'
+                        self.last_download_attempt = timezone.now()
+                        self.save(update_fields=['download_status', 'last_download_attempt'])
+                        
+                        # Create pending download log entry
+                        from log.models import ContentDownloadLog
+                        ContentDownloadLog.objects.create(
+                            content=self,
+                            screen=screen,
+                            status='pending',
+                            file_size=self.file_size,
+                            downloaded_at=None  # Will be set when screen confirms
+                        )
+                    
+                    # Note: Actual download confirmation should come from screen
+                    # via status update or command response
+                    return True
+                else:
+                    # Command failed to send - use atomic transaction
+                    with transaction.atomic():
+                        self.mark_failed("Failed to send download command to screen")
+                        # Create download log entry atomically
+                        from log.models import ContentDownloadLog
+                        ContentDownloadLog.objects.create(
+                            content=self,
+                            screen=screen,
+                            status='failed',
+                            retry_count=self.retry_count,
+                            error_message="Failed to send download command to screen"
+                        )
+                    return False
                 
             except Exception as cmd_error:
-                # Command execution failed
+                # Command execution failed - use atomic transaction
                 error_msg = str(cmd_error)
-                self.mark_failed()
+                with transaction.atomic():
+                    self.mark_failed()
+                    # Create download log entry atomically
+                    from log.models import ContentDownloadLog
+                    ContentDownloadLog.objects.create(
+                        content=self,
+                        screen=screen,
+                        status='failed',
+                        retry_count=self.retry_count,
+                        error_message=error_msg
+                    )
                 
-                # Create download log entry
+                raise ConnectionError(f"Download command failed: {error_msg}")
+                
+        except requests.exceptions.RequestException as e:
+            # Network or HTTP error - use atomic transaction
+            error_msg = str(e)
+            with transaction.atomic():
+                self.mark_failed()
+                # Create download log entry atomically
                 from log.models import ContentDownloadLog
                 ContentDownloadLog.objects.create(
                     content=self,
@@ -938,39 +991,22 @@ class Content(models.Model):
                     retry_count=self.retry_count,
                     error_message=error_msg
                 )
-                
-                raise ConnectionError(f"Download command failed: {error_msg}")
-                
-        except requests.exceptions.RequestException as e:
-            # Network or HTTP error
-            error_msg = str(e)
-            self.mark_failed()
-            
-            # Create download log entry
-            from log.models import ContentDownloadLog
-            ContentDownloadLog.objects.create(
-                content=self,
-                screen=screen,
-                status='failed',
-                retry_count=self.retry_count,
-                error_message=error_msg
-            )
             
             raise ConnectionError(f"Download failed: {error_msg}")
         except Exception as e:
-            # Other errors
+            # Other errors - use atomic transaction
             error_msg = str(e)
-            self.mark_failed()
-            
-            # Create download log entry
-            from log.models import ContentDownloadLog
-            ContentDownloadLog.objects.create(
-                content=self,
-                screen=screen,
-                status='failed',
-                retry_count=self.retry_count,
-                error_message=error_msg
-            )
+            with transaction.atomic():
+                self.mark_failed()
+                # Create download log entry atomically
+                from log.models import ContentDownloadLog
+                ContentDownloadLog.objects.create(
+                    content=self,
+                    screen=screen,
+                    status='failed',
+                    retry_count=self.retry_count,
+                    error_message=error_msg
+                )
             
             raise Exception(f"Download error: {error_msg}")
     
@@ -987,6 +1023,10 @@ class Content(models.Model):
         """
         # Only retry if status is 'failed' or 'pending'
         if self.download_status not in ['failed', 'pending']:
+            # Log why retry is not allowed
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.info(f"Retry download skipped for content {self.id}: download_status is '{self.download_status}' (must be 'failed' or 'pending')")
             return False
         
         # Check retry limit
@@ -997,8 +1037,10 @@ class Content(models.Model):
         try:
             return self.download_to_screen(screen, max_retries=max_retries)
         except Exception as e:
-            # Log error (in production, use proper logging)
-            print(f"Retry download failed for content {self.name} to screen {screen.name}: {str(e)}")
+            # Log error properly
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Retry download failed for content {self.id} ({self.name}) to screen {screen.id} ({screen.name}): {str(e)}", exc_info=True)
             return False
     
     def _get_screen_storage_path(self, screen):
@@ -1094,6 +1136,11 @@ class Content(models.Model):
                     URLValidator()(self.file_url)
                 except ValidationError:
                     return False, "Invalid file_url format"
+        
+        # Validate text content: either file_url or text_content must be provided
+        if self.type == 'text':
+            if not self.file_url and not self.storage_path and not self.text_content:
+                return False, "Text content requires either file_url/storage_path or text_content"
         
         # Validate content_json for JSON content
         if self.type == 'json':

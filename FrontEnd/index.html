@@ -5,6 +5,17 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SCREENGRAM - Enterprise Digital Signage Management Platform</title>
+    <script>
+      // Prevent theme flash by setting theme before Vue loads
+      (function() {
+        const storedTheme = localStorage.getItem('screengram_theme');
+        if (storedTheme === 'dark' || storedTheme === 'light') {
+          document.documentElement.classList.toggle('dark', storedTheme === 'dark');
+        } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+          document.documentElement.classList.add('dark');
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="app"></div>

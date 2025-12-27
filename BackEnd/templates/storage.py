@@ -130,31 +130,75 @@ class ContentStorageManager:
         return hash_obj.hexdigest()
     
     @staticmethod
-    def _generate_storage_path(content_instance) -> str:
+    def _generate_storage_path(content_instance, user=None) -> str:
         """
-        Generate storage path for content file.
+        Generate storage path for content file with user-based organization.
         
-        Path format: content/{content_id}/{filename}
+        Path format: users/user_{user_id}/{type}/{type}_{uuid}.{ext}
         
         Args:
             content_instance: Content model instance
+            user: User who uploaded the file (optional, will try to infer from content)
             
         Returns:
             Storage path string
         """
+        # Get user ID - priority: provided user > content widget layer template created_by
+        user_id = None
+        if user and hasattr(user, 'id'):
+            user_id = user.id
+        else:
+            # Try to get user from content relationships
+            try:
+                widget = content_instance.widget
+                if widget:
+                    layer = widget.layer
+                    if layer:
+                        template = layer.template
+                        if template and hasattr(template, 'created_by') and template.created_by:
+                            user_id = template.created_by.id
+            except (AttributeError, Exception) as e:
+                logger.warning(f"Could not determine user from content relationships: {e}")
+        
+        # Fallback to 'unknown' if no user found
+        if not user_id:
+            logger.warning(f"Content {content_instance.id} has no associated user, using 'unknown'")
+            user_id = 'unknown'
+        
+        # Get content type directory name
+        content_type = content_instance.type.lower()
+        type_dir_map = {
+            'image': 'images',
+            'video': 'videos',
+            'text': 'texts',
+            'webview': 'other',
+            'chart': 'other',
+            'json': 'other',
+            'other': 'other'
+        }
+        type_dir = type_dir_map.get(content_type, 'other')
+        
+        # Generate filename: {type}_{uuid}.{ext}
         content_id = str(content_instance.id)
         
-        # Get filename from file_obj or generate one
+        # Get file extension
         if hasattr(content_instance, '_uploaded_file_name'):
             filename = content_instance._uploaded_file_name
+            # Extract extension from filename
+            _, ext = os.path.splitext(filename)
+            if not ext:
+                ext = ContentStorageManager._get_file_extension(content_instance.type)
+            # Generate new filename with UUID
+            filename = f"{content_type}_{content_id}{ext}"
         else:
-            # Generate filename from content name and type
             ext = ContentStorageManager._get_file_extension(content_instance.type)
-            filename = f"{content_instance.name}_{content_id[:8]}{ext}"
-            # Sanitize filename
-            filename = "".join(c for c in filename if c.isalnum() or c in ('-', '_', '.'))
+            filename = f"{content_type}_{content_id}{ext}"
         
-        return os.path.join('content', content_id, filename)
+        # Sanitize filename (remove any path separators)
+        filename = "".join(c for c in filename if c.isalnum() or c in ('-', '_', '.'))
+        
+        # Build path: users/user_{user_id}/{type}/{filename}
+        return os.path.join('users', f'user_{user_id}', type_dir, filename)
     
     @staticmethod
     def _get_file_extension(content_type: str) -> str:
@@ -270,11 +314,38 @@ class ContentStorageManager:
             if metadata_from_validation.get('file_hash'):
                 file_hash = metadata_from_validation['file_hash']
             
-            # Generate storage path with sanitized filename
-            storage_path = cls._generate_storage_path(content_instance)
+            # Generate storage path with sanitized filename and user
+            storage_path = cls._generate_storage_path(content_instance, user)
+            logger.info(f"Generated storage path: {storage_path}")
             
             # Store sanitized filename for later use
             content_instance._uploaded_file_name = sanitized_filename
+            
+            # Ensure directory exists before saving
+            storage = cls._get_storage_backend()
+            directory = os.path.dirname(storage_path)
+            
+            logger.info(f"Storage backend: {type(storage).__name__}")
+            logger.info(f"Directory to create: {directory}")
+            
+            # For local storage, create directories if they don't exist
+            if hasattr(storage, 'location'):
+                # Local file storage - create directory structure
+                full_path = os.path.join(storage.location, directory)
+                logger.info(f"Full directory path: {full_path}")
+                
+                try:
+                    os.makedirs(full_path, exist_ok=True)
+                    logger.info(f"Directory created/verified: {full_path}")
+                    
+                    # Verify directory is writable
+                    if not os.access(full_path, os.W_OK):
+                        logger.error(f"Directory is not writable: {full_path}")
+                        raise StorageError(f"Storage directory is not writable: {full_path}")
+                except OSError as e:
+                    logger.error(f"Failed to create directory {full_path}: {e}", exc_info=True)
+                    raise StorageError(f"Failed to create storage directory: {e}")
+            # For S3 or other storage - directories are implicit, no need to create
             
             # Save file to storage backend
             storage = cls._get_storage_backend()
@@ -284,11 +355,29 @@ class ContentStorageManager:
             file_content = file_obj.read()
             file_size = len(file_content)
             
+            logger.info(f"File content read: {file_size} bytes")
+            logger.info(f"Saving to storage path: {storage_path}")
+            
             # Save to storage
-            saved_path = storage.save(storage_path, ContentFile(file_content))
+            try:
+                saved_path = storage.save(storage_path, ContentFile(file_content))
+                logger.info(f"File saved successfully to: {saved_path}")
+            except Exception as e:
+                logger.error(f"Failed to save file to storage: {e}", exc_info=True)
+                raise StorageError(f"Failed to save file to storage: {e}")
             
             # Get file URL
-            file_url = storage.url(saved_path)
+            # For local storage, ensure it's a proper media URL
+            if hasattr(storage, 'location'):
+                # Local storage - use MEDIA_URL
+                from django.conf import settings
+                media_url = getattr(settings, 'MEDIA_URL', '/media/')
+                # Remove leading slash from saved_path if present, add media_url
+                clean_path = saved_path.lstrip('/')
+                file_url = f"{media_url.rstrip('/')}/{clean_path}"
+            else:
+                # S3 or other storage
+                file_url = storage.url(saved_path) if hasattr(storage, 'url') else saved_path
             
             # If using S3, we'll need to generate signed URL separately
             # For now, file_url might be a relative path for local storage
@@ -395,7 +484,27 @@ class ContentStorageManager:
                 return file_url
         
         # For local storage, return media URL
-        return storage.url(content_instance.file_url) if hasattr(storage, 'url') else content_instance.file_url
+        # If file_url is already a full URL, return it
+        if content_instance.file_url.startswith('http'):
+            return content_instance.file_url
+        
+        # If file_url is a relative path, construct full media URL
+        if hasattr(storage, 'url'):
+            url_result = storage.url(content_instance.file_url)
+            # If storage.url returns a full URL, use it
+            if url_result.startswith('http'):
+                return url_result
+            # Otherwise, construct from MEDIA_URL
+            from django.conf import settings
+            media_url = getattr(settings, 'MEDIA_URL', '/media/')
+            clean_path = url_result.lstrip('/')
+            return f"{media_url.rstrip('/')}/{clean_path}"
+        
+        # Fallback: construct URL from MEDIA_URL
+        from django.conf import settings
+        media_url = getattr(settings, 'MEDIA_URL', '/media/')
+        clean_path = content_instance.file_url.lstrip('/')
+        return f"{media_url.rstrip('/')}/{clean_path}"
     
     @classmethod
     def delete_content(cls, content_instance) -> bool:
@@ -492,6 +601,45 @@ class ContentStorageManager:
         except Exception as e:
             logger.error(f"Error verifying content integrity: {str(e)}")
             return False, f"Integrity check failed: {str(e)}"
+    
+    @staticmethod
+    def verify_user_access(content_instance, user) -> bool:
+        """
+        Verify that a user has access to a content file.
+        
+        Args:
+            content_instance: Content model instance
+            user: User to check access for
+            
+        Returns:
+            True if user has access, False otherwise
+        """
+        if not user or not hasattr(user, 'id'):
+            return False
+        
+        # Get user from content relationships
+        try:
+            widget = content_instance.widget
+            if widget:
+                layer = widget.layer
+                if layer:
+                    template = layer.template
+                    if template:
+                        # Check if user created the template
+                        if hasattr(template, 'created_by') and template.created_by:
+                            if template.created_by.id == user.id:
+                                return True
+                        
+                        # Check if user has view permission via RolePermissions
+                        try:
+                            from accounts.permissions import RolePermissions
+                            return RolePermissions.can_view_resource(user, template)
+                        except:
+                            pass
+        except (AttributeError, Exception) as e:
+            logger.warning(f"Error checking user access for content {content_instance.id}: {e}")
+        
+        return False
     
     @classmethod
     def list_contents(cls, screen_id=None, template_id=None, limit=100, offset=0):

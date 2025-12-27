@@ -692,3 +692,161 @@ class ContentValidationLog(models.Model):
         """Return string representation"""
         status = "✓" if self.is_valid else "✗"
         return f"{status} {self.username} - {self.filename} ({self.content_type})"
+
+
+class ErrorLog(models.Model):
+    """
+    Tracks all application errors for Super Admin monitoring.
+    
+    This model records server-side errors, API exceptions, and backend process failures.
+    Errors are automatically logged by middleware and can be viewed by SuperAdmin users.
+    """
+    
+    LEVEL_CHOICES = [
+        ('DEBUG', 'Debug'),
+        ('INFO', 'Info'),
+        ('WARNING', 'Warning'),
+        ('ERROR', 'Error'),
+        ('CRITICAL', 'Critical'),
+    ]
+    
+    id = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False,
+        help_text="Unique identifier for the error log entry"
+    )
+    timestamp = models.DateTimeField(
+        auto_now_add=True,
+        db_index=True,
+        help_text="When the error occurred"
+    )
+    level = models.CharField(
+        max_length=20,
+        choices=LEVEL_CHOICES,
+        default='ERROR',
+        db_index=True,
+        help_text="Error severity level"
+    )
+    message = models.TextField(
+        help_text="Error message"
+    )
+    user = models.ForeignKey(
+        'accounts.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='error_logs',
+        help_text="User who triggered the error (if applicable)"
+    )
+    stack_trace = models.TextField(
+        blank=True,
+        null=True,
+        help_text="Full stack trace of the error"
+    )
+    endpoint = models.CharField(
+        max_length=500,
+        blank=True,
+        null=True,
+        db_index=True,
+        help_text="API endpoint or URL where error occurred"
+    )
+    request_method = models.CharField(
+        max_length=10,
+        blank=True,
+        null=True,
+        help_text="HTTP method (GET, POST, etc.)"
+    )
+    ip_address = models.GenericIPAddressField(
+        null=True,
+        blank=True,
+        help_text="IP address of the client"
+    )
+    user_agent = models.TextField(
+        blank=True,
+        null=True,
+        help_text="User agent string"
+    )
+    exception_type = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        db_index=True,
+        help_text="Type of exception (e.g., ValueError, PermissionDenied)"
+    )
+    metadata = models.JSONField(
+        default=default_json_dict,
+        blank=True,
+        help_text="Additional error metadata"
+    )
+    is_resolved = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text="Whether the error has been resolved"
+    )
+    resolved_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When the error was marked as resolved"
+    )
+    resolved_by = models.ForeignKey(
+        'accounts.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='resolved_errors',
+        help_text="User who resolved the error"
+    )
+    
+    class Meta:
+        db_table = 'log_error'
+        verbose_name = 'Error Log'
+        verbose_name_plural = 'Error Logs'
+        ordering = ['-timestamp']
+        indexes = [
+            models.Index(fields=['timestamp']),
+            models.Index(fields=['level', 'timestamp']),
+            models.Index(fields=['endpoint', 'timestamp']),
+            models.Index(fields=['user', 'timestamp']),
+            models.Index(fields=['exception_type', 'timestamp']),
+            models.Index(fields=['is_resolved', 'timestamp']),
+        ]
+    
+    def __str__(self):
+        """Return string representation"""
+        user_str = f"User: {self.user.username}" if self.user else "Anonymous"
+        endpoint_str = f" @ {self.endpoint}" if self.endpoint else ""
+        return f"[{self.get_level_display()}] {self.message[:50]}... ({user_str}{endpoint_str})"
+    
+    @classmethod
+    def filter_by_date_range(cls, start_date=None, end_date=None):
+        """Filter errors by date range"""
+        queryset = cls.objects.all()
+        if start_date:
+            queryset = queryset.filter(timestamp__gte=start_date)
+        if end_date:
+            queryset = queryset.filter(timestamp__lte=end_date)
+        return queryset
+    
+    @classmethod
+    def filter_by_level(cls, level):
+        """Filter errors by severity level"""
+        return cls.objects.filter(level=level)
+    
+    @classmethod
+    def filter_by_endpoint(cls, endpoint):
+        """Filter errors by endpoint"""
+        return cls.objects.filter(endpoint__icontains=endpoint)
+    
+    @classmethod
+    def get_unresolved_count(cls):
+        """Get count of unresolved errors"""
+        return cls.objects.filter(is_resolved=False).count()
+    
+    @classmethod
+    def get_recent_errors(cls, hours=24, limit=100):
+        """Get recent errors within specified hours"""
+        from django.utils import timezone
+        from datetime import timedelta
+        cutoff = timezone.now() - timedelta(hours=hours)
+        return cls.objects.filter(timestamp__gte=cutoff).order_by('-timestamp')[:limit]

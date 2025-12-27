@@ -293,6 +293,9 @@ class Command(models.Model):
         Execute the command on a given Screen.
         Also creates a log entry in CommandExecutionLog.
         
+        Uses transaction.atomic() to ensure command status and log updates are atomic.
+        PostgreSQL's strict transaction handling prevents race conditions.
+        
         Args:
             screen: Screen instance to execute command on. If None, uses self.screen.
         
@@ -300,6 +303,7 @@ class Command(models.Model):
             bool: True if execution successful, False otherwise
         """
         from log.models import CommandExecutionLog
+        from django.db import transaction
         
         # Use provided screen or default to self.screen
         target_screen = screen or self.screen
@@ -309,71 +313,94 @@ class Command(models.Model):
         
         # Check if command is expired
         if self.is_expired():
-            self.status = 'failed'
-            self.completed_at = timezone.now()
-            self.error_message = 'Command expired'
-            self.save(update_fields=['status', 'completed_at', 'error_message'])
-            # Log expired command
-            CommandExecutionLog.objects.create(
-                command=self,
-                screen=target_screen,
-                status='failed',
-                error_message='Command expired'
-            )
+            with transaction.atomic():
+                self.status = 'failed'
+                self.completed_at = timezone.now()
+                self.error_message = 'Command expired'
+                self.save(update_fields=['status', 'completed_at', 'error_message'])
+                # Log expired command
+                CommandExecutionLog.objects.create(
+                    command=self,
+                    screen=target_screen,
+                    status='failed',
+                    error_message='Command expired'
+                )
             return False
         
         # Check if screen is online
         if not target_screen.is_online:
             # Screen is offline, keep command as pending
-            CommandExecutionLog.objects.create(
-                command=self,
-                screen=target_screen,
-                status='pending',
-                error_message='Screen is offline'
-            )
+            with transaction.atomic():
+                CommandExecutionLog.objects.create(
+                    command=self,
+                    screen=target_screen,
+                    status='pending',
+                    error_message='Screen is offline'
+                )
             return False
         
-        # Update status to executing
-        self.status = 'executing'
-        self.attempt_count += 1
-        self.executed_at = timezone.now()
-        self.last_attempt_at = timezone.now()
-        self.save(update_fields=['status', 'attempt_count', 'executed_at', 'last_attempt_at'])
-        
-        # Create execution log entry
-        exec_log = CommandExecutionLog.objects.create(
-            command=self,
-            screen=target_screen,
-            status='running',
-            started_at=timezone.now()
-        )
+        # Use atomic transaction for command execution and logging
+        # This ensures status updates and logs are consistent in PostgreSQL
+        with transaction.atomic():
+            # Lock command row to prevent concurrent execution
+            command = Command.objects.select_for_update().get(id=self.id)
+            
+            # Update status to executing
+            command.status = 'executing'
+            command.attempt_count += 1
+            command.executed_at = timezone.now()
+            command.last_attempt_at = timezone.now()
+            command.save(update_fields=['status', 'attempt_count', 'executed_at', 'last_attempt_at'])
+            
+            # Create execution log entry
+            exec_log = CommandExecutionLog.objects.create(
+                command=command,
+                screen=target_screen,
+                status='running',
+                started_at=timezone.now()
+            )
         
         try:
-            # Execute command based on type
+            # Execute command based on type (outside transaction to avoid long locks)
             success = self._execute_by_type_for_screen(target_screen)
             
-            if success:
-                self.mark_done()
-                exec_log.status = 'done'
-                exec_log.finished_at = timezone.now()
-                exec_log.save(update_fields=['status', 'finished_at'])
-                return True
-            else:
-                self.mark_failed('Command execution failed')
-                exec_log.status = 'failed'
-                exec_log.finished_at = timezone.now()
-                exec_log.error_message = 'Command execution failed'
-                exec_log.save(update_fields=['status', 'finished_at', 'error_message'])
-                return False
+            # Update status atomically after execution
+            with transaction.atomic():
+                command = Command.objects.select_for_update().get(id=self.id)
+                exec_log = CommandExecutionLog.objects.filter(
+                    id=exec_log.id
+                ).first()
+                
+                if success:
+                    command.mark_done()
+                    if exec_log:
+                        exec_log.status = 'done'
+                        exec_log.finished_at = timezone.now()
+                        exec_log.save(update_fields=['status', 'finished_at'])
+                    return True
+                else:
+                    command.mark_failed('Command execution failed')
+                    if exec_log:
+                        exec_log.status = 'failed'
+                        exec_log.finished_at = timezone.now()
+                        exec_log.error_message = 'Command execution failed'
+                        exec_log.save(update_fields=['status', 'finished_at', 'error_message'])
+                    return False
                 
         except Exception as e:
-            # Log error
+            # Log error atomically
             error_msg = str(e)
-            self.mark_failed(error_msg)
-            exec_log.status = 'failed'
-            exec_log.finished_at = timezone.now()
-            exec_log.error_message = error_msg
-            exec_log.save(update_fields=['status', 'finished_at', 'error_message'])
+            with transaction.atomic():
+                command = Command.objects.select_for_update().get(id=self.id)
+                command.mark_failed(error_msg)
+                exec_log = CommandExecutionLog.objects.filter(
+                    id=exec_log.id
+                ).first()
+                if exec_log:
+                    exec_log.status = 'failed'
+                    exec_log.finished_at = timezone.now()
+                    exec_log.error_message = error_msg
+                    exec_log.save(update_fields=['status', 'finished_at', 'error_message'])
             return False
     
     def execute_command(self):
@@ -421,18 +448,40 @@ class Command(models.Model):
             return self._send_to_screen(screen, 'display_message', {'message': message})
         
         elif self.type == 'sync_content':
+            # Check if this is a direct content download command (from content.download_to_screen)
+            # These commands have content_id, content_url, etc. in payload
+            if 'content_id' in self.payload and 'content_url' in self.payload:
+                # Direct content download - send command to screen
+                # The screen will handle the actual download
+                return self._send_to_screen(screen, 'sync_content', self.payload)
+            
+            # Otherwise, this is a bulk sync command
             content_ids = self.payload.get('content_ids', [])
-            # Sync content on screen
             if content_ids:
+                # Sync specific content items
                 from templates.models import Content
                 contents = Content.objects.filter(id__in=content_ids, is_active=True)
                 success_count = 0
                 for content in contents:
                     try:
-                        if content.download_to_screen(screen):
+                        # Create individual download commands for each content
+                        # Don't call download_to_screen() here to avoid recursion
+                        # Instead, send the download instruction directly
+                        secure_url = content.get_secure_url()
+                        download_payload = {
+                            'content_id': str(content.id),
+                            'content_url': secure_url,
+                            'content_type': content.type,
+                            'file_size': content.file_size,
+                            'file_hash': content.file_hash,
+                            'hash_algorithm': content.hash_algorithm,
+                        }
+                        if self._send_to_screen(screen, 'sync_content', download_payload):
                             success_count += 1
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        import logging
+                        logger = logging.getLogger(__name__)
+                        logger.error(f"Error syncing content {content.id} to screen {screen.id}: {str(e)}")
                 return success_count > 0
             else:
                 # Sync all active template content
@@ -518,6 +567,9 @@ class Command(models.Model):
         """
         Queue a command for execution on a screen.
         
+        Uses transaction.atomic() to ensure command creation is atomic.
+        PostgreSQL's strict transaction handling prevents race conditions.
+        
         Args:
             command_type: Type of command (must be one of COMMAND_TYPE_CHOICES)
             screen: Screen instance
@@ -530,15 +582,18 @@ class Command(models.Model):
         Returns:
             Command: Created command instance
         """
-        command = cls.objects.create(
-            name=name,
-            type=command_type,
-            screen=screen,
-            payload=payload or {},
-            priority=priority,
-            expire_at=expire_at,
-            created_by=created_by
-        )
+        from django.db import transaction
+        
+        with transaction.atomic():
+            command = cls.objects.create(
+                name=name,
+                type=command_type,
+                screen=screen,
+                payload=payload or {},
+                priority=priority,
+                expire_at=expire_at,
+                created_by=created_by
+            )
         return command
     
     @classmethod

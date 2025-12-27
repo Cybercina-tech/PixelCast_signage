@@ -1,8 +1,8 @@
 from rest_framework import serializers
 from django.utils import timezone
-from .models import Screen
+from .models import Screen, PairingSession
 from commands.models import Command
-from templates.models import Template, Content
+from templates.models import Template, Content, Layer, Widget
 from log.models import CommandExecutionLog, ScreenStatusLog, ContentDownloadLog
 
 
@@ -55,25 +55,48 @@ class HeartbeatSerializer(serializers.Serializer):
     
     def validate(self, attrs):
         """Validate authentication credentials"""
+        import logging
+        logger = logging.getLogger(__name__)
+        
         auth_token = attrs.get('auth_token')
         secret_key = attrs.get('secret_key')
         
+        # Log validation attempt (masked)
+        logger.debug(f"HeartbeatSerializer validation: auth_token={auth_token[:8] + '...' if auth_token else 'MISSING'}, secret_key={'***' if secret_key else 'MISSING'}")
+        
+        # Check if credentials are provided
+        if not auth_token or not auth_token.strip():
+            logger.warning("HeartbeatSerializer: auth_token is missing or empty")
+            raise serializers.ValidationError({'auth_token': 'Authentication token is required'})
+        
+        if not secret_key or not secret_key.strip():
+            logger.warning("HeartbeatSerializer: secret_key is missing or empty")
+            raise serializers.ValidationError({'secret_key': 'Secret key is required'})
+        
         try:
             screen = Screen.objects.get(auth_token=auth_token)
+            logger.debug(f"HeartbeatSerializer: Screen found with auth_token. Screen ID: {screen.id}, Name: {screen.name}")
         except Screen.DoesNotExist:
+            logger.warning(f"HeartbeatSerializer: No screen found with auth_token: {auth_token[:8]}...")
             raise serializers.ValidationError({'auth_token': 'Invalid authentication token'})
+        except Exception as e:
+            logger.error(f"HeartbeatSerializer: Error fetching screen: {str(e)}", exc_info=True)
+            raise serializers.ValidationError({'auth_token': 'Error validating authentication token'})
         
+        # Authenticate
         if not screen.authenticate(auth_token, secret_key):
+            logger.warning(f"HeartbeatSerializer: Authentication failed for screen {screen.id}. Token matches but secret_key is incorrect.")
             raise serializers.ValidationError({'secret_key': 'Invalid secret key'})
         
+        logger.info(f"HeartbeatSerializer: Authentication successful for screen {screen.id} ({screen.name})")
         attrs['screen'] = screen
         return attrs
 
 
 class CommandSerializer(serializers.ModelSerializer):
     """Serializer for Command model"""
-    payload_summary = serializers.CharField(source='payload_summary', read_only=True)
-    is_executable = serializers.BooleanField(source='is_executable', read_only=True)
+    payload_summary = serializers.CharField(read_only=True)
+    is_executable = serializers.BooleanField(read_only=True)
     
     class Meta:
         model = Command
@@ -206,3 +229,229 @@ class TemplateSerializer(serializers.ModelSerializer):
             'id', 'name', 'description', 'orientation',
             'width', 'height', 'version', 'is_active'
         ]
+
+
+# Player-specific serializers for complete template structure
+class PlayerContentSerializer(serializers.ModelSerializer):
+    """Serializer for Content in player context"""
+    secure_url = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Content
+        fields = [
+            'id', 'name', 'type', 'secure_url', 'content_json',
+            'duration', 'autoplay', 'order', 'file_size', 'file_hash', 'is_active'
+        ]
+    
+    def get_secure_url(self, obj):
+        """Get secure URL with appropriate expiration and make it absolute"""
+        if not obj.file_url:
+            return ''
+        
+        request = self.context.get('request')
+        
+        # For player, use longer expiration (24 hours)
+        try:
+            url = obj.get_secure_url(expiration=86400)
+        except:
+            url = obj.file_url or ''
+        
+        if not url:
+            return ''
+        
+        # If already absolute URL, return as is
+        if url.startswith('http'):
+            return url
+        
+        # Build absolute URL using request context
+        if request:
+            return request.build_absolute_uri(url)
+        
+        # Fallback: construct absolute URL from settings
+        from django.conf import settings
+        base_url = getattr(settings, 'BASE_URL', 'http://localhost:8000')
+        clean_url = url.lstrip('/')
+        return f"{base_url.rstrip('/')}/{clean_url}"
+
+
+class PlayerWidgetSerializer(serializers.ModelSerializer):
+    """Serializer for Widget in player context"""
+    contents = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Widget
+        fields = [
+            'id', 'name', 'type',
+            'font_size', 'color', 'alignment', 'autoplay',
+            'x', 'y', 'width', 'height', 'z_index',
+            'is_active', 'contents'
+        ]
+    
+    def get_contents(self, obj):
+        """Get active contents with request context for absolute URLs"""
+        active_contents = obj.get_active_contents()
+        return PlayerContentSerializer(active_contents, many=True, context=self.context).data
+
+
+class PlayerLayerSerializer(serializers.ModelSerializer):
+    """Serializer for Layer in player context"""
+    widgets = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Layer
+        fields = [
+            'id', 'name', 'x', 'y', 'width', 'height', 'z_index',
+            'background_color', 'opacity', 'animation_type',
+            'animation_duration', 'is_active', 'widgets'
+        ]
+    
+    def get_widgets(self, obj):
+        """Get active widgets with request context for absolute URLs"""
+        active_widgets = obj.get_active_widgets()
+        return PlayerWidgetSerializer(active_widgets, many=True, context=self.context).data
+
+
+class PlayerTemplateSerializer(serializers.ModelSerializer):
+    """Serializer for complete template structure for player"""
+    layers = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Template
+        fields = [
+            'id', 'name', 'orientation', 'width', 'height',
+            'version', 'config_json', 'layers'
+        ]
+    
+    def get_layers(self, obj):
+        """Get only active layers, ordered by z_index"""
+        active_layers = obj.layers.filter(is_active=True).order_by('z_index', 'name')
+        return PlayerLayerSerializer(active_layers, many=True, context=self.context).data
+
+
+# Pairing serializers
+class PairingSessionSerializer(serializers.ModelSerializer):
+    """Serializer for pairing session (TV side - public)"""
+    is_expired = serializers.SerializerMethodField()
+    expires_in_seconds = serializers.SerializerMethodField()
+    qr_code_url = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = PairingSession
+        fields = [
+            'pairing_code', 'pairing_token', 'status',
+            'expires_at', 'is_expired', 'expires_in_seconds',
+            'qr_code_url', 'created_at'
+        ]
+        read_only_fields = ['pairing_code', 'pairing_token', 'status', 'expires_at', 'created_at']
+    
+    def get_is_expired(self, obj):
+        """Check if pairing session is expired"""
+        return obj.is_expired()
+    
+    def get_expires_in_seconds(self, obj):
+        """Calculate seconds until expiration"""
+        if obj.is_expired():
+            return 0
+        delta = obj.expires_at - timezone.now()
+        return max(0, int(delta.total_seconds()))
+    
+    def get_qr_code_url(self, obj):
+        """Generate QR code URL for pairing"""
+        from django.conf import settings
+        # Try to get from settings, fallback to localhost
+        base_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:5173')
+        # Remove trailing slash if present
+        base_url = base_url.rstrip('/')
+        return f"{base_url}/screens/add?token={obj.pairing_token}"
+
+
+class PairingBindSerializer(serializers.Serializer):
+    """Serializer for binding a pairing session to a user (Dashboard side)"""
+    pairing_code = serializers.CharField(
+        required=False,
+        allow_null=True,
+        allow_blank=True,
+        max_length=6,
+        help_text="6-digit pairing code (alternative to pairing_token)"
+    )
+    pairing_token = serializers.CharField(
+        required=False,
+        allow_null=True,
+        allow_blank=True,
+        max_length=255,
+        help_text="Pairing token from QR code (alternative to pairing_code)"
+    )
+    screen_name = serializers.CharField(
+        required=False,
+        max_length=255,
+        allow_blank=True,
+        allow_null=True,
+        help_text="Optional name for the screen"
+    )
+    
+    def validate(self, attrs):
+        """Validate that either pairing_code or pairing_token is provided"""
+        pairing_code = attrs.get('pairing_code')
+        pairing_token = attrs.get('pairing_token')
+        
+        # Clean up empty strings
+        if pairing_code == '':
+            pairing_code = None
+        if pairing_token == '':
+            pairing_token = None
+        
+        if not pairing_code and not pairing_token:
+            raise serializers.ValidationError({
+                'non_field_errors': ['Either pairing_code or pairing_token must be provided']
+            })
+        
+        # Find pairing session
+        try:
+            if pairing_code:
+                session = PairingSession.objects.get(
+                    pairing_code=pairing_code,
+                    status='pending'
+                )
+            else:
+                session = PairingSession.objects.get(
+                    pairing_token=pairing_token,
+                    status='pending'
+                )
+        except PairingSession.DoesNotExist:
+            raise serializers.ValidationError({
+                'non_field_errors': ['Invalid or expired pairing code/token']
+            })
+        
+        # Check if expired
+        if session.is_expired():
+            session.mark_expired()
+            raise serializers.ValidationError({
+                'non_field_errors': ['Pairing code/token has expired. Please generate a new one.']
+            })
+        
+        # Check if already paired
+        if session.status != 'pending':
+            raise serializers.ValidationError({
+                'non_field_errors': ['This pairing code/token has already been used']
+            })
+        
+        attrs['session'] = session
+        return attrs
+
+
+class PairingStatusSerializer(serializers.Serializer):
+    """Serializer for checking pairing status (TV side polling)"""
+    pairing_token = serializers.CharField(required=True)
+    
+    def validate_pairing_token(self, value):
+        """Validate pairing token and return session"""
+        try:
+            session = PairingSession.objects.get(pairing_token=value)
+        except PairingSession.DoesNotExist:
+            raise serializers.ValidationError("Invalid pairing token")
+        
+        # Check if expired
+        if session.is_expired() and session.status == 'pending':
+            session.mark_expired()
+        
+        return session

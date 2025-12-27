@@ -126,8 +126,23 @@ export const useContentStore = defineStore('content', {
     async uploadContent(id, file, additionalData = {}) {
       this.loading = true
       this.error = null
+      
+      console.log('[ContentStore] uploadContent called', {
+        contentId: id,
+        fileName: file?.name,
+        fileSize: file?.size,
+        fileType: file?.type,
+        additionalData
+      })
+      
       try {
         const response = await contentsAPI.upload(id, file, additionalData)
+        
+        console.log('[ContentStore] uploadContent success', {
+          status: response.status,
+          data: response.data
+        })
+        
         // Update content in list
         const index = this.contents.findIndex(c => c.id === id)
         if (index !== -1) {
@@ -138,7 +153,28 @@ export const useContentStore = defineStore('content', {
         }
         return response.data
       } catch (error) {
-        this.error = error.response?.data?.detail || error.response?.data?.message || error.message
+        console.error('[ContentStore] uploadContent error', {
+          status: error.response?.status,
+          statusText: error.response?.statusText,
+          data: error.response?.data,
+          message: error.message,
+          config: {
+            url: error.config?.url,
+            method: error.config?.method,
+            headers: error.config?.headers
+          }
+        })
+        
+        // Extract detailed error message
+        const errorData = error.response?.data || {}
+        const errorMessage = errorData.message || 
+                               errorData.error || 
+                               errorData.detail || 
+                               (typeof errorData === 'string' ? errorData : JSON.stringify(errorData)) ||
+                               error.message ||
+                               'Failed to upload content'
+        
+        this.error = errorMessage
         throw error
       } finally {
         this.loading = false

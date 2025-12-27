@@ -12,6 +12,7 @@ export const useAuthStore = defineStore('auth', {
       isAuthenticated: !!token,
       loading: false,
       error: null,
+      initialized: false,
     }
   },
   actions: {
@@ -39,7 +40,13 @@ export const useAuthStore = defineStore('auth', {
         this.isAuthenticated = true
         return response.data
       } catch (error) {
-        this.error = error.response?.data?.detail || error.response?.data?.message || error.message
+        // Extract error message from various possible locations
+        const errorData = error.response?.data
+        this.error = errorData?.detail || 
+                    errorData?.error || 
+                    errorData?.message || 
+                    error.message || 
+                    'Login failed. Please check your credentials.'
         throw error
       } finally {
         this.loading = false
@@ -111,6 +118,28 @@ export const useAuthStore = defineStore('auth', {
       } catch (error) {
         throw error
       }
+    },
+    async initialize() {
+      // Initialize auth state on app startup
+      if (this.initialized) return
+      
+      const token = localStorage.getItem('auth_token')
+      if (token && !this.user) {
+        try {
+          this.token = token
+          this.refreshToken = localStorage.getItem('refresh_token')
+          await this.fetchMe()
+          this.isAuthenticated = true
+        } catch (error) {
+          // Token invalid, clear it
+          this.token = null
+          this.refreshToken = null
+          this.isAuthenticated = false
+          localStorage.removeItem('auth_token')
+          localStorage.removeItem('refresh_token')
+        }
+      }
+      this.initialized = true
     },
   },
 })

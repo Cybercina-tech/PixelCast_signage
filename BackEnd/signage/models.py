@@ -304,6 +304,9 @@ class Screen(models.Model):
         """
         Activate a template on this screen.
         
+        Uses transaction.atomic() to ensure template activation and content sync are atomic.
+        PostgreSQL's strict transaction handling prevents race conditions.
+        
         Args:
             template: Template instance to activate
             sync_content: Whether to sync content after activation (default: True)
@@ -312,25 +315,35 @@ class Screen(models.Model):
             bool: True if activation successful, False otherwise
         """
         from django.utils import timezone
+        from django.db import transaction
         
         # Validate template is active
         if not template.is_active:
             return False
         
-        # Activate template
-        self.active_template = template
-        self.last_template_update_at = timezone.now()
-        self.save(update_fields=['active_template', 'last_template_update_at'])
-        
-        # Sync content if requested
-        if sync_content:
-            self.sync_template_content(template)
+        # Use atomic transaction for template activation
+        # This ensures screen update and content sync operations are atomic
+        with transaction.atomic():
+            # Lock screen row to prevent concurrent activation
+            screen = Screen.objects.select_for_update().get(id=self.id)
+            
+            # Activate template
+            screen.active_template = template
+            screen.last_template_update_at = timezone.now()
+            screen.save(update_fields=['active_template', 'last_template_update_at'])
+            
+            # Sync content if requested (within same transaction)
+            if sync_content:
+                synced_count = screen.sync_template_content(template)
         
         return True
     
     def sync_template_content(self, template=None):
         """
         Sync all content from active template to this screen.
+        
+        Each content download uses its own transaction to allow partial success.
+        This is intentional - we want to sync as much content as possible even if some fail.
         
         Args:
             template: Template instance (defaults to active_template)
@@ -357,37 +370,16 @@ class Screen(models.Model):
                 contents = widget.contents.all()
                 for content in contents:
                     if content.is_active and content.needs_download:
-                        # Attempt download
+                        # Attempt download (each download handles its own transaction)
+                        # This allows partial success - some content may sync while others fail
                         try:
                             success = content.download_to_screen(self)
                             if success:
                                 synced_count += 1
-                                # Log success
-                                ContentDownloadLog.objects.create(
-                                    content=content,
-                                    screen=self,
-                                    status='success',
-                                    file_size=content.estimated_size_mb * 1024 * 1024 if content.estimated_size_mb else None,
-                                    downloaded_at=timezone.now()
-                                )
-                            else:
-                                # Log failure
-                                ContentDownloadLog.objects.create(
-                                    content=content,
-                                    screen=self,
-                                    status='failed',
-                                    retry_count=content.retry_count,
-                                    error_message='Download failed'
-                                )
+                                # Log success (download_to_screen already creates log atomically)
                         except Exception as e:
-                            # Log error
-                            ContentDownloadLog.objects.create(
-                                content=content,
-                                screen=self,
-                                status='failed',
-                                retry_count=content.retry_count,
-                                error_message=str(e)
-                            )
+                            # Log error (download_to_screen already creates log atomically)
+                            pass  # Error already logged in download_to_screen
         
         return synced_count
     
@@ -499,6 +491,120 @@ class Screen(models.Model):
         )
         
         return command
+
+
+class PairingSession(models.Model):
+    """
+    Pairing session model for screen pairing flow.
+    
+    Tracks temporary pairing credentials (6-digit code + token) that allow
+    a TV/Web Player to be securely linked to a user account.
+    """
+    
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('paired', 'Paired'),
+        ('expired', 'Expired'),
+    ]
+    
+    # Pairing credentials
+    pairing_code = models.CharField(
+        max_length=6,
+        unique=True,
+        db_index=True,
+        help_text="6-digit numeric pairing code displayed on TV"
+    )
+    pairing_token = models.CharField(
+        max_length=255,
+        unique=True,
+        db_index=True,
+        help_text="Secure token for QR code pairing"
+    )
+    
+    # Status and lifecycle
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='pending',
+        db_index=True,
+        help_text="Current status of the pairing session"
+    )
+    expires_at = models.DateTimeField(
+        db_index=True,
+        help_text="When this pairing session expires"
+    )
+    paired_at = models.DateTimeField(
+        blank=True,
+        null=True,
+        help_text="When this session was successfully paired"
+    )
+    
+    # Screen relationship (set after pairing)
+    screen = models.OneToOneField(
+        'Screen',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='pairing_session',
+        help_text="Screen that was paired using this session"
+    )
+    
+    # User who initiated pairing (set during bind)
+    paired_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='pairing_sessions',
+        help_text="User who completed the pairing"
+    )
+    
+    # Metadata
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        help_text="When this pairing session was created"
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        help_text="When this pairing session was last updated"
+    )
+    
+    class Meta:
+        db_table = 'signage_pairing_session'
+        verbose_name = 'Pairing Session'
+        verbose_name_plural = 'Pairing Sessions'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['pairing_code', 'status']),
+            models.Index(fields=['pairing_token', 'status']),
+            models.Index(fields=['status', 'expires_at']),
+        ]
+    
+    def __str__(self):
+        return f"Pairing {self.pairing_code} ({self.status})"
+    
+    def is_expired(self):
+        """Check if this pairing session has expired"""
+        from django.utils import timezone
+        return timezone.now() > self.expires_at
+    
+    def is_valid(self):
+        """Check if this pairing session is valid (not expired and pending)"""
+        return self.status == 'pending' and not self.is_expired()
+    
+    def mark_paired(self, screen, user):
+        """Mark this session as paired and link to screen and user"""
+        from django.utils import timezone
+        self.status = 'paired'
+        self.screen = screen
+        self.paired_by = user
+        self.paired_at = timezone.now()
+        self.save(update_fields=['status', 'screen', 'paired_by', 'paired_at'])
+    
+    def mark_expired(self):
+        """Mark this session as expired"""
+        self.status = 'expired'
+        self.save(update_fields=['status'])
 
 
 class Schedule(models.Model):

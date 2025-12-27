@@ -1,8 +1,8 @@
 <template>
-  <div class="bg-white rounded-lg shadow p-6" :class="cardClass">
+  <div class="card-base rounded-2xl p-6" :class="cardClass">
     <div v-if="title" class="mb-4">
-      <h3 class="text-lg font-medium text-gray-900">{{ title }}</h3>
-      <p v-if="subtitle" class="mt-1 text-sm text-gray-500">{{ subtitle }}</p>
+      <h3 class="text-lg font-semibold text-primary leading-tight">{{ title }}</h3>
+      <p v-if="subtitle" class="mt-1.5 text-sm text-secondary leading-relaxed">{{ subtitle }}</p>
     </div>
     <slot></slot>
   </div>

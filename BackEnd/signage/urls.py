@@ -6,7 +6,11 @@ from .views import (
     command_pull_endpoint,
     command_response_endpoint,
     content_sync_endpoint,
-    health_check_endpoint
+    health_check_endpoint,
+    player_template_endpoint,
+    generate_pairing_session,
+    get_pairing_status,
+    bind_pairing_session
 )
 
 # Create router for ViewSets
@@ -24,4 +28,12 @@ urlpatterns = [
     path('screens/content-sync/', content_sync_endpoint, name='screen-content-sync'),
     path('screens/health-check/', health_check_endpoint, name='screen-health-check'),
     # Note: command-receive endpoint is in commands.urls for better organization
+    
+    # Player-specific endpoints
+    path('player/template/', player_template_endpoint, name='player-template'),
+    
+    # Pairing endpoints
+    path('pairing/generate/', generate_pairing_session, name='pairing-generate'),
+    path('pairing/status/', get_pairing_status, name='pairing-status'),
+    path('pairing/bind/', bind_pairing_session, name='pairing-bind'),
 ]

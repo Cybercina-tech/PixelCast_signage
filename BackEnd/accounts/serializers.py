@@ -12,23 +12,23 @@ class UserSerializer(serializers.ModelSerializer):
     """Serializer for User model"""
     password = serializers.CharField(write_only=True, required=False, validators=[validate_password])
     role_display = serializers.CharField(source='get_role_display', read_only=True)
-    active_screens_count = serializers.IntegerField(source='active_screens_count', read_only=True)
-    total_screens_count = serializers.IntegerField(source='total_screens_count', read_only=True)
-    active_templates_count = serializers.IntegerField(source='active_templates_count', read_only=True)
-    total_templates_count = serializers.IntegerField(source='total_templates_count', read_only=True)
+    active_screens_count = serializers.IntegerField(read_only=True)
+    total_screens_count = serializers.IntegerField(read_only=True)
+    active_templates_count = serializers.IntegerField(read_only=True)
+    total_templates_count = serializers.IntegerField(read_only=True)
     
     class Meta:
         model = User
         fields = [
             'id', 'username', 'email', 'full_name', 'phone_number',
             'role', 'role_display', 'organization_name', 'is_active',
-            'is_staff', 'is_superuser', 'last_seen', 'date_joined',
+            'is_staff', 'is_superuser', 'is_email_verified', 'last_seen', 'date_joined',
             'active_screens_count', 'total_screens_count',
             'active_templates_count', 'total_templates_count',
             'password'
         ]
         read_only_fields = [
-            'id', 'is_staff', 'is_superuser', 'last_seen', 'date_joined'
+            'id', 'is_staff', 'is_superuser', 'is_email_verified', 'last_seen', 'date_joined'
         ]
         extra_kwargs = {
             'email': {'required': True},
@@ -161,8 +161,28 @@ class UserCreateSerializer(serializers.ModelSerializer):
         strength = PasswordStrengthChecker.check_password_strength(password)
         
         if strength['score'] < 2:
+            # Create user-friendly password validation message
+            feedback_messages = []
+            for msg in strength['feedback'][:2]:
+                if '8 characters' in msg:
+                    feedback_messages.append('Use at least 8 characters')
+                elif 'lowercase' in msg.lower():
+                    feedback_messages.append('Include lowercase letters')
+                elif 'uppercase' in msg.lower():
+                    feedback_messages.append('Include uppercase letters')
+                elif 'numbers' in msg.lower() or 'digit' in msg.lower():
+                    feedback_messages.append('Include numbers')
+                elif 'special' in msg.lower():
+                    feedback_messages.append('Include special characters')
+                else:
+                    feedback_messages.append(msg)
+            
+            error_msg = 'Password must be at least 8 characters and include numbers and English letters.'
+            if feedback_messages:
+                error_msg = f"Password is too weak. {'. '.join(feedback_messages)}."
+            
             raise serializers.ValidationError({
-                "password": f"Password is too weak. {', '.join(strength['feedback'][:2])}"
+                "password": error_msg
             })
         
         return attrs
@@ -189,46 +209,85 @@ class LoginSerializer(serializers.Serializer):
     password = serializers.CharField(required=True, write_only=True, style={'input_type': 'password'})
     
     def validate_username(self, value):
-        """Validate and sanitize username"""
+        """Validate and sanitize username or email"""
         if not value:
-            raise serializers.ValidationError('Username is required.')
+            raise serializers.ValidationError('Please enter your username or email.')
         
         # Limit length to prevent DoS
         if len(value) > 150:
-            raise serializers.ValidationError('Username is too long.')
+            raise serializers.ValidationError('Username or email is too long (maximum 150 characters).')
         
         return value.strip().lower()
     
     def validate(self, attrs):
         """Validate credentials"""
-        username = attrs.get('username')
+        username = attrs.get('username')  # Already lowercased in validate_username
         password = attrs.get('password')
         
         if not username or not password:
-            raise serializers.ValidationError('Must include "username" and "password".')
+            raise serializers.ValidationError({
+                'non_field_errors': ['Please enter your username or email and password.']
+            })
         
-        # Try username first, then email
+        # Try to find user by username (case-insensitive) or email
         user = None
+        user_obj = None
         try:
-            user = authenticate(username=username, password=password)
-        except Exception:
-            pass
-        
-        # If username auth failed, try email
-        if not user:
-            try:
-                from .models import User
-                user_obj = User.objects.get(email=username.lower())
+            from .models import User
+            
+            # Try username (case-insensitive match)
+            user_obj = User.objects.filter(username__iexact=username).first()
+            if user_obj:
+                logger.info(f'Found user by username: "{user_obj.username}" (requested: "{username}"), is_active: {user_obj.is_active}')
+                
+                # First try Django's authenticate (uses AUTHENTICATION_BACKENDS)
                 user = authenticate(username=user_obj.username, password=password)
-            except (User.DoesNotExist, Exception):
-                pass
+                
+                # If authenticate fails, try manual password check as fallback
+                if not user and user_obj.check_password(password):
+                    logger.info(f'Password check passed manually for username: "{user_obj.username}"')
+                    user = user_obj
+                elif not user:
+                    logger.warning(f'Authentication failed for username: "{user_obj.username}". Password check failed.')
+                    # Log additional debug info (without exposing password)
+                    logger.debug(f'User object details - username: "{user_obj.username}", email: "{user_obj.email}", is_active: {user_obj.is_active}, is_staff: {user_obj.is_staff}, has_usable_password: {user_obj.has_usable_password()}')
+                else:
+                    logger.info(f'Authentication successful for username: "{user_obj.username}"')
+            
+            # If username auth failed, try email
+            if not user:
+                user_obj = User.objects.filter(email__iexact=username).first()
+                if user_obj:
+                    logger.info(f'Found user by email: "{user_obj.email}", username: "{user_obj.username}", is_active: {user_obj.is_active}')
+                    
+                    # First try Django's authenticate
+                    user = authenticate(username=user_obj.username, password=password)
+                    
+                    # If authenticate fails, try manual password check as fallback
+                    if not user and user_obj.check_password(password):
+                        logger.info(f'Password check passed manually for email: "{user_obj.email}"')
+                        user = user_obj
+                    elif not user:
+                        logger.warning(f'Authentication failed for email: "{user_obj.email}". Password check failed.')
+                    else:
+                        logger.info(f'Authentication successful for email: "{user_obj.email}"')
+            
+            if not user_obj:
+                logger.warning(f'No user found with username/email: "{username}"')
+        except Exception as e:
+            logger.error(f'Authentication error: {e}', exc_info=True)
+            pass
         
         if not user:
             # Don't reveal whether user exists (prevent enumeration)
-            raise serializers.ValidationError('Unable to log in with provided credentials.')
+            raise serializers.ValidationError({
+                'non_field_errors': ['Unable to log in with provided credentials.']
+            })
         
         if not user.is_active:
-            raise serializers.ValidationError('User account is disabled.')
+            raise serializers.ValidationError({
+                'non_field_errors': ['User account is disabled.']
+            })
         
         attrs['user'] = user
         return attrs

@@ -3,7 +3,8 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     ScreenStatusLogViewSet,
     ContentDownloadLogViewSet,
-    CommandExecutionLogViewSet
+    CommandExecutionLogViewSet,
+    ErrorLogViewSet
 )
 
 # Create router for ViewSets

@@ -137,7 +137,10 @@ export const useTemplatesStore = defineStore('templates', {
       this.error = null
       try {
         const response = await layersAPI.list({ template: templateId, ...params })
-        this.layers = response.data.results || response.data || []
+        // Only store layers for the current template to avoid mixing layers from different templates
+        const layers = response.data.results || response.data || []
+        // Filter to ensure only layers for this template are stored
+        this.layers = layers.filter(layer => layer.template === templateId || layer.template?.id === templateId)
         return response.data
       } catch (error) {
         this.error = error.response?.data?.detail || error.response?.data?.message || error.message
@@ -151,7 +154,19 @@ export const useTemplatesStore = defineStore('templates', {
       this.error = null
       try {
         const response = await layersAPI.create(data)
-        this.layers.push(response.data)
+        const newLayer = response.data
+        // Only add if it belongs to the current template being viewed
+        const templateId = data.template || newLayer.template || newLayer.template?.id
+        if (templateId) {
+          // Check if this layer belongs to the template we're currently viewing
+          const currentTemplateId = this.currentTemplate?.id
+          if (!currentTemplateId || currentTemplateId === templateId) {
+            this.layers.push(newLayer)
+          }
+        } else {
+          // If no template specified, add it anyway (shouldn't happen)
+          this.layers.push(newLayer)
+        }
         return response.data
       } catch (error) {
         this.error = error.response?.data?.detail || error.response?.data?.message || error.message
@@ -196,7 +211,9 @@ export const useTemplatesStore = defineStore('templates', {
       this.error = null
       try {
         const response = await widgetsAPI.list({ layer: layerId, ...params })
-        this.widgets = response.data.results || response.data || []
+        const widgets = response.data.results || response.data || []
+        // Only store widgets for the current layer to avoid mixing widgets from different layers
+        this.widgets = widgets.filter(widget => widget.layer === layerId || widget.layer?.id === layerId)
         return response.data
       } catch (error) {
         this.error = error.response?.data?.detail || error.response?.data?.message || error.message
@@ -210,7 +227,19 @@ export const useTemplatesStore = defineStore('templates', {
       this.error = null
       try {
         const response = await widgetsAPI.create(data)
-        this.widgets.push(response.data)
+        const newWidget = response.data
+        // Only add if it belongs to the current layer being viewed
+        const layerId = data.layer || newWidget.layer || newWidget.layer?.id
+        if (layerId) {
+          // Check if this widget belongs to a layer we're currently viewing
+          const currentLayerIds = this.layers.map(l => l.id)
+          if (currentLayerIds.includes(layerId)) {
+            this.widgets.push(newWidget)
+          }
+        } else {
+          // If no layer specified, add it anyway (shouldn't happen)
+          this.widgets.push(newWidget)
+        }
         return response.data
       } catch (error) {
         this.error = error.response?.data?.detail || error.response?.data?.message || error.message

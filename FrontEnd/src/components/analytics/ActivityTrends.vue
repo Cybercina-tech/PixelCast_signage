@@ -3,12 +3,12 @@
     <!-- Period Selector -->
     <Card>
       <div class="flex items-center justify-between mb-4">
-        <h3 class="text-lg font-semibold text-gray-900">Activity Trends</h3>
+        <h3 class="text-lg font-semibold text-primary">Activity Trends</h3>
         <div class="flex items-center space-x-2">
           <select
             v-model="selectedPeriod"
             @change="updatePeriod"
-            class="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+            class="select-base px-3 py-2 rounded-lg text-sm"
           >
             <option value="day">Daily</option>
             <option value="week">Weekly</option>
@@ -20,7 +20,7 @@
             type="number"
             min="1"
             max="365"
-            class="w-20 px-3 py-2 border border-gray-300 rounded-lg text-sm"
+            class="input-base w-20 px-3 py-2 rounded-lg text-sm"
             placeholder="Days"
           />
         </div>
@@ -36,7 +36,7 @@
           :data="screenRegistrationsData"
           :options="chartOptions"
         />
-        <div v-else class="text-center text-gray-500 py-8">
+        <div v-else class="text-center text-muted py-8">
           No registration data available
         </div>
       </Card>
@@ -48,7 +48,7 @@
           :data="commandsCreatedData"
           :options="chartOptions"
         />
-        <div v-else class="text-center text-gray-500 py-8">
+        <div v-else class="text-center text-muted py-8">
           No command data available
         </div>
       </Card>
@@ -60,7 +60,7 @@
           :data="templatesCreatedData"
           :options="chartOptions"
         />
-        <div v-else class="text-center text-gray-500 py-8">
+        <div v-else class="text-center text-muted py-8">
           No template data available
         </div>
       </Card>
@@ -72,7 +72,7 @@
           :data="contentUploadsData"
           :options="chartOptions"
         />
-        <div v-else class="text-center text-gray-500 py-8">
+        <div v-else class="text-center text-muted py-8">
           No content upload data available
         </div>
       </Card>

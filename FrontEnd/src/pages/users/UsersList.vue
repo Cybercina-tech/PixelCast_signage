@@ -2,7 +2,7 @@
   <AppLayout>
     <div class="space-y-6">
       <div class="flex justify-between items-center">
-        <h1 class="text-2xl font-bold text-gray-900">Users & Roles</h1>
+        <h1 class="text-2xl font-bold text-primary">Users & Roles</h1>
         <button
           @click="showCreateModal = true"
           class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
@@ -26,33 +26,39 @@
           @delete="handleDelete"
         >
           <template #cell-role="{ value }">
-            <span class="px-2 py-1 bg-purple-100 text-purple-800 rounded text-xs capitalize">{{ value }}</span>
+            <span class="badge-primary px-2 py-1 rounded text-xs capitalize">{{ value }}</span>
           </template>
           <template #actions="{ row }">
-            <router-link
-              :to="`/users/${row.id}`"
-              class="text-indigo-600 hover:text-indigo-900 mr-3"
-            >
-              View
-            </router-link>
-            <button
-              @click="handleEdit(row)"
-              class="text-blue-600 hover:text-blue-900 mr-3"
-            >
-              Edit
-            </button>
-            <button
-              @click="handleChangeRole(row)"
-              class="text-purple-600 hover:text-purple-900 mr-3"
-            >
-              Change Role
-            </button>
-            <button
-              @click="handleDelete(row)"
-              class="text-red-600 hover:text-red-900"
-            >
-              Delete
-            </button>
+            <div class="flex items-center justify-end gap-1">
+              <router-link
+                :to="`/users/${row.id}`"
+                class="action-btn-view"
+                title="View"
+              >
+                <EyeIcon class="w-4 h-4" />
+              </router-link>
+              <button
+                @click="handleEdit(row)"
+                class="action-btn-edit"
+                title="Edit"
+              >
+                <PencilIcon class="w-4 h-4" />
+              </button>
+              <button
+                @click="handleChangeRole(row)"
+                class="action-btn-role"
+                title="Change Role"
+              >
+                <ShieldCheckIcon class="w-4 h-4" />
+              </button>
+              <button
+                @click="handleDelete(row)"
+                class="action-btn-delete"
+                title="Delete"
+              >
+                <TrashIcon class="w-4 h-4" />
+              </button>
+            </div>
           </template>
         </Table>
       </Card>
@@ -65,24 +71,24 @@
       >
         <div class="space-y-4">
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Username</label>
-            <input v-model="form.username" type="text" required class="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+            <label class="label-base block text-sm mb-1">Username</label>
+            <input v-model="form.username" type="text" required class="input-base w-full px-3 py-2 rounded-lg" />
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-            <input v-model="form.email" type="email" required class="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+            <label class="label-base block text-sm mb-1">Email</label>
+            <input v-model="form.email" type="email" required class="input-base w-full px-3 py-2 rounded-lg" />
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
-            <input v-model="form.full_name" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+            <label class="label-base block text-sm mb-1">Full Name</label>
+            <input v-model="form.full_name" type="text" class="input-base w-full px-3 py-2 rounded-lg" />
           </div>
           <div v-if="!showEditModal">
-            <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
-            <input v-model="form.password" type="password" required class="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+            <label class="label-base block text-sm mb-1">Password</label>
+            <input v-model="form.password" type="password" required class="input-base w-full px-3 py-2 rounded-lg" />
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Role</label>
-            <select v-model="form.role" class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+            <label class="label-base block text-sm mb-1">Role</label>
+            <select v-model="form.role" class="select-base w-full px-3 py-2 rounded-lg">
               <option value="Viewer">Viewer</option>
               <option value="Manager">Manager</option>
               <option value="Operator">Operator</option>
@@ -91,15 +97,15 @@
             </select>
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Organization</label>
-            <input v-model="form.organization_name" type="text" class="w-full px-3 py-2 border border-gray-300 rounded-lg" />
+            <label class="label-base block text-sm mb-1">Organization</label>
+            <input v-model="form.organization_name" type="text" class="input-base w-full px-3 py-2 rounded-lg" />
           </div>
         </div>
         <template #footer>
           <button type="button" @click="handleSubmit" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
             {{ showEditModal ? 'Update' : 'Create' }}
           </button>
-          <button type="button" @click="closeModal" class="px-4 py-2 border border-gray-300 rounded-lg">
+          <button type="button" @click="closeModal" class="btn-outline px-4 py-2 rounded-lg">
             Cancel
           </button>
         </template>
@@ -109,8 +115,8 @@
       <Modal :show="showRoleModal" title="Change Role" @close="showRoleModal = false">
         <div class="space-y-4">
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">New Role</label>
-            <select v-model="roleForm.role" required class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+            <label class="label-base block text-sm mb-1">New Role</label>
+            <select v-model="roleForm.role" required class="select-base w-full px-3 py-2 rounded-lg">
               <option value="Viewer">Viewer</option>
               <option value="Manager">Manager</option>
               <option value="Operator">Operator</option>
@@ -123,7 +129,7 @@
           <button type="button" @click="handleRoleSubmit" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">
             Change Role
           </button>
-          <button type="button" @click="showRoleModal = false" class="px-4 py-2 border border-gray-300 rounded-lg">
+          <button type="button" @click="showRoleModal = false" class="btn-outline px-4 py-2 rounded-lg">
             Cancel
           </button>
         </template>
@@ -135,8 +141,10 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { EyeIcon, PencilIcon, TrashIcon, ShieldCheckIcon } from '@heroicons/vue/24/outline'
 import { useUsersStore } from '@/stores/users'
-import { useToastStore } from '@/stores/toast'
+import { useNotification } from '@/composables/useNotification'
+import { useDeleteConfirmation } from '@/composables/useDeleteConfirmation'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import Card from '@/components/common/Card.vue'
 import Table from '@/components/common/Table.vue'
@@ -144,7 +152,7 @@ import Modal from '@/components/common/Modal.vue'
 
 const router = useRouter()
 const usersStore = useUsersStore()
-const toastStore = useToastStore()
+const notify = useNotification()
 
 const showCreateModal = ref(false)
 const showEditModal = ref(false)
@@ -197,13 +205,26 @@ const handleChangeRole = (row) => {
 }
 
 const handleDelete = async (row) => {
-  if (confirm(`Delete user "${row.username}"?`)) {
-    try {
-      await usersStore.deleteUser(row.id)
-      toastStore.success('User deleted')
-    } catch (error) {
+  try {
+    const { confirmDelete } = useDeleteConfirmation()
+    await confirmDelete(
+      row.id,
+      async () => {
+        await usersStore.deleteUser(row.id)
+      },
+      {
+        title: 'Delete User?',
+        message: 'This will permanently delete the user account and all associated data. This action cannot be undone.',
+        itemName: row.username,
+        confirmText: 'Yes, Delete User',
+        cancelText: 'Cancel'
+      }
+    )
+    notify.success('User deleted successfully')
+  } catch (error) {
+    if (error.message !== 'Delete cancelled') {
       const errorMsg = error.response?.data?.detail || error.response?.data?.message || error.message || 'Failed to delete user'
-      toastStore.error(errorMsg)
+      notify.error(errorMsg)
     }
   }
 }
@@ -217,27 +238,27 @@ const handleSubmit = async () => {
         delete updateData.password
       }
       await usersStore.updateUser(editingUser.value.id, updateData)
-      toastStore.success('User updated')
+      notify.success('User updated')
     } else {
       await usersStore.createUser(form.value)
-      toastStore.success('User created')
+      notify.success('User created')
     }
     closeModal()
   } catch (error) {
     const errorMsg = error.response?.data?.detail || error.response?.data?.message || error.message || 'Operation failed'
-    toastStore.error(errorMsg)
+    notify.error(errorMsg)
   }
 }
 
 const handleRoleSubmit = async () => {
   try {
     await usersStore.changeRole(roleChangingUser.value.id, roleForm.value.role)
-    toastStore.success('Role changed')
+    notify.success('Role changed')
     showRoleModal.value = false
     roleChangingUser.value = null
   } catch (error) {
     const errorMsg = error.response?.data?.detail || error.response?.data?.message || error.message || 'Failed to change role'
-    toastStore.error(errorMsg)
+    notify.error(errorMsg)
   }
 }
 

@@ -4,8 +4,8 @@
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       <Card>
         <div class="text-center">
-          <p class="text-sm text-gray-600 mb-2">Total Commands</p>
-          <p class="text-3xl font-bold text-gray-900">
+          <p class="text-sm text-muted mb-2">Total Commands</p>
+          <p class="text-3xl font-bold text-primary">
             {{ analyticsStore.commandStats?.overall?.total || 0 }}
           </p>
         </div>
@@ -13,8 +13,8 @@
 
       <Card>
         <div class="text-center">
-          <p class="text-sm text-gray-600 mb-2">Success Rate</p>
-          <p class="text-3xl font-bold text-green-600">
+          <p class="text-sm text-muted mb-2">Success Rate</p>
+          <p class="text-3xl font-bold text-success">
             {{ analyticsStore.commandStats?.overall?.success_rate?.toFixed(1) || 0 }}%
           </p>
         </div>
@@ -22,8 +22,8 @@
 
       <Card>
         <div class="text-center">
-          <p class="text-sm text-gray-600 mb-2">Pending</p>
-          <p class="text-3xl font-bold text-yellow-600">
+          <p class="text-sm text-muted mb-2">Pending</p>
+          <p class="text-3xl font-bold text-warning">
             {{ analyticsStore.commandStats?.overall?.pending || 0 }}
           </p>
         </div>
@@ -31,8 +31,8 @@
 
       <Card>
         <div class="text-center">
-          <p class="text-sm text-gray-600 mb-2">Failed</p>
-          <p class="text-3xl font-bold text-red-600">
+          <p class="text-sm text-muted mb-2">Failed</p>
+          <p class="text-3xl font-bold text-error">
             {{ analyticsStore.commandStats?.overall?.failed || 0 }}
           </p>
         </div>
@@ -41,31 +41,30 @@
 
     <!-- Statistics by Type -->
     <Card title="Commands by Type">
-      <div v-if="analyticsStore.commandStats?.by_type?.length > 0" class="overflow-x-auto">
-        <table class="min-w-full divide-y divide-gray-200">
-          <thead class="bg-gray-50">
+      <div v-if="analyticsStore.commandStats?.by_type?.length > 0" class="table-container">
+        <table class="table-base">
+          <thead class="table-thead">
             <tr>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Pending</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Done</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Failed</th>
+              <th class="table-th">Type</th>
+              <th class="table-th">Total</th>
+              <th class="table-th">Done</th>
+              <th class="table-th">Failed</th>
             </tr>
           </thead>
-          <tbody class="bg-white divide-y divide-gray-200">
-            <tr v-for="stat in analyticsStore.commandStats.by_type" :key="stat.type">
-              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+          <tbody class="table-tbody">
+            <tr v-for="stat in analyticsStore.commandStats.by_type" :key="stat.type" class="table-tr">
+              <td class="table-td font-medium">
                 {{ stat.type }}
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ stat.total }}</td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-yellow-600">{{ stat.pending }}</td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-green-600">{{ stat.done }}</td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-red-600">{{ stat.failed }}</td>
+              <td class="table-td text-number">{{ stat.total }}</td>
+              <td class="table-td text-warning">{{ stat.pending }}</td>
+              <td class="table-td text-success">{{ stat.done }}</td>
+              <td class="table-td text-error">{{ stat.failed }}</td>
             </tr>
           </tbody>
         </table>
       </div>
-      <div v-else class="text-center text-gray-500 py-8">
+      <div v-else class="text-center text-muted py-8">
         No command statistics available
       </div>
     </Card>

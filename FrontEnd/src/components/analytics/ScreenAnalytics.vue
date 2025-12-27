@@ -5,25 +5,25 @@
       <Card title="Screen Status Overview">
         <div v-if="analyticsStore.screenStats" class="space-y-4">
           <div class="flex items-center justify-between">
-            <span class="text-gray-600">Online Screens</span>
-            <span class="text-2xl font-bold text-green-600">
+            <span class="text-muted">Online Screens</span>
+            <span class="text-2xl font-bold text-success">
               {{ analyticsStore.screenStats.status_breakdown?.online || 0 }}
             </span>
           </div>
           <div class="flex items-center justify-between">
-            <span class="text-gray-600">Offline Screens</span>
-            <span class="text-2xl font-bold text-red-600">
+            <span class="text-muted">Offline Screens</span>
+            <span class="text-2xl font-bold text-error">
               {{ analyticsStore.screenStats.status_breakdown?.offline || 0 }}
             </span>
           </div>
           <div class="flex items-center justify-between">
-            <span class="text-gray-600">Total Screens</span>
-            <span class="text-2xl font-bold text-gray-900">
+            <span class="text-muted">Total Screens</span>
+            <span class="text-2xl font-bold text-primary">
               {{ analyticsStore.screenStats.status_breakdown?.total || 0 }}
             </span>
           </div>
         </div>
-        <div v-else class="text-center text-gray-500 py-8">
+        <div v-else class="text-center text-muted py-8">
           No screen statistics available
         </div>
       </Card>
@@ -31,37 +31,37 @@
       <Card title="Health Metrics">
         <div v-if="analyticsStore.screenStats?.health_metrics" class="space-y-4">
           <div class="flex items-center justify-between">
-            <span class="text-gray-600">Avg CPU Usage</span>
-            <span class="text-lg font-semibold">
+            <span class="text-muted">Avg CPU Usage</span>
+            <span class="text-lg font-semibold text-primary">
               {{ analyticsStore.screenStats.health_metrics.avg_cpu_usage?.toFixed(1) || 'N/A' }}%
             </span>
           </div>
           <div class="flex items-center justify-between">
-            <span class="text-gray-600">Avg Memory Usage</span>
-            <span class="text-lg font-semibold">
+            <span class="text-muted">Avg Memory Usage</span>
+            <span class="text-lg font-semibold text-primary">
               {{ analyticsStore.screenStats.health_metrics.avg_memory_usage?.toFixed(1) || 'N/A' }}%
             </span>
           </div>
           <div class="flex items-center justify-between">
-            <span class="text-gray-600">Avg Latency</span>
-            <span class="text-lg font-semibold">
+            <span class="text-muted">Avg Latency</span>
+            <span class="text-lg font-semibold text-primary">
               {{ analyticsStore.screenStats.health_metrics.avg_latency_ms?.toFixed(1) || 'N/A' }} ms
             </span>
           </div>
           <div class="flex items-center justify-between">
-            <span class="text-gray-600">Max CPU Usage</span>
-            <span class="text-lg font-semibold text-red-600">
+            <span class="text-muted">Max CPU Usage</span>
+            <span class="text-lg font-semibold text-error">
               {{ analyticsStore.screenStats.health_metrics.max_cpu_usage?.toFixed(1) || 'N/A' }}%
             </span>
           </div>
           <div class="flex items-center justify-between">
-            <span class="text-gray-600">Max Memory Usage</span>
-            <span class="text-lg font-semibold text-red-600">
+            <span class="text-muted">Max Memory Usage</span>
+            <span class="text-lg font-semibold text-error">
               {{ analyticsStore.screenStats.health_metrics.max_memory_usage?.toFixed(1) || 'N/A' }}%
             </span>
           </div>
         </div>
-        <div v-else class="text-center text-gray-500 py-8">
+        <div v-else class="text-center text-muted py-8">
           No health metrics available
         </div>
       </Card>
@@ -78,9 +78,7 @@
             <span
               :class="[
                 'px-2 py-1 rounded-full text-xs font-medium',
-                value
-                  ? 'bg-green-100 text-green-800'
-                  : 'bg-red-100 text-red-800'
+                value ? 'badge-success' : 'badge-error'
               ]"
             >
               {{ value ? 'Online' : 'Offline' }}
@@ -89,7 +87,7 @@
           <template #actions="{ row }">
             <button
               @click="viewScreenDetails(row.id)"
-              class="text-indigo-600 hover:text-indigo-900 text-sm font-medium"
+              class="action-btn-view text-sm font-medium"
             >
               View Details
             </button>
@@ -133,7 +131,8 @@ const screenTableData = computed(() => {
 const viewScreenDetails = async (screenId) => {
   try {
     await analyticsStore.fetchScreenDetail(screenId)
-    router.push(`/analytics/screens/${screenId}`)
+    // Navigate to screen details page (not analytics-specific route)
+    router.push(`/screens/${screenId}`)
   } catch (error) {
     console.error('Failed to fetch screen details:', error)
   }

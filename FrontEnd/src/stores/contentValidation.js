@@ -4,7 +4,7 @@
  */
 import { defineStore } from 'pinia'
 import { contentValidationAPI } from '../services/api'
-import { useToastStore } from './toast'
+import { useNotificationStore } from './notification'
 
 export const useContentValidationStore = defineStore('contentValidation', {
   state: () => ({
@@ -43,7 +43,7 @@ export const useContentValidationStore = defineStore('contentValidation', {
     async validateFiles(files, contentTypes = [], filenames = []) {
       this.loading = true
       this.error = null
-      const toastStore = useToastStore()
+      const notifyStore = useNotificationStore()
       
       try {
         const response = await contentValidationAPI.validateBulk(
@@ -57,17 +57,17 @@ export const useContentValidationStore = defineStore('contentValidation', {
         const invalidCount = this.bulkValidationResults.invalid_count || 0
         
         if (invalidCount > 0) {
-          toastStore.warning(
+          notifyStore.warning(
             `Validation complete: ${validCount} valid, ${invalidCount} invalid files`
           )
         } else {
-          toastStore.success(`All ${validCount} files are valid`)
+          notifyStore.success(`All ${validCount} files are valid`)
         }
         
         return this.bulkValidationResults
       } catch (error) {
         this.error = error.response?.data?.error || error.response?.data?.detail || error.message
-        toastStore.error('Validation failed: ' + this.error)
+        notifyStore.error('Validation failed: ' + this.error)
         throw error
       } finally {
         this.loading = false

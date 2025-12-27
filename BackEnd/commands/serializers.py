@@ -8,8 +8,8 @@ class CommandSerializer(serializers.ModelSerializer):
     """Serializer for Command model"""
     type_display = serializers.CharField(source='get_type_display', read_only=True)
     status_display = serializers.CharField(source='get_status_display', read_only=True)
-    payload_summary = serializers.CharField(source='payload_summary', read_only=True)
-    is_executable = serializers.BooleanField(source='is_executable', read_only=True)
+    payload_summary = serializers.CharField(read_only=True)
+    is_executable = serializers.BooleanField(read_only=True)
     is_expired = serializers.SerializerMethodField()
     can_retry = serializers.SerializerMethodField()
     screen_name = serializers.CharField(source='screen.name', read_only=True)

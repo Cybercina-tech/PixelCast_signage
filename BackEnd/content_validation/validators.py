@@ -404,6 +404,22 @@ class ContentValidator:
             file_content = file_obj.read()
             file_obj.seek(0)
             
+            # Check if file is binary (contains null bytes or high percentage of non-text characters)
+            # Binary files should not be validated as text
+            null_bytes = file_content.count(b'\x00')
+            if null_bytes > 0:
+                # File contains null bytes, likely binary - skip text validation
+                logger.debug("File contains null bytes, skipping text validation (likely binary file)")
+                return True, None
+            
+            # Check if file is likely binary by checking for high percentage of non-printable characters
+            if len(file_content) > 0:
+                non_printable = sum(1 for byte in file_content[:1024] if byte < 32 and byte not in [9, 10, 13])
+                if non_printable / min(len(file_content), 1024) > 0.3:
+                    # More than 30% non-printable characters, likely binary
+                    logger.debug("File appears to be binary (high percentage of non-printable characters), skipping text validation")
+                    return True, None
+            
             # Try to decode as UTF-8
             try:
                 text_content = file_content.decode('utf-8')
@@ -412,9 +428,11 @@ class ContentValidator:
                 try:
                     text_content = file_content.decode('latin-1')
                 except:
-                    return False, "File encoding not recognized (expected UTF-8 or Latin-1)"
+                    # If decoding fails, it's likely a binary file - skip text validation
+                    logger.debug("File cannot be decoded as text, skipping text validation (likely binary file)")
+                    return True, None
             
-            # Check for script injection patterns
+            # Check for script injection patterns only in text content
             if check_scripts:
                 for pattern in cls.SCRIPT_PATTERNS:
                     if re.search(pattern, text_content, re.IGNORECASE | re.DOTALL):

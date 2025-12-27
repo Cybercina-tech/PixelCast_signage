@@ -4,7 +4,7 @@
       <!-- Header -->
       <div class="flex justify-between items-center">
         <div>
-          <h1 class="text-2xl font-bold text-gray-900">System Backups</h1>
+          <h1 class="text-2xl font-bold text-primary">System Backups</h1>
           <p class="text-sm text-gray-600 mt-1">Manage database and media backups</p>
         </div>
         <div class="flex gap-3">
@@ -16,7 +16,7 @@
           </button>
           <button
             @click="handleCleanup"
-            class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition"
+            class="px-4 py-2 bg-slate-600 dark:bg-slate-700 text-white rounded-lg hover:bg-slate-700 dark:hover:bg-slate-600 transition"
           >
             Cleanup Expired
           </button>
@@ -27,11 +27,11 @@
       <Card>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Backup Type</label>
+            <label class="label-base block text-sm mb-1">Backup Type</label>
             <select
               v-model="filters.backup_type"
               @change="applyFilters"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg"
+              class="select-base w-full px-3 py-2 rounded-lg"
             >
               <option value="">All Types</option>
               <option value="database">Database</option>
@@ -41,11 +41,11 @@
             </select>
           </div>
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
+            <label class="label-base block text-sm mb-1">Status</label>
             <select
               v-model="filters.status"
               @change="applyFilters"
-              class="w-full px-3 py-2 border border-gray-300 rounded-lg"
+              class="select-base w-full px-3 py-2 rounded-lg"
             >
               <option value="">All Statuses</option>
               <option value="pending">Pending</option>
@@ -58,7 +58,7 @@
           <div class="flex items-end">
             <button
               @click="clearFilters"
-              class="w-full px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition"
+              class="w-full px-4 py-2 bg-slate-200 dark:bg-slate-700 text-primary rounded-lg hover:bg-slate-300 dark:hover:bg-slate-600 transition"
             >
               Clear Filters
             </button>
@@ -70,8 +70,8 @@
       <Modal :show="showTriggerModal" title="Trigger Backup" @close="showTriggerModal = false">
         <div class="space-y-4">
           <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Backup Type *</label>
-            <select v-model="backupForm.backup_type" required class="w-full px-3 py-2 border border-gray-300 rounded-lg">
+            <label class="label-base block text-sm mb-1">Backup Type *</label>
+            <select v-model="backupForm.backup_type" required class="select-base w-full px-3 py-2 rounded-lg">
               <option value="">Select backup type</option>
               <option value="database">Database</option>
               <option value="media">Media</option>
@@ -83,9 +83,9 @@
               <input
                 v-model="backupForm.compression"
                 type="checkbox"
-                class="mr-2"
+                class="checkbox-base mr-2"
               />
-              <span class="text-sm font-medium text-gray-700">Enable Compression</span>
+              <span class="text-sm font-medium text-primary">Enable Compression</span>
             </label>
           </div>
           <div v-if="backupForm.backup_type === 'database'">
@@ -93,9 +93,9 @@
               <input
                 v-model="backupForm.include_media"
                 type="checkbox"
-                class="mr-2"
+                class="checkbox-base mr-2"
               />
-              <span class="text-sm font-medium text-gray-700">Include Media Files</span>
+              <span class="text-sm font-medium text-primary">Include Media Files</span>
             </label>
           </div>
         </div>
@@ -117,64 +117,68 @@
         <div v-else-if="coreStore.error" class="text-center py-8 text-red-600">
           {{ coreStore.error }}
         </div>
-        <div v-else-if="coreStore.backups.length === 0" class="text-center py-8 text-gray-500">
+        <div v-else-if="coreStore.backups.length === 0" class="text-center py-8 text-muted">
           No backups found
         </div>
-        <div v-else class="overflow-x-auto">
-          <table class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-gray-50">
+        <div v-else class="table-container">
+          <table class="table-base">
+            <thead class="table-thead">
               <tr>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">File Size</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Started</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Completed</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Duration</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created By</th>
-                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                <th class="table-th">Type</th>
+                <th class="table-th">Status</th>
+                <th class="table-th">File Size</th>
+                <th class="table-th">Started</th>
+                <th class="table-th">Completed</th>
+                <th class="table-th">Duration</th>
+                <th class="table-th">Created By</th>
+                <th class="table-th text-right">Actions</th>
               </tr>
             </thead>
-            <tbody class="bg-white divide-y divide-gray-200">
-              <tr v-for="backup in coreStore.backups" :key="backup.id">
-                <td class="px-6 py-4 whitespace-nowrap">
-                  <span class="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs capitalize">
+            <tbody class="table-tbody">
+              <tr v-for="backup in coreStore.backups" :key="backup.id" class="table-tr">
+                <td class="table-td">
+                  <span class="badge-primary px-2 py-1 rounded text-xs capitalize">
                     {{ backup.backup_type || 'N/A' }}
                   </span>
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap">
+                <td class="table-td">
                   <span :class="getStatusClass(backup.status)" class="px-2 py-1 rounded text-xs font-medium">
                     {{ backup.status || 'unknown' }}
                   </span>
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                <td class="table-td text-number">
                   {{ formatFileSize(backup.file_size) }}
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                <td class="table-td text-number">
                   {{ formatDate(backup.started_at) }}
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                <td class="table-td text-number">
                   {{ formatDate(backup.completed_at) || '-' }}
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                <td class="table-td text-number">
                   {{ formatDuration(backup.duration_seconds) }}
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                <td class="table-td text-number">
                   {{ backup.created_by_username || 'System' }}
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  <button
-                    @click="viewBackup(backup)"
-                    class="text-indigo-600 hover:text-indigo-900 mr-3"
-                  >
-                    View
-                  </button>
-                  <button
-                    v-if="backup.status === 'completed'"
-                    @click="verifyBackup(backup.id)"
-                    class="text-green-600 hover:text-green-900 mr-3"
-                  >
-                    Verify
-                  </button>
+                <td class="table-td text-right">
+                  <div class="flex items-center justify-end gap-1">
+                    <button
+                      @click="viewBackup(backup)"
+                      class="action-btn-view"
+                      title="View"
+                    >
+                      <EyeIcon class="w-4 h-4" />
+                    </button>
+                    <button
+                      v-if="backup.status === 'completed'"
+                      @click="verifyBackup(backup.id)"
+                      class="action-btn-verify"
+                      title="Verify"
+                    >
+                      <CheckCircleIcon class="w-4 h-4" />
+                    </button>
+                  </div>
                 </td>
               </tr>
             </tbody>
@@ -187,15 +191,15 @@
         <div v-if="selectedBackup" class="space-y-4">
           <div class="grid grid-cols-2 gap-4">
             <div>
-              <label class="block text-sm font-medium text-gray-700">Backup Type</label>
+              <label class="label-base block text-sm">Backup Type</label>
               <div class="mt-1">
-                <span class="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs capitalize">
+                <span class="badge-primary px-2 py-1 rounded text-xs capitalize">
                   {{ selectedBackup.backup_type }}
                 </span>
               </div>
             </div>
             <div>
-              <label class="block text-sm font-medium text-gray-700">Status</label>
+              <label class="label-base block text-sm">Status</label>
               <div class="mt-1">
                 <span :class="getStatusClass(selectedBackup.status)" class="px-2 py-1 rounded text-xs font-medium">
                   {{ selectedBackup.status }}
@@ -203,77 +207,77 @@
               </div>
             </div>
             <div>
-              <label class="block text-sm font-medium text-gray-700">File Path</label>
-              <div class="mt-1 text-sm text-gray-900 font-mono text-xs break-all">
+              <label class="label-base block text-sm">File Path</label>
+              <div class="mt-1 text-sm text-primary font-mono text-xs break-all">
                 {{ selectedBackup.file_path || 'N/A' }}
               </div>
             </div>
             <div>
-              <label class="block text-sm font-medium text-gray-700">File Size</label>
-              <div class="mt-1 text-sm text-gray-900">
+              <label class="label-base block text-sm">File Size</label>
+              <div class="mt-1 text-sm text-primary">
                 {{ formatFileSize(selectedBackup.file_size) }}
               </div>
             </div>
             <div>
-              <label class="block text-sm font-medium text-gray-700">Started At</label>
-              <div class="mt-1 text-sm text-gray-900">{{ formatDate(selectedBackup.started_at) }}</div>
+              <label class="label-base block text-sm">Started At</label>
+              <div class="mt-1 text-sm text-primary">{{ formatDate(selectedBackup.started_at) }}</div>
             </div>
             <div>
-              <label class="block text-sm font-medium text-gray-700">Completed At</label>
-              <div class="mt-1 text-sm text-gray-900">{{ formatDate(selectedBackup.completed_at) || '-' }}</div>
+              <label class="label-base block text-sm">Completed At</label>
+              <div class="mt-1 text-sm text-primary">{{ formatDate(selectedBackup.completed_at) || '-' }}</div>
             </div>
             <div>
-              <label class="block text-sm font-medium text-gray-700">Duration</label>
-              <div class="mt-1 text-sm text-gray-900">
+              <label class="label-base block text-sm">Duration</label>
+              <div class="mt-1 text-sm text-primary">
                 {{ formatDuration(selectedBackup.duration_seconds) }}
               </div>
             </div>
             <div>
-              <label class="block text-sm font-medium text-gray-700">Created By</label>
-              <div class="mt-1 text-sm text-gray-900">{{ selectedBackup.created_by_username || 'System' }}</div>
+              <label class="label-base block text-sm">Created By</label>
+              <div class="mt-1 text-sm text-primary">{{ selectedBackup.created_by_username || 'System' }}</div>
             </div>
             <div>
-              <label class="block text-sm font-medium text-gray-700">Compression</label>
+              <label class="label-base block text-sm">Compression</label>
               <div class="mt-1">
-                <span :class="selectedBackup.compression ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'" class="px-2 py-1 rounded text-xs">
+                <span :class="selectedBackup.compression ? 'badge-success' : 'badge-info'" class="px-2 py-1 rounded text-xs">
                   {{ selectedBackup.compression ? 'Enabled' : 'Disabled' }}
                 </span>
               </div>
             </div>
             <div>
-              <label class="block text-sm font-medium text-gray-700">Include Media</label>
+              <label class="label-base block text-sm">Include Media</label>
               <div class="mt-1">
-                <span :class="selectedBackup.include_media ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'" class="px-2 py-1 rounded text-xs">
+                <span :class="selectedBackup.include_media ? 'badge-success' : 'badge-info'" class="px-2 py-1 rounded text-xs">
                   {{ selectedBackup.include_media ? 'Yes' : 'No' }}
                 </span>
               </div>
             </div>
             <div>
-              <label class="block text-sm font-medium text-gray-700">Scheduled</label>
+              <label class="label-base block text-sm">Scheduled</label>
               <div class="mt-1">
-                <span :class="selectedBackup.scheduled ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'" class="px-2 py-1 rounded text-xs">
+                <span :class="selectedBackup.scheduled ? 'badge-primary' : 'badge-info'" class="px-2 py-1 rounded text-xs">
                   {{ selectedBackup.scheduled ? 'Yes' : 'Manual' }}
                 </span>
               </div>
             </div>
             <div>
-              <label class="block text-sm font-medium text-gray-700">Expires At</label>
-              <div class="mt-1 text-sm text-gray-900">{{ formatDate(selectedBackup.expires_at) || 'Never' }}</div>
+              <label class="label-base block text-sm">Expires At</label>
+              <div class="mt-1 text-sm text-primary">{{ formatDate(selectedBackup.expires_at) || 'Never' }}</div>
             </div>
           </div>
           <div v-if="selectedBackup.checksum">
-            <label class="block text-sm font-medium text-gray-700">Checksum</label>
-            <div class="mt-1 text-sm text-gray-900 font-mono text-xs break-all">
+            <label class="label-base block text-sm">Checksum</label>
+            <div class="mt-1 text-sm text-primary font-mono text-xs break-all">
               {{ selectedBackup.checksum }}
             </div>
           </div>
           <div v-if="selectedBackup.error_message">
-            <label class="block text-sm font-medium text-gray-700">Error Message</label>
-            <div class="mt-1 p-3 bg-red-50 rounded text-sm text-red-900">{{ selectedBackup.error_message }}</div>
+            <label class="label-base block text-sm">Error Message</label>
+            <div class="mt-1 p-3 bg-red-50 dark:bg-red-900/20 rounded text-sm text-red-800 dark:text-red-300 break-words">{{ selectedBackup.error_message }}</div>
           </div>
           <div v-if="selectedBackup.metadata">
-            <label class="block text-sm font-medium text-gray-700">Metadata</label>
-            <pre class="mt-1 p-3 bg-gray-50 rounded text-xs overflow-auto">{{ JSON.stringify(selectedBackup.metadata, null, 2) }}</pre>
+            <label class="label-base block text-sm">Metadata</label>
+            <pre class="mt-1 p-3 bg-slate-50 dark:bg-slate-800 rounded text-xs text-primary overflow-auto">{{ JSON.stringify(selectedBackup.metadata, null, 2) }}</pre>
           </div>
         </div>
       </Modal>
@@ -283,6 +287,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { EyeIcon, CheckCircleIcon } from '@heroicons/vue/24/outline'
 import { useCoreStore } from '@/stores/core'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import Card from '@/components/common/Card.vue'
@@ -384,13 +389,13 @@ const formatDuration = (seconds) => {
 
 const getStatusClass = (status) => {
   const classes = {
-    pending: 'bg-yellow-100 text-yellow-800',
-    in_progress: 'bg-blue-100 text-blue-800',
-    completed: 'bg-green-100 text-green-800',
-    failed: 'bg-red-100 text-red-800',
-    expired: 'bg-gray-100 text-gray-800',
+    pending: 'badge-warning',
+    in_progress: 'badge-primary',
+    completed: 'badge-success',
+    failed: 'badge-error',
+    expired: 'badge-info',
   }
-  return classes[status] || 'bg-gray-100 text-gray-800'
+  return classes[status] || 'badge-info'
 }
 
 onMounted(() => {

@@ -72,7 +72,7 @@
       </div>
       
       <Card v-if="command.error_message" title="Error">
-        <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+        <div class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded break-words">
           {{ command.error_message }}
         </div>
       </Card>
@@ -84,13 +84,13 @@
 import { computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useCommandsStore } from '@/stores/commands'
-import { useToastStore } from '@/stores/toast'
+import { useNotification } from '@/composables/useNotification'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import Card from '@/components/common/Card.vue'
 
 const route = useRoute()
 const commandsStore = useCommandsStore()
-const toastStore = useToastStore()
+const notify = useNotification()
 
 const command = computed(() => commandsStore.currentCommand)
 
@@ -102,10 +102,10 @@ const formatDate = (dateString) => {
 const handleRetry = async () => {
   try {
     await commandsStore.retryCommand(command.value.id)
-    toastStore.success('Command retry initiated')
+    notify.success('Command retry initiated')
     await commandsStore.fetchCommand(command.value.id)
   } catch (error) {
-    toastStore.error('Failed to retry command')
+    notify.error('Failed to retry command')
   }
 }
 

@@ -24,20 +24,95 @@ api.interceptors.request.use(
   }
 )
 
-// Response interceptor for error handling
+// Response interceptor for error handling and token refresh
+let isRefreshing = false
+let failedQueue = []
+
+const processQueue = (error, token = null) => {
+  failedQueue.forEach(prom => {
+    if (error) {
+      prom.reject(error)
+    } else {
+      prom.resolve(token)
+    }
+  })
+  failedQueue = []
+}
+
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
+    const originalRequest = error.config
     const status = error.response?.status
     
-    if (status === 401) {
-      // Handle unauthorized - redirect to login
-      localStorage.removeItem('auth_token')
-      localStorage.removeItem('refresh_token')
-      if (window.location.pathname !== '/login' && 
-          window.location.pathname !== '/' &&
-          !window.location.pathname.startsWith('/401')) {
-        window.location.href = '/401'
+    // Don't try to refresh token for auth endpoints (login, signup, etc.)
+    const isAuthEndpoint = originalRequest.url?.includes('/auth/login/') || 
+                          originalRequest.url?.includes('/auth/signup/') ||
+                          originalRequest.url?.includes('/auth/token/')
+    
+    // Handle 401 - try to refresh token (but not for auth endpoints)
+    if (status === 401 && !originalRequest._retry && !isAuthEndpoint) {
+      if (isRefreshing) {
+        // If already refreshing, queue this request
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject })
+        })
+          .then(token => {
+            originalRequest.headers.Authorization = `Bearer ${token}`
+            return api(originalRequest)
+          })
+          .catch(err => {
+            return Promise.reject(err)
+          })
+      }
+
+      originalRequest._retry = true
+      isRefreshing = true
+
+      const refreshToken = localStorage.getItem('refresh_token')
+      
+      if (!refreshToken) {
+        // No refresh token, clear everything and redirect to login
+        localStorage.removeItem('auth_token')
+        localStorage.removeItem('refresh_token')
+        isRefreshing = false
+        processQueue(new Error('No refresh token'), null)
+        
+        if (window.location.pathname !== '/login' && 
+            window.location.pathname !== '/' &&
+            !window.location.pathname.startsWith('/401')) {
+          window.location.href = '/login'
+        }
+        return Promise.reject(error)
+      }
+
+      try {
+        const response = await authAPI.refreshToken(refreshToken)
+        const { access } = response.data
+        
+        localStorage.setItem('auth_token', access)
+        if (response.data.refresh) {
+          localStorage.setItem('refresh_token', response.data.refresh)
+        }
+        
+        originalRequest.headers.Authorization = `Bearer ${access}`
+        isRefreshing = false
+        processQueue(null, access)
+        
+        return api(originalRequest)
+      } catch (refreshError) {
+        // Refresh failed, clear tokens and redirect to login
+        localStorage.removeItem('auth_token')
+        localStorage.removeItem('refresh_token')
+        isRefreshing = false
+        processQueue(refreshError, null)
+        
+        if (window.location.pathname !== '/login' && 
+            window.location.pathname !== '/' &&
+            !window.location.pathname.startsWith('/401')) {
+          window.location.href = '/login'
+        }
+        return Promise.reject(refreshError)
       }
     } else if (status === 403) {
       // Handle forbidden - redirect to 403 page
@@ -58,10 +133,22 @@ api.interceptors.response.use(
 
 // Authentication API
 export const authAPI = {
+  signup: (data) => api.post('/auth/signup/', data),
   login: (credentials) => api.post('/auth/login/', credentials),
   logout: (data) => api.post('/auth/logout/', data),
+  logoutAll: () => api.post('/auth/logout-all/'),
+  sessions: () => api.get('/auth/sessions/'),
   token: (credentials) => api.post('/auth/token/', credentials),
-  refreshToken: (refresh) => api.post('/auth/token/refresh/', { refresh }),
+  refreshToken: (refresh) => {
+    // Use a separate axios instance without interceptors to avoid infinite loop
+    const refreshApi = axios.create({
+      baseURL: API_BASE_URL,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+    return refreshApi.post('/auth/token/refresh/', { refresh })
+  },
 }
 
 // Users API
@@ -73,9 +160,14 @@ export const usersAPI = {
   patch: (id, data) => api.patch(`/users/${id}/`, data),
   delete: (id) => api.delete(`/users/${id}/`),
   me: () => api.get('/users/me/'),
-  updateMe: (data) => api.put('/users/update_me/', data),
+  updateMe: (data) => api.patch('/users/me/', data),
+  changePasswordMe: (data) => api.post('/users/change_password_me/', data),
+  activityLogs: (params) => api.get('/users/activity_logs/', { params }),
   changePassword: (id, data) => api.post(`/users/${id}/change_password/`, data),
   changeRole: (id, data) => api.post(`/users/${id}/change_role/`, data),
+  sendVerificationEmail: () => api.post('/send-verification-email/'),
+  verifyEmail: (data) => api.post('/verify-email/', data),
+  sidebarItems: () => api.get('/sidebar-items/'),
 }
 
 // Roles API
@@ -99,6 +191,13 @@ export const screensAPI = {
   commandResponse: (data) => api.post('/screens/command-response/', data),
   contentSync: (data) => api.post('/screens/content-sync/', data),
   healthCheck: (params) => api.get('/screens/health-check/', { params }),
+}
+
+// Pairing API
+export const pairingAPI = {
+  generate: () => api.post('/pairing/generate/'),
+  status: (params) => api.get('/pairing/status/', { params }),
+  bind: (data) => api.post('/pairing/bind/', data),
 }
 
 // Templates API
@@ -143,13 +242,41 @@ export const contentsAPI = {
   downloadToScreen: (id, data) => api.post(`/contents/${id}/download_to_screen/`, data),
   retryDownload: (id, data) => api.post(`/contents/${id}/retry_download/`, data),
   upload: (id, file, data = {}) => {
+    console.log('[API] uploadContent called', {
+      contentId: id,
+      fileName: file?.name,
+      fileSize: file?.size,
+      fileType: file?.type,
+      additionalData: data
+    })
+    
+    // Validate file
+    if (!file) {
+      console.error('[API] uploadContent: No file provided')
+      return Promise.reject(new Error('No file provided'))
+    }
+    
     const formData = new FormData()
     formData.append('file', file)
+    
+    // Append additional data if provided
     Object.keys(data).forEach(key => {
       formData.append(key, data[key])
+      console.log(`[API] uploadContent: Added form field "${key}":`, data[key])
     })
+    
+    // Log FormData contents (for debugging)
+    console.log('[API] uploadContent: FormData prepared', {
+      hasFile: formData.has('file'),
+      fileInFormData: file,
+      formDataKeys: Array.from(formData.keys())
+    })
+    
+    // DO NOT set Content-Type manually - let axios set it with boundary
+    // Setting it manually breaks multipart/form-data boundary
     return api.post(`/contents/${id}/upload/`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
+      // Remove manual Content-Type header - axios will set it automatically with boundary
+      // headers: { 'Content-Type': 'multipart/form-data' }, // ❌ WRONG - breaks boundary
     })
   },
   download: (id, params) => api.get(`/contents/${id}/download/`, { params }),
@@ -293,6 +420,17 @@ export const coreAPI = {
     trigger: (data) => api.post('/core/backups/trigger/', data),
     verify: (id) => api.post(`/core/backups/${id}/verify/`),
     cleanup: () => api.post('/core/backups/cleanup/'),
+  },
+}
+
+// Admin API (SuperAdmin only)
+export const adminAPI = {
+  // Error Logs
+  errors: {
+    list: (params) => api.get('/admin/errors/', { params }),
+    detail: (id) => api.get(`/admin/errors/${id}/`),
+    resolve: (id) => api.patch(`/admin/errors/${id}/resolve/`),
+    stats: (params) => api.get('/admin/errors/stats/', { params }),
   },
 }
 

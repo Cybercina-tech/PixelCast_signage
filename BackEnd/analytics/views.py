@@ -4,9 +4,12 @@ Analytics Dashboard API views.
 Provides REST API endpoints for fetching analytics data with proper
 authentication, authorization, and input validation.
 """
+
+import logging
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.exceptions import PermissionDenied
 from rest_framework import status
 from django.utils import timezone
 from django.core.exceptions import ValidationError
@@ -14,6 +17,8 @@ from django.core.cache import cache
 from typing import Optional
 
 from accounts.permissions import RolePermissions
+
+logger = logging.getLogger(__name__)
 from .services import (
     ScreenAnalyticsService,
     CommandAnalyticsService,
@@ -41,14 +46,27 @@ def check_analytics_permission(request):
     """
     Check if user has permission to access analytics.
     
-    Only Manager and Admin roles can access analytics.
+    Manager, Admin, and SuperAdmin roles can access analytics.
     
     Raises:
         PermissionDenied: If user doesn't have permission
     """
-    if not RolePermissions.can_manage_own(request.user):
-        from rest_framework.exceptions import PermissionDenied
-        raise PermissionDenied("Manager or Admin role required to access analytics")
+    try:
+        if not request.user or not request.user.is_authenticated:
+            raise PermissionDenied("Authentication required")
+        
+        # Check if user has view_analytics permission using the permission system
+        from accounts.sidebar_config import has_permission
+        
+        # Check permission first, then fallback to role check
+        has_perm = has_permission(request.user, 'view_analytics')
+        has_role = (request.user.is_superadmin() or request.user.is_admin() or request.user.is_manager())
+        
+        if not has_perm and not has_role:
+            raise PermissionDenied("Manager, Admin, or SuperAdmin role required to access analytics")
+    except AttributeError as e:
+        logger.error(f"Error checking analytics permission: {str(e)}", exc_info=True)
+        raise PermissionDenied("Error checking permissions")
 
 
 def get_rate_limit_key(user_id: int, endpoint: str) -> str:
@@ -133,11 +151,20 @@ def screen_statistics(request):
             'error': str(e),
             'timestamp': timezone.now().isoformat(),
         }, status=status.HTTP_400_BAD_REQUEST)
+    except PermissionDenied as e:
+        logger.warning(f"Permission denied for user {request.user.id if request.user.is_authenticated else 'anonymous'}: {str(e)}")
+        return Response({
+            'status': 'error',
+            'error': 'Permission denied',
+            'message': str(e),
+            'timestamp': timezone.now().isoformat(),
+        }, status=status.HTTP_403_FORBIDDEN)
     except Exception as e:
+        logger.error(f"Error in screen_statistics: {str(e)}", exc_info=True)
         return Response({
             'status': 'error',
             'error': 'Internal server error',
-            'message': str(e),
+            'message': f'An error occurred while fetching screen statistics: {str(e)}',
             'timestamp': timezone.now().isoformat(),
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -185,11 +212,20 @@ def screen_detail(request, screen_id):
             'error': str(e),
             'timestamp': timezone.now().isoformat(),
         }, status=status.HTTP_400_BAD_REQUEST)
+    except PermissionDenied as e:
+        logger.warning(f"Permission denied for user {request.user.id if request.user.is_authenticated else 'anonymous'}: {str(e)}")
+        return Response({
+            'status': 'error',
+            'error': 'Permission denied',
+            'message': str(e),
+            'timestamp': timezone.now().isoformat(),
+        }, status=status.HTTP_403_FORBIDDEN)
     except Exception as e:
+        logger.error(f"Error in screen_statistics: {str(e)}", exc_info=True)
         return Response({
             'status': 'error',
             'error': 'Internal server error',
-            'message': str(e),
+            'message': f'An error occurred while fetching screen statistics: {str(e)}',
             'timestamp': timezone.now().isoformat(),
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -251,11 +287,20 @@ def command_statistics(request):
             'error': str(e),
             'timestamp': timezone.now().isoformat(),
         }, status=status.HTTP_400_BAD_REQUEST)
+    except PermissionDenied as e:
+        logger.warning(f"Permission denied for user {request.user.id if request.user.is_authenticated else 'anonymous'}: {str(e)}")
+        return Response({
+            'status': 'error',
+            'error': 'Permission denied',
+            'message': str(e),
+            'timestamp': timezone.now().isoformat(),
+        }, status=status.HTTP_403_FORBIDDEN)
     except Exception as e:
+        logger.error(f"Error in screen_statistics: {str(e)}", exc_info=True)
         return Response({
             'status': 'error',
             'error': 'Internal server error',
-            'message': str(e),
+            'message': f'An error occurred while fetching screen statistics: {str(e)}',
             'timestamp': timezone.now().isoformat(),
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -306,11 +351,20 @@ def content_statistics(request):
             'error': str(e),
             'timestamp': timezone.now().isoformat(),
         }, status=status.HTTP_400_BAD_REQUEST)
+    except PermissionDenied as e:
+        logger.warning(f"Permission denied for user {request.user.id if request.user.is_authenticated else 'anonymous'}: {str(e)}")
+        return Response({
+            'status': 'error',
+            'error': 'Permission denied',
+            'message': str(e),
+            'timestamp': timezone.now().isoformat(),
+        }, status=status.HTTP_403_FORBIDDEN)
     except Exception as e:
+        logger.error(f"Error in screen_statistics: {str(e)}", exc_info=True)
         return Response({
             'status': 'error',
             'error': 'Internal server error',
-            'message': str(e),
+            'message': f'An error occurred while fetching screen statistics: {str(e)}',
             'timestamp': timezone.now().isoformat(),
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -361,11 +415,20 @@ def template_statistics(request):
             'error': str(e),
             'timestamp': timezone.now().isoformat(),
         }, status=status.HTTP_400_BAD_REQUEST)
+    except PermissionDenied as e:
+        logger.warning(f"Permission denied for user {request.user.id if request.user.is_authenticated else 'anonymous'}: {str(e)}")
+        return Response({
+            'status': 'error',
+            'error': 'Permission denied',
+            'message': str(e),
+            'timestamp': timezone.now().isoformat(),
+        }, status=status.HTTP_403_FORBIDDEN)
     except Exception as e:
+        logger.error(f"Error in screen_statistics: {str(e)}", exc_info=True)
         return Response({
             'status': 'error',
             'error': 'Internal server error',
-            'message': str(e),
+            'message': f'An error occurred while fetching screen statistics: {str(e)}',
             'timestamp': timezone.now().isoformat(),
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
@@ -423,10 +486,19 @@ def activity_trends(request):
             'error': str(e),
             'timestamp': timezone.now().isoformat(),
         }, status=status.HTTP_400_BAD_REQUEST)
+    except PermissionDenied as e:
+        logger.warning(f"Permission denied for user {request.user.id if request.user.is_authenticated else 'anonymous'}: {str(e)}")
+        return Response({
+            'status': 'error',
+            'error': 'Permission denied',
+            'message': str(e),
+            'timestamp': timezone.now().isoformat(),
+        }, status=status.HTTP_403_FORBIDDEN)
     except Exception as e:
+        logger.error(f"Error in screen_statistics: {str(e)}", exc_info=True)
         return Response({
             'status': 'error',
             'error': 'Internal server error',
-            'message': str(e),
+            'message': f'An error occurred while fetching screen statistics: {str(e)}',
             'timestamp': timezone.now().isoformat(),
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

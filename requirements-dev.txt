@@ -17,4 +17,4 @@ isort>=5.12.0  # Import sorter
 # pytest>=7.4.0
 # pytest-django>=4.5.0
 # coverage>=7.3.0
-
+psycopg2-binary==2.9.9

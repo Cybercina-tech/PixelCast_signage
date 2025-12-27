@@ -16,6 +16,14 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from django.conf import settings
+from django.conf.urls.static import static
+from rest_framework.routers import DefaultRouter
+from log.views import ErrorLogViewSet
+
+# Create router for admin endpoints
+admin_router = DefaultRouter()
+admin_router.register(r'errors', ErrorLogViewSet, basename='error-log')
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -28,5 +36,10 @@ urlpatterns = [
     path('api/', include('analytics.urls')),  # Analytics dashboard endpoints
     path('api/core/', include('core.urls')),  # Core infrastructure (audit, backup)
     path('api/logs/', include('log.urls')),
+    path('api/admin/', include(admin_router.urls)),  # Admin-only endpoints (errors)
     path('', include('api_docs.urls')),  # API documentation (Swagger/OpenAPI)
 ]
+
+# Serve media files during development
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

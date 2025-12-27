@@ -13,22 +13,24 @@ class RolePermissions:
     
     Provides methods to check if a user has permission to perform
     specific actions based on their role.
+    
+    SuperAdmin always has full access to everything.
     """
     
     @staticmethod
     def can_view_all(user):
-        """Check if user can view all resources (Admin)"""
-        return user.is_admin()
+        """Check if user can view all resources (SuperAdmin or Admin)"""
+        return user.is_superadmin() or user.is_admin()
     
     @staticmethod
     def can_manage_all(user):
-        """Check if user can manage all resources (Admin)"""
-        return user.is_admin()
+        """Check if user can manage all resources (SuperAdmin or Admin)"""
+        return user.is_superadmin() or user.is_admin()
     
     @staticmethod
     def can_manage_own(user):
-        """Check if user can manage their own resources (Manager or Admin)"""
-        return user.is_admin() or user.is_manager()
+        """Check if user can manage their own resources (SuperAdmin, Admin, or Manager)"""
+        return user.is_superadmin() or user.is_admin() or user.is_manager()
     
     @staticmethod
     def can_view_own(user):
@@ -40,6 +42,8 @@ class RolePermissions:
         """
         Check if user can edit a specific resource.
         
+        SuperAdmin always has full access.
+        
         Args:
             user: User instance
             resource: Resource instance (Screen, Template, etc.) with owner/created_by field
@@ -47,6 +51,10 @@ class RolePermissions:
         Returns:
             bool: True if user can edit the resource
         """
+        # SuperAdmin always has full access
+        if user.is_superadmin():
+            return True
+        
         if user.is_admin():
             return True
         
@@ -64,6 +72,8 @@ class RolePermissions:
         """
         Check if user can view a specific resource.
         
+        SuperAdmin always has full access.
+        
         Args:
             user: User instance
             resource: Resource instance (Screen, Template, etc.)
@@ -71,6 +81,10 @@ class RolePermissions:
         Returns:
             bool: True if user can view the resource
         """
+        # SuperAdmin always has full access
+        if user.is_superadmin():
+            return True
+        
         if user.is_admin():
             return True
         
@@ -85,16 +99,16 @@ class RolePermissions:
 
 
 def require_admin(user):
-    """Decorator/function to require Admin role"""
-    if not user.is_admin():
-        raise PermissionDenied("Admin role required")
+    """Decorator/function to require SuperAdmin or Admin role"""
+    if not (user.is_superadmin() or user.is_admin()):
+        raise PermissionDenied("SuperAdmin or Admin role required")
     return True
 
 
 def require_manager_or_admin(user):
-    """Decorator/function to require Manager or Admin role"""
-    if not (user.is_admin() or user.is_manager()):
-        raise PermissionDenied("Manager or Admin role required")
+    """Decorator/function to require Manager, Admin, or SuperAdmin role"""
+    if not (user.is_superadmin() or user.is_admin() or user.is_manager()):
+        raise PermissionDenied("Manager, Admin, or SuperAdmin role required")
     return True
 
 

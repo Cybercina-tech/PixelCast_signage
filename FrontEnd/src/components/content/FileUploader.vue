@@ -2,13 +2,13 @@
   <div class="space-y-4">
     <!-- File Input -->
     <div>
-      <label class="block text-sm font-medium text-gray-700 mb-2">
+      <label class="label-base block text-sm mb-2">
         {{ label || 'Select File' }}
       </label>
-      <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-lg hover:border-indigo-400 transition">
+      <div class="upload-zone mt-1 flex justify-center px-6 pt-5 pb-6 rounded-lg">
         <div class="space-y-1 text-center">
           <svg
-            class="mx-auto h-12 w-12 text-gray-400"
+            class="mx-auto h-12 w-12 text-muted"
             stroke="currentColor"
             fill="none"
             viewBox="0 0 48 48"
@@ -20,10 +20,10 @@
               stroke-linejoin="round"
             />
           </svg>
-          <div class="flex text-sm text-gray-600">
+          <div class="flex text-sm text-secondary">
             <label
               for="file-upload"
-              class="relative cursor-pointer bg-white rounded-md font-medium text-indigo-600 hover:text-indigo-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-indigo-500"
+              class="relative cursor-pointer bg-transparent rounded-md font-medium text-primary-color hover:text-emerald-700 dark:hover:text-emerald-300 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-emerald-500 dark:focus-within:ring-emerald-400"
             >
               <span>Upload a file</span>
               <input
@@ -37,24 +37,24 @@
             </label>
             <p class="pl-1">or drag and drop</p>
           </div>
-          <p class="text-xs text-gray-500">{{ acceptHint }}</p>
+          <p class="text-xs text-muted">{{ acceptHint }}</p>
         </div>
       </div>
     </div>
 
     <!-- Selected File -->
-    <div v-if="selectedFile" class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+    <div v-if="selectedFile" class="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-4">
       <div class="flex items-center justify-between">
         <div class="flex items-center space-x-3">
-          <DocumentIcon class="w-8 h-8 text-gray-400" />
+          <DocumentIcon class="w-8 h-8 text-muted" />
           <div>
-            <p class="text-sm font-medium text-gray-900">{{ selectedFile.name }}</p>
-            <p class="text-xs text-gray-500">{{ formatFileSize(selectedFile.size) }}</p>
+            <p class="text-sm font-medium text-primary">{{ selectedFile.name }}</p>
+            <p class="text-xs text-muted">{{ formatFileSize(selectedFile.size) }}</p>
           </div>
         </div>
         <button
           @click="clearFile"
-          class="text-red-600 hover:text-red-800"
+          class="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors"
         >
           <XMarkIcon class="w-5 h-5" />
         </button>
@@ -65,20 +65,20 @@
     <div v-if="validationResult" class="space-y-2">
       <div
         v-if="validationResult.is_valid"
-        class="bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg text-sm"
+        class="badge-success border border-emerald-200 dark:border-emerald-800 px-4 py-3 rounded-lg text-sm"
       >
         ✓ File is valid and ready to upload
       </div>
       <div
         v-else
-        class="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg text-sm"
+        class="badge-error border border-red-200 dark:border-red-800 px-4 py-3 rounded-lg text-sm"
       >
         <p class="font-medium mb-1">Validation failed:</p>
         <ul class="list-disc list-inside space-y-1">
           <li v-for="(error, idx) in validationResult.errors" :key="idx">{{ error }}</li>
         </ul>
       </div>
-      <div v-if="validationResult.warnings && validationResult.warnings.length > 0" class="bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 rounded-lg text-sm">
+      <div v-if="validationResult.warnings && validationResult.warnings.length > 0" class="badge-warning border border-amber-200 dark:border-amber-800 px-4 py-3 rounded-lg text-sm">
         <p class="font-medium mb-1">Warnings:</p>
         <ul class="list-disc list-inside space-y-1">
           <li v-for="(warning, idx) in validationResult.warnings" :key="idx">{{ warning }}</li>
@@ -88,8 +88,8 @@
 
     <!-- Validation Loading -->
     <div v-if="validating" class="text-center py-2">
-      <div class="inline-block animate-spin rounded-full h-5 w-5 border-b-2 border-indigo-600"></div>
-      <p class="mt-1 text-xs text-gray-600">Validating file...</p>
+      <div class="inline-block animate-spin rounded-full h-5 w-5 border-b-2 border-primary-color"></div>
+      <p class="mt-1 text-xs text-muted">Validating file...</p>
     </div>
   </div>
 </template>

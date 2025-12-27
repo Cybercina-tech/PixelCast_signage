@@ -59,78 +59,161 @@
           </div>
         </div>
 
-        <!-- Quick Links Section -->
+        <!-- Product Links Section -->
         <div>
-          <h3 class="text-lg font-bold text-white mb-6">Quick Links</h3>
+          <h3 class="text-lg font-bold text-white mb-6">Product</h3>
           <ul class="space-y-3">
-            <li v-for="link in quickLinks" :key="link.name">
+            <li>
               <a
-                :href="link.href"
-                @click.prevent="scrollToSection(link.href)"
+                href="#features"
+                @click.prevent="scrollToSection('#features')"
                 class="text-neutral-400 hover:text-orange-400 transition-all duration-300 ease-out inline-block hover:translate-x-1 text-sm group"
               >
                 <span class="flex items-center">
                   <span class="w-0 group-hover:w-2 h-0.5 bg-orange-500 mr-0 group-hover:mr-2 transition-all duration-300"></span>
-                  {{ link.name }}
+                  Features
+                </span>
+              </a>
+            </li>
+            <li>
+              <a
+                href="#features"
+                @click.prevent="scrollToSection('#features')"
+                class="text-neutral-400 hover:text-orange-400 transition-all duration-300 ease-out inline-block hover:translate-x-1 text-sm group"
+              >
+                <span class="flex items-center">
+                  <span class="w-0 group-hover:w-2 h-0.5 bg-orange-500 mr-0 group-hover:mr-2 transition-all duration-300"></span>
+                  Screens
+                </span>
+              </a>
+            </li>
+            <li>
+              <a
+                href="#features"
+                @click.prevent="scrollToSection('#features')"
+                class="text-neutral-400 hover:text-orange-400 transition-all duration-300 ease-out inline-block hover:translate-x-1 text-sm group"
+              >
+                <span class="flex items-center">
+                  <span class="w-0 group-hover:w-2 h-0.5 bg-orange-500 mr-0 group-hover:mr-2 transition-all duration-300"></span>
+                  Templates
+                </span>
+              </a>
+            </li>
+            <li>
+              <a
+                href="#features"
+                @click.prevent="scrollToSection('#features')"
+                class="text-neutral-400 hover:text-orange-400 transition-all duration-300 ease-out inline-block hover:translate-x-1 text-sm group"
+              >
+                <span class="flex items-center">
+                  <span class="w-0 group-hover:w-2 h-0.5 bg-orange-500 mr-0 group-hover:mr-2 transition-all duration-300"></span>
+                  Schedules
+                </span>
+              </a>
+            </li>
+            <li>
+              <a
+                href="#features"
+                @click.prevent="scrollToSection('#features')"
+                class="text-neutral-400 hover:text-orange-400 transition-all duration-300 ease-out inline-block hover:translate-x-1 text-sm group"
+              >
+                <span class="flex items-center">
+                  <span class="w-0 group-hover:w-2 h-0.5 bg-orange-500 mr-0 group-hover:mr-2 transition-all duration-300"></span>
+                  Pricing
                 </span>
               </a>
             </li>
           </ul>
         </div>
 
-        <!-- Contact Info Section -->
+        <!-- Company / Legal Section -->
         <div>
-          <h3 class="text-lg font-bold text-white mb-6">Contact</h3>
-          <ul class="space-y-4">
-            <li class="flex items-start space-x-3">
-              <EnvelopeIcon class="w-5 h-5 text-orange-500 mt-0.5 flex-shrink-0" />
+          <h3 class="text-lg font-bold text-white mb-6">Company</h3>
+          <ul class="space-y-3">
+            <li>
               <a
-                href="mailto:contact@screengram.com"
-                class="text-neutral-400 hover:text-orange-400 transition-colors duration-300 text-sm"
+                href="#about"
+                @click.prevent="scrollToSection('#about')"
+                class="text-neutral-400 hover:text-orange-400 transition-all duration-300 ease-out inline-block hover:translate-x-1 text-sm group"
               >
-                contact@screengram.com
+                <span class="flex items-center">
+                  <span class="w-0 group-hover:w-2 h-0.5 bg-orange-500 mr-0 group-hover:mr-2 transition-all duration-300"></span>
+                  About
+                </span>
               </a>
             </li>
-            <li class="flex items-start space-x-3">
-              <PhoneIcon class="w-5 h-5 text-orange-500 mt-0.5 flex-shrink-0" />
+            <li>
               <a
-                href="tel:+1234567890"
-                class="text-neutral-400 hover:text-orange-400 transition-colors duration-300 text-sm"
+                href="#contact"
+                @click.prevent="scrollToSection('#contact')"
+                class="text-neutral-400 hover:text-orange-400 transition-all duration-300 ease-out inline-block hover:translate-x-1 text-sm group"
               >
-                +1 (234) 567-890
+                <span class="flex items-center">
+                  <span class="w-0 group-hover:w-2 h-0.5 bg-orange-500 mr-0 group-hover:mr-2 transition-all duration-300"></span>
+                  Contact
+                </span>
               </a>
             </li>
-            <li class="flex items-start space-x-3">
-              <MapPinIcon class="w-5 h-5 text-orange-500 mt-0.5 flex-shrink-0" />
-              <span class="text-neutral-400 text-sm">
-                123 Enterprise Blvd<br>
-                San Francisco, CA 94105
-              </span>
+            <li>
+              <router-link
+                to="/privacy"
+                class="text-neutral-400 hover:text-orange-400 transition-all duration-300 ease-out inline-block hover:translate-x-1 text-sm group"
+              >
+                <span class="flex items-center">
+                  <span class="w-0 group-hover:w-2 h-0.5 bg-orange-500 mr-0 group-hover:mr-2 transition-all duration-300"></span>
+                  Privacy Policy
+                </span>
+              </router-link>
+            </li>
+            <li>
+              <router-link
+                to="/terms"
+                class="text-neutral-400 hover:text-orange-400 transition-all duration-300 ease-out inline-block hover:translate-x-1 text-sm group"
+              >
+                <span class="flex items-center">
+                  <span class="w-0 group-hover:w-2 h-0.5 bg-orange-500 mr-0 group-hover:mr-2 transition-all duration-300"></span>
+                  Terms of Service
+                </span>
+              </router-link>
             </li>
           </ul>
         </div>
 
-        <!-- Newsletter Section -->
+        <!-- Meta / Trust Section -->
         <div>
-          <h3 class="text-lg font-bold text-white mb-6">Stay Updated</h3>
-          <p class="text-neutral-400 text-sm mb-4">
-            Get the latest updates and features delivered to your inbox.
-          </p>
-          <form @submit.prevent="handleNewsletterSubmit" class="space-y-3">
-            <input
-              type="email"
-              v-model="email"
-              placeholder="Enter your email"
-              class="w-full px-4 py-2.5 bg-neutral-800 border border-neutral-700 rounded-lg text-white placeholder-neutral-500 focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20 transition-all duration-300 text-sm"
-              required
-            />
-            <button
-              type="submit"
-              class="w-full px-4 py-2.5 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-lg font-bold text-sm hover:from-orange-600 hover:to-orange-700 transition-all duration-300 ease-out shadow-lg shadow-orange-500/30 hover:shadow-xl hover:shadow-orange-500/40 hover:-translate-y-0.5 active:translate-y-0"
+          <h3 class="text-lg font-bold text-white mb-6">Support</h3>
+          <ul class="space-y-3 mb-6">
+            <li>
+              <a
+                href="mailto:support@screengram.com"
+                class="text-neutral-400 hover:text-orange-400 transition-colors duration-300 text-sm flex items-center gap-2"
+              >
+                <EnvelopeIcon class="w-4 h-4" />
+                support@screengram.com
+              </a>
+            </li>
+            <li>
+              <span class="text-neutral-400 text-sm">Version: v{{ appVersion }}</span>
+            </li>
+            <li>
+              <a
+                href="#"
+                class="text-neutral-400 hover:text-orange-400 transition-colors duration-300 text-sm"
+              >
+                Status Page
+              </a>
+            </li>
+          </ul>
+          
+          <!-- Optional CTA -->
+          <div class="mt-4">
+            <a
+              href="/signup"
+              class="inline-block px-4 py-2 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-lg font-medium text-sm hover:from-orange-600 hover:to-orange-700 transition-all duration-300 ease-out shadow-lg shadow-orange-500/30 hover:shadow-xl hover:shadow-orange-500/40 hover:-translate-y-0.5 active:translate-y-0"
             >
-              Subscribe
-            </button>
-          </form>
+              Start Free Trial
+            </a>
+          </div>
         </div>
       </div>
 
@@ -141,24 +224,18 @@
             <span>© {{ currentYear }} Screengram. All rights reserved.</span>
           </div>
           <div class="flex items-center space-x-6 text-sm">
-            <a
-              href="#"
+            <router-link
+              to="/privacy"
               class="text-neutral-400 hover:text-orange-400 transition-colors duration-300"
             >
               Privacy Policy
-            </a>
-            <a
-              href="#"
+            </router-link>
+            <router-link
+              to="/terms"
               class="text-neutral-400 hover:text-orange-400 transition-colors duration-300"
             >
               Terms of Service
-            </a>
-            <a
-              href="#"
-              class="text-neutral-400 hover:text-orange-400 transition-colors duration-300"
-            >
-              Cookie Policy
-            </a>
+            </router-link>
           </div>
         </div>
       </div>
@@ -181,24 +258,19 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import {
   BoltIcon,
   EnvelopeIcon,
-  PhoneIcon,
-  MapPinIcon,
   ArrowUpIcon
 } from '@heroicons/vue/24/outline'
 
 const currentYear = new Date().getFullYear()
 const showScrollTop = ref(false)
-const email = ref('')
 
-const quickLinks = ref([
-  { name: 'Home', href: '#home' },
-  { name: 'Features', href: '#features' },
-  { name: 'Templates', href: '#features' },
-  { name: 'Commands', href: '#features' },
-  { name: 'Scheduling', href: '#features' },
-  { name: 'Users', href: '#features' },
-  { name: 'Contact', href: '#contact' }
-])
+// App version from Git (set at build time)
+// Format: commit hash (e.g., "e994370")
+const appVersion = ref(typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'dev')
+
+// App version from Git (set at build time)
+// Format: commit hash (e.g., "e994370")
+const appVersion = ref(typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'dev')
 
 
 const scrollToSection = (href) => {
@@ -223,12 +295,7 @@ const scrollToTop = () => {
   })
 }
 
-const handleNewsletterSubmit = () => {
-  // Handle newsletter subscription
-  console.log('Newsletter subscription:', email.value)
-  email.value = ''
-  // You can add actual API call here
-}
+// Newsletter form removed - replaced with CTA button
 
 const handleScroll = () => {
   showScrollTop.value = window.scrollY > 500

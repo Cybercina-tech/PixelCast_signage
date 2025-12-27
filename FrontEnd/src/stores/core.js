@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { coreAPI } from '../services/api'
-import { useToastStore } from './toast'
+import { useNotificationStore } from './notification'
 
 export const useCoreStore = defineStore('core', {
   state: () => ({
@@ -36,8 +36,8 @@ export const useCoreStore = defineStore('core', {
         return response.data
       } catch (error) {
         this.error = error.response?.data?.detail || error.response?.data?.message || error.message
-        const toastStore = useToastStore()
-        toastStore.showError(this.error || 'Failed to fetch audit logs')
+        const notifyStore = useNotificationStore()
+        notifyStore.error(this.error || 'Failed to fetch audit logs')
         throw error
       } finally {
         this.loading = false
@@ -52,8 +52,8 @@ export const useCoreStore = defineStore('core', {
         return response.data
       } catch (error) {
         this.error = error.response?.data?.detail || error.response?.data?.message || error.message
-        const toastStore = useToastStore()
-        toastStore.showError(this.error || 'Failed to fetch audit log')
+        const notifyStore = useNotificationStore()
+        notifyStore.error(this.error || 'Failed to fetch audit log')
         throw error
       } finally {
         this.loading = false
@@ -101,8 +101,8 @@ export const useCoreStore = defineStore('core', {
         return response.data
       } catch (error) {
         this.error = error.response?.data?.detail || error.response?.data?.message || error.message
-        const toastStore = useToastStore()
-        toastStore.showError(this.error || 'Failed to fetch backups')
+        const notifyStore = useNotificationStore()
+        notifyStore.error(this.error || 'Failed to fetch backups')
         throw error
       } finally {
         this.loading = false
@@ -118,8 +118,8 @@ export const useCoreStore = defineStore('core', {
         return response.data
       } catch (error) {
         this.error = error.response?.data?.detail || error.response?.data?.message || error.message
-        const toastStore = useToastStore()
-        toastStore.showError(this.error || 'Failed to fetch backup')
+        const notifyStore = useNotificationStore()
+        notifyStore.error(this.error || 'Failed to fetch backup')
         throw error
       } finally {
         this.loading = false
@@ -129,20 +129,20 @@ export const useCoreStore = defineStore('core', {
     async triggerBackup(backupType, options = {}) {
       this.loading = true
       this.error = null
-      const toastStore = useToastStore()
+      const notifyStore = useNotificationStore()
       try {
         const response = await coreAPI.backups.trigger({
           backup_type: backupType,
           compression: options.compression !== false,
           include_media: options.include_media || false,
         })
-        toastStore.showSuccess('Backup triggered successfully')
+        notifyStore.success('Backup triggered successfully')
         // Refresh backups list
         await this.fetchBackups()
         return response.data
       } catch (error) {
         this.error = error.response?.data?.detail || error.response?.data?.message || error.message
-        toastStore.showError(this.error || 'Failed to trigger backup')
+        notifyStore.error(this.error || 'Failed to trigger backup')
         throw error
       } finally {
         this.loading = false
@@ -152,19 +152,19 @@ export const useCoreStore = defineStore('core', {
     async verifyBackup(id) {
       this.loading = true
       this.error = null
-      const toastStore = useToastStore()
+      const notifyStore = useNotificationStore()
       try {
         const response = await coreAPI.backups.verify(id)
         const isValid = response.data.is_valid
         if (isValid) {
-          toastStore.showSuccess('Backup verification passed')
+          notifyStore.success('Backup verification passed')
         } else {
-          toastStore.showError('Backup verification failed')
+          notifyStore.error('Backup verification failed')
         }
         return response.data
       } catch (error) {
         this.error = error.response?.data?.detail || error.response?.data?.message || error.message
-        toastStore.showError(this.error || 'Failed to verify backup')
+        notifyStore.error(this.error || 'Failed to verify backup')
         throw error
       } finally {
         this.loading = false
@@ -174,17 +174,17 @@ export const useCoreStore = defineStore('core', {
     async cleanupBackups() {
       this.loading = true
       this.error = null
-      const toastStore = useToastStore()
+      const notifyStore = useNotificationStore()
       try {
         const response = await coreAPI.backups.cleanup()
         const deletedCount = response.data.deleted_count || 0
-        toastStore.showSuccess(`Cleaned up ${deletedCount} expired backups`)
+        notifyStore.success(`Cleaned up ${deletedCount} expired backups`)
         // Refresh backups list
         await this.fetchBackups()
         return response.data
       } catch (error) {
         this.error = error.response?.data?.detail || error.response?.data?.message || error.message
-        toastStore.showError(this.error || 'Failed to cleanup backups')
+        notifyStore.error(this.error || 'Failed to cleanup backups')
         throw error
       } finally {
         this.loading = false

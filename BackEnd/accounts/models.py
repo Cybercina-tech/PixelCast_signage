@@ -3,7 +3,9 @@ from django.contrib.auth.models import AbstractUser, Group, Permission
 from django.core.validators import RegexValidator, EmailValidator
 from django.core.exceptions import ValidationError
 from django.utils import timezone
+from datetime import timedelta
 import logging
+import random
 from .validators import validate_username_format, validate_phone_number, validate_organization_name
 
 logger = logging.getLogger(__name__)
@@ -82,6 +84,23 @@ class User(AbstractUser):
         blank=True,
         null=True,
         help_text="Account lockout expiration time"
+    )
+    
+    # Email verification fields
+    is_email_verified = models.BooleanField(
+        default=False,
+        help_text="Whether the user's email address has been verified"
+    )
+    verification_code = models.CharField(
+        max_length=6,
+        blank=True,
+        null=True,
+        help_text="6-digit verification code for email verification"
+    )
+    verification_code_expiry = models.DateTimeField(
+        blank=True,
+        null=True,
+        help_text="Expiration time for the verification code"
     )
     
     # Status & Metadata
@@ -220,6 +239,14 @@ class User(AbstractUser):
         """Update last_seen timestamp to current time"""
         self.last_seen = timezone.now()
         self.save(update_fields=['last_seen'])
+    
+    def generate_verification_code(self):
+        """Generate a 6-digit random verification code and set expiry to 10 minutes from now"""
+        code = str(random.randint(100000, 999999))  # Generate 6-digit code
+        self.verification_code = code
+        self.verification_code_expiry = timezone.now() + timedelta(minutes=10)
+        self.save(update_fields=['verification_code', 'verification_code_expiry'])
+        return code
     
     def clean(self):
         """Validate model fields"""

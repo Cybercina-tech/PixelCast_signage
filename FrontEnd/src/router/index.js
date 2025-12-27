@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { canAccessRoute } from '@/utils/permissions'
 
 // Public pages
 import Landing from '../pages/Landing.vue'
@@ -46,11 +47,24 @@ import Backups from '../pages/core/Backups.vue'
 // Settings
 import Settings from '../pages/Settings.vue'
 
+// User Management
+import Profile from '../pages/Profile.vue'
+import Security from '../pages/Security.vue'
+import Sessions from '../pages/Sessions.vue'
+
+// Legal Pages
+import PrivacyPolicy from '../pages/PrivacyPolicy.vue'
+import TermsOfService from '../pages/TermsOfService.vue'
+
 // Error Pages
 import NotFound from '../pages/errors/NotFound.vue'
 import Unauthorized from '../pages/errors/Unauthorized.vue'
 import Forbidden from '../pages/errors/Forbidden.vue'
 import ServerError from '../pages/errors/ServerError.vue'
+
+// Web Player
+import WebPlayer from '../pages/player/WebPlayer.vue'
+import PlayerConnect from '../pages/player/PlayerConnect.vue'
 
 const routes = [
   {
@@ -72,6 +86,30 @@ const routes = [
     meta: { public: true },
   },
   {
+    path: '/privacy',
+    name: 'privacy',
+    component: PrivacyPolicy,
+    meta: { public: true },
+  },
+  {
+    path: '/terms',
+    name: 'terms',
+    component: TermsOfService,
+    meta: { public: true },
+  },
+  {
+    path: '/player',
+    name: 'player',
+    component: WebPlayer,
+    meta: { public: true }, // Player uses its own authentication via URL params
+  },
+  {
+    path: '/player/connect',
+    name: 'player-connect',
+    component: PlayerConnect,
+    meta: { public: true }, // Public pairing route
+  },
+  {
     path: '/dashboard',
     name: 'dashboard',
     component: Dashboard,
@@ -81,6 +119,12 @@ const routes = [
     path: '/screens',
     name: 'screens',
     component: ScreensList,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/screens/add',
+    name: 'add-screen',
+    component: () => import('../pages/screens/AddScreen.vue'),
     meta: { requiresAuth: true },
   },
   {
@@ -179,6 +223,24 @@ const routes = [
     component: Settings,
     meta: { requiresAuth: true },
   },
+  {
+    path: '/profile',
+    name: 'profile',
+    component: Profile,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/security',
+    name: 'security',
+    component: Security,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/sessions',
+    name: 'sessions',
+    component: Sessions,
+    meta: { requiresAuth: true },
+  },
   // Error pages
   {
     path: '/401',
@@ -216,7 +278,18 @@ const router = createRouter({
   routes,
 })
 
-// Navigation guard
+/**
+ * Navigation Guard - Backend-Driven Authentication
+ * 
+ * IMPORTANT: This guard validates authentication with backend API.
+ * Frontend role checks are for UX only - backend APIs enforce actual permissions.
+ * 
+ * Flow:
+ * 1. Public routes: Allow access immediately
+ * 2. Protected routes: Validate token with backend via fetchMe()
+ * 3. Role-based routes: Check role from backend user data (backend API will also enforce)
+ * 4. Invalid token: Clear auth state and redirect to login
+ */
 router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore()
   
@@ -233,22 +306,26 @@ router.beforeEach(async (to, from, next) => {
   
   // If route requires auth and user is not authenticated
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
-    // Try to fetch user info (in case token exists but user state is not set)
+    // Try to validate token with backend (in case token exists but user state is not set)
     if (authStore.token) {
       try {
+        // Validate token by fetching user from backend
         // Set timeout to prevent hanging if API is not available
-        const fetchPromise = authStore.fetchMe()
+        const fetchPromise = authStore.fetchMe() // Calls GET /api/users/me/
         const timeoutPromise = new Promise((_, reject) => 
           setTimeout(() => reject(new Error('Timeout')), 2000)
         )
         
         await Promise.race([fetchPromise, timeoutPromise])
         
+        // Backend validated token successfully
         if (authStore.isAuthenticated && authStore.user) {
-          // Check role requirements after authentication
+          // UI-only role check for route guard (backend API will also enforce)
+          // SuperAdmin always bypasses role checks
           if (to.meta.requiresRole) {
-            const userRole = authStore.user?.role
-            if (!to.meta.requiresRole.includes(userRole)) {
+            const userRole = authStore.user?.role // Role from backend
+            // SuperAdmin always has access regardless of requiresRole
+            if (userRole !== 'SuperAdmin' && !to.meta.requiresRole.includes(userRole)) {
               next({ name: 'forbidden' })
               return
             }
@@ -257,7 +334,7 @@ router.beforeEach(async (to, from, next) => {
           return
         }
       } catch (error) {
-        // Token invalid or timeout, clear and redirect to login
+        // Backend rejected token (401/403) or timeout - clear auth state
         authStore.token = null
         authStore.refreshToken = null
         authStore.isAuthenticated = false
@@ -266,15 +343,29 @@ router.beforeEach(async (to, from, next) => {
         localStorage.removeItem('refresh_token')
       }
     }
-    // Redirect to login if not authenticated
+    // No valid token or backend validation failed - redirect to login
     next({ name: 'login', query: { redirect: to.fullPath } })
     return
   }
 
-  // Check role requirements for authenticated users
+  // Check role requirements for authenticated users (UI-only check)
+  // Backend API will enforce actual permissions
+  // SuperAdmin always bypasses role checks
   if (to.meta.requiresRole && authStore.isAuthenticated && authStore.user) {
-    const userRole = authStore.user?.role
-    if (!to.meta.requiresRole.includes(userRole)) {
+    const userRole = authStore.user?.role // Role from backend API
+    // SuperAdmin always has access regardless of requiresRole
+    if (userRole !== 'SuperAdmin' && !to.meta.requiresRole.includes(userRole)) {
+      next({ name: 'forbidden' })
+      return
+    }
+  }
+  
+  // Check permissions for authenticated users (UI-only check)
+  // Backend API will enforce actual permissions
+  if (to.meta.requiresAuth && authStore.isAuthenticated && authStore.user) {
+    // Check if user has permission to access this route
+    if (!canAccessRoute(authStore.user, to.path)) {
+      // User doesn't have permission - redirect to forbidden page
       next({ name: 'forbidden' })
       return
     }

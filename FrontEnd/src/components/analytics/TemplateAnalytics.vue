@@ -4,8 +4,8 @@
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
       <Card>
         <div class="text-center">
-          <p class="text-sm text-gray-600 mb-2">Total Templates</p>
-          <p class="text-3xl font-bold text-gray-900">
+          <p class="text-sm text-muted mb-2">Total Templates</p>
+          <p class="text-3xl font-bold text-primary">
             {{ analyticsStore.templateStats?.total_templates || 0 }}
           </p>
         </div>
@@ -13,8 +13,8 @@
 
       <Card>
         <div class="text-center">
-          <p class="text-sm text-gray-600 mb-2">Active Screens</p>
-          <p class="text-3xl font-bold text-indigo-600">
+          <p class="text-sm text-muted mb-2">Active Screens</p>
+          <p class="text-3xl font-bold text-primary-color">
             {{ analyticsStore.templateStats?.total_active_screens || 0 }}
           </p>
         </div>
@@ -22,11 +22,11 @@
 
       <Card>
         <div class="text-center">
-          <p class="text-sm text-gray-600 mb-2">By Orientation</p>
+          <p class="text-sm text-muted mb-2">By Orientation</p>
           <div class="space-y-1 mt-2">
             <div v-for="orient in analyticsStore.templateStats?.by_orientation || []" :key="orient.orientation">
-              <span class="text-sm text-gray-600">{{ orient.orientation }}:</span>
-              <span class="text-lg font-bold text-gray-900 ml-2">{{ orient.count }}</span>
+              <span class="text-sm text-muted">{{ orient.orientation }}:</span>
+              <span class="text-lg font-bold text-primary ml-2">{{ orient.count }}</span>
             </div>
           </div>
         </div>
@@ -35,29 +35,29 @@
 
     <!-- Most Active Templates -->
     <Card title="Most Active Templates">
-      <div v-if="analyticsStore.templateStats?.most_active_templates?.length > 0" class="overflow-x-auto">
-        <table class="min-w-full divide-y divide-gray-200">
-          <thead class="bg-gray-50">
+      <div v-if="analyticsStore.templateStats?.most_active_templates?.length > 0" class="table-container">
+        <table class="table-base">
+          <thead class="table-thead">
             <tr>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Template Name</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Active Screens</th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+              <th class="table-th">Template Name</th>
+              <th class="table-th">Active Screens</th>
+              <th class="table-th">Actions</th>
             </tr>
           </thead>
-          <tbody class="bg-white divide-y divide-gray-200">
-            <tr v-for="template in analyticsStore.templateStats.most_active_templates" :key="template.template_id">
-              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+          <tbody class="table-tbody">
+            <tr v-for="template in analyticsStore.templateStats.most_active_templates" :key="template.template_id" class="table-tr">
+              <td class="table-td font-medium">
                 {{ template.template_name }}
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                <span class="px-2 py-1 bg-indigo-100 text-indigo-800 rounded-full text-xs font-medium">
+              <td class="table-td">
+                <span class="badge-primary px-2 py-1 rounded-full text-xs font-medium">
                   {{ template.active_screen_count }} screens
                 </span>
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm">
+              <td class="table-td">
                 <router-link
                   :to="`/templates/${template.template_id}`"
-                  class="text-indigo-600 hover:text-indigo-900 font-medium"
+                  class="action-btn-view font-medium"
                 >
                   View Details
                 </router-link>
@@ -66,7 +66,7 @@
           </tbody>
         </table>
       </div>
-      <div v-else class="text-center text-gray-500 py-8">
+      <div v-else class="text-center text-muted py-8">
         No active templates data available
       </div>
     </Card>

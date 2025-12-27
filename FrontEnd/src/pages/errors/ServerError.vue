@@ -24,7 +24,7 @@
         </div>
         <div v-if="error" class="mt-8 p-4 bg-red-50 border border-red-200 rounded-lg text-left">
           <p class="text-sm font-medium text-red-800">Error Details:</p>
-          <p class="text-sm text-red-600 mt-1">{{ error }}</p>
+          <p class="text-sm text-red-600 mt-1 break-words">{{ error }}</p>
         </div>
       </div>
     </div>

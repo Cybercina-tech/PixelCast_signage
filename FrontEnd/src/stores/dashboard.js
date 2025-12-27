@@ -107,60 +107,89 @@ export const useDashboardStore = defineStore('dashboard', {
         
         // Recent command executions
         try {
-          const cmdLogs = await logsAPI.commandExecution.list({ page_size: 10 })
+          const cmdLogs = await logsAPI.commandExecution.list({ page_size: 15, ordering: '-created_at' })
           const cmdLogsData = cmdLogs.data.results || cmdLogs.data || []
-          cmdLogsData.forEach(log => {
-            activities.push({
-              id: `cmd-${log.id}`,
-              type: 'command',
-              message: `Command ${log.command_type_display || log.command_type} ${log.status_display || log.status} on ${log.screen_name || 'Screen'}`,
-              timestamp: log.created_at,
-              details: log,
+          if (Array.isArray(cmdLogsData)) {
+            cmdLogsData.forEach(log => {
+              if (log && log.id) {
+                activities.push({
+                  id: `cmd-${log.id}`,
+                  type: 'command',
+                  message: `Command "${log.command_name || log.command_type_display || log.command_type || 'Unknown'}" ${log.status_display || log.status || 'executed'} on ${log.screen_name || 'Screen'}`,
+                  timestamp: log.created_at || log.started_at || new Date().toISOString(),
+                  details: log,
+                })
+              }
             })
-          })
+          }
         } catch (e) {
           console.error('Failed to fetch command logs:', e)
         }
         
         // Recent content downloads
         try {
-          const contentLogs = await logsAPI.contentDownload.list({ page_size: 10 })
+          const contentLogs = await logsAPI.contentDownload.list({ page_size: 15, ordering: '-created_at' })
           const contentLogsData = contentLogs.data.results || contentLogs.data || []
-          contentLogsData.forEach(log => {
-            activities.push({
-              id: `content-${log.id}`,
-              type: 'content',
-              message: `Content "${log.content_name || 'Unknown'}" ${log.status_display || log.status} on ${log.screen_name || 'Screen'}`,
-              timestamp: log.created_at,
-              details: log,
+          if (Array.isArray(contentLogsData)) {
+            contentLogsData.forEach(log => {
+              if (log && log.id) {
+                activities.push({
+                  id: `content-${log.id}`,
+                  type: 'content',
+                  message: `Content "${log.content_name || 'Unknown'}" ${log.status_display || log.status || 'downloaded'} on ${log.screen_name || 'Screen'}`,
+                  timestamp: log.created_at || log.downloaded_at || new Date().toISOString(),
+                  details: log,
+                })
+              }
             })
-          })
+          }
         } catch (e) {
           console.error('Failed to fetch content logs:', e)
         }
         
-        // Recent screen status changes
+        // Recent screen status changes (only significant ones - online/offline transitions)
         try {
-          const statusLogs = await logsAPI.screenStatus.list({ page_size: 10 })
+          const statusLogs = await logsAPI.screenStatus.list({ page_size: 15, ordering: '-recorded_at' })
           const statusLogsData = statusLogs.data.results || statusLogs.data || []
-          statusLogsData.forEach(log => {
-            activities.push({
-              id: `status-${log.id}`,
-              type: 'screen',
-              message: `Screen "${log.screen_name || 'Unknown'}" is ${log.status_display || log.status}`,
-              timestamp: log.recorded_at,
-              details: log,
+          if (Array.isArray(statusLogsData)) {
+            // Group by screen and only show status changes
+            const screenStatusMap = new Map()
+            statusLogsData.forEach(log => {
+              if (log && log.id && log.screen_id) {
+                const key = log.screen_id
+                if (!screenStatusMap.has(key) || screenStatusMap.get(key).recorded_at < log.recorded_at) {
+                  screenStatusMap.set(key, log)
+                }
+              }
             })
-          })
+            
+            screenStatusMap.forEach(log => {
+              activities.push({
+                id: `status-${log.id}`,
+                type: 'screen',
+                message: `Screen "${log.screen_name || 'Unknown'}" is now ${log.status_display || log.status || 'online'}`,
+                timestamp: log.recorded_at || new Date().toISOString(),
+                details: log,
+              })
+            })
+          }
         } catch (e) {
           console.error('Failed to fetch status logs:', e)
         }
         
-        // Sort by timestamp and take most recent
+        // Sort by timestamp (most recent first) and take top 20
         this.activities = activities
-          .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+          .filter(activity => activity.timestamp) // Only include activities with valid timestamps
+          .sort((a, b) => {
+            const dateA = new Date(a.timestamp)
+            const dateB = new Date(b.timestamp)
+            return dateB - dateA // Most recent first
+          })
           .slice(0, 20)
+        
+        console.log(`Loaded ${this.activities.length} recent activities`)
       } catch (error) {
+        console.error('Error fetching activities:', error)
         this.error = error.response?.data?.detail || error.response?.data?.message || error.message
         this.activities = []
       } finally {

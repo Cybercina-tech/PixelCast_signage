@@ -17,20 +17,20 @@ urlpatterns = [
     path('templates/bulk/activate/', views.bulk_templates_activate, name='bulk-templates-activate'),
     path('templates/bulk/activate_on_screens/', views.bulk_templates_activate_on_screens, name='bulk-templates-activate-on-screens'),
     
-    # Content bulk operations
-    path('contents/bulk/delete/', views.bulk_contents_delete, name='bulk-contents-delete'),
-    path('contents/bulk/update/', views.bulk_contents_update, name='bulk-contents-update'),
-    path('contents/bulk/download/', views.bulk_contents_download, name='bulk-contents-download'),
-    path('contents/bulk/retry/', views.bulk_contents_retry, name='bulk-contents-retry'),
+    # Content bulk operations (TODO: Implement these views)
+    # path('contents/bulk/delete/', views.bulk_contents_delete, name='bulk-contents-delete'),
+    # path('contents/bulk/update/', views.bulk_contents_update, name='bulk-contents-update'),
+    # path('contents/bulk/download/', views.bulk_contents_download, name='bulk-contents-download'),
+    # path('contents/bulk/retry/', views.bulk_contents_retry, name='bulk-contents-retry'),
     
-    # Schedule bulk operations
-    path('schedules/bulk/delete/', views.bulk_schedules_delete, name='bulk-schedules-delete'),
-    path('schedules/bulk/update/', views.bulk_schedules_update, name='bulk-schedules-update'),
-    path('schedules/bulk/activate/', views.bulk_schedules_activate, name='bulk-schedules-activate'),
-    path('schedules/bulk/execute/', views.bulk_schedules_execute, name='bulk-schedules-execute'),
+    # Schedule bulk operations (TODO: Implement these views)
+    # path('schedules/bulk/delete/', views.bulk_schedules_delete, name='bulk-schedules-delete'),
+    # path('schedules/bulk/update/', views.bulk_schedules_update, name='bulk-schedules-update'),
+    # path('schedules/bulk/activate/', views.bulk_schedules_activate, name='bulk-schedules-activate'),
+    # path('schedules/bulk/execute/', views.bulk_schedules_execute, name='bulk-schedules-execute'),
     
-    # Command bulk operations
-    path('commands/bulk/delete/', views.bulk_commands_delete, name='bulk-commands-delete'),
-    path('commands/bulk/execute/', views.bulk_commands_execute, name='bulk-commands-execute'),
-    path('commands/bulk/retry/', views.bulk_commands_retry, name='bulk-commands-retry'),
+    # Command bulk operations (TODO: Implement these views)
+    # path('commands/bulk/delete/', views.bulk_commands_delete, name='bulk-commands-delete'),
+    # path('commands/bulk/execute/', views.bulk_commands_execute, name='bulk-commands-execute'),
+    # path('commands/bulk/retry/', views.bulk_commands_retry, name='bulk-commands-retry'),
 ]

@@ -1,381 +1,292 @@
 # ScreenGram - Digital Signage Management System
 
-A production-ready digital signage management platform with Vue.js 3 frontend and Django backend.
-
-> 📋 **Feature Planning**: For a complete overview of implemented features, missing features, and the development roadmap, see [FeaturePlan.md](./FeaturePlan.md).
-
-## 🚀 Overview
-
-ScreenGram is a comprehensive digital signage management system that enables users to:
-- Manage digital displays (screens) remotely
-- Create and manage content templates
-- Schedule content playback
-- Monitor screen health and status in real-time
-- Execute commands on remote screens
-- Manage users with role-based access control
-
-## 🔒 Security
-
-The system implements production-ready security features:
-- ✅ **JWT Authentication** - Secure token-based authentication
-- ✅ **Role-Based Access Control** - Granular permission system
-- ✅ **Account Lockout** - Protection against brute force attacks (5 attempts, 15min lockout)
-- ✅ **Enhanced Password Security** - PBKDF2 hashing, strength checking, validation
-- ✅ **User Enumeration Prevention** - Generic error messages
-- ✅ **Input Sanitization** - Comprehensive XSS and injection prevention
-- ✅ **Audit Logging** - Complete audit trail for all critical actions
-- ✅ **Rate Limiting** - Multi-strategy API rate limiting
-- ✅ **Environment Variable Security** - Sensitive config via environment variables
-
-## 📁 Project Structure
-
-```
-ScreenGram/
-├── FrontEnd/          # Vue.js 3 frontend application
-├── BackEnd/           # Django REST API backend
-├── README.md          # This file
-└── FeaturePlan.md     # Feature roadmap and planning
-```
-
-## Features
-
-### Frontend (Vue.js 3)
-- **Complete Dashboard** with real-time status cards, charts, and activity feed
-- **Screen Management** - List, view details, health monitoring, command queue, and logs
-- **Template Management** - Create, edit templates with hierarchical structure (Template → Layer → Widget → Content)
-- **Content Management** - Upload, manage, and track content downloads
-- **Schedule Management** - Create and manage time-based schedules with repeat options
-- **Command Management** - Send commands to screens, track execution status
-- **User & Role Management** - Manage users with role-based access control
-- **Logs & Reports** - View and export logs (Screen Status, Content Download, Command Execution)
-- **Core Infrastructure** - Audit logs and backup management (Manager/Admin only)
-- **Settings** - Configure API, WebSocket, storage, security, and notifications
-
-### Backend (Django)
-- **RESTful API** - Complete REST API with Swagger/OpenAPI documentation
-- **WebSocket Support** - Real-time communication with screens
-- **User Management** - Secure user management with enhanced security
-- **Caching System** - Redis/LocMem caching for performance
-- **Rate Limiting** - Multi-strategy rate limiting
-- **Audit Logging** - Comprehensive audit trail
-- **Backup System** - Automated database and media backups
-- **Security Features** - Account lockout, password security, input sanitization
-
-## Technology Stack
-
-### Frontend
-- **Vue.js 3.4+** - Progressive JavaScript framework
-- **Vue Router 4.3+** - Official router for Vue.js
-- **Pinia 2.1+** - State management library
-- **Tailwind CSS 3.4+** - Utility-first CSS framework
-- **Chart.js** - Charting library for metrics visualization
-- **Axios** - HTTP client for API requests
-- **Heroicons** - Beautiful SVG icons
-- **Vite 5.1+** - Next-generation frontend build tool
-
-### Backend
-- **Django 5.2+** - Python web framework
-- **Django REST Framework** - REST API framework
-- **Django Channels** - WebSocket support
-- **JWT Authentication** - Token-based authentication
-- **Redis** - Caching and rate limiting
-- **PostgreSQL/SQLite** - Database
-- **Celery** - Background task processing
-- **Swagger/OpenAPI** - API documentation
-
-## Quick Start
-
-### Backend Setup
-
-1. **Navigate to BackEnd directory:**
-   ```bash
-   cd BackEnd
-   ```
-
-2. **Create virtual environment and install dependencies:**
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   pip install -r requirements.txt
-   ```
-
-3. **Set environment variables:**
-   ```bash
-   # Create .env file
-   SECRET_KEY=your-secret-key-here
-   DEBUG=False
-   ALLOWED_HOSTS=yourdomain.com,api.yourdomain.com
-   ACCOUNT_LOCKOUT_ENABLED=True
-   MAX_LOGIN_ATTEMPTS=5
-   LOCKOUT_DURATION=900
-   ```
-
-4. **Run migrations:**
-   ```bash
-   python manage.py makemigrations
-   python manage.py migrate
-   ```
-
-5. **Create superuser:**
-   ```bash
-   python manage.py createsuperuser
-   ```
-
-6. **Start development server:**
-   ```bash
-   python manage.py runserver
-   ```
-
-### Frontend Setup
-
-1. **Navigate to FrontEnd directory:**
-   ```bash
-   cd FrontEnd
-   ```
-
-2. **Install dependencies:**
-   ```bash
-   npm install
-   ```
-
-3. **Configure environment variables:**
-   ```bash
-   # Create .env file
-   VITE_API_BASE_URL=http://localhost:8000/api
-   VITE_WS_HOST=ws://localhost:8000
-   ```
-
-4. **Start development server:**
-   ```bash
-   npm run dev
-   ```
-
-## Documentation
-
-- **[FeaturePlan.md](./FeaturePlan.md)** - Complete feature roadmap and planning document
-- **API Documentation** - Available at `/api/docs/` when backend is running (Swagger UI)
-- **Backend README** - See `BackEnd/` directory for detailed backend documentation
-
-## Backend API Configuration
-
-The frontend is designed to work with the ScreenGram Django backend. Ensure the backend is running and accessible at the URL specified in your `.env` file.
-
-### API Endpoints
-
-The frontend uses the following API endpoints (configured in `src/services/api.js`):
-
-- **Authentication:** `/api/auth/login/`, `/api/auth/logout/`, `/api/auth/token/`
-- **Users:** `/api/users/`, `/api/users/{id}/`, `/api/users/me/`
-- **Screens:** `/api/screens/`, `/api/screens/{id}/`
-- **Templates:** `/api/templates/`, `/api/templates/{id}/activate_on_screen/`
-- **Layers:** `/api/layers/`
-- **Widgets:** `/api/widgets/`
-- **Contents:** `/api/contents/`, `/api/contents/{id}/upload/`
-- **Schedules:** `/api/schedules/`, `/api/schedules/{id}/execute/`
-- **Commands:** `/api/commands/`, `/api/commands/{id}/retry/`
-- **Logs:** `/api/logs/screen-status/`, `/api/logs/content-download/`, `/api/logs/command-execution/`
-
-### WebSocket Configuration
-
-For real-time updates, configure WebSocket connection:
-
-- **Dashboard WebSocket:** `ws://your-backend/ws/dashboard/?token=<JWT_TOKEN>`
-- **Screen WebSocket:** `ws://your-backend/ws/screen/?auth_token=xxx&secret_key=yyy`
-
-The WebSocket URL is configured via `VITE_WS_HOST` environment variable.
-
-## Authentication
-
-The frontend uses JWT (JSON Web Tokens) for authentication:
-
-1. User logs in via `/login` page
-2. Backend returns JWT access token (and optionally refresh token)
-3. Token is stored in localStorage and included in API requests
-4. Token is automatically refreshed when expired (if refresh token is available)
-
-## State Management
-
-The application uses Pinia stores for state management:
-
-- **auth** - Authentication state and user info
-- **screens** - Screen data and operations
-- **templates** - Template, layer, and widget data
-- **content** - Content data and upload operations
-- **schedules** - Schedule data and execution
-- **commands** - Command queue and execution status
-- **users** - User management
-- **logs** - Log data and filtering
-- **dashboard** - Dashboard statistics and metrics
-- **toast** - Toast notification system
-
-## Key Features
-
-### Real-time Updates
-
-The application supports real-time updates via WebSocket connections. The `useWebSocket` composable handles:
-- Automatic connection management
-- Reconnection with exponential backoff
-- Event subscription/unsubscription
-- Heartbeat/ping-pong mechanism
-
-### Responsive Design
-
-All pages are responsive and work on:
-- Desktop (1920px+)
-- Tablet (768px - 1919px)
-- Mobile (< 768px)
-
-### Error Handling
-
-- API errors are caught and displayed via toast notifications
-- Network errors trigger automatic retries where appropriate
-- 401 errors automatically redirect to login page
-
-### Data Filtering & Search
-
-Most list pages support:
-- Text search across relevant fields
-- Status/type filtering
-- Date range filtering (for logs)
-- Real-time filter application
-
-## Development
-
-### Adding New Pages
-
-1. Create component in `src/pages/`
-2. Add route in `src/router/index.js`
-3. Create/update Pinia store if needed
-4. Add navigation link in `src/components/layout/Sidebar.vue`
-
-### Adding New API Endpoints
-
-1. Add endpoint function in `src/services/api.js`
-2. Add corresponding action in relevant Pinia store
-3. Use in component/page
-
-### Styling
-
-The project uses Tailwind CSS. Custom styles can be added in:
-- `src/style.css` - Global styles
-- Component `<style>` blocks - Component-specific styles
-
-## Production Deployment
-
-1. **Build the application:**
-   ```bash
-   npm run build
-   ```
-
-2. **Deploy the `dist` directory** to your web server (nginx, Apache, etc.)
-
-3. **Configure reverse proxy** to handle API requests and WebSocket connections
-
-4. **Set environment variables** on your hosting platform
-
-### Example Nginx Configuration
-
-```nginx
-server {
-    listen 80;
-    server_name yourdomain.com;
-    
-    # Frontend
-    location / {
-        root /var/www/screengram-frontend/dist;
-        try_files $uri $uri/ /index.html;
-    }
-    
-    # Backend API
-    location /api {
-        proxy_pass http://localhost:8000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-    }
-    
-    # WebSocket
-    location /ws {
-        proxy_pass http://localhost:8000;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-        proxy_set_header Host $host;
-    }
-}
-```
-
-## Troubleshooting
-
-### API Connection Issues
-
-- Verify `VITE_API_BASE_URL` is correct
-- Check CORS settings on backend
-- Ensure backend is running and accessible
-
-### WebSocket Connection Issues
-
-- Verify `VITE_WS_HOST` is correct
-- Check WebSocket URL format (ws:// or wss://)
-- Ensure backend WebSocket server is running
-- Check firewall/network settings
-
-### Build Issues
-
-- Clear `node_modules` and reinstall: `rm -rf node_modules && npm install`
-- Clear Vite cache: `rm -rf node_modules/.vite`
-- Check Node.js version (requires 18+)
-
-## Support
-
-For issues and questions:
-- Check backend API documentation
-- Review browser console for errors
-- Check network tab for API request/response details
-
-## Security Features
-
-ScreenGram implements industry-standard security practices:
-
-### Authentication & Authorization
-- JWT token-based authentication
-- Role-based access control (5 roles: SuperAdmin, Admin, Operator, Manager, Viewer)
-- Session management with automatic token refresh
-
-### Account Protection
-- Account lockout after 5 failed login attempts
-- 15-minute lockout duration (configurable)
-- IP-based and username-based tracking
-- User enumeration prevention
-
-### Password Security
-- PBKDF2 password hashing (260,000+ iterations)
-- Minimum 8-character requirement
-- Password strength checking
-- User attribute similarity validation
-- Common password prevention
-
-### Data Protection
-- Comprehensive input sanitization
-- XSS and SQL injection prevention
-- CSRF protection
-- Secure environment variable configuration
-- Passwords never exposed in API responses
-
-### Audit & Monitoring
-- Complete audit trail for all critical actions
-- Login/logout logging
-- Password change tracking (high severity)
-- Role change tracking (critical severity)
-- User CRUD operation logging
-
-### API Security
-- Rate limiting (configurable per role)
-- Request validation
-- Secure error messages
-- CORS configuration
-
-For detailed security information, see the backend documentation and security audit reports.
-
-## License
-
-See main project LICENSE file.
+## 1. Project Overview
+
+ScreenGram is a digital signage management platform that enables users to remotely manage digital displays (screens), create and schedule content templates, monitor screen health, and execute commands on remote devices.
+
+**Problem it solves:**
+- Centralized management of multiple digital signage displays
+- Remote content deployment and scheduling
+- Real-time monitoring of screen status and health
+- Web-based content player for TVs and displays
+
+**High-level explanation:**
+The system consists of a Django REST API backend that manages screens, templates, content, and users, and a Vue.js frontend dashboard for administration. Screens connect via a web player (HTML/JavaScript) that renders templates in fullscreen mode. Communication happens via HTTP REST API and WebSocket connections for real-time updates.
+
+## 2. Current Features
+
+### Authentication & Users
+- ✅ JWT-based authentication with access/refresh tokens
+- ✅ Role-based access control (SuperAdmin, Admin, Operator, Manager, Viewer)
+- ✅ User CRUD operations with permissions
+- ✅ Account lockout after 5 failed login attempts (15-minute lockout)
+- ✅ Password security (PBKDF2 hashing, strength validation, 8+ characters)
+- ✅ User enumeration prevention
+- ✅ Profile management (view/edit profile, change password, active sessions)
+- ✅ Dynamic sidebar based on user permissions
+- ✅ Audit logging for critical actions
+- ⚠️ Session management exists but may need testing for edge cases
+
+### Screens & Pairing
+- ✅ Screen CRUD operations
+- ✅ Screen pairing via 6-digit code or QR token (expires in 5 minutes)
+- ✅ Screen status tracking (online/offline, last heartbeat)
+- ✅ Health check endpoints and metrics
+- ✅ Command queue management per screen
+- ✅ Screen authentication via auth_token + secret_key
+- ⚠️ Heartbeat endpoint exists but has documented 401 authentication issues (see Known Issues)
+- ⚠️ Pairing works but credentials handling has been refactored (screen_id method added, legacy auth_token/secret_key method still supported)
+
+### Web Player
+- ✅ Fullscreen responsive player component
+- ✅ Template polling (fetches template every 5 minutes)
+- ✅ Layer-based rendering with proper z-indexing
+- ✅ Widget rendering (supports image widgets currently)
+- ✅ Responsive scaling (320px to 8K displays)
+- ✅ Aspect ratio preservation using CSS transform: scale()
+- ✅ Heartbeat functionality (sends periodic heartbeats to backend)
+- ✅ Error handling with retry logic
+- ✅ Credential management (localStorage for screen_id or auth_token/secret_key)
+- ⚠️ Template rendering may show black screens if template has no active layers/widgets/content
+- ⚠️ Only image widget type is fully implemented; video, text, webview, chart widgets exist in models but may not render
+
+### Content Management
+- ✅ Content CRUD operations
+- ✅ Content upload for images, videos, webview files
+- ✅ Storage management (local filesystem, S3 support configured)
+- ✅ User-based directory structure (`users/user_{id}/{type}/`)
+- ✅ File validation (type, size limits: 500MB max)
+- ✅ Content download status tracking
+- ✅ Content sync commands to screens
+- ⚠️ Upload endpoint has documented 400 error issues (Content-Type header problems fixed, but other issues may persist)
+- ⚠️ Preview reliability may be unstable (file_url generation issues documented)
+- ⚠️ Media files may not save to expected local paths in some cases
+
+### Templates / Widgets
+- ✅ Template CRUD operations
+- ✅ Hierarchical structure: Template → Layer → Widget → Content
+- ✅ Layer management (position, size, z-index, background, opacity, animations)
+- ✅ Widget management (position, size, type: image, video, text, clock, webview, chart)
+- ✅ Content assignment to widgets (multiple content items per widget for playlists)
+- ✅ Template activation on screens
+- ✅ Template versioning field (version number stored)
+- ⚠️ Template preview/visual editor not implemented (only data model)
+- ⚠️ Template designer UI not implemented (create/edit via forms only)
+- ⚠️ Some widget types (video, text, webview, chart, clock) may not render properly in web player
+
+### Media Upload & Preview
+- ✅ File upload via multipart/form-data
+- ✅ File type validation (image: jpeg, png, gif, webp, svg; video: mp4, webm, ogg, quicktime)
+- ✅ File size validation (500MB max)
+- ✅ Hash-based integrity checking (SHA-256)
+- ✅ Storage path generation with user-based organization
+- ✅ URL generation for file access
+- ⚠️ Upload 400 errors documented (Content-Type boundary issues fixed, other issues may remain)
+- ⚠️ Preview not always reliable (file_url may not be accessible)
+- ⚠️ Media files may not save correctly to local storage in some cases
+
+### Heartbeat & Screen Status
+- ✅ Heartbeat endpoint (`POST /api/screens/heartbeat/`)
+- ✅ Screen status tracking (is_online, last_heartbeat_at)
+- ✅ Stale heartbeat detection (5-minute timeout)
+- ✅ Screen status logs (ScreenStatusLog model)
+- ✅ Optional metrics (latency, CPU usage, memory usage)
+- ✅ Management command to mark offline screens (`check_heartbeats`)
+- ⚠️ Heartbeat 401 errors documented - authentication issues with request body parsing
+- ⚠️ Heartbeat endpoint has multiple credential extraction methods but may fail in some scenarios
+
+### Schedules
+- ✅ Schedule CRUD operations
+- ✅ Time-based scheduling (start_time, end_time)
+- ✅ Repeat types (none, daily, weekly, monthly)
+- ✅ Priority-based conflict resolution
+- ✅ Schedule execution on screens
+- ✅ Recurrence calculation for repeat schedules
+- ⚠️ Schedule execution may not work correctly for all repeat types
+
+### Commands
+- ✅ Command queue system
+- ✅ Command types (restart, refresh, change_template, display_message, sync_content, custom)
+- ✅ Command priority and expiration
+- ✅ Command execution status tracking
+- ✅ Command execution logs
+- ✅ Command pull endpoint for screens
+- ✅ Command response endpoint for screens
+- ⚠️ Command execution via WebSocket may not be fully reliable (HTTP fallback exists)
+
+### Analytics & Logging
+- ✅ Analytics dashboard endpoints
+- ✅ Screen status logs
+- ✅ Content download logs
+- ✅ Command execution logs
+- ✅ Error logging (Super Admin only)
+- ✅ Audit logs for critical actions
+- ✅ Log filtering and export
+
+### Core Infrastructure
+- ✅ Backup system (database and media backups)
+- ✅ Rate limiting (configurable per role, per endpoint)
+- ✅ Caching (Redis/LocMem cache)
+- ✅ Error logging middleware
+- ⚠️ Automated backup scheduling configured but may need Celery workers
+
+## 3. Current Architecture
+
+### Backend Stack
+- **Framework**: Django 5.2+ with Django REST Framework
+- **Database**: SQLite (default) or PostgreSQL (production)
+- **Authentication**: JWT (djangorestframework-simplejwt)
+- **WebSocket**: Django Channels (in-memory channel layer in dev, Redis for production)
+- **Storage**: Local filesystem (default) or Amazon S3
+- **Caching**: Redis (production) or LocMemCache (development)
+- **Task Queue**: Celery (configured, but may need workers running)
+- **API Documentation**: drf-spectacular (Swagger/OpenAPI)
+
+### Frontend Stack
+- **Framework**: Vue.js 3.4+ with Composition API
+- **Build Tool**: Vite 5.1+
+- **Router**: Vue Router 4.3+
+- **State Management**: Pinia 2.1+
+- **HTTP Client**: Axios
+- **Styling**: Tailwind CSS 3.4+
+- **Charts**: Chart.js with vue-chartjs
+- **Icons**: Heroicons
+
+### Media Storage Approach
+- **Local Storage**: Files stored in `BackEnd/media/users/user_{user_id}/{type}/`
+- **S3 Storage**: Configured but requires `USE_S3_STORAGE=True` and AWS credentials
+- **File Organization**: User-based directory structure
+- **File Naming**: `{type}_{uuid}.{ext}` format
+- **URL Generation**: `/media/users/user_{id}/{type}/...` for local, signed URLs for S3
+- **Hash Verification**: SHA-256 hashes stored for integrity checking
+
+### Screen ↔ User Connection Flow
+
+1. **Pairing Flow**:
+   - User generates pairing session via `/api/pairing/generate/` (returns 6-digit code + pairing_token)
+   - Screen displays pairing code and QR code (contains pairing_token)
+   - User enters pairing code or scans QR code in dashboard
+   - Dashboard calls `/api/pairing/bind/` with pairing_code/token
+   - Backend creates Screen record and links to user
+   - Screen polls `/api/pairing/status/` until status becomes "paired"
+   - Screen receives auth_token and secret_key (or screen_id for new method)
+
+2. **Authentication**:
+   - Screen authenticates using auth_token + secret_key (or screen_id)
+   - Credentials stored in localStorage on screen
+   - Heartbeat endpoint accepts both methods
+
+3. **Communication**:
+   - HTTP REST API for commands and template fetching
+   - WebSocket for real-time updates (if available)
+   - Polling fallback (template polling every 5 minutes, heartbeat every 30-60 seconds)
+
+### Web Player Lifecycle
+
+1. **Initialization**:
+   - Load credentials from localStorage, URL params, or env vars
+   - Fetch template from `/api/player/template/` endpoint
+   - Initialize responsive scaling
+
+2. **Rendering**:
+   - Render template container with proper dimensions
+   - Render layers in z-index order
+   - Render widgets within layers
+   - Render content within widgets (currently image widgets)
+
+3. **Updates**:
+   - Poll template every 5 minutes
+   - Send heartbeat every 30-60 seconds
+   - Handle window resize events (debounced)
+
+4. **Error Handling**:
+   - Retry on network errors
+   - Show error messages on screen
+   - Fallback to cached template if available
+
+## 4. Known Issues & Limitations
+
+### Upload Issues (400 Errors)
+- **Issue**: Content upload endpoint (`POST /api/contents/{id}/upload/`) may return 400 errors
+- **Status**: Content-Type header boundary issue has been fixed, but other issues may persist
+- **Symptoms**: "File is required" error even when file is sent, validation errors
+- **Documentation**: See `CONTENT_UPLOAD_DEBUG_GUIDE.md` (to be removed)
+- **Workaround**: Ensure FormData is sent correctly, check browser Network tab for request format
+
+### Preview Problems
+- **Issue**: Content preview may not display correctly after upload
+- **Possible Causes**: 
+  - `file_url` not generated correctly
+  - `MEDIA_URL` not configured properly
+  - CORS issues preventing file access
+  - File not actually saved to disk
+- **Status**: Needs investigation
+
+### Heartbeat 401 Issues
+- **Issue**: Heartbeat endpoint (`POST /api/screens/heartbeat/`) may return 401 Unauthorized
+- **Status**: Multiple fixes applied (request body parsing, credential extraction from multiple sources)
+- **Symptoms**: "Authentication credentials were not provided" even when credentials are sent
+- **Documentation**: See `HEARTBEAT_401_FIX.md` (to be removed)
+- **Workaround**: Ensure credentials are sent in POST body as JSON, check backend logs for parsing issues
+
+### Template Black Screen Problems
+- **Issue**: Web player may show black screen when rendering templates
+- **Possible Causes**:
+  - Template has no active layers
+  - Template has no active widgets
+  - Template has no active content
+  - Invalid template dimensions (width/height = 0)
+- **Status**: Template validation exists but may not catch all cases
+- **Workaround**: Verify template has active layers, widgets, and content before activating
+
+### Media Not Saving Locally
+- **Issue**: Uploaded files may not save to expected local paths
+- **Possible Causes**:
+  - `MEDIA_ROOT` directory doesn't exist
+  - Permission issues (directory not writable)
+  - Storage path generation errors
+  - Storage backend misconfiguration
+- **Status**: Needs investigation
+- **Workaround**: Verify `BackEnd/media/` directory exists and is writable
+
+### Missing Validations
+- Template activation on offline screens (allows activation but content won't sync)
+- Content type validation may not catch all invalid files
+- Widget type rendering (only image widgets fully implemented)
+
+### Missing Permissions
+- Some endpoints may not have proper permission checks
+- Bulk operations may not check permissions for all affected resources
+- Template/widget/content access may not respect organization boundaries in all cases
+
+### Partial Implementations
+- **Video Widgets**: Models exist but rendering not implemented in web player
+- **Text Widgets**: Models exist but rendering not implemented
+- **Webview Widgets**: Models exist but rendering not implemented
+- **Chart Widgets**: Models exist but rendering not implemented
+- **Clock Widgets**: Models exist but rendering not implemented
+- **Template Preview**: No visual preview in dashboard (only data editing)
+- **Template Designer**: No drag-and-drop designer UI
+- **Schedule Execution**: May not work correctly for all repeat types
+
+### Performance Considerations
+- Template polling every 5 minutes may be too frequent for many screens
+- Heartbeat frequency may need adjustment (currently 30-60 seconds)
+- Large file uploads may timeout (500MB max)
+- No CDN integration for media files (S3 can be used but not required)
+
+### Database
+- SQLite used by default (not suitable for production with multiple concurrent users)
+- No database migrations strategy documented
+- No database backup/restore procedure documented
+
+### Deployment
+- No production deployment guide
+- Nginx configuration example exists but may need updates
+- Environment variables not fully documented
+- No Docker/containerization setup
+
+---
+
+**Last Updated**: 2024  
+**Status**: Active Development - See FuturePlans.md for roadmap

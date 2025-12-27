@@ -7,8 +7,8 @@
     <div v-else-if="content" class="space-y-6">
       <div class="flex justify-between items-center">
         <div>
-          <h1 class="text-2xl font-bold text-gray-900">{{ content.name }}</h1>
-          <p class="text-gray-600">{{ content.type }}</p>
+          <h1 class="text-2xl font-bold text-primary">{{ content.name }}</h1>
+          <p class="text-secondary">{{ content.type }}</p>
         </div>
         <div class="flex gap-2">
           <button
@@ -23,17 +23,17 @@
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <!-- Preview -->
         <Card title="Preview">
-          <div v-if="content.type === 'image' && content.file_url" class="aspect-video bg-gray-100 rounded-lg overflow-hidden">
+          <div v-if="content.type === 'image' && content.file_url" class="aspect-video bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden">
             <img :src="content.file_url" :alt="content.name" class="w-full h-full object-contain" />
           </div>
-          <div v-else-if="content.type === 'video' && content.file_url" class="aspect-video bg-gray-100 rounded-lg">
+          <div v-else-if="content.type === 'video' && content.file_url" class="aspect-video bg-gray-100 dark:bg-gray-800 rounded-lg">
             <video :src="content.file_url" controls class="w-full h-full"></video>
           </div>
-          <div v-else-if="content.type === 'text'" class="p-4 bg-gray-50 rounded-lg">
-            <p class="whitespace-pre-wrap">{{ content.content_json?.text || 'No text content' }}</p>
+          <div v-else-if="content.type === 'text'" class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+            <p class="whitespace-pre-wrap text-primary">{{ content.text_content || content.content_json?.text || 'No text content' }}</p>
           </div>
-          <div v-else class="aspect-video bg-gray-100 rounded-lg flex items-center justify-center">
-            <span class="text-gray-400">Preview not available</span>
+          <div v-else class="aspect-video bg-gray-100 dark:bg-gray-800 rounded-lg flex items-center justify-center">
+            <span class="text-muted">Preview not available</span>
           </div>
         </Card>
         
@@ -41,19 +41,19 @@
         <Card title="Content Details">
           <dl class="space-y-3">
             <div>
-              <dt class="text-sm font-medium text-gray-500">Type</dt>
-              <dd class="mt-1 text-sm text-gray-900 capitalize">{{ content.type }}</dd>
+              <dt class="text-sm font-medium text-muted">Type</dt>
+              <dd class="mt-1 text-sm text-primary capitalize">{{ content.type }}</dd>
             </div>
             <div>
-              <dt class="text-sm font-medium text-gray-500">Download Status</dt>
+              <dt class="text-sm font-medium text-muted">Download Status</dt>
               <dd class="mt-1">
                 <span
                   :class="[
                     'px-2 py-1 rounded-full text-xs font-medium',
-                    content.download_status === 'success' ? 'bg-green-100 text-green-800' : '',
-                    content.download_status === 'failed' ? 'bg-red-100 text-red-800' : '',
-                    content.download_status === 'downloading' ? 'bg-yellow-100 text-yellow-800' : '',
-                    content.download_status === 'pending' ? 'bg-gray-100 text-gray-800' : '',
+                    content.download_status === 'success' ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300' : '',
+                    content.download_status === 'failed' ? 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300' : '',
+                    content.download_status === 'downloading' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300' : '',
+                    content.download_status === 'pending' ? 'bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-300' : '',
                   ]"
                 >
                   {{ content.download_status || 'pending' }}
@@ -61,16 +61,16 @@
               </dd>
             </div>
             <div>
-              <dt class="text-sm font-medium text-gray-500">File Size</dt>
-              <dd class="mt-1 text-sm text-gray-900">{{ formatFileSize(content.file_size) }}</dd>
+              <dt class="text-sm font-medium text-muted">File Size</dt>
+              <dd class="mt-1 text-sm text-primary">{{ formatFileSize(content.file_size) }}</dd>
             </div>
             <div>
-              <dt class="text-sm font-medium text-gray-500">Retry Count</dt>
-              <dd class="mt-1 text-sm text-gray-900">{{ content.retry_count || 0 }}</dd>
+              <dt class="text-sm font-medium text-muted">Retry Count</dt>
+              <dd class="mt-1 text-sm text-primary">{{ content.retry_count || 0 }}</dd>
             </div>
             <div>
-              <dt class="text-sm font-medium text-gray-500">Created</dt>
-              <dd class="mt-1 text-sm text-gray-900">{{ formatDate(content.created_at) }}</dd>
+              <dt class="text-sm font-medium text-muted">Created</dt>
+              <dd class="mt-1 text-sm text-primary">{{ formatDate(content.created_at) }}</dd>
             </div>
           </dl>
         </Card>
@@ -78,13 +78,13 @@
       
       <!-- Download Status per Screen -->
       <Card title="Download Status by Screen">
-        <div v-if="downloadLogs.length === 0" class="text-center text-gray-500 py-4">
+        <div v-if="!downloadLogs || downloadLogs.length === 0" class="text-center text-muted py-4">
           No download logs available
         </div>
         <Table
           v-else
           :columns="logColumns"
-          :data="downloadLogs"
+          :data="downloadLogs || []"
         />
       </Card>
     </div>
@@ -97,7 +97,7 @@ import { useRoute } from 'vue-router'
 import { useContentStore } from '@/stores/content'
 import { useLogsStore } from '@/stores/logs'
 import { useScreensStore } from '@/stores/screens'
-import { useToastStore } from '@/stores/toast'
+import { useNotification } from '@/composables/useNotification'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import Card from '@/components/common/Card.vue'
 import Table from '@/components/common/Table.vue'
@@ -106,7 +106,7 @@ const route = useRoute()
 const contentStore = useContentStore()
 const logsStore = useLogsStore()
 const screensStore = useScreensStore()
-const toastStore = useToastStore()
+const notify = useNotification()
 
 const content = computed(() => contentStore.currentContent)
 const downloadLogs = ref([])
@@ -138,13 +138,13 @@ const handleRetryDownload = async () => {
     const screens = screensResponse.results || screensResponse.data?.results || screensResponse.data || screensStore.screens || []
     if (screens.length > 0) {
       await contentStore.retryDownload(content.value.id, screens[0].id)
-      toastStore.success('Download retry initiated')
+      notify.success('Download retry initiated')
     } else {
-      toastStore.warning('No screens available for download')
+      notify.warning('No screens available for download')
     }
   } catch (error) {
     const errorMsg = error.response?.data?.detail || error.response?.data?.message || error.message || 'Failed to retry download'
-    toastStore.error(errorMsg)
+    notify.error(errorMsg)
   }
 }
 
@@ -159,7 +159,7 @@ onMounted(async () => {
     downloadLogs.value = response.results || response.data?.results || response.data || response || []
   } catch (error) {
     const errorMsg = error.response?.data?.detail || error.response?.data?.message || error.message
-    toastStore.error(errorMsg || 'Failed to load download logs')
+    notify.error(errorMsg || 'Failed to load download logs')
   }
 })
 </script>
