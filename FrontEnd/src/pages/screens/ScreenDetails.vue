@@ -44,10 +44,10 @@
                 <span
                   :class="[
                     'px-2 py-1 rounded-full text-xs font-medium',
-                    screen.is_online ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300' : 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300',
+                    getStatusClass(screen),
                   ]"
                 >
-                  {{ screen.is_online ? 'Online' : 'Offline' }}
+                  {{ getStatusText(screen) }}
                 </span>
               </dd>
             </div>
@@ -260,7 +260,7 @@
           <div>
             <label class="flex items-center">
               <input v-model="templateForm.sync_content" type="checkbox" class="checkbox-base mr-2" />
-              <span class="text-sm text-secondary">Sync content automatically</span>
+              <span class="text-sm text-primary dark:text-slate-300">Sync content automatically</span>
             </label>
           </div>
         </div>
@@ -278,7 +278,8 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { smartUpdateArray } from '@/utils/deepCompare'
 import { useRoute } from 'vue-router'
 import { useScreensStore } from '@/stores/screens'
 import { useTemplatesStore } from '@/stores/templates'
@@ -322,6 +323,36 @@ const templateForm = ref({
   sync_content: true,
 })
 
+/**
+ * Get status class for screen badge
+ */
+const getStatusClass = (screen) => {
+  if (!screen) return 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300'
+  const status = screensStore.getScreenStatus(screen)
+  if (status === 'online') {
+    return 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
+  } else if (status === 'connecting') {
+    return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300'
+  } else {
+    return 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300'
+  }
+}
+
+/**
+ * Get status text for screen
+ */
+const getStatusText = (screen) => {
+  if (!screen) return 'Offline'
+  const status = screensStore.getScreenStatus(screen)
+  if (status === 'online') {
+    return 'Online'
+  } else if (status === 'connecting') {
+    return 'Connecting...'
+  } else {
+    return 'Offline'
+  }
+}
+
 const commandColumns = [
   { key: 'type', label: 'Type' },
   { key: 'name', label: 'Name' },
@@ -362,15 +393,25 @@ const handleSendCommand = async () => {
 
 const handleActivateTemplate = async () => {
   try {
-    await templatesStore.activateOnScreen(
+    const response = await templatesStore.activateOnScreen(
       templateForm.value.template_id,
       screen.value.id,
       templateForm.value.sync_content
     )
+    
     notify.success('Template activated successfully')
     showTemplateModal.value = false
     templateForm.value = { template_id: '', sync_content: true }
-    await screensStore.fetchScreen(screen.value.id)
+    
+    // CRITICAL: Update screen immediately from response data if available
+    // This ensures UI shows active_template without waiting for fetch
+    if (response && response.screen) {
+      // Screen was already updated in templates store, but refresh to be sure
+      await screensStore.fetchScreen(screen.value.id)
+    } else {
+      // Fallback: Fetch screen if response doesn't include screen data
+      await screensStore.fetchScreen(screen.value.id)
+    }
   } catch (error) {
     const errorMsg = error.response?.data?.detail || error.response?.data?.message || error.message || 'Failed to activate template'
     notify.error(errorMsg)
@@ -382,8 +423,13 @@ const loadCommands = async () => {
     const response = await commandsStore.fetchCommands({ screen: screen.value.id })
     // Backend returns paginated results or array
     const commands = response.results || response.data?.results || response.data || response || []
-    pendingCommands.value = commands.filter(c => c.status === 'pending')
-    commandHistory.value = commands.filter(c => c.status !== 'pending').slice(0, 10)
+    
+    // Smart update: Only update if commands changed
+    const newPending = commands.filter(c => c.status === 'pending')
+    const newHistory = commands.filter(c => c.status !== 'pending').slice(0, 10)
+    
+    pendingCommands.value = smartUpdateArray(pendingCommands.value || [], newPending, 'id')
+    commandHistory.value = smartUpdateArray(commandHistory.value || [], newHistory, 'id')
   } catch (error) {
     const errorMsg = error.response?.data?.detail || error.response?.data?.message || error.message
     notify.error(errorMsg || 'Failed to load commands')
@@ -394,15 +440,22 @@ const loadLogs = async () => {
   try {
     const response = await logsStore.fetchScreenStatusLogs({ screen_id: screen.value.id, page_size: 10 })
     // Backend returns paginated results or array
-    recentLogs.value = response.results || response.data?.results || response.data || response || []
+    const newLogs = response.results || response.data?.results || response.data || response || []
     
-    // Get latest health metrics from most recent log
+    // Smart update: Only update if logs changed
+    recentLogs.value = smartUpdateArray(recentLogs.value || [], newLogs, 'id')
+    
+    // Get latest health metrics from most recent log (only update if changed)
     if (recentLogs.value.length > 0) {
       const latestLog = recentLogs.value[0]
-      healthMetrics.value = {
+      const newMetrics = {
         cpu_usage: latestLog.cpu_usage || 0,
         memory_usage: latestLog.memory_usage || 0,
         latency: latestLog.heartbeat_latency || 0,
+      }
+      // Only update if metrics actually changed
+      if (JSON.stringify(healthMetrics.value) !== JSON.stringify(newMetrics)) {
+        healthMetrics.value = newMetrics
       }
     }
   } catch (error) {
@@ -418,11 +471,23 @@ onMounted(async () => {
   await loadCommands()
   await loadLogs()
   
-  // Refresh every 30 seconds
-  setInterval(async () => {
-    await screensStore.fetchScreen(screenId)
-    await loadCommands()
-    await loadLogs()
-  }, 30000)
+  // Refresh every 60 seconds (reduced polling frequency)
+  // Note: Real-time updates should come via WebSocket when available
+  const refreshInterval = setInterval(async () => {
+    try {
+      await screensStore.fetchScreen(screenId)
+      await loadCommands()
+      await loadLogs()
+    } catch (error) {
+      console.error('Failed to refresh screen data:', error)
+    }
+  }, 60000) // Increased from 30s to 60s
+  
+  // Cleanup interval on unmount
+  onUnmounted(() => {
+    if (refreshInterval) {
+      clearInterval(refreshInterval)
+    }
+  })
 })
 </script>

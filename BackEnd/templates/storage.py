@@ -141,7 +141,7 @@ class ContentStorageManager:
             user: User who uploaded the file (optional, will try to infer from content)
             
         Returns:
-            Storage path string
+            Storage path string (normalized, no leading/trailing slashes)
         """
         # Get user ID - priority: provided user > content widget layer template created_by
         user_id = None
@@ -165,6 +165,9 @@ class ContentStorageManager:
             logger.warning(f"Content {content_instance.id} has no associated user, using 'unknown'")
             user_id = 'unknown'
         
+        # Ensure user_id is a string
+        user_id = str(user_id)
+        
         # Get content type directory name
         content_type = content_instance.type.lower()
         type_dir_map = {
@@ -182,23 +185,39 @@ class ContentStorageManager:
         content_id = str(content_instance.id)
         
         # Get file extension
+        ext = ''
         if hasattr(content_instance, '_uploaded_file_name'):
             filename = content_instance._uploaded_file_name
             # Extract extension from filename
             _, ext = os.path.splitext(filename)
-            if not ext:
+            if not ext or ext == '.':
                 ext = ContentStorageManager._get_file_extension(content_instance.type)
-            # Generate new filename with UUID
-            filename = f"{content_type}_{content_id}{ext}"
         else:
             ext = ContentStorageManager._get_file_extension(content_instance.type)
-            filename = f"{content_type}_{content_id}{ext}"
         
-        # Sanitize filename (remove any path separators)
+        # Ensure extension starts with dot
+        if ext and not ext.startswith('.'):
+            ext = '.' + ext
+        
+        # Generate new filename with UUID
+        filename = f"{content_type}_{content_id}{ext}"
+        
+        # Sanitize filename (remove any path separators and invalid characters)
         filename = "".join(c for c in filename if c.isalnum() or c in ('-', '_', '.'))
         
         # Build path: users/user_{user_id}/{type}/{filename}
-        return os.path.join('users', f'user_{user_id}', type_dir, filename)
+        # Use os.path.join for cross-platform compatibility, then normalize
+        path = os.path.join('users', f'user_{user_id}', type_dir, filename)
+        
+        # Normalize path separators (use forward slashes for consistency)
+        path = path.replace('\\', '/')
+        
+        # Remove any leading/trailing slashes
+        path = path.strip('/')
+        
+        logger.debug(f"Generated storage path: {path} for content {content_instance.id}")
+        
+        return path
     
     @staticmethod
     def _get_file_extension(content_type: str) -> str:
@@ -360,28 +379,95 @@ class ContentStorageManager:
             
             # Save to storage
             try:
-                saved_path = storage.save(storage_path, ContentFile(file_content))
+                # CRITICAL: Normalize path for Windows compatibility
+                # Django's FileSystemStorage validates paths are within MEDIA_ROOT
+                # On Windows, mixed slashes can cause "outside base directory" errors
+                # Normalize both the storage_path and ensure MEDIA_ROOT is normalized
+                if hasattr(storage, 'location'):
+                    # Local storage - normalize paths
+                    # Note: os is already imported at the top of the file
+                    # Normalize storage_path to use forward slashes (Django expects this)
+                    storage_path_normalized = storage_path.replace('\\', '/')
+                    # Ensure no leading/trailing slashes
+                    storage_path_normalized = storage_path_normalized.strip('/')
+                    
+                    # Get MEDIA_ROOT and normalize it
+                    media_root = getattr(settings, 'MEDIA_ROOT', None)
+                    if media_root:
+                        # Convert Path object to string if needed
+                        if hasattr(media_root, '__str__'):
+                            media_root = str(media_root)
+                        # Normalize MEDIA_ROOT path
+                        media_root_normalized = os.path.normpath(media_root)
+                        # Convert to absolute path
+                        media_root_absolute = os.path.abspath(media_root_normalized)
+                        
+                        # Construct full path and normalize
+                        full_path = os.path.join(media_root_absolute, storage_path_normalized)
+                        full_path_normalized = os.path.normpath(full_path)
+                        
+                        # Verify path is within MEDIA_ROOT (security check)
+                        if not full_path_normalized.startswith(media_root_absolute):
+                            error_msg = f"Path integrity check failed: {full_path_normalized} is outside base directory {media_root_absolute}"
+                            logger.error(error_msg)
+                            raise StorageError(error_msg)
+                        
+                        logger.debug(f"Path normalized: {storage_path} -> {storage_path_normalized}")
+                        logger.debug(f"MEDIA_ROOT: {media_root_absolute}")
+                        logger.debug(f"Full path: {full_path_normalized}")
+                    
+                    # Use normalized path for storage.save()
+                    saved_path = storage.save(storage_path_normalized, ContentFile(file_content))
+                else:
+                    # S3 or other storage - use path as-is
+                    saved_path = storage.save(storage_path, ContentFile(file_content))
+                
                 logger.info(f"File saved successfully to: {saved_path}")
             except Exception as e:
                 logger.error(f"Failed to save file to storage: {e}", exc_info=True)
                 raise StorageError(f"Failed to save file to storage: {e}")
             
-            # Get file URL
-            # For local storage, ensure it's a proper media URL
-            if hasattr(storage, 'location'):
-                # Local storage - use MEDIA_URL
-                from django.conf import settings
-                media_url = getattr(settings, 'MEDIA_URL', '/media/')
-                # Remove leading slash from saved_path if present, add media_url
-                clean_path = saved_path.lstrip('/')
-                file_url = f"{media_url.rstrip('/')}/{clean_path}"
-            else:
-                # S3 or other storage
-                file_url = storage.url(saved_path) if hasattr(storage, 'url') else saved_path
+            # Get file URL - ensure consistent, reliable URL generation
+            media_url = getattr(settings, 'MEDIA_URL', '/media/')
             
-            # If using S3, we'll need to generate signed URL separately
-            # For now, file_url might be a relative path for local storage
-            # or a public URL for S3 (if configured)
+            if hasattr(storage, 'location'):
+                # Local storage - construct proper media URL
+                # saved_path from storage.save() is relative to MEDIA_ROOT
+                # Normalize the path to ensure consistency
+                clean_path = saved_path.replace('\\', '/').strip('/')
+                
+                # Ensure media_url ends with / and clean_path doesn't start with /
+                media_url_clean = media_url.rstrip('/') + '/'
+                if clean_path.startswith('/'):
+                    clean_path = clean_path.lstrip('/')
+                
+                # Construct file_url: /media/path/to/file
+                file_url = media_url_clean + clean_path
+                
+                # Ensure no double slashes (except after http:// or https://)
+                file_url = file_url.replace('//', '/')
+                if not file_url.startswith('http') and not file_url.startswith('/'):
+                    file_url = '/' + file_url
+                
+                logger.debug(f"Generated file_url for local storage: {file_url}")
+            else:
+                # S3 or other storage backend
+                if hasattr(storage, 'url'):
+                    try:
+                        file_url = storage.url(saved_path)
+                        # If storage.url returns a relative path, make it absolute
+                        if file_url and not file_url.startswith('http'):
+                            # It's a relative path, prepend media_url
+                            clean_path = file_url.lstrip('/')
+                            file_url = media_url.rstrip('/') + '/' + clean_path
+                    except Exception as e:
+                        logger.warning(f"Error getting URL from storage: {e}, using saved_path")
+                        file_url = saved_path
+                else:
+                    # Fallback: use saved_path as-is
+                    file_url = saved_path
+                
+                logger.debug(f"Generated file_url for remote storage: {file_url}")
             
             # Prepare metadata (merge with validation metadata)
             metadata = {
@@ -410,19 +496,20 @@ class ContentStorageManager:
         Get secure URL for content file.
         
         For S3: Returns signed URL with expiration
-        For Local: Returns media URL
+        For Local: Returns media URL (absolute or relative based on context)
         
         Args:
             content_instance: Content model instance
             expiration: URL expiration time in seconds (for S3 signed URLs)
             
         Returns:
-            URL string
+            URL string (reliable and consistent)
         """
         if not content_instance.file_url:
             raise StorageError("Content has no file_url")
         
         storage = cls._get_storage_backend()
+        file_url = content_instance.file_url
         
         # Check if using S3 storage
         if hasattr(storage, 'url') and 's3' in str(type(storage)).lower():
@@ -432,23 +519,21 @@ class ContentStorageManager:
             expiration = expiration or default_expiration
             
             try:
-                # Extract key from file_url
-                # S3 URLs typically look like: https://bucket.s3.region.amazonaws.com/key
-                # or: https://bucket.s3-region.amazonaws.com/key
-                file_url = content_instance.file_url
-                
-                # If file_url is already a full S3 URL, extract the key
-                # Otherwise, use the storage_path
-                if hasattr(content_instance, '_storage_path'):
+                # Extract key from file_url or use storage_path
+                if hasattr(content_instance, '_storage_path') and content_instance._storage_path:
                     key = content_instance._storage_path
+                elif hasattr(content_instance, 'storage_path') and content_instance.storage_path:
+                    key = content_instance.storage_path
                 else:
                     # Try to extract from URL
-                    key = file_url.split('.com/')[-1] if '.com/' in file_url else file_url
+                    if '.com/' in file_url:
+                        key = file_url.split('.com/')[-1]
+                    elif file_url.startswith('/'):
+                        key = file_url.lstrip('/')
+                    else:
+                        key = file_url
                 
-                # Generate signed URL
-                signed_url = storage.url(key)
-                
-                # For boto3, we need to use generate_presigned_url
+                # For boto3, generate presigned URL
                 if hasattr(storage, 'connection'):
                     # This is S3Boto3Storage
                     try:
@@ -471,40 +556,62 @@ class ContentStorageManager:
                             },
                             ExpiresIn=expiration
                         )
+                        logger.debug(f"Generated S3 signed URL for key: {key}")
+                        return signed_url
                     except ImportError:
                         logger.warning("boto3 not installed, cannot generate signed URLs for S3")
-                        # Fallback to regular URL
-                        signed_url = file_url
+                    except Exception as e:
+                        logger.error(f"Error generating S3 signed URL: {e}", exc_info=True)
                 
-                return signed_url
+                # Fallback: use storage.url() method
+                try:
+                    signed_url = storage.url(key)
+                    if signed_url:
+                        return signed_url
+                except Exception as e:
+                    logger.warning(f"Error getting URL from storage: {e}")
+                
+                # Final fallback: return original file_url
+                return file_url
                 
             except Exception as e:
-                logger.error(f"Error generating signed URL: {str(e)}")
+                logger.error(f"Error generating signed URL: {str(e)}", exc_info=True)
                 # Fallback to regular URL
                 return file_url
         
-        # For local storage, return media URL
-        # If file_url is already a full URL, return it
-        if content_instance.file_url.startswith('http'):
-            return content_instance.file_url
+        # For local storage, return consistent media URL
+        # If file_url is already a full HTTP(S) URL, return it as-is
+        if file_url.startswith('http://') or file_url.startswith('https://'):
+            return file_url
         
-        # If file_url is a relative path, construct full media URL
-        if hasattr(storage, 'url'):
-            url_result = storage.url(content_instance.file_url)
-            # If storage.url returns a full URL, use it
-            if url_result.startswith('http'):
-                return url_result
-            # Otherwise, construct from MEDIA_URL
-            from django.conf import settings
-            media_url = getattr(settings, 'MEDIA_URL', '/media/')
-            clean_path = url_result.lstrip('/')
-            return f"{media_url.rstrip('/')}/{clean_path}"
+        # Normalize the file_url path
+        clean_path = file_url.replace('\\', '/').strip('/')
         
-        # Fallback: construct URL from MEDIA_URL
-        from django.conf import settings
+        # If it's already a proper media URL path, return it
         media_url = getattr(settings, 'MEDIA_URL', '/media/')
-        clean_path = content_instance.file_url.lstrip('/')
-        return f"{media_url.rstrip('/')}/{clean_path}"
+        media_url_clean = media_url.rstrip('/')
+        
+        # If file_url already starts with media_url, return as-is (normalized)
+        if clean_path.startswith(media_url_clean.lstrip('/')):
+            # Ensure it starts with /
+            if not clean_path.startswith('/'):
+                clean_path = '/' + clean_path
+            return clean_path
+        
+        # Construct proper media URL
+        # Ensure media_url ends with / and clean_path doesn't start with /
+        if clean_path.startswith('/'):
+            clean_path = clean_path.lstrip('/')
+        
+        result_url = f"{media_url_clean}/{clean_path}"
+        
+        # Ensure no double slashes (except after http:// or https://)
+        result_url = result_url.replace('//', '/')
+        if not result_url.startswith('http') and not result_url.startswith('/'):
+            result_url = '/' + result_url
+        
+        logger.debug(f"Generated content URL: {result_url}")
+        return result_url
     
     @classmethod
     def delete_content(cls, content_instance) -> bool:
@@ -583,13 +690,94 @@ class ContentStorageManager:
             else:
                 # Read from storage and calculate hash
                 storage = cls._get_storage_backend()
-                storage_path = content_instance.file_url
                 
-                if not storage.exists(storage_path):
-                    return False, "File not found in storage"
+                # CRITICAL: Normalize file_url to get proper storage path
+                # file_url might be absolute path (C:\media\users\...) or relative path
+                file_url = content_instance.file_url
+                if not file_url:
+                    return False, "Content has no file_url"
                 
-                with storage.open(storage_path, 'rb') as f:
-                    calculated_hash = cls._calculate_hash(f, hash_algorithm)
+                # Extract storage path from file_url
+                # If file_url is absolute path, extract relative part
+                # If file_url is relative path, use as-is
+                storage_path = file_url
+                
+                # Normalize path: remove leading slashes and normalize separators
+                storage_path = storage_path.replace('\\', '/').strip('/')
+                
+                # If path starts with MEDIA_URL, remove it
+                media_url = getattr(settings, 'MEDIA_URL', '/media/')
+                media_url_clean = media_url.rstrip('/').lstrip('/')
+                if storage_path.startswith(media_url_clean):
+                    storage_path = storage_path[len(media_url_clean):].lstrip('/')
+                
+                # If path is absolute (starts with drive letter on Windows or / on Unix)
+                # Extract relative part from MEDIA_ROOT
+                if os.path.isabs(storage_path) or (len(storage_path) > 1 and storage_path[1] == ':'):
+                    # This is an absolute path, need to extract relative part
+                    media_root = getattr(settings, 'MEDIA_ROOT', None)
+                    if media_root:
+                        # Convert Path object to string if needed
+                        if hasattr(media_root, '__str__'):
+                            media_root = str(media_root)
+                        media_root_abs = os.path.abspath(os.path.normpath(media_root))
+                        storage_path_abs = os.path.abspath(os.path.normpath(storage_path))
+                        
+                        # Check if storage_path is within MEDIA_ROOT
+                        if not storage_path_abs.startswith(media_root_abs):
+                            error_msg = f"Path integrity check failed: {storage_path_abs} is outside base directory {media_root_abs}"
+                            logger.error(error_msg)
+                            return False, error_msg
+                        
+                        # Extract relative path
+                        try:
+                            storage_path = os.path.relpath(storage_path_abs, media_root_abs)
+                            # Normalize to forward slashes for Django
+                            storage_path = storage_path.replace('\\', '/')
+                        except ValueError:
+                            # Paths are on different drives (Windows)
+                            error_msg = f"Cannot extract relative path from absolute path: {storage_path}"
+                            logger.error(error_msg)
+                            return False, error_msg
+                
+                # Final normalization: ensure no leading/trailing slashes
+                storage_path = storage_path.strip('/')
+                
+                # Verify path is safe (no directory traversal)
+                if '..' in storage_path or storage_path.startswith('/'):
+                    error_msg = f"Invalid storage path detected: {storage_path}"
+                    logger.error(error_msg)
+                    return False, error_msg
+                
+                logger.debug(f"Normalized storage path: {file_url} -> {storage_path}")
+                
+                # Try to open file - handle various path formats
+                # Try normalized path first
+                file_path = None
+                if storage.exists(storage_path):
+                    file_path = storage_path
+                else:
+                    # Try alternative path formats
+                    # Sometimes file_url might be stored differently
+                    # Try with leading slash
+                    alt_path = '/' + storage_path if not storage_path.startswith('/') else storage_path
+                    if storage.exists(alt_path):
+                        file_path = alt_path
+                    else:
+                        # Try original file_url as fallback (if it's a relative path)
+                        if not os.path.isabs(file_url) and storage.exists(file_url):
+                            file_path = file_url
+                        else:
+                            return False, f"File not found in storage. Tried paths: {storage_path}, {alt_path}, {file_url}"
+                
+                # Open file and calculate hash
+                try:
+                    with storage.open(file_path, 'rb') as f:
+                        calculated_hash = cls._calculate_hash(f, hash_algorithm)
+                except Exception as e:
+                    error_msg = f"Cannot open file from storage: {str(e)}. Path: {file_path}"
+                    logger.error(error_msg)
+                    return False, error_msg
             
             # Compare hashes
             stored_hash = content_instance.file_hash
@@ -599,7 +787,7 @@ class ContentStorageManager:
             return True, None
             
         except Exception as e:
-            logger.error(f"Error verifying content integrity: {str(e)}")
+            logger.error(f"Error verifying content integrity: {str(e)}", exc_info=True)
             return False, f"Integrity check failed: {str(e)}"
     
     @staticmethod

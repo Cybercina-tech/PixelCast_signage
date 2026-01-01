@@ -57,6 +57,15 @@ def command_status_changed(sender, instance, created, **kwargs):
     # Check if command failed
     if instance.status == 'failed':
         try:
+            # Check if event exists and is active before dispatching
+            from notifications.models import NotificationEvent
+            try:
+                event = NotificationEvent.objects.get(event_key='command.failed', is_active=True)
+            except NotificationEvent.DoesNotExist:
+                # Event not configured, skip notification (not an error)
+                logger.debug(f"Notification event 'command.failed' not found or inactive, skipping notification")
+                return
+            
             NotificationDispatcher.dispatch(
                 event_key='command.failed',
                 payload={

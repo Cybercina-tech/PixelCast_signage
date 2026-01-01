@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { commandsAPI } from '../services/api'
+import { smartUpdateArray, smartUpdateObject, deepEqual } from '../utils/deepCompare'
 
 export const useCommandsStore = defineStore('commands', {
   state: () => ({
@@ -46,7 +47,11 @@ export const useCommandsStore = defineStore('commands', {
       this.error = null
       try {
         const response = await commandsAPI.list({ ...this.filters, ...params })
-        this.commands = response.data.results || response.data || []
+        const newCommands = response.data.results || response.data || []
+        
+        // Smart update: Fine-grained patching - only update changed commands
+        this.commands = smartUpdateArray(this.commands || [], newCommands, 'id')
+        
         return response.data
       } catch (error) {
         this.error = error.response?.data?.detail || error.response?.data?.message || error.message
@@ -60,11 +65,18 @@ export const useCommandsStore = defineStore('commands', {
       this.error = null
       try {
         const response = await commandsAPI.detail(id)
-        this.currentCommand = response.data
-        // Update in list if exists
+        const newCommand = response.data
+        
+        // Smart update: Only update if command data changed
+        this.currentCommand = smartUpdateObject(this.currentCommand, newCommand)
+        
+        // Update in list if exists (fine-grained patch)
         const index = this.commands.findIndex(c => c.id === id)
         if (index !== -1) {
-          this.commands[index] = response.data
+          // Only update if data actually changed
+          if (!deepEqual(this.commands[index], newCommand)) {
+            this.commands[index] = smartUpdateObject(this.commands[index], newCommand)
+          }
         }
         return response.data
       } catch (error) {
@@ -93,12 +105,18 @@ export const useCommandsStore = defineStore('commands', {
       this.error = null
       try {
         const response = await commandsAPI.update(id, data)
+        const updatedCommand = response.data
+        
+        // Smart update: Fine-grained patch
         const index = this.commands.findIndex(c => c.id === id)
         if (index !== -1) {
-          this.commands[index] = response.data
+          // Only update if data changed
+          if (!deepEqual(this.commands[index], updatedCommand)) {
+            this.commands[index] = smartUpdateObject(this.commands[index], updatedCommand)
+          }
         }
         if (this.currentCommand?.id === id) {
-          this.currentCommand = response.data
+          this.currentCommand = smartUpdateObject(this.currentCommand, updatedCommand)
         }
         return response.data
       } catch (error) {
@@ -129,13 +147,21 @@ export const useCommandsStore = defineStore('commands', {
       this.error = null
       try {
         const response = await commandsAPI.execute(id, data)
-        // Update command status
+        const updatedData = response.data
+        
+        // Smart update: Only update changed properties
         const index = this.commands.findIndex(c => c.id === id)
         if (index !== -1) {
-          this.commands[index] = { ...this.commands[index], ...response.data }
+          const merged = { ...this.commands[index], ...updatedData }
+          if (!deepEqual(this.commands[index], merged)) {
+            this.commands[index] = smartUpdateObject(this.commands[index], merged)
+          }
         }
         if (this.currentCommand?.id === id) {
-          this.currentCommand = { ...this.currentCommand, ...response.data }
+          const merged = { ...this.currentCommand, ...updatedData }
+          if (!deepEqual(this.currentCommand, merged)) {
+            this.currentCommand = smartUpdateObject(this.currentCommand, merged)
+          }
         }
         return response.data
       } catch (error) {

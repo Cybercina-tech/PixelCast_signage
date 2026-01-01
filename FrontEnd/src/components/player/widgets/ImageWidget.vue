@@ -8,7 +8,7 @@
     >
       <img
         v-if="content.secure_url"
-        :src="content.secure_url"
+        :src="ensureAbsoluteUrl(content.secure_url)"
         :alt="content.name || 'Content'"
         :data-content-id="content.id"
         class="content-image"
@@ -29,6 +29,7 @@
 
 <script setup>
 import { computed, ref } from 'vue'
+import { ensureAbsoluteUrl } from '@/utils/url'
 
 const props = defineProps({
   widget: {
@@ -74,24 +75,32 @@ const contentStyle = computed(() => {
     height: '100%',
     position: 'absolute',
     top: 0,
-    left: 0
+    left: 0,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'visible'
   }
 })
 
 /**
  * Image style with responsive object-fit
- * Maintains aspect ratio while scaling with widget
+ * CRITICAL FIX: Changed default from 'contain' to 'cover'
+ * 'contain' creates empty black spaces when aspect ratios don't match
+ * 'cover' fills entire widget area, cropping edges if needed (no black bars)
  */
 const imageStyle = computed(() => {
   const contentJson = props.widget.content_json || {}
-  const objectFit = contentJson.objectFit || 'contain'
+  // CRITICAL: Default to 'cover' instead of 'contain' to prevent black spaces
+  // User can still override via content_json.objectFit if needed
+  const objectFit = contentJson.objectFit || 'cover'
   
   return {
     width: '100%',
     height: '100%',
     objectFit: objectFit,
     display: 'block',
-    // Maintain aspect ratio
+    // Center the image (important for cover mode - centers the crop area)
     objectPosition: 'center center',
     // Prevent image distortion
     imageRendering: 'auto',
@@ -121,10 +130,28 @@ const onImageError = (event) => {
     failedImages.value.add(contentId)
     // Hide failed image gracefully without breaking layout
     img.style.display = 'none'
-    console.error(`[ImageWidget] Failed to load image for content: ${contentId}`, {
-      src: img.src,
-      error: event
-    })
+    
+    // Enhanced error logging with full details
+    const errorDetails = {
+      contentId: contentId,
+      attemptedUrl: img.src,
+      widgetId: props.widget.id,
+      widgetName: props.widget.name,
+      widgetType: props.widget.type,
+      content: props.widget.contents?.find(c => c.id === contentId),
+      error: event.type,
+      timestamp: new Date().toISOString()
+    }
+    
+    console.error(`[ImageWidget] Failed to load image for content: ${contentId}`, errorDetails)
+    
+    // Log the full URL that failed
+    console.error(`[ImageWidget] Broken image URL: ${img.src}`)
+    
+    // Check if URL is relative vs absolute
+    if (!img.src.startsWith('http://') && !img.src.startsWith('https://')) {
+      console.warn(`[ImageWidget] Image URL is relative, might need absolute URL: ${img.src}`)
+    }
   }
 }
 </script>
@@ -134,7 +161,10 @@ const onImageError = (event) => {
   width: 100%;
   height: 100%;
   position: relative;
-  background-color: #000000; /* Black background for TV displays */
+  /* CRITICAL FIX: Transparent background instead of black
+     With object-fit: cover, images fill widget completely, so background shouldn't show
+     But if it does show (e.g., during loading), transparent is better than black */
+  background-color: transparent;
 }
 
 .content-item {
@@ -143,15 +173,28 @@ const onImageError = (event) => {
   position: absolute;
   top: 0;
   left: 0;
-  background-color: #000000; /* Black background */
+  /* CRITICAL: Use flexbox to center image content */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* CRITICAL FIX: Transparent background
+     With object-fit: cover, images fill completely, so no black spaces
+     Transparent ensures no visible background if image doesn't cover perfectly */
+  background-color: transparent;
+  overflow: visible;
 }
 
 .content-image {
   width: 100%;
   height: 100%;
-  object-fit: contain; /* Maintain aspect ratio, fit within container */
+  /* CRITICAL FIX: Changed from 'contain' to 'cover'
+     'contain' creates empty black spaces when aspect ratios don't match widget
+     'cover' fills entire widget, cropping edges if needed (eliminates black spaces) */
+  object-fit: cover;
   display: block;
-  /* Maintain aspect ratio and prevent distortion */
+  /* CRITICAL: Center the image both horizontally and vertically
+     object-position centers the crop area in cover mode
+     This ensures image is perfectly centered in widget container */
   object-position: center center;
   /* Hardware acceleration for smooth scaling */
   backface-visibility: hidden;
@@ -168,9 +211,9 @@ const onImageError = (event) => {
   /* Image rendering optimization */
   image-rendering: auto;
   -webkit-image-rendering: auto;
-  /* Prevent layout shifts */
-  contain: layout style paint;
-  /* Ensure image looks perfect on any TV resolution without stretching */
+  /* Prevent layout shifts but allow content overflow */
+  contain: layout style;
+  /* Ensure image fills widget completely */
   max-width: 100%;
   max-height: 100%;
 }

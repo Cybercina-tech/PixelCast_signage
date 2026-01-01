@@ -4,6 +4,16 @@
     class="web-player"
     :style="containerStyle"
   >
+    <!-- On-screen message overlay (display_message command) -->
+    <div
+      v-if="overlayVisible"
+      class="message-overlay"
+    >
+      <div class="message-box">
+        <div class="message-text">{{ overlayMessage }}</div>
+      </div>
+    </div>
+
     <!-- Black screen when no template -->
     <div v-if="status === 'no_template'" class="no-template-screen">
       <!-- Empty black screen -->
@@ -45,6 +55,8 @@
         v-for="layer in sortedLayers"
         :key="layer.id"
         :layer="layer"
+        :template-width="template.width || 1920"
+        :template-height="template.height || 1080"
       />
     </div>
   </div>
@@ -68,21 +80,36 @@ const status = computed(() => playerStore.status)
 const template = computed(() => playerStore.template)
 const errorMessage = computed(() => playerStore.errorMessage)
 const retryCountdown = computed(() => playerStore.retryCountdown)
+const overlayVisible = computed(() => playerStore.overlayVisible)
+const overlayMessage = computed(() => playerStore.overlayMessage)
 
 // Watch for unpair status and redirect to pairing page
+// BUT: Don't redirect if screen_id exists (might be temporary error)
 watch(status, (newStatus) => {
+  // Check if screen_id exists before redirecting
+  const storedScreenId = localStorage.getItem('player_screen_id')
+  const isPaired = localStorage.getItem('player_is_paired') === 'true'
+  const hasScreenId = storedScreenId && isPaired
+  
   if (newStatus === 'unpaired') {
-    console.log('[WebPlayer] Status changed to unpaired, redirecting to pairing page')
-    // Redirect to pairing page immediately (don't wait)
-    router.push('/player/connect')
+    // Only redirect if we don't have a valid screen_id
+    if (!hasScreenId) {
+      console.log('[WebPlayer] Status changed to unpaired, redirecting to pairing page')
+      // Redirect to pairing page immediately (don't wait)
+      router.push('/player/connect')
+    } else {
+      console.log('[WebPlayer] Status is unpaired but screen_id exists, not redirecting', {
+        screenId: storedScreenId
+      })
+    }
   }
   
   // Also redirect on error if it's a credentials error
   if (newStatus === 'error') {
     const errorMsg = errorMessage.value || ''
-    if (errorMsg.includes('credentials') || 
-        errorMsg.includes('pair') || 
-        errorMsg.includes('auth_token and secret_key')) {
+    if ((errorMsg.includes('credentials') || 
+         errorMsg.includes('pair') || 
+         errorMsg.includes('auth_token and secret_key')) && !hasScreenId) {
       console.log('[WebPlayer] Credentials error detected, redirecting to pairing page')
       router.push('/player/connect')
     }
@@ -129,106 +156,43 @@ const {
 } = useResponsiveScaling(template)
 
 // Container style - full viewport with black background
+// CRITICAL FIX: No overflow clipping needed since container is exactly viewport size (no scaling)
 const containerStyle = computed(() => ({
   position: 'fixed',
   top: 0,
   left: 0,
   width: '100vw',
   height: '100vh',
-  overflow: 'hidden',
-  backgroundColor: '#000000',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center'
+  // No overflow clipping - container is exactly viewport size, template-container fills it naturally
+  overflow: 'visible',
+  backgroundColor: '#000000'
+  // Template container is relative positioned and fills 100vw x 100vh
 }))
 
-// Template container style - actual template dimensions with scaling transform
+// Template container style - CRITICAL FIX: container must be 100vw x 100vh with no scale
+// This ensures container fills entire viewport and content is not "shrunk" in the center
+// Layers/Widgets inside will use their dimensions as percentages or pixel values relative to this container
 const templateContainerStyle = computed(() => {
-  if (!template.value) {
-    return {
-      width: '100%',
-      height: '100%',
-      position: 'relative'
-    }
-  }
-
-  const templateWidth = template.value.width || 1920
-  const templateHeight = template.value.height || 1080
-  const scale = scaleFactor.value
-
-  // Safety check: ensure dimensions are valid
-  if (templateWidth <= 0 || templateHeight <= 0) {
-    console.error('[WebPlayer] Invalid template dimensions:', { templateWidth, templateHeight })
-    return {
-      width: '1920px',
-      height: '1080px',
-      position: 'relative',
-      transform: `scale(${scale})`,
-      transformOrigin: 'center center',
-      willChange: 'transform',
-      backfaceVisibility: 'hidden',
-      WebkitTransform: `scale(${scale})`,
-      WebkitTransformOrigin: 'center center',
-      margin: '0 auto',
-      visibility: 'visible',
-      opacity: 1
-    }
-  }
-
-  // Safety check: ensure scale is valid
-  if (scale <= 0 || !isFinite(scale)) {
-    console.error('[WebPlayer] Invalid scale factor:', scale)
-    return {
-      width: `${templateWidth}px`,
-      height: `${templateHeight}px`,
-      position: 'relative',
-      transform: 'scale(1)',
-      transformOrigin: 'center center',
-      willChange: 'transform',
-      backfaceVisibility: 'hidden',
-      WebkitTransform: 'scale(1)',
-      WebkitTransformOrigin: 'center center',
-      margin: '0 auto',
-      visibility: 'visible',
-      opacity: 1
-    }
-  }
-
+  // CRITICAL: Container must be exactly 100% viewport (100vw x 100vh)
+  // No scaling - container fills entire screen naturally
+  // This allows layers/widgets to fill the container properly without being "shrunk"
   return {
-    width: `${templateWidth}px`,
-    height: `${templateHeight}px`,
+    width: '100vw',
+    height: '100vh',
     position: 'relative',
-    transform: `scale(${scale})`,
-    transformOrigin: 'center center',
-    willChange: 'transform',
-    backfaceVisibility: 'hidden',
-    // Use hardware acceleration
-    WebkitTransform: `scale(${scale})`,
-    WebkitTransformOrigin: 'center center',
-    // Center the template
-    margin: '0 auto',
+    // No transform/scale needed - container is already full viewport
     // Ensure container is visible
     visibility: 'visible',
     opacity: 1,
-    // Ensure container is not clipped
+    // Allow overflow for content that extends beyond (layers/widgets handle their own overflow)
     overflow: 'visible'
   }
 })
 
-// Update transform when template or scale changes
-// This ensures all nested elements (layers → widgets → content) scale proportionally
-watch([template, scaleFactor], () => {
-  nextTick(() => {
-    if (templateContainer.value && template.value) {
-      const scale = scaleFactor.value
-      // Apply scale transform - all child elements scale proportionally
-      templateContainer.value.style.transform = `scale(${scale})`
-      templateContainer.value.style.WebkitTransform = `scale(${scale})`
-      // Force hardware acceleration
-      templateContainer.value.style.willChange = 'transform'
-    }
-  })
-}, { immediate: true })
+// CRITICAL FIX: Removed scale transform watch
+// Container is now 100vw x 100vh with no scaling
+// All dimensions are handled via percentages in layers/widgets
+// No transform/scale needed anymore
 
 // Event handlers
 let contextMenuHandler = null
@@ -258,17 +222,9 @@ let keydownHandler = null
     document.addEventListener('selectstart', (e) => e.preventDefault())
     document.addEventListener('dragstart', (e) => e.preventDefault())
 
-    // Setup responsive scaling resize listener
-    setupResizeListener()
-
-    // Initial transform application
-    await nextTick()
-    if (templateContainer.value && template.value) {
-      const scale = scaleFactor.value
-      templateContainer.value.style.transform = `scale(${scale})`
-      templateContainer.value.style.WebkitTransform = `scale(${scale})`
-      console.log('[WebPlayer] Applied initial transform', { scale })
-    }
+    // CRITICAL FIX: Removed scale transform application
+    // Container is 100vw x 100vh with no scaling
+    // No transform needed - container naturally fills viewport
 
     // Initialize player store
     try {
@@ -281,9 +237,14 @@ let keydownHandler = null
         console.error('[WebPlayer] Initialization failed with status error:', errorMsg)
         
         // If credentials are missing, redirect to pairing page immediately
-        if (errorMsg.includes('auth_token and secret_key are required') || 
-            errorMsg.includes('credentials') ||
-            errorMsg.includes('pair')) {
+        // BUT: Don't redirect if screen_id exists
+        const storedScreenId = localStorage.getItem('player_screen_id')
+        const isPaired = localStorage.getItem('player_is_paired') === 'true'
+        const hasScreenId = storedScreenId && isPaired
+        
+        if ((errorMsg.includes('auth_token and secret_key are required') || 
+             errorMsg.includes('credentials') ||
+             errorMsg.includes('pair')) && !hasScreenId) {
           console.log('[WebPlayer] Credentials missing, redirecting to pairing page')
           playerStore.clearCredentials()
           router.push('/player/connect')
@@ -291,19 +252,26 @@ let keydownHandler = null
         }
       }
       
-      // Only start polling if we have valid credentials
-      // Check if credentials are actually set in playerAPI
+      // Only start polling if we have valid authentication (screen_id OR credentials)
+      // Check if authentication is configured in localStorage
+      const storedScreenId = localStorage.getItem('player_screen_id')
+      const isPaired = localStorage.getItem('player_is_paired') === 'true'
       const storedToken = localStorage.getItem('player_auth_token')
       const storedSecret = localStorage.getItem('player_secret_key')
       
-      if (!storedToken || !storedSecret) {
-        console.warn('[WebPlayer] No credentials found, redirecting to pairing page')
+      const hasScreenId = storedScreenId && isPaired
+      const hasCredentials = storedToken && storedSecret
+      
+      if (!hasScreenId && !hasCredentials) {
+        console.warn('[WebPlayer] No authentication found, redirecting to pairing page')
         playerStore.clearCredentials()
         router.push('/player/connect')
         return // Don't start polling
       }
       
-      console.log('[WebPlayer] Credentials verified, starting polling')
+      console.log('[WebPlayer] Authentication verified, starting polling', {
+        method: hasScreenId ? 'screen_id' : 'credentials'
+      })
       
       // Log template data when received
       watch(() => playerStore.template, (newTemplate) => {
@@ -394,6 +362,37 @@ onUnmounted(() => {
   background-color: #000000;
 }
 
+.message-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.35);
+  z-index: 99999;
+  pointer-events: none;
+}
+
+.message-box {
+  max-width: 70vw;
+  padding: 18px 22px;
+  background: rgba(0, 0, 0, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.message-text {
+  font-size: 20px;
+  color: #ffffff;
+  text-align: center;
+  line-height: 1.5;
+  word-break: break-word;
+}
+
 .error-screen {
   width: 100%;
   height: 100%;
@@ -426,13 +425,16 @@ onUnmounted(() => {
 }
 
 .template-container {
+  /* CRITICAL FIX: Position relative (not absolute)
+     Container is 100vw x 100vh, fills parent naturally
+     No scaling, no transform - container fills entire viewport */
   position: relative;
-  overflow: hidden;
+  overflow: visible;
   /* Ensure proper rendering with hardware acceleration */
   transform: translateZ(0);
   -webkit-transform: translateZ(0);
-  /* Prevent any layout shifts */
-  contain: layout style paint;
+  /* Prevent layout shifts but allow content overflow for images */
+  contain: layout style;
 }
 </style>
 

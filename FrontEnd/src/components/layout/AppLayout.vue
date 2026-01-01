@@ -19,7 +19,10 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
+import { useAuthStore } from '@/stores/auth'
+import { useScreensStore } from '@/stores/screens'
+import { useWebSocket } from '@/composables/useWebSocket'
 import Sidebar from './Sidebar.vue'
 import Navbar from './Navbar.vue'
 import Footer from './Footer.vue'
@@ -32,4 +35,39 @@ defineProps({
 })
 
 const sidebarOpen = ref(false)
+const authStore = useAuthStore()
+const screensStore = useScreensStore()
+const { connect, disconnect, on, off, isConnected } = useWebSocket()
+
+// Set up WebSocket listener for screen status updates
+onMounted(() => {
+  if (authStore.isAuthenticated && authStore.accessToken) {
+    // Connect WebSocket
+    connect(authStore.accessToken)
+    
+    // Listen for screen status updates
+    on('screen_status_update', (data) => {
+      if (data && data.screen) {
+        screensStore.handleScreenStatusUpdate(data.screen)
+      }
+    })
+    
+    // Listen for screen heartbeat updates
+    on('screen_heartbeat', (data) => {
+      if (data && data.screen_id) {
+        // Fetch updated status for this screen
+        screensStore.fetchSingleScreenStatus(data.screen_id).catch(err => {
+          console.warn('Failed to fetch screen status after heartbeat:', err)
+        })
+      }
+    })
+  }
+})
+
+onUnmounted(() => {
+  // Clean up WebSocket listeners
+  off('screen_status_update')
+  off('screen_heartbeat')
+  disconnect()
+})
 </script>

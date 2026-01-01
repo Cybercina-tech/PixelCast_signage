@@ -23,11 +23,16 @@
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <!-- Preview -->
         <Card title="Preview">
-          <div v-if="content.type === 'image' && content.file_url" class="aspect-video bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden">
-            <img :src="content.file_url" :alt="content.name" class="w-full h-full object-contain" />
+          <div v-if="content.type === 'image' && getContentFileUrl(content)" class="aspect-video bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden">
+            <img 
+              :src="getContentFileUrl(content)" 
+              :alt="content.name" 
+              class="w-full h-full object-contain"
+              @error="onImageError"
+            />
           </div>
-          <div v-else-if="content.type === 'video' && content.file_url" class="aspect-video bg-gray-100 dark:bg-gray-800 rounded-lg">
-            <video :src="content.file_url" controls class="w-full h-full"></video>
+          <div v-else-if="content.type === 'video' && getContentFileUrl(content)" class="aspect-video bg-gray-100 dark:bg-gray-800 rounded-lg">
+            <video :src="getContentFileUrl(content)" controls class="w-full h-full"></video>
           </div>
           <div v-else-if="content.type === 'text'" class="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
             <p class="whitespace-pre-wrap text-primary">{{ content.text_content || content.content_json?.text || 'No text content' }}</p>
@@ -98,6 +103,7 @@ import { useContentStore } from '@/stores/content'
 import { useLogsStore } from '@/stores/logs'
 import { useScreensStore } from '@/stores/screens'
 import { useNotification } from '@/composables/useNotification'
+import { getContentFileUrl } from '@/utils/url'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import Card from '@/components/common/Card.vue'
 import Table from '@/components/common/Table.vue'
@@ -129,21 +135,51 @@ const formatFileSize = (bytes) => {
   return `${mb.toFixed(2)} MB`
 }
 
+const onImageError = (event) => {
+  const img = event.target
+  console.error('[ContentDetails] Failed to load preview image:', {
+    src: img.src,
+    contentId: content.value?.id,
+    contentName: content.value?.name,
+    fileUrl: content.value?.file_url,
+    absoluteFileUrl: content.value?.absolute_file_url
+  })
+}
+
 const handleRetryDownload = async () => {
-  if (!content.value) return
+  if (!content.value) {
+    console.warn('DEBUG [handleRetryDownload]: No content available')
+    return
+  }
   
   try {
+    console.log(`DEBUG [handleRetryDownload]: Starting retry for content ${content.value.id}`)
+    
     // Get first screen for retry (in real app, you'd select screen)
     const screensResponse = await screensStore.fetchScreens()
     const screens = screensResponse.results || screensResponse.data?.results || screensResponse.data || screensStore.screens || []
+    
+    console.log(`DEBUG [handleRetryDownload]: Found ${screens.length} screens`)
+    
     if (screens.length > 0) {
-      await contentStore.retryDownload(content.value.id, screens[0].id)
+      const screenId = screens[0].id
+      console.log(`DEBUG [handleRetryDownload]: Using screen ${screenId} for retry`)
+      
+      const response = await contentStore.retryDownload(content.value.id, screenId)
+      
+      console.log('DEBUG [handleRetryDownload]: Retry response:', response)
+      
+      // Refresh content to get updated status
+      await contentStore.fetchContent(content.value.id)
+      
       notify.success('Download retry initiated')
     } else {
       notify.warning('No screens available for download')
     }
   } catch (error) {
-    const errorMsg = error.response?.data?.detail || error.response?.data?.message || error.message || 'Failed to retry download'
+    console.error('DEBUG [handleRetryDownload]: Error:', error)
+    console.error('DEBUG [handleRetryDownload]: Error response:', error.response?.data)
+    const errorMsg = error.response?.data?.error || error.response?.data?.detail || error.response?.data?.message || error.message || 'Failed to retry download'
     notify.error(errorMsg)
   }
 }

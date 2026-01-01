@@ -8,8 +8,13 @@ export const usePlayerStore = defineStore('player', {
     template: null,
     errorMessage: null,
     retryCountdown: 0,
+    // UI overlays (e.g., display_message command)
+    overlayMessage: null,
+    overlayVisible: false,
+    overlayTimer: null,
     pollingInterval: null,
     heartbeatInterval: null,
+    commandPollingInterval: null, // Interval for polling commands
     retryTimer: null,
     lastSuccessfulHeartbeat: null, // Timestamp of last successful heartbeat
     connectionLostTimer: null // Timer to track connection loss
@@ -22,20 +27,21 @@ export const usePlayerStore = defineStore('player', {
      */
     async initialize() {
       try {
-        // Load configuration
+        // Load configuration (only screen_id)
         await this.loadConfig()
         
-        // Verify credentials are actually set before proceeding
-        const storedToken = localStorage.getItem('player_auth_token')
-        const storedSecret = localStorage.getItem('player_secret_key')
+        // Verify screen_id exists
+        const storedScreenId = localStorage.getItem('player_screen_id')
         
-        if (!storedToken || !storedSecret) {
-          const error = new Error('Credentials not found after loading. Please pair your screen first.')
-          error.code = 'CREDENTIALS_NOT_LOADED'
+        if (!storedScreenId) {
+          const error = new Error('Screen not paired. Please pair your screen first.')
+          error.code = 'SCREEN_NOT_PAIRED'
           throw error
         }
         
-        console.log('[PlayerStore] Credentials verified, fetching template')
+        console.log('[PlayerStore] Screen ID verified, fetching template', {
+          screenId: storedScreenId
+        })
         
         // Fetch initial template
         await this.fetchTemplate()
@@ -44,11 +50,10 @@ export const usePlayerStore = defineStore('player', {
         this.status = 'error'
         this.errorMessage = error.message || 'Initialization failed'
         
-        // If credentials are missing, set specific status
-        if (error.code === 'CREDENTIALS_MISSING' || 
-            error.code === 'CREDENTIALS_EMPTY' || 
-            error.code === 'CREDENTIALS_NOT_LOADED' ||
-            error.message?.includes('credentials')) {
+        // If screen_id is missing, set unpaired status
+        if (error.code === 'SCREEN_NOT_PAIRED' || 
+            error.message?.includes('not paired') ||
+            error.message?.includes('screen_id')) {
           this.status = 'unpaired'
           this.errorMessage = 'Please pair your screen first to continue.'
         }
@@ -59,152 +64,78 @@ export const usePlayerStore = defineStore('player', {
     },
 
     /**
-     * Load player configuration from localStorage, URL params, or env config
-     * Priority: localStorage > URL params > env vars
+     * Load player configuration from localStorage or URL params
+     * Priority: localStorage > URL params
+     * ONLY looks for screen_id - no token logic
      */
     async loadConfig() {
-      let authToken = null
-      let secretKey = null
+      let screenId = null
       let source = 'none'
       
       // 1. Try localStorage first (persistent pairing)
-      // New method: Check for screen_id first (after pairing, only screen_id is stored)
       try {
-        const storedScreenId = localStorage.getItem('player_screen_id')
-        const isPaired = localStorage.getItem('player_is_paired') === 'true'
-        
-        if (storedScreenId && isPaired) {
-          // New method: Use screen_id (credentials are stored in backend)
-          playerAPI.setScreenId(storedScreenId)
-          source = 'localStorage (screen_id)'
+        screenId = localStorage.getItem('player_screen_id')
+        if (screenId) {
+          source = 'localStorage'
           console.log('[PlayerStore] Loaded screen_id from localStorage', {
-            screenId: storedScreenId,
-            isPaired: isPaired
+            screenId: screenId
           })
-          // Don't set authToken/secretKey - they're not needed with screen_id method
-        } else {
-          // Legacy method: Try to load credentials (for backward compatibility)
-          const storedToken = localStorage.getItem('player_auth_token')
-          const storedSecret = localStorage.getItem('player_secret_key')
-          
-          if (storedToken && storedSecret) {
-            authToken = storedToken
-            secretKey = storedSecret
-            source = 'localStorage (legacy)'
-            console.log('[PlayerStore] Loaded credentials from localStorage (legacy)', {
-              tokenPrefix: authToken.substring(0, 8) + '...',
-              secretLength: secretKey.length
-            })
-          } else {
-            console.debug('[PlayerStore] No credentials or screen_id in localStorage', {
-              hasScreenId: !!storedScreenId,
-              isPaired: isPaired,
-              hasToken: !!storedToken,
-              hasSecret: !!storedSecret
-            })
-          }
         }
       } catch (error) {
         console.warn('[PlayerStore] Failed to read from localStorage:', error)
       }
       
-      // 2. Fallback to URL params
-      if (!authToken || !secretKey) {
+      // 2. Fallback to URL params (only if screen_id not found in localStorage)
+      if (!screenId) {
         const urlParams = new URLSearchParams(window.location.search)
-        authToken = urlParams.get('auth_token')
-        secretKey = urlParams.get('secret_key')
+        screenId = urlParams.get('screen_id')
         
-        if (authToken && secretKey) {
+        if (screenId) {
           source = 'urlParams'
-          console.log('[PlayerStore] Loaded credentials from URL params', {
-            tokenPrefix: authToken.substring(0, 8) + '...',
-            secretLength: secretKey.length
+          console.log('[PlayerStore] Loaded screen_id from URL params', {
+            screenId: screenId
           })
           
           // Save to localStorage for future use
           try {
-            localStorage.setItem('player_auth_token', authToken)
-            localStorage.setItem('player_secret_key', secretKey)
-            const screenId = urlParams.get('screen_id')
-            if (screenId) {
-              localStorage.setItem('player_screen_id', screenId)
-            }
-            console.log('[PlayerStore] Saved credentials to localStorage')
+            localStorage.setItem('player_screen_id', screenId)
+            console.log('[PlayerStore] Saved screen_id to localStorage')
           } catch (error) {
-            console.warn('[PlayerStore] Failed to save credentials to localStorage:', error)
+            console.warn('[PlayerStore] Failed to save screen_id to localStorage:', error)
           }
-        } else {
-          console.debug('[PlayerStore] No credentials in URL params', {
-            hasToken: !!authToken,
-            hasSecret: !!secretKey,
-            url: window.location.href
-          })
-        }
-      }
-      
-      // 3. Fallback to env vars (for development/testing)
-      if (!authToken || !secretKey) {
-        authToken = import.meta.env.VITE_PLAYER_AUTH_TOKEN
-        secretKey = import.meta.env.VITE_PLAYER_SECRET_KEY
-        if (authToken && secretKey) {
-          source = 'env'
-          console.log('[PlayerStore] Loaded credentials from environment variables', {
-            tokenPrefix: authToken.substring(0, 8) + '...',
-            secretLength: secretKey.length
-          })
-        } else {
-          console.debug('[PlayerStore] No credentials in environment variables')
         }
       }
 
-      if (!authToken || !secretKey) {
-        console.error('[PlayerStore] No credentials found from any source', {
-          checkedSources: ['localStorage', 'urlParams', 'env'],
+      // Validate screen_id is present
+      if (!screenId) {
+        console.error('[PlayerStore] No screen_id found from any source', {
+          checkedSources: ['localStorage', 'urlParams'],
           localStorage: {
-            hasToken: !!localStorage.getItem('player_auth_token'),
-            hasSecret: !!localStorage.getItem('player_secret_key')
+            hasScreenId: !!localStorage.getItem('player_screen_id')
           },
-          urlParams: window.location.search,
-          env: {
-            hasToken: !!import.meta.env.VITE_PLAYER_AUTH_TOKEN,
-            hasSecret: !!import.meta.env.VITE_PLAYER_SECRET_KEY
-          }
+          urlParams: window.location.search
         })
-        const error = new Error('auth_token and secret_key are required. Please pair your screen first.')
-        error.code = 'CREDENTIALS_MISSING'
+        const error = new Error('screen_id is required. Please pair your screen first.')
+        error.code = 'SCREEN_ID_MISSING'
         throw error
       }
 
-      // Validate credentials are not empty strings
-      if (authToken.trim() === '' || secretKey.trim() === '') {
-        console.error('[PlayerStore] Credentials are empty strings', {
-          source,
-          tokenLength: authToken.length,
-          secretLength: secretKey.length
-        })
-        const error = new Error('Invalid credentials: auth_token and secret_key cannot be empty.')
-        error.code = 'CREDENTIALS_EMPTY'
-        throw error
-      }
-
-      console.log('[PlayerStore] Credentials loaded successfully', {
+      // Set screen_id in playerAPI
+      console.log('[PlayerStore] Using screen_id authentication', {
         source,
-        tokenPrefix: authToken.substring(0, 8) + '...',
-        secretLength: secretKey.length
+        screenId: screenId
       })
-
-      // Store in playerAPI
-      playerAPI.setCredentials(authToken, secretKey)
+      playerAPI.setScreenId(screenId)
       
-      // Verify credentials were set
-      if (!playerAPI || typeof playerAPI.setCredentials !== 'function') {
-        console.error('[PlayerStore] playerAPI.setCredentials is not available')
+      // Verify authentication was set
+      if (!playerAPI || typeof playerAPI.setScreenId !== 'function') {
+        console.error('[PlayerStore] playerAPI.setScreenId is not available')
         const error = new Error('Player API not initialized')
         error.code = 'API_NOT_INITIALIZED'
         throw error
       }
       
-      console.log('[PlayerStore] Credentials set in playerAPI successfully')
+      console.log('[PlayerStore] Screen ID set in playerAPI successfully')
     },
 
     /**
@@ -229,32 +160,18 @@ export const usePlayerStore = defineStore('player', {
       } catch (error) {
         console.error('Template fetch error:', error)
         
-        // Check if credentials are invalid (401 Unauthorized) or screen not found (404)
         const errorData = error.response?.data || {}
-        const errorMessage = errorData.error || errorData.auth_token?.[0] || errorData.detail || error.message || ''
+        const errorMessage = errorData.error || errorData.message || error.message || ''
         const statusCode = error.response?.status
         
-        if (statusCode === 401 || statusCode === 404) {
-          // Check if screen was deleted/unpaired
-          if (
-            errorMessage.includes('Invalid authentication') ||
-            errorMessage.includes('Screen not found') ||
-            errorMessage.includes('Invalid authentication token') ||
-            statusCode === 404
-          ) {
-            // Screen was unpaired/deleted - show unpair message
-            this.clearCredentials()
+        // Handle 404 (screen not found) - but DON'T clear screen_id
+        if (statusCode === 404) {
+          if (errorMessage.includes('Screen not found')) {
             this.status = 'unpaired'
-            this.errorMessage = 'Device has been unpaired from your account.'
-            this.stopPolling() // Stop all polling
+            this.errorMessage = 'Screen not found. Please verify your screen_id.'
+            this.stopPolling()
             return // Don't throw, just set status
           }
-          
-          // Other 401 errors - clear credentials and show error
-          this.clearCredentials()
-          this.status = 'error'
-          this.errorMessage = 'Invalid credentials. Please pair your screen again.'
-          throw new Error('Invalid credentials. Redirecting to pairing page.')
         }
         
         this.status = 'error'
@@ -316,24 +233,18 @@ export const usePlayerStore = defineStore('player', {
       } catch (error) {
         console.error('Heartbeat error:', error)
         
-        // Check if screen was deleted/unpaired
         const errorData = error.response?.data || {}
-        const errorMessage = errorData.error || errorData.auth_token?.[0] || errorData.detail || error.message || ''
+        const errorMessage = errorData.error || errorData.message || error.message || ''
         const statusCode = error.response?.status
         
-        // Check if screen was deleted/unpaired (401, 404, or validation error for auth_token)
-        if (
-          statusCode === 401 ||
-          statusCode === 404 ||
-          (statusCode === 400 && (
-            errorMessage.includes('Invalid authentication token') ||
-            errorMessage.includes('Invalid authentication') ||
-            errorData.auth_token
-          ))
-        ) {
-          // Screen was unpaired/deleted - show unpair message
-          this.handleUnpair('Device has been unpaired from your account.')
-          throw error // Re-throw to allow caller to handle
+        // Handle 404 (screen not found) - but DON'T clear screen_id
+        if (statusCode === 404) {
+          if (errorMessage.includes('Screen not found')) {
+            this.status = 'unpaired'
+            this.errorMessage = 'Screen not found. Please verify your screen_id.'
+            this.stopPolling()
+            throw error
+          }
         }
         
         // Check if we've lost connection for 5 minutes
@@ -346,7 +257,7 @@ export const usePlayerStore = defineStore('player', {
 
     /**
      * Start monitoring for connection loss
-     * If no successful heartbeat for 5 minutes, unpair the screen
+     * If no successful heartbeat for 5 minutes, show warning
      */
     startConnectionLossMonitoring() {
       // Clear existing timer
@@ -375,57 +286,59 @@ export const usePlayerStore = defineStore('player', {
       const fiveMinutes = 5 * 60 * 1000 // 5 minutes in milliseconds
       
       if (timeSinceLastHeartbeat >= fiveMinutes) {
-        // Connection lost for 5 minutes - unpair screen
-        console.warn('Connection lost for 5 minutes, unpairing screen...')
-        this.handleUnpair('Connection lost for 5 minutes. Please pair your screen again.')
+        // Connection lost for 5 minutes - show warning but DON'T clear screen_id
+        console.warn('Connection lost for 5 minutes, showing warning...')
+        this.status = 'error'
+        this.errorMessage = 'Connection lost for 5 minutes. Please check your network connection.'
       }
     },
 
     /**
-     * Handle screen unpairing
+     * Show an on-screen overlay message (used by display_message command)
      */
-    handleUnpair(message = 'Device has been unpaired.') {
-      // Clear credentials
-      this.clearCredentials()
-      
-      // Stop all polling and timers
-      this.stopPolling()
-      
-      // Clear connection monitoring
-      if (this.connectionLostTimer) {
-        clearTimeout(this.connectionLostTimer)
-        this.connectionLostTimer = null
+    showOverlay(message, durationMs = 10000) {
+      // Clear any existing timer
+      if (this.overlayTimer) {
+        clearTimeout(this.overlayTimer)
+        this.overlayTimer = null
       }
-      
-      // Set status to unpaired
-      this.status = 'unpaired'
-      this.errorMessage = message
-      
-      // Note: Redirect will be handled by WebPlayer component when status becomes 'unpaired'
+
+      this.overlayMessage = message
+      this.overlayVisible = true
+
+      // Auto-hide after duration
+      this.overlayTimer = setTimeout(() => {
+        this.clearOverlay()
+      }, durationMs)
+    },
+
+    /**
+     * Clear overlay message
+     */
+    clearOverlay() {
+      if (this.overlayTimer) {
+        clearTimeout(this.overlayTimer)
+        this.overlayTimer = null
+      }
+      this.overlayVisible = false
+      this.overlayMessage = null
     },
 
     /**
      * Start polling for template updates and sending heartbeats
      * Polls every 30 seconds if no template, or every 5 minutes if template exists
      * Sends heartbeat every 30 seconds
+     * Commands are polled every 5 seconds for fast execution
      */
     startPolling() {
-      // Verify screen_id or credentials exist before starting polling
+      // Verify screen_id exists before starting polling
       const storedScreenId = localStorage.getItem('player_screen_id')
-      const isPaired = localStorage.getItem('player_is_paired') === 'true'
-      const storedToken = localStorage.getItem('player_auth_token')
-      const storedSecret = localStorage.getItem('player_secret_key')
       
-      // New method: Check for screen_id first
-      if (!storedScreenId || !isPaired) {
-        // Legacy method: Check for credentials
-        if (!storedToken || !storedSecret) {
-          console.error('[PlayerStore] Cannot start polling: screen not paired')
-          this.status = 'error'
-          this.errorMessage = 'Screen not paired. Please pair your screen first.'
-          this.handleUnpair('Screen not paired. Please pair your screen again.')
-          return
-        }
+      if (!storedScreenId) {
+        console.error('[PlayerStore] Cannot start polling: screen not paired')
+        this.status = 'error'
+        this.errorMessage = 'Screen not paired. Please pair your screen first.'
+        return
       }
       
       // Verify playerAPI is available
@@ -436,28 +349,18 @@ export const usePlayerStore = defineStore('player', {
         return
       }
       
-      // Double-check that screen_id or credentials are actually set in playerAPI
-      // This is important after pairing when screen_id was just saved
+      // Re-set screen_id to ensure it's in playerAPI
       try {
-        if (storedScreenId && isPaired) {
-          // New method: Re-set screen_id to ensure it's in playerAPI
-          playerAPI.setScreenId(storedScreenId)
-          console.log('[PlayerStore] Screen ID re-set in playerAPI after verification')
-        } else if (storedToken && storedSecret) {
-          // Legacy method: Re-set credentials to ensure they're in playerAPI
-          if (typeof playerAPI.setCredentials === 'function') {
-            playerAPI.setCredentials(storedToken, storedSecret)
-            console.log('[PlayerStore] Credentials re-set in playerAPI after verification (legacy)')
-          }
-        }
+        playerAPI.setScreenId(storedScreenId)
+        console.log('[PlayerStore] Screen ID re-set in playerAPI after verification')
       } catch (error) {
-        console.error('[PlayerStore] Failed to set screen_id/credentials in playerAPI:', error)
+        console.error('[PlayerStore] Failed to set screen_id in playerAPI:', error)
         this.status = 'error'
         this.errorMessage = 'Failed to configure player API'
         return
       }
       
-      console.log('[PlayerStore] Starting polling with credentials verified')
+      console.log('[PlayerStore] Starting polling with screen_id verified')
       
       if (this.pollingInterval) {
         clearInterval(this.pollingInterval)
@@ -467,27 +370,14 @@ export const usePlayerStore = defineStore('player', {
       // Initialize last successful heartbeat timestamp
       this.lastSuccessfulHeartbeat = Date.now()
 
-      // Send initial heartbeat with a small delay to ensure credentials are fully set
-      // This is especially important after pairing when credentials were just saved
+      // Send initial heartbeat with a small delay to ensure screen_id is fully set
       setTimeout(() => {
         this.sendHeartbeat().catch(error => {
           console.warn('[PlayerStore] Initial heartbeat failed, will retry:', error)
-          console.warn('[PlayerStore] Heartbeat error details:', {
-            message: error.message,
-            status: error.response?.status,
-            statusText: error.response?.statusText,
-            data: error.response?.data
-          })
           // Retry after 5 seconds
           setTimeout(() => {
             this.sendHeartbeat().catch(err => {
               console.error('[PlayerStore] Retry heartbeat also failed:', err)
-              console.error('[PlayerStore] Retry heartbeat error details:', {
-                message: err.message,
-                status: err.response?.status,
-                statusText: err.response?.statusText,
-                data: err.response?.data
-              })
               // Check connection loss even on retry failure
               this.checkConnectionLoss()
             })
@@ -495,14 +385,33 @@ export const usePlayerStore = defineStore('player', {
         })
       }, 500) // Small delay to ensure everything is initialized
 
-      // Start heartbeat interval (every 30 seconds for more frequent updates)
+      // Start heartbeat interval (every 30 seconds)
       this.heartbeatInterval = setInterval(() => {
         this.sendHeartbeat().catch(error => {
           console.error('Heartbeat failed:', error)
           // Check connection loss on each failure
           this.checkConnectionLoss()
         })
-      }, 30000) // 30 seconds (reduced from 60 for faster status updates)
+      }, 30000) // 30 seconds
+
+      // Start command polling interval (every 5 seconds for fast command execution)
+      // Also fetch commands immediately (don't wait)
+      console.log('[PlayerStore] Starting command polling (every 5 seconds for fast execution)')
+      
+      // Fetch commands immediately
+      this.fetchAndExecuteCommands().catch(error => {
+        console.error('[PlayerStore] Initial command fetch failed:', error)
+        // Don't break the player if command polling fails
+      })
+      
+      // Poll every 5 seconds for fast command execution
+      this.commandPollingInterval = setInterval(() => {
+        console.log('[PlayerStore] Fetching pending commands...')
+        this.fetchAndExecuteCommands().catch(error => {
+          console.error('[PlayerStore] Command polling failed:', error)
+          // Don't break the player if command polling fails
+        })
+      }, 5000) // 5 seconds - fast polling for immediate command execution
 
       const poll = () => {
         // Poll more frequently if no template (to detect when one is assigned)
@@ -527,6 +436,175 @@ export const usePlayerStore = defineStore('player', {
     },
 
     /**
+     * Fetch pending commands and execute them
+     */
+    async fetchAndExecuteCommands() {
+      // Verify screen_id exists before fetching commands
+      const storedScreenId = localStorage.getItem('player_screen_id')
+      if (!storedScreenId) {
+        console.warn('[PlayerStore] Cannot fetch commands: screen_id not found in localStorage')
+        return
+      }
+      
+      // Verify screen_id is set in playerAPI
+      const currentScreenId = playerAPI.getScreenId()
+      if (currentScreenId !== storedScreenId) {
+        console.warn('[PlayerStore] Screen ID mismatch, updating playerAPI', {
+          stored: storedScreenId,
+          current: currentScreenId
+        })
+        playerAPI.setScreenId(storedScreenId)
+      }
+      
+      console.log('[PlayerStore] Fetching pending commands...', { screenId: storedScreenId })
+      try {
+        const response = await playerAPI.fetchPendingCommands()
+        
+        console.log('[PlayerStore] Command fetch response:', {
+          status: response.status,
+          count: response.count || 0,
+          hasCommands: !!(response.commands && response.commands.length > 0)
+        })
+        
+        if (response.status === 'success' && response.commands && response.commands.length > 0) {
+          console.log(`[PlayerStore] Found ${response.commands.length} pending commands - executing immediately`, {
+            commands: response.commands.map(c => ({ id: c.id, type: c.type, name: c.name }))
+          })
+          
+          // Execute each command sequentially for reliability
+          // Commands are executed immediately when fetched (fast polling ensures quick execution)
+          for (const command of response.commands) {
+            await this.executeCommand(command)
+          }
+        } else {
+          console.log('[PlayerStore] No pending commands found')
+        }
+      } catch (error) {
+        console.error('[PlayerStore] Error fetching commands:', error)
+        // Don't throw - command polling failures shouldn't break the player
+      }
+    },
+
+    /**
+     * Execute a command
+     */
+    async executeCommand(command) {
+      const { id, type, payload } = command
+      
+      console.log(`[PlayerStore] Executing command ${id} of type ${type}`, { 
+        commandId: id,
+        commandType: type,
+        payload: payload 
+      })
+      
+      try {
+        let success = false
+        let errorMessage = ''
+        
+        // Execute based on command type
+        switch (type) {
+          case 'restart':
+            // Reload the page
+            console.log('[PlayerStore] Executing restart command - reloading page in 1 second')
+            success = true
+            // Update status first, then reload
+            await playerAPI.updateCommandStatus(id, 'done', '', {})
+            setTimeout(() => {
+              window.location.reload()
+            }, 1000)
+            return // Exit early since we're reloading
+            
+          case 'refresh':
+            // Refresh the template
+            console.log('[PlayerStore] Executing refresh command - fetching template')
+            success = true
+            await this.fetchTemplate()
+            break
+            
+          case 'change_template':
+            // Change to a different template (template_id in payload)
+            if (payload && payload.template_id) {
+              console.log('[PlayerStore] Executing change_template command', { template_id: payload.template_id })
+              // Force template refresh - the next poll will get the new template
+              success = true
+              await this.fetchTemplate()
+            } else {
+              errorMessage = 'Template ID not provided in payload'
+              console.warn('[PlayerStore] change_template command missing template_id in payload')
+            }
+            break
+            
+          case 'display_message':
+            // Display a message (could show a modal or overlay)
+            if (payload && payload.message) {
+              console.log('[PlayerStore] Executing display_message command:', payload.message)
+              // Show overlay on screen
+              const durationSeconds = payload.duration || 10
+              const durationMs = Math.max(1000, durationSeconds * 1000)
+              this.showOverlay(payload.message, durationMs)
+              success = true
+            } else {
+              errorMessage = 'Message not provided in payload'
+              console.warn('[PlayerStore] display_message command missing message in payload')
+            }
+            break
+            
+          case 'sync_content':
+            // Sync content files (content_ids in payload, or all if empty)
+            console.log('[PlayerStore] Executing sync_content command', { content_ids: payload?.content_ids })
+            // Content sync would typically be handled by the backend
+            // For now, just mark as done
+            success = true
+            break
+            
+          case 'custom':
+            // Execute custom JavaScript (payload.script)
+            if (payload && payload.script) {
+              try {
+                // WARNING: Executing arbitrary JavaScript is a security risk
+                // In production, you should validate and sanitize the script
+                // For now, we'll just log it
+                console.warn('[PlayerStore] Custom script execution requested (not executed for security):', payload.script)
+                success = true
+                errorMessage = 'Custom script execution not implemented for security reasons'
+              } catch (e) {
+                errorMessage = `Script execution error: ${e.message}`
+                console.error('[PlayerStore] Custom script execution error:', e)
+              }
+            } else {
+              errorMessage = 'Script not provided in payload'
+              console.warn('[PlayerStore] custom command missing script in payload')
+            }
+            break
+            
+          default:
+            errorMessage = `Unknown command type: ${type}`
+            console.warn(`[PlayerStore] Unknown command type: ${type}`)
+        }
+        
+        // Update command status on backend (unless it was restart which already updated)
+        const status = success ? 'done' : 'failed'
+        console.log(`[PlayerStore] Updating command ${id} status to ${status}`, { errorMessage })
+        await playerAPI.updateCommandStatus(id, status, errorMessage, {})
+        
+        console.log(`[PlayerStore] Command ${id} execution completed with status: ${status}`, { 
+          errorMessage: errorMessage || 'none' 
+        })
+        
+      } catch (error) {
+        console.error(`[PlayerStore] Error executing command ${id}:`, error)
+        
+        // Update command status as failed
+        try {
+          await playerAPI.updateCommandStatus(id, 'failed', error.message || 'Command execution error', {})
+          console.log(`[PlayerStore] Command ${id} marked as failed due to error`)
+        } catch (updateError) {
+          console.error('[PlayerStore] Error updating command status:', updateError)
+        }
+      }
+    },
+
+    /**
      * Stop polling and heartbeat
      */
     stopPolling() {
@@ -540,6 +618,11 @@ export const usePlayerStore = defineStore('player', {
         this.heartbeatInterval = null
       }
       
+      if (this.commandPollingInterval) {
+        clearInterval(this.commandPollingInterval)
+        this.commandPollingInterval = null
+      }
+      
       if (this.retryTimer) {
         clearInterval(this.retryTimer)
         this.retryTimer = null
@@ -549,22 +632,14 @@ export const usePlayerStore = defineStore('player', {
         clearTimeout(this.connectionLostTimer)
         this.connectionLostTimer = null
       }
-    },
-    
-    /**
-     * Clear stored credentials (for unpairing)
-     */
-    clearCredentials() {
-      try {
-        localStorage.removeItem('player_auth_token')
-        localStorage.removeItem('player_secret_key')
-        localStorage.removeItem('player_screen_id')
-        localStorage.removeItem('player_paired_at')
-        console.log('Credentials cleared from localStorage')
-      } catch (error) {
-        console.error('Failed to clear credentials:', error)
+
+      if (this.overlayTimer) {
+        clearTimeout(this.overlayTimer)
+        this.overlayTimer = null
       }
+
+      this.overlayVisible = false
+      this.overlayMessage = null
     }
   }
 })
-

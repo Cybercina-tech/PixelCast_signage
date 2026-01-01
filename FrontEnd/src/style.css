@@ -374,6 +374,12 @@
     @apply cursor-pointer;
   }
   
+  /* Select options - Dark mode support */
+  .select-base option {
+    @apply bg-white dark:bg-slate-800;
+    @apply text-slate-900 dark:text-slate-100;
+  }
+  
   /* Textareas */
   .textarea-base {
     @apply input-base;

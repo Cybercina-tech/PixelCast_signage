@@ -1,15 +1,19 @@
 from rest_framework import serializers
 from django.utils import timezone
+import logging
 from .models import Screen, PairingSession
 from commands.models import Command
 from templates.models import Template, Content, Layer, Widget
 from log.models import CommandExecutionLog, ScreenStatusLog, ContentDownloadLog
+
+logger = logging.getLogger(__name__)
 
 
 class ScreenSerializer(serializers.ModelSerializer):
     """Serializer for Screen model"""
     is_heartbeat_stale = serializers.SerializerMethodField()
     online_duration_seconds = serializers.SerializerMethodField()
+    active_template = serializers.SerializerMethodField()
     
     class Meta:
         model = Screen
@@ -36,6 +40,19 @@ class ScreenSerializer(serializers.ModelSerializer):
             return None
         delta = timezone.now() - obj.last_heartbeat_at
         return int(delta.total_seconds())
+    
+    def get_active_template(self, obj):
+        """
+        Return active template with id and name
+        CRITICAL FIX: Return template object with name instead of just ID
+        This ensures frontend can display template name instead of "None"
+        """
+        if obj.active_template:
+            return {
+                'id': obj.active_template.id,
+                'name': obj.active_template.name
+            }
+        return None
 
 
 class HeartbeatSerializer(serializers.Serializer):
@@ -248,30 +265,68 @@ class PlayerContentSerializer(serializers.ModelSerializer):
         if not obj.file_url:
             return ''
         
-        request = self.context.get('request')
-        
-        # For player, use longer expiration (24 hours)
-        try:
-            url = obj.get_secure_url(expiration=86400)
-        except:
-            url = obj.file_url or ''
-        
-        if not url:
-            return ''
+        # Get the original file_url
+        url = obj.file_url
         
         # If already absolute URL, return as is
-        if url.startswith('http'):
+        if url.startswith('http://') or url.startswith('https://'):
             return url
         
-        # Build absolute URL using request context
+        # Get request context for building absolute URL
+        request = self.context.get('request')
+        
+        # Try to get the actual request object (might be wrapped)
+        actual_request = None
         if request:
-            return request.build_absolute_uri(url)
+            # DRF Request object has _request attribute
+            actual_request = getattr(request, '_request', request)
+            if hasattr(actual_request, 'build_absolute_uri'):
+                try:
+                    # Use build_absolute_uri to ensure we get http://localhost:8000
+                    absolute_url = actual_request.build_absolute_uri(url)
+                    # Log for debugging
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.debug(f"Built absolute URL for content {obj.id}: {absolute_url} (from {url})")
+                    return absolute_url
+                except Exception as e:
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.warning(f"Failed to build absolute URI from request: {e}, falling back to BASE_URL")
+            elif hasattr(request, 'build_absolute_uri'):
+                # Try DRF request directly
+                try:
+                    absolute_url = request.build_absolute_uri(url)
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.debug(f"Built absolute URL for content {obj.id}: {absolute_url} (from {url})")
+                    return absolute_url
+                except Exception as e:
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.warning(f"Failed to build absolute URI from DRF request: {e}")
         
         # Fallback: construct absolute URL from settings
         from django.conf import settings
         base_url = getattr(settings, 'BASE_URL', 'http://localhost:8000')
+        media_url = getattr(settings, 'MEDIA_URL', '/media/')
+        
+        # Clean up the URL
         clean_url = url.lstrip('/')
-        return f"{base_url.rstrip('/')}/{clean_url}"
+        
+        # If URL already starts with MEDIA_URL, use it as is
+        if url.startswith(media_url):
+            clean_url = url[len(media_url):].lstrip('/')
+        
+        # Construct full absolute URL
+        absolute_url = f"{base_url.rstrip('/')}{media_url.rstrip('/')}/{clean_url}"
+        
+        # Log for debugging
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.debug(f"Constructed absolute URL for content {obj.id}: {absolute_url} (from file_url: {url})")
+        
+        return absolute_url
 
 
 class PlayerWidgetSerializer(serializers.ModelSerializer):
@@ -291,6 +346,59 @@ class PlayerWidgetSerializer(serializers.ModelSerializer):
         """Get active contents with request context for absolute URLs"""
         active_contents = obj.get_active_contents()
         return PlayerContentSerializer(active_contents, many=True, context=self.context).data
+    
+    def to_representation(self, instance):
+        """
+        CRITICAL FIX: Normalize widget dimensions to fill entire layer/screen
+        
+        If widget has placeholder dimensions (100×100 or small sizes < 200px),
+        set it to template dimensions (1920×1080) so widget fills entire screen.
+        Also reset position to (0, 0) to start from top-left corner.
+        
+        This ensures widgets fill entire screen on frontend regardless of 
+        database values, eliminating black spaces and gaps.
+        """
+        data = super().to_representation(instance)
+        
+        # Get template dimensions from layer
+        layer = instance.layer
+        template = getattr(layer, 'template', None)
+        
+        # Default template dimensions (1920×1080 - Full HD)
+        tpl_width = getattr(template, 'width', None) or 1920
+        tpl_height = getattr(template, 'height', None) or 1080
+        
+        # Current widget dimensions
+        width = instance.width or 0
+        height = instance.height or 0
+        
+        # CRITICAL: Check if widget has placeholder or small dimensions
+        # Placeholder: 100×100 (default in model)
+        # Small: < 200px (not realistic for full-screen display)
+        MIN_REALISTIC_SIZE = 200
+        is_placeholder = (
+            width <= 0 or 
+            height <= 0 or 
+            width < MIN_REALISTIC_SIZE or 
+            height < MIN_REALISTIC_SIZE or
+            (width == 100 and height == 100)  # Default placeholder
+        )
+        
+        if is_placeholder:
+            # CRITICAL: Set widget to template dimensions (full screen)
+            data['width'] = tpl_width
+            data['height'] = tpl_height
+            # Reset position to top-left (0, 0) to fill entire layer
+            data['x'] = 0
+            data['y'] = 0
+            
+            # Log for debugging
+            logger.info(
+                f'[PlayerWidgetSerializer] Normalized widget {instance.id} dimensions: '
+                f'{width}×{height} → {tpl_width}×{tpl_height} (template size)'
+            )
+        
+        return data
 
 
 class PlayerLayerSerializer(serializers.ModelSerializer):
@@ -309,6 +417,34 @@ class PlayerLayerSerializer(serializers.ModelSerializer):
         """Get active widgets with request context for absolute URLs"""
         active_widgets = obj.get_active_widgets()
         return PlayerWidgetSerializer(active_widgets, many=True, context=self.context).data
+
+    def to_representation(self, instance):
+        """
+        Fallback dimensions:
+        - If layer kept default placeholder size (100x100) or invalid (<=0),
+          stretch to template dimensions so content is visible full-screen.
+        """
+        data = super().to_representation(instance)
+
+        # Get template dimensions
+        template = instance.template
+        tpl_width = getattr(template, 'width', None) or 1920
+        tpl_height = getattr(template, 'height', None) or 1080
+
+        # Current layer dimensions
+        width = instance.width or 0
+        height = instance.height or 0
+
+        if (width <= 0 or height <= 0) or (width == 100 and height == 100):
+            data['width'] = tpl_width
+            data['height'] = tpl_height
+            # Ensure top-left origin if missing/invalid
+            if data.get('x') is None:
+                data['x'] = 0
+            if data.get('y') is None:
+                data['y'] = 0
+
+        return data
 
 
 class PlayerTemplateSerializer(serializers.ModelSerializer):

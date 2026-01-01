@@ -171,10 +171,12 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { pairingAPI } from '@/services/api'
+import { useScreensStore } from '@/stores/screens'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import Card from '@/components/common/Card.vue'
 
 const router = useRouter()
+const screensStore = useScreensStore()
 
 // State
 const activeTab = ref('qr') // 'qr' | 'manual'
@@ -291,8 +293,31 @@ async function pairScreen() {
     const response = await pairingAPI.bind(payload)
     
     if (response.data.status === 'success') {
-      statusMessage.value = `Screen "${response.data.screen.name}" paired successfully!`
+      const screen = response.data.screen
+      statusMessage.value = `Screen "${screen.name}" paired successfully!`
       statusMessageClass.value = 'bg-green-50 text-green-800'
+      
+      // Optimistically add screen to store with "Connecting" state
+      const optimisticScreen = {
+        ...screen,
+        is_online: false,
+        _isNew: true,
+        _createdAt: new Date().toISOString(),
+      }
+      
+      // Check if screen already exists in store
+      const existingIndex = screensStore.screens.findIndex(s => s.id === screen.id)
+      if (existingIndex !== -1) {
+        screensStore.screens[existingIndex] = optimisticScreen
+      } else {
+        screensStore.screens.push(optimisticScreen)
+      }
+      
+      // Immediately fetch the latest status (in case heartbeat already arrived)
+      // This ensures we get the real status without waiting for next poll
+      screensStore.fetchSingleScreenStatus(screen.id).catch(err => {
+        console.warn('Failed to fetch initial screen status after pairing:', err)
+      })
       
       // Redirect to screens list after a short delay
       setTimeout(() => {

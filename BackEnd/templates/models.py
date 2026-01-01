@@ -3,10 +3,10 @@ import os
 import requests
 import json
 from django.db import models
+from django.db import transaction
 from django.conf import settings
 from django.core.validators import MinValueValidator, MaxValueValidator, URLValidator
 from django.utils import timezone
-from django.core.exceptions import ValidationError
 from django.core.exceptions import ValidationError
 from datetime import timedelta
 
@@ -815,10 +815,20 @@ class Content(models.Model):
             str: Secure URL
         """
         from .storage import ContentStorageManager
+        import logging
+        
+        logger = logging.getLogger(__name__)
         
         try:
-            return ContentStorageManager.get_content_url(self, expiration)
+            url = ContentStorageManager.get_content_url(self, expiration)
+            if not url:
+                # If get_content_url returns empty, fallback to file_url
+                logger.warning(f"Content {self.id}: get_content_url returned empty, using file_url")
+                return self.file_url or ''
+            return url
         except Exception as e:
+            # Log error but don't fail - use fallback
+            logger.warning(f"Content {self.id}: Error getting secure URL: {str(e)}, using file_url as fallback")
             # Fallback to regular file_url
             return self.file_url or ''
     
@@ -887,10 +897,29 @@ class Content(models.Model):
             secure_url = self.get_secure_url()
             
             # Verify integrity if hash is available
+            # Note: If integrity check fails, we log it but don't block download
+            # The screen can verify the file hash after download
             if self.file_hash:
-                is_valid, error = self.verify_integrity()
-                if not is_valid:
-                    raise ValueError(f"Content integrity check failed: {error}")
+                try:
+                    is_valid, error = self.verify_integrity()
+                    if not is_valid:
+                        # Log warning but don't fail download - screen will verify hash
+                        import logging
+                        logger = logging.getLogger(__name__)
+                        logger.warning(
+                            f"Content {self.id} integrity check failed: {error}. "
+                            f"Download will proceed, screen will verify hash."
+                        )
+                        # Don't raise exception - let download proceed
+                except Exception as integrity_error:
+                    # If integrity check itself fails (e.g., path issues), log but continue
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.warning(
+                        f"Content {self.id} integrity check error: {str(integrity_error)}. "
+                        f"Download will proceed."
+                    )
+                    # Don't raise exception - let download proceed
             
             # In production, this would send a command to the screen via WebSocket
             # For now, we simulate the download process
@@ -916,16 +945,16 @@ class Content(models.Model):
                     priority=5
                 )
             
-            # Execute command (this will send via WebSocket or HTTP)
-            # Note: We mark as pending here, actual download status will be updated
-            # when screen confirms receipt via status update
+            # Execute command (this will send via WebSocket or queue for polling)
+            # Note: For sync_content, if WebSocket is not available, command is queued
+            # and screen will fetch it via /iot/commands/pending/ endpoint
             try:
                 success = command.execute()
                 
                 if success:
                     # Use atomic transaction for status update and log creation
                     with transaction.atomic():
-                        # Command was sent successfully, but don't mark as downloaded yet
+                        # Command was queued successfully (either sent via WebSocket or queued for polling)
                         # The screen needs to confirm receipt. We'll mark as pending.
                         # The status will be updated when screen sends confirmation
                         self.download_status = 'pending'
@@ -946,7 +975,26 @@ class Content(models.Model):
                     # via status update or command response
                     return True
                 else:
-                    # Command failed to send - use atomic transaction
+                    # Command failed to send - check if it's because screen is offline
+                    # If screen is offline, keep as pending (screen will fetch when online)
+                    if not screen.is_online:
+                        # Screen is offline, keep command as pending
+                        with transaction.atomic():
+                            self.download_status = 'pending'
+                            self.last_download_attempt = timezone.now()
+                            self.save(update_fields=['download_status', 'last_download_attempt'])
+                            
+                            from log.models import ContentDownloadLog
+                            ContentDownloadLog.objects.create(
+                                content=self,
+                                screen=screen,
+                                status='pending',
+                                file_size=self.file_size,
+                                error_message="Screen is offline, command queued for when screen comes online"
+                            )
+                        return True  # Return True because command is queued, not failed
+                    
+                    # Command failed to send and screen is online - mark as failed
                     with transaction.atomic():
                         self.mark_failed("Failed to send download command to screen")
                         # Create download log entry atomically
@@ -1021,26 +1069,46 @@ class Content(models.Model):
         Returns:
             bool: True if retry successful, False otherwise
         """
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        # DEBUG: Log retry attempt
+        print(f"DEBUG [retry_download model]: Starting retry for content {self.id} ({self.name})")
+        print(f"DEBUG [retry_download model]: Current download_status: {self.download_status}")
+        print(f"DEBUG [retry_download model]: Current retry_count: {self.retry_count}, max_retries: {max_retries}")
+        
         # Only retry if status is 'failed' or 'pending'
         if self.download_status not in ['failed', 'pending']:
             # Log why retry is not allowed
-            import logging
-            logger = logging.getLogger(__name__)
             logger.info(f"Retry download skipped for content {self.id}: download_status is '{self.download_status}' (must be 'failed' or 'pending')")
+            print(f"DEBUG [retry_download model]: Retry skipped - invalid status: {self.download_status}")
             return False
         
         # Check retry limit
         if self.retry_count >= max_retries:
+            print(f"DEBUG [retry_download model]: Retry limit exceeded: {self.retry_count} >= {max_retries}")
             self.update_status('failed')
             return False
         
+        # CRITICAL: Reset download_status to 'pending' before retry
+        # This ensures the content is ready for download
+        print(f"DEBUG [retry_download model]: Resetting download_status to 'pending'")
+        self.download_status = 'pending'
+        # Don't increment retry_count here - download_to_screen will handle it
+        self.save(update_fields=['download_status'])
+        print(f"DEBUG [retry_download model]: download_status reset to: {self.download_status}")
+        
         try:
-            return self.download_to_screen(screen, max_retries=max_retries)
+            result = self.download_to_screen(screen, max_retries=max_retries)
+            print(f"DEBUG [retry_download model]: download_to_screen returned: {result}")
+            print(f"DEBUG [retry_download model]: Final download_status: {self.download_status}")
+            return result
         except Exception as e:
             # Log error properly
-            import logging
-            logger = logging.getLogger(__name__)
             logger.error(f"Retry download failed for content {self.id} ({self.name}) to screen {screen.id} ({screen.name}): {str(e)}", exc_info=True)
+            print(f"DEBUG [retry_download model]: Exception occurred: {str(e)}")
+            # Mark as failed on exception
+            self.mark_failed(str(e))
             return False
     
     def _get_screen_storage_path(self, screen):

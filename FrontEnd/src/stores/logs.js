@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { logsAPI } from '../services/api'
+import { smartUpdateArray, smartUpdateObject } from '../utils/deepCompare'
 
 export const useLogsStore = defineStore('logs', {
   state: () => ({
@@ -27,7 +28,11 @@ export const useLogsStore = defineStore('logs', {
       this.error = null
       try {
         const response = await logsAPI.screenStatus.list({ ...this.filters, ...params })
-        this.screenStatusLogs = response.data.results || response.data || []
+        const newLogs = response.data.results || response.data || []
+        
+        // Smart update: Only update logs if changed
+        this.screenStatusLogs = smartUpdateArray(this.screenStatusLogs || [], newLogs, 'id')
+        
         return response.data
       } catch (error) {
         this.error = error.response?.data?.detail || error.response?.data?.message || error.message
@@ -69,7 +74,11 @@ export const useLogsStore = defineStore('logs', {
       this.error = null
       try {
         const response = await logsAPI.contentDownload.list({ ...this.filters, ...params })
-        this.contentDownloadLogs = response.data.results || response.data || []
+        const newLogs = response.data.results || response.data || []
+        
+        // Smart update: Only update logs if changed
+        this.contentDownloadLogs = smartUpdateArray(this.contentDownloadLogs || [], newLogs, 'id')
+        
         return response.data
       } catch (error) {
         this.error = error.response?.data?.detail || error.response?.data?.message || error.message
@@ -111,7 +120,11 @@ export const useLogsStore = defineStore('logs', {
       this.error = null
       try {
         const response = await logsAPI.commandExecution.list({ ...this.filters, ...params })
-        this.commandExecutionLogs = response.data.results || response.data || []
+        const newLogs = response.data.results || response.data || []
+        
+        // Smart update: Only update logs if changed
+        this.commandExecutionLogs = smartUpdateArray(this.commandExecutionLogs || [], newLogs, 'id')
+        
         return response.data
       } catch (error) {
         this.error = error.response?.data?.detail || error.response?.data?.message || error.message

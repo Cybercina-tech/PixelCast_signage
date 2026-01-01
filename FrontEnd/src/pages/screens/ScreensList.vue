@@ -71,14 +71,14 @@
           @edit="handleEdit"
           @delete="handleDelete"
         >
-          <template #cell-is_online="{ value }">
+          <template #cell-is_online="{ row }">
             <span
               :class="[
                 'px-2 py-1 rounded-full text-xs font-medium',
-                value ? 'badge-success' : 'badge-error',
+                getStatusClass(row),
               ]"
             >
-              {{ value ? 'Online' : 'Offline' }}
+              {{ getStatusText(row) }}
             </span>
           </template>
           <template #cell-active_template="{ value }">
@@ -235,6 +235,34 @@ const handleFilter = () => {
 const clearFilters = () => {
   screensStore.clearFilters()
   screensStore.fetchScreens()
+}
+
+/**
+ * Get status class for screen badge
+ */
+const getStatusClass = (screen) => {
+  const status = screensStore.getScreenStatus(screen)
+  if (status === 'online') {
+    return 'badge-success'
+  } else if (status === 'connecting') {
+    return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300'
+  } else {
+    return 'badge-error'
+  }
+}
+
+/**
+ * Get status text for screen
+ */
+const getStatusText = (screen) => {
+  const status = screensStore.getScreenStatus(screen)
+  if (status === 'online') {
+    return 'Online'
+  } else if (status === 'connecting') {
+    return 'Connecting...'
+  } else {
+    return 'Offline'
+  }
 }
 
 const handleView = (row) => {

@@ -94,7 +94,7 @@
           <div v-else class="space-y-4 max-h-[600px] overflow-y-auto">
             <div
               v-for="activity in dashboardStore.activities.slice(0, 10)"
-              :key="activity.id"
+              :key="`activity-${activity.id}`"
               class="flex items-start space-x-3 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl transition-all duration-200 hover:bg-slate-100 dark:hover:bg-slate-800"
             >
               <div class="flex-shrink-0">
@@ -240,7 +240,8 @@ onMounted(async () => {
     dashboardStore.fetchActivities(),
   ])
   
-  // Refresh stats every 30 seconds
+  // Refresh stats every 60 seconds (reduced polling frequency)
+  // Note: Real-time updates should come via WebSocket when available
   refreshInterval = setInterval(async () => {
     try {
       await Promise.all([
@@ -249,9 +250,13 @@ onMounted(async () => {
         dashboardStore.fetchActivities(),
       ])
     } catch (error) {
-      console.error('Error refreshing dashboard data:', error)
+      // Silently handle errors to prevent console spam
+      // Broken pipe errors are usually harmless (client disconnected before response)
+      if (error.message && !error.message.includes('Broken pipe')) {
+        console.error('Error refreshing dashboard data:', error)
+      }
     }
-  }, 30000)
+  }, 60000) // Increased from 30s to 60s
 })
 
 onUnmounted(() => {

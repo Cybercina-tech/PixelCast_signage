@@ -26,8 +26,15 @@ export function useResponsiveScaling(template) {
   }
   
   /**
-   * Calculate scale factor to fit template in viewport
-   * Maintains aspect ratio - never stretches or distorts
+   * Calculate scale factor to cover entire viewport (no black bars)
+   * CRITICAL FIX: Changed from "fit" to "cover" mode
+   * This ensures template always fills 100% of viewport, eliminating black borders
+   * 
+   * IMPORTANT: This scale is used when template-container is 100vw x 100vh
+   * Scale is applied to template's natural dimensions (e.g. 1920x1080)
+   * to make it cover the entire viewport container
+   * 
+   * Uses larger scale to cover entire viewport (may crop edges if aspect ratios differ)
    * All nested elements (layers → widgets → content) scale proportionally via CSS transform
    */
   const scaleFactor = computed(() => {
@@ -51,22 +58,38 @@ export function useResponsiveScaling(template) {
     const templateAspectRatio = templateWidth / templateHeight
     const viewportAspectRatio = viewportWidth.value / viewportHeight.value
     
-    // Calculate scale to fit viewport while maintaining aspect ratio
+    // CRITICAL FIX: Calculate scale to COVER viewport (not fit)
+    // Container is 100vw x 100vh, template needs to scale to cover it completely
+    // This uses the larger scale factor to ensure 100% of viewport is filled
+    // Similar to CSS object-fit: cover - fills entire container, may crop edges
     let scale
     
     if (templateAspectRatio > viewportAspectRatio) {
-      // Template is wider than viewport - fit to width
-      // This ensures template fits horizontally, may have black bars top/bottom
-      scale = viewportWidth.value / templateWidth
-    } else {
-      // Template is taller than viewport - fit to height
-      // This ensures template fits vertically, may have black bars left/right
+      // Template is wider than viewport - cover by height
+      // Scale template height to match viewport height
+      // May crop left/right edges (no black bars top/bottom)
       scale = viewportHeight.value / templateHeight
+    } else {
+      // Template is taller than viewport - cover by width  
+      // Scale template width to match viewport width
+      // May crop top/bottom edges (no black bars left/right)
+      scale = viewportWidth.value / templateWidth
     }
     
     // Ensure scale is never negative, zero, or excessively large
     // Clamp between 0.01 (very small) and 10 (very large) for safety
-    return Math.max(0.01, Math.min(scale, 10))
+    const finalScale = Math.max(0.01, Math.min(scale, 10))
+    
+    console.log('[useResponsiveScaling] Scale calculated:', {
+      templateSize: `${templateWidth}x${templateHeight}`,
+      viewportSize: `${viewportWidth.value}x${viewportHeight.value}`,
+      templateAspectRatio: templateAspectRatio.toFixed(3),
+      viewportAspectRatio: viewportAspectRatio.toFixed(3),
+      scale: finalScale.toFixed(6),
+      mode: templateAspectRatio > viewportAspectRatio ? 'cover-by-height' : 'cover-by-width'
+    })
+    
+    return finalScale
   })
   
   // Calculate scaled dimensions

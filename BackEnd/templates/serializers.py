@@ -32,28 +32,36 @@ class ContentSerializer(serializers.ModelSerializer):
         if not obj.file_url:
             return None
         
+        # If already absolute URL, return as is
+        if obj.file_url.startswith('http://') or obj.file_url.startswith('https://'):
+            return obj.file_url
+        
+        # Get request context for building absolute URL
         request = self.context.get('request')
+        actual_request = None
         if request:
-            # Use request to build absolute URL
-            if obj.file_url.startswith('http'):
-                return obj.file_url
-            return request.build_absolute_uri(obj.file_url)
+            # DRF Request object has _request attribute
+            actual_request = getattr(request, '_request', request)
+            if hasattr(actual_request, 'build_absolute_uri'):
+                try:
+                    return actual_request.build_absolute_uri(obj.file_url)
+                except Exception:
+                    pass
         
-        # Fallback if no request context
-        if obj.file_url.startswith('http'):
-            return obj.file_url
-        
-        # Use settings to construct URL
+        # Fallback: construct absolute URL from settings
         from django.conf import settings
-        media_url = getattr(settings, 'MEDIA_URL', '/media/')
-        if obj.file_url.startswith(media_url):
-            return obj.file_url
-        
-        # Construct full URL
         base_url = getattr(settings, 'BASE_URL', 'http://localhost:8000')
+        media_url = getattr(settings, 'MEDIA_URL', '/media/')
+        
+        # Clean up the URL
         clean_url = obj.file_url.lstrip('/')
-        clean_media = media_url.rstrip('/').lstrip('/')
-        return f"{base_url.rstrip('/')}/{clean_media}/{clean_url}"
+        
+        # If URL already starts with MEDIA_URL, use it as is
+        if obj.file_url.startswith(media_url):
+            clean_url = obj.file_url[len(media_url):].lstrip('/')
+        
+        # Construct full absolute URL
+        return f"{base_url.rstrip('/')}{media_url.rstrip('/')}/{clean_url}"
 
 
 class WidgetSerializer(serializers.ModelSerializer):

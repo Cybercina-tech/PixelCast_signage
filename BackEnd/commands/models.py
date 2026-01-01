@@ -274,8 +274,12 @@ class Command(models.Model):
         Returns:
             bool: True if command can be retried, False otherwise
         """
-        # Cannot retry if already done
+        # Can only retry if status is 'failed' or 'pending'
+        # Cannot retry if already done or currently executing
         if self.status == 'done':
+            return False
+        
+        if self.status == 'executing':
             return False
         
         # Cannot retry if expired
@@ -286,7 +290,8 @@ class Command(models.Model):
         if self.attempt_count >= max_retries:
             return False
         
-        return True
+        # Can retry if status is 'failed' or 'pending'
+        return self.status in ['failed', 'pending']
     
     def execute(self, screen=None):
         """
@@ -546,7 +551,23 @@ class Command(models.Model):
                 screen.save(update_fields=['last_command_sent_at'])
                 return True
         
-        # Fallback to HTTP POST
+        # For sync_content commands, if WebSocket is not available,
+        # we can still mark command as pending - screen will pull it via /iot/commands/pending/
+        # This is better than failing immediately
+        if command_type == 'sync_content':
+            # Screen will fetch this command via polling endpoint
+            # Mark command as pending (it's already pending, but ensure it's queued)
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.info(
+                f"WebSocket not available for screen {screen.id}, "
+                f"command {self.id} will be fetched via polling endpoint"
+            )
+            # Command is already pending, screen will fetch it
+            # Return True to indicate command is queued (not failed)
+            return True
+        
+        # For other command types, try HTTP fallback
         try:
             from commands.views import send_command_via_http
             success = send_command_via_http(screen, signed_payload)

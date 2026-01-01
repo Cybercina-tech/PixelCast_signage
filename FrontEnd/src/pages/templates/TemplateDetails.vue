@@ -172,7 +172,7 @@
           <div>
             <label class="flex items-center">
               <input v-model="activateForm.sync_content" type="checkbox" class="checkbox-base mr-2" />
-              <span class="text-sm text-primary">Sync content automatically</span>
+              <span class="text-sm text-primary dark:text-slate-300">Sync content automatically</span>
             </label>
           </div>
         </div>

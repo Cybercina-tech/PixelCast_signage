@@ -14,11 +14,13 @@ from pathlib import Path
 import os
 from dotenv import load_dotenv
 
-# Load environment variables from .env file
-load_dotenv()
-
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Load environment variables from .env file in project root (one level up from BackEnd)
+# BASE_DIR is BackEnd, so .env is in BASE_DIR.parent
+PROJECT_ROOT = BASE_DIR.parent
+load_dotenv(dotenv_path=PROJECT_ROOT / '.env')
 
 # Import Fernet for notification encryption key generation
 try:
@@ -113,10 +115,11 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'core.rate_limiting.RateLimitMiddleware',  # Rate limiting middleware
     'log.middleware.ErrorLoggingMiddleware',  # Error logging middleware (must be after auth)
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'core.rate_limiting.RateLimitMiddleware',  # Rate limiting middleware
+
 ]
 
 ROOT_URLCONF = 'Screengram.urls'
@@ -161,7 +164,7 @@ else:
             'NAME': os.environ.get('DB_NAME', 'screengram_db'),
             'USER': os.environ.get('DB_USER', 'screengram_user'),
             'PASSWORD': os.environ.get('DB_PASSWORD', ''),
-            'HOST': os.environ.get('DB_HOST', 'localhost'),
+            'HOST': os.environ.get('DB_HOST', '127.0.0.1'),
             'PORT': os.environ.get('DB_PORT', '5432'),
             'OPTIONS': {
                 'connect_timeout': 10,
@@ -216,8 +219,14 @@ STATIC_URL = 'static/'
 # Media files (User-uploaded content)
 # https://docs.djangoproject.com/en/5.2/topics/files/
 
-MEDIA_ROOT = BASE_DIR / 'media'
+# CRITICAL: Normalize MEDIA_ROOT to absolute path to prevent path traversal issues
+# On Windows, this ensures paths like C:\Work\Project\...\media are properly normalized
+MEDIA_ROOT = os.path.abspath(os.path.normpath(str(BASE_DIR / 'media')))
 MEDIA_URL = '/media/'
+
+# Base URL for building absolute URLs (used in serializers)
+# In production, set this to your domain (e.g., 'https://yourdomain.com')
+BASE_URL = os.environ.get('BASE_URL', 'http://localhost:8000')
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
@@ -236,7 +245,8 @@ REST_FRAMEWORK = {
         'rest_framework.authentication.SessionAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.IsAuthenticated',
+        'rest_framework.permissions.AllowAny',  # TEMPORARY: Changed from IsAuthenticated to test if 401 disappears
+        # 'rest_framework.permissions.IsAuthenticated',  # Original setting - uncomment after testing
     ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 50,

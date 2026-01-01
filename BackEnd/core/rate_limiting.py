@@ -240,9 +240,17 @@ class RateLimitMiddleware(MiddlewareMixin):
 
     def process_request(self, request):
         """Check rate limit before processing request."""
-        # Skip rate limiting for admin and static files
-        if request.path.startswith('/admin/') or request.path.startswith('/static/'):
-            return None
+        # THE IoT ESCAPE PLAN: Explicitly exclude IoT endpoints at the VERY START of process_request
+        # This ensures these requests bypass ALL rate limiting checks before any other logic
+        # Whitelist /iot/ namespace completely to bypass all security filters
+        if (request.path.startswith('/iot/') or  # NEW: Complete /iot/ namespace bypass
+            request.path.startswith('/api/screens/heartbeat/') or 
+            request.path.startswith('/api/player/template/') or
+            request.path.startswith('/public-iot/screens/heartbeat/') or
+            request.path.startswith('/public-iot/player/template/') or
+            request.path.startswith('/admin/') or 
+            request.path.startswith('/static/')):
+            return None  # Return None to skip rate limiting and continue to next middleware/view
 
         # Get rate limit configuration
         rate_limit_config = getattr(settings, 'RATE_LIMITING', {})

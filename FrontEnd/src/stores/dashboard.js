@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { screensAPI, commandsAPI, contentsAPI, logsAPI } from '../services/api'
+import { smartUpdateObject, smartUpdateArray } from '../utils/deepCompare'
 
 export const useDashboardStore = defineStore('dashboard', {
   state: () => ({
@@ -23,33 +24,107 @@ export const useDashboardStore = defineStore('dashboard', {
       this.loading = true
       this.error = null
       try {
+        console.log('DEBUG [fetchStats]: Starting stats fetch...')
+        
         // Fetch screens to calculate stats
-        const screensResponse = await screensAPI.list()
-        const screens = screensResponse.data.results || screensResponse.data || []
+        let screens = []
+        try {
+          const screensResponse = await screensAPI.list()
+          console.log('DEBUG [fetchStats]: Screens response:', screensResponse.data)
+          // Handle different response structures
+          if (screensResponse.data?.results && Array.isArray(screensResponse.data.results)) {
+            screens = screensResponse.data.results
+          } else if (Array.isArray(screensResponse.data)) {
+            screens = screensResponse.data
+          } else if (screensResponse.data?.data && Array.isArray(screensResponse.data.data)) {
+            screens = screensResponse.data.data
+          }
+          console.log('DEBUG [fetchStats]: Parsed screens:', screens.length)
+        } catch (e) {
+          console.error('DEBUG [fetchStats]: Error fetching screens:', e)
+        }
         
         // Fetch pending commands
-        const commandsResponse = await commandsAPI.pending()
-        const pendingCommands = commandsResponse.data.commands || commandsResponse.data.results || commandsResponse.data || []
+        let pendingCommands = []
+        try {
+          const commandsResponse = await commandsAPI.pending()
+          console.log('DEBUG [fetchStats]: Commands response:', commandsResponse.data)
+          // Handle different response structures
+          if (commandsResponse.data?.commands && Array.isArray(commandsResponse.data.commands)) {
+            pendingCommands = commandsResponse.data.commands
+          } else if (commandsResponse.data?.results && Array.isArray(commandsResponse.data.results)) {
+            pendingCommands = commandsResponse.data.results
+          } else if (Array.isArray(commandsResponse.data)) {
+            pendingCommands = commandsResponse.data
+          } else if (commandsResponse.data?.data && Array.isArray(commandsResponse.data.data)) {
+            pendingCommands = commandsResponse.data.data
+          }
+          console.log('DEBUG [fetchStats]: Parsed pending commands:', pendingCommands.length)
+        } catch (e) {
+          console.error('DEBUG [fetchStats]: Error fetching commands:', e)
+        }
         
-        // Fetch downloading content
-        const contentsResponse = await contentsAPI.list({ download_status: 'downloading' })
-        const downloadingContent = contentsResponse.data.results || contentsResponse.data || []
+        // Fetch downloading content - try different status values
+        let downloadingContent = []
+        try {
+          // Try 'downloading' status first
+          let contentsResponse = await contentsAPI.list({ download_status: 'downloading' })
+          console.log('DEBUG [fetchStats]: Contents response (downloading):', contentsResponse.data)
+          
+          // Handle different response structures
+          if (contentsResponse.data?.results && Array.isArray(contentsResponse.data.results)) {
+            downloadingContent = contentsResponse.data.results
+          } else if (Array.isArray(contentsResponse.data)) {
+            downloadingContent = contentsResponse.data
+          } else if (contentsResponse.data?.data && Array.isArray(contentsResponse.data.data)) {
+            downloadingContent = contentsResponse.data.data
+          }
+          
+          // If no results, try 'pending' status
+          if (downloadingContent.length === 0) {
+            contentsResponse = await contentsAPI.list({ download_status: 'pending' })
+            if (contentsResponse.data?.results && Array.isArray(contentsResponse.data.results)) {
+              downloadingContent = contentsResponse.data.results.filter(c => 
+                c.download_status === 'downloading' || c.download_status === 'pending'
+              )
+            } else if (Array.isArray(contentsResponse.data)) {
+              downloadingContent = contentsResponse.data.filter(c => 
+                c.download_status === 'downloading' || c.download_status === 'pending'
+              )
+            }
+          }
+          
+          console.log('DEBUG [fetchStats]: Parsed downloading content:', downloadingContent.length)
+        } catch (e) {
+          console.error('DEBUG [fetchStats]: Error fetching content:', e)
+        }
         
-        this.stats = {
-          online_screens: screens.filter(s => s.is_online).length,
-          offline_screens: screens.filter(s => !s.is_online).length,
+        // Calculate stats
+        const onlineScreens = screens.filter(s => s.is_online === true).length
+        const offlineScreens = screens.filter(s => s.is_online === false).length
+        
+        console.log('DEBUG [fetchStats]: Calculated stats:', {
+          online_screens: onlineScreens,
+          offline_screens: offlineScreens,
+          commands_in_queue: pendingCommands.length,
+          content_downloading: downloadingContent.length,
+        })
+        
+        // Smart update: Only update stats if values changed
+        const newStats = {
+          online_screens: onlineScreens,
+          offline_screens: offlineScreens,
           commands_in_queue: pendingCommands.length,
           content_downloading: downloadingContent.length,
         }
+        this.stats = smartUpdateObject(this.stats, newStats)
+        
+        console.log('DEBUG [fetchStats]: Final stats:', this.stats)
       } catch (error) {
+        console.error('DEBUG [fetchStats]: Error:', error)
         this.error = error.response?.data?.detail || error.response?.data?.message || error.message
-        // Set default stats on error
-        this.stats = {
-          online_screens: 0,
-          offline_screens: 0,
-          commands_in_queue: 0,
-          content_downloading: 0,
-        }
+        // Don't reset stats on error - keep previous values
+        console.warn('DEBUG [fetchStats]: Error occurred, keeping previous stats')
       } finally {
         this.loading = false
       }
@@ -72,7 +147,8 @@ export const useDashboardStore = defineStore('dashboard', {
           })
           .sort((a, b) => new Date(a.recorded_at) - new Date(b.recorded_at))
         
-        this.metrics = {
+        // Smart update: Only update metrics if data changed
+        const newMetrics = {
           cpu: last24h.map(log => ({
             time: log.recorded_at,
             value: log.cpu_usage || 0,
@@ -85,6 +161,12 @@ export const useDashboardStore = defineStore('dashboard', {
             time: log.recorded_at,
             value: log.heartbeat_latency || 0,
           })),
+        }
+        // Update each metric array only if changed
+        this.metrics = {
+          cpu: smartUpdateArray(this.metrics.cpu || [], newMetrics.cpu, 'time'),
+          memory: smartUpdateArray(this.metrics.memory || [], newMetrics.memory, 'time'),
+          latency: smartUpdateArray(this.metrics.latency || [], newMetrics.latency, 'time'),
         }
       } catch (error) {
         this.error = error.response?.data?.detail || error.response?.data?.message || error.message
@@ -178,7 +260,7 @@ export const useDashboardStore = defineStore('dashboard', {
         }
         
         // Sort by timestamp (most recent first) and take top 20
-        this.activities = activities
+        const newActivities = activities
           .filter(activity => activity.timestamp) // Only include activities with valid timestamps
           .sort((a, b) => {
             const dateA = new Date(a.timestamp)
@@ -186,6 +268,9 @@ export const useDashboardStore = defineStore('dashboard', {
             return dateB - dateA // Most recent first
           })
           .slice(0, 20)
+        
+        // Smart update: Only update activities array if changed
+        this.activities = smartUpdateArray(this.activities || [], newActivities, 'id')
         
         console.log(`Loaded ${this.activities.length} recent activities`)
       } catch (error) {

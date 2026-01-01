@@ -321,20 +321,54 @@ class Screen(models.Model):
         if not template.is_active:
             return False
         
+        # DEBUG: Log before transaction
+        print(f"DEBUG [activate_template]: Starting activation for screen {self.id}")
+        print(f"DEBUG [activate_template]: Template to activate: {template.id} ({template.name})")
+        print(f"DEBUG [activate_template]: Screen active_template BEFORE transaction: {self.active_template}")
+        
         # Use atomic transaction for template activation
         # This ensures screen update and content sync operations are atomic
         with transaction.atomic():
             # Lock screen row to prevent concurrent activation
-            screen = Screen.objects.select_for_update().get(id=self.id)
+            # Refresh self from DB to get latest state
+            self.refresh_from_db()
+            print(f"DEBUG [activate_template]: Screen active_template AFTER refresh (in transaction): {self.active_template}")
             
-            # Activate template
-            screen.active_template = template
-            screen.last_template_update_at = timezone.now()
-            screen.save(update_fields=['active_template', 'last_template_update_at'])
+            # Activate template on self (the screen instance)
+            self.active_template = template
+            self.last_template_update_at = timezone.now()
+            print(f"DEBUG [activate_template]: Screen active_template AFTER assignment (before save): {self.active_template}")
+            print(f"DEBUG [activate_template]: Screen active_template ID (before save): {self.active_template.id if self.active_template else None}")
+            
+            # CRITICAL: Save immediately to ensure DB is updated before response
+            self.save(update_fields=['active_template', 'last_template_update_at'])
+            print(f"DEBUG [activate_template]: Screen saved with active_template: {self.active_template}")
+            print(f"DEBUG [activate_template]: Screen active_template ID (after save): {self.active_template.id if self.active_template else None}")
+            
+            # CRITICAL: Refresh immediately after save to ensure we have the latest state
+            self.refresh_from_db()
+            print(f"DEBUG [activate_template]: Screen active_template AFTER immediate refresh: {self.active_template}")
+            print(f"DEBUG [activate_template]: Screen active_template ID (after immediate refresh): {self.active_template.id if self.active_template else None}")
             
             # Sync content if requested (within same transaction)
             if sync_content:
-                synced_count = screen.sync_template_content(template)
+                synced_count = self.sync_template_content(template)
+                print(f"DEBUG [activate_template]: Content synced: {synced_count} items")
+        
+        # CRITICAL: Refresh from DB one more time after transaction to ensure
+        # all changes are committed and visible to other queries (like player_template_endpoint)
+        self.refresh_from_db()
+        print(f"DEBUG [activate_template]: Screen active_template AFTER transaction refresh: {self.active_template}")
+        print(f"DEBUG [activate_template]: Screen active_template ID (final): {self.active_template.id if self.active_template else None}")
+        
+        # CRITICAL: Verify active_template is set correctly
+        if self.active_template != template:
+            print(f"ERROR [activate_template]: active_template mismatch! Expected: {template.id}, Got: {self.active_template.id if self.active_template else None}")
+            # Force update one more time
+            self.active_template = template
+            self.save(update_fields=['active_template'])
+            self.refresh_from_db()
+            print(f"DEBUG [activate_template]: Forced update complete. active_template: {self.active_template.id if self.active_template else None}")
         
         return True
     

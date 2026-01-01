@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { usersAPI } from '../services/api'
+import { smartUpdateArray } from '../utils/deepCompare'
 
 export const useSidebarStore = defineStore('sidebar', {
   state: () => ({
@@ -14,7 +15,11 @@ export const useSidebarStore = defineStore('sidebar', {
       this.error = null
       try {
         const response = await usersAPI.sidebarItems()
-        this.items = response.data.items || []
+        const newItems = response.data.items || []
+        
+        // Smart update: Only update sidebar items if changed
+        // This prevents re-triggering entrance animations
+        this.items = smartUpdateArray(this.items || [], newItems, 'id')
         this.lastFetched = new Date()
         return this.items
       } catch (error) {

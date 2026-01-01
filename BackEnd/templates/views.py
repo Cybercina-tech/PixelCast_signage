@@ -135,22 +135,87 @@ class TemplateViewSet(viewsets.ModelViewSet):
             raise PermissionDenied("You do not have permission to access this screen")
         
         sync_content = serializer.validated_data.get('sync_content', True)
+        
+        # DEBUG: Log before activation
+        print(f"DEBUG [activate_on_screen]: Activating template {template.id} ({template.name}) for screen {screen.id} ({screen.name})")
+        print(f"DEBUG [activate_on_screen]: Screen active_template BEFORE activation: {screen.active_template}")
+        print(f"DEBUG [activate_on_screen]: Screen active_template ID BEFORE: {screen.active_template.id if screen.active_template else None}")
+        
         success = template.activate_on_screen(screen, sync_content=sync_content)
         
         if success:
-            # Provide detailed response including screen status
+            # CRITICAL: Refresh screen from database to ensure active_template is committed
+            # This ensures the player_template_endpoint will see the updated active_template
+            screen.refresh_from_db()
+            
+            # DEBUG: Log after refresh
+            print(f"DEBUG [activate_on_screen]: Screen active_template AFTER refresh_from_db: {screen.active_template}")
+            print(f"DEBUG [activate_on_screen]: Screen active_template ID AFTER: {screen.active_template.id if screen.active_template else None}")
+            print(f"DEBUG [activate_on_screen]: Screen active_template NAME AFTER: {screen.active_template.name if screen.active_template else None}")
+            
+            # Import ScreenSerializer to return full screen data
+            from signage.serializers import ScreenSerializer
+            
+            # DEBUG: Serialize and check
+            screen_serializer = ScreenSerializer(screen, context={'request': request})
+            screen_data = screen_serializer.data
+            print(f"DEBUG [activate_on_screen]: Serialized screen.active_template: {screen_data.get('active_template')}")
+            print(f"DEBUG [activate_on_screen]: Serialized screen.active_template type: {type(screen_data.get('active_template'))}")
+            print(f"DEBUG [activate_on_screen]: Serialized screen data keys: {list(screen_data.keys())}")
+            print(f"DEBUG [activate_on_screen]: Full serialized screen data: {screen_data}")
+            
+            # DEBUG: Check raw screen object
+            print(f"DEBUG [activate_on_screen]: Raw screen.active_template object: {screen.active_template}")
+            print(f"DEBUG [activate_on_screen]: Raw screen.active_template.id: {screen.active_template.id if screen.active_template else None}")
+            print(f"DEBUG [activate_on_screen]: Raw screen.active_template.name: {screen.active_template.name if screen.active_template else None}")
+            
+            # Provide detailed response including updated screen data
             response_data = {
                 'status': 'success',
                 'message': f'Template "{template.name}" activated on screen "{screen.name}"',
                 'template_id': str(template.id),
+                'template_name': template.name,
                 'screen_id': str(screen.id),
                 'screen_online': screen.is_online,
                 'content_sync': sync_content,
+                # Include full updated screen data for frontend to update store immediately
+                'screen': screen_data,
             }
+            
+            # DEBUG: Log response payload
+            print(f"DEBUG [activate_on_screen]: Response Payload screen.active_template: {response_data['screen'].get('active_template')}")
+            print(f"DEBUG [activate_on_screen]: Response Payload (full): {response_data}")
             
             # Add warning if screen is offline and content sync was requested
             if not screen.is_online and sync_content:
                 response_data['warning'] = 'Screen is offline. Content will be synced when screen comes online.'
+
+            # Queue immediate commands for the player so it refreshes without waiting for next poll
+            try:
+                # High priority refresh to force template fetch
+                screen.queue_command(
+                    command_type='refresh',
+                    payload={
+                        'reason': 'template_activated',
+                        'template_id': str(template.id)
+                    },
+                    priority=10
+                )
+
+                # Optional content sync command if requested
+                if sync_content:
+                    screen.queue_command(
+                        command_type='sync_content',
+                        payload={
+                            'content_ids': []  # empty list => sync all
+                        },
+                        priority=5
+                    )
+                response_data['commands_queued'] = True
+            except Exception as queue_error:
+                # Don't fail activation if command queueing has an issue
+                print(f"WARNING [activate_on_screen]: Failed to queue commands for screen {screen.id}: {queue_error}")
+                response_data['commands_queued'] = False
             
             return Response(response_data, status=status.HTTP_200_OK)
         else:
@@ -322,6 +387,12 @@ class ContentViewSet(viewsets.ModelViewSet):
     serializer_class = ContentSerializer
     permission_classes = [IsAuthenticated]
     lookup_field = 'id'
+    
+    def get_serializer_context(self):
+        """Add request context to serializer for absolute URL generation"""
+        context = super().get_serializer_context()
+        context['request'] = self.request
+        return context
     parser_classes = [MultiPartParser, FormParser, JSONParser]
     
     def update(self, request, *args, **kwargs):
@@ -507,8 +578,20 @@ class ContentViewSet(viewsets.ModelViewSet):
         user = request.user
         
         logger.info(f"Retry download request for content {content.id} by user {user.id if hasattr(user, 'id') else 'anonymous'}")
-        logger.debug(f"Request data: {request.data}")
-        logger.debug(f"Content download_status: {content.download_status}, retry_count: {content.retry_count}")
+        
+        # DEBUG: Log request details
+        print(f"DEBUG [retry_download]: Request method: {request.method}")
+        print(f"DEBUG [retry_download]: Request data type: {type(request.data)}")
+        print(f"DEBUG [retry_download]: Request data: {request.data}")
+        print(f"DEBUG [retry_download]: Request data dict: {dict(request.data) if hasattr(request.data, 'get') else 'NOT A DICT'}")
+        print(f"DEBUG [retry_download]: Content download_status: {content.download_status}, retry_count: {content.retry_count}")
+        
+        # Handle empty request body - allow retry without screen_id (will retry to all screens)
+        # This is valid - screen_id is optional
+        if not request.data:
+            print("DEBUG [retry_download]: request.data is empty - will retry to all screens")
+            # Set empty dict to avoid errors
+            request._full_data = {}
         
         # Check permissions - verify user has access to this content
         try:
@@ -522,11 +605,25 @@ class ContentViewSet(viewsets.ModelViewSet):
             logger.error(f"Error checking permissions for retry download: {e}", exc_info=True)
             raise PermissionDenied("You do not have permission to retry download for this content")
         
-        screen_id = request.data.get('screen_id')
-        max_retries = request.data.get('max_retries', 3)
+        # Try to get screen_id from request.data (handle different data formats)
+        screen_id = None
+        max_retries = 3
+        
+        if request.data:
+            if isinstance(request.data, dict):
+                screen_id = request.data.get('screen_id')
+                max_retries = request.data.get('max_retries', 3)
+            elif hasattr(request.data, 'get'):
+                screen_id = request.data.get('screen_id')
+                max_retries = request.data.get('max_retries', 3)
+            else:
+                # Try to access as attribute
+                screen_id = getattr(request.data, 'screen_id', None)
+                max_retries = getattr(request.data, 'max_retries', 3)
         
         logger.debug(f"Received screen_id: {screen_id} (type: {type(screen_id)})")
         logger.debug(f"Received max_retries: {max_retries} (type: {type(max_retries)})")
+        print(f"DEBUG [retry_download]: Extracted screen_id: {screen_id}, max_retries: {max_retries}")
         
         # Handle empty string or None
         if screen_id == '' or screen_id is None:
@@ -546,10 +643,15 @@ class ContentViewSet(viewsets.ModelViewSet):
             # Validate screen_id format (should be UUID)
             try:
                 import uuid
-                uuid.UUID(str(screen_id))
-            except (ValueError, AttributeError):
+                # Convert to string and validate UUID format
+                screen_id_str = str(screen_id).strip()
+                print(f"DEBUG [retry_download]: Validating screen_id: {screen_id_str}")
+                uuid.UUID(screen_id_str)
+                screen_id = screen_id_str  # Use cleaned string
+            except (ValueError, AttributeError) as e:
+                print(f"DEBUG [retry_download]: Invalid screen_id format: {screen_id}, error: {e}")
                 return Response(
-                    {'error': f'Invalid screen_id format: {screen_id}. Must be a valid UUID.'},
+                    {'error': f'Invalid screen_id format: {screen_id}. Must be a valid UUID.', 'received': str(screen_id)},
                     status=status.HTTP_400_BAD_REQUEST
                 )
             
@@ -638,14 +740,30 @@ class ContentViewSet(viewsets.ModelViewSet):
                 # Refresh content from DB to get updated status
                 content.refresh_from_db()
                 
+                # DEBUG: Log updated content status
+                print(f"DEBUG [retry_download]: Content status after retry: {content.download_status}")
+                print(f"DEBUG [retry_download]: Content retry_count after retry: {content.retry_count}")
+                
                 if success:
+                    # Import ContentSerializer to return full updated content data
+                    from .serializers import ContentSerializer
+                    
+                    # Serialize updated content for frontend
+                    content_serializer = ContentSerializer(content, context={'request': request})
+                    content_data = content_serializer.data
+                    
+                    print(f"DEBUG [retry_download]: Serialized content data: {content_data}")
+                    print(f"DEBUG [retry_download]: Serialized download_status: {content_data.get('download_status')}")
+                    
                     return Response({
                         'status': 'success',
                         'message': f'Content "{content.name}" retry download successful to screen "{screen.name}"',
                         'content_id': str(content.id),
                         'screen_id': str(screen.id),
                         'download_status': content.download_status,
-                        'retry_count': content.retry_count
+                        'retry_count': content.retry_count,
+                        # Include full updated content data for frontend to update store immediately
+                        'content': content_data
                     }, status=status.HTTP_200_OK)
                 else:
                     # Get more details about why it failed
@@ -855,6 +973,66 @@ class ContentViewSet(viewsets.ModelViewSet):
             
             logger.info(f"File saved successfully. Metadata: {metadata}")
             
+            # After successful upload, sync content to all screens that use this template
+            # and ensure template is active
+            sync_results = []
+            template_info = None
+            try:
+                # Get template from content relationships
+                widget = content.widget
+                if widget:
+                    layer = widget.layer
+                    if layer:
+                        template = layer.template
+                        if template:
+                            template_info = {
+                                'template_id': str(template.id),
+                                'template_name': template.name
+                            }
+                            
+                            # Get all screens that have this template assigned
+                            screens = template.screens.all()
+                            
+                            if screens.count() == 0:
+                                logger.warning(f"Template {template.id} has no screens assigned. Content uploaded but not synced.")
+                            else:
+                                logger.info(f"Syncing content {content.id} to {screens.count()} screens for template {template.id}")
+                                
+                                # Sync content to all online screens
+                                for screen in screens:
+                                    if screen.is_online:
+                                        try:
+                                            logger.info(f"Syncing content {content.id} to screen {screen.id}")
+                                            success = content.download_to_screen(screen)
+                                            sync_results.append({
+                                                'screen_id': str(screen.id),
+                                                'screen_name': screen.name,
+                                                'success': success
+                                            })
+                                            if success:
+                                                logger.info(f"Content {content.id} synced successfully to screen {screen.id}")
+                                            else:
+                                                logger.warning(f"Content {content.id} sync failed to screen {screen.id}")
+                                        except Exception as e:
+                                            logger.error(f"Error syncing content {content.id} to screen {screen.id}: {str(e)}")
+                                            sync_results.append({
+                                                'screen_id': str(screen.id),
+                                                'screen_name': screen.name,
+                                                'success': False,
+                                                'error': str(e)
+                                            })
+                                    else:
+                                        logger.info(f"Screen {screen.id} is offline, skipping sync (will sync when online)")
+                                        sync_results.append({
+                                            'screen_id': str(screen.id),
+                                            'screen_name': screen.name,
+                                            'success': False,
+                                            'error': 'Screen is offline'
+                                        })
+            except Exception as e:
+                logger.error(f"Error during content sync after upload: {str(e)}", exc_info=True)
+                # Don't fail the upload if sync fails
+            
             # Note: We don't log uploads to ContentDownloadLog as that's for screen-specific downloads
             # Uploads are logged via the content's created_at/updated_at timestamps
             
@@ -866,7 +1044,7 @@ class ContentViewSet(viewsets.ModelViewSet):
                 else:
                     absolute_file_url = request.build_absolute_uri(content.file_url)
             
-            return Response({
+            response_data = {
                 'status': 'success',
                 'message': f'File uploaded successfully for content "{content.name}"',
                 'content_id': str(content.id),
@@ -874,8 +1052,25 @@ class ContentViewSet(viewsets.ModelViewSet):
                 'absolute_file_url': absolute_file_url,
                 'file_size': content.file_size,
                 'file_hash': content.file_hash,
-                'storage_path': content.storage_path
-            }, status=status.HTTP_200_OK)
+                'storage_path': content.storage_path,
+                'sync_results': sync_results
+            }
+            
+            if template_info:
+                response_data['template'] = template_info
+            
+            if sync_results:
+                success_count = sum(1 for r in sync_results if r.get('success'))
+                response_data['sync_summary'] = {
+                    'total_screens': len(sync_results),
+                    'successful_syncs': success_count,
+                    'failed_syncs': len(sync_results) - success_count
+                }
+            else:
+                if template_info:
+                    response_data['warning'] = f'Template "{template_info["template_name"]}" has no screens assigned. Please assign template to a screen to display content.'
+            
+            return Response(response_data, status=status.HTTP_200_OK)
             
         except ValueError as e:
             error_msg = str(e)

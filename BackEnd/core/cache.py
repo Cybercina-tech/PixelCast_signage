@@ -146,7 +146,10 @@ class CacheManager:
                         deleted += 1
                 return deleted
             else:
-                logger.warning("Pattern-based cache invalidation not available with current cache backend")
+                # LocMemCache or other backends don't support pattern matching
+                # This is expected and not an error - just log at debug level
+                logger.debug("Pattern-based cache invalidation not available with current cache backend. "
+                           "For pattern-based invalidation, use Redis cache backend (set USE_REDIS_CACHE=True).")
                 return 0
         except Exception as e:
             logger.error(f"Cache pattern invalidation error for {pattern}: {e}")

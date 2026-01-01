@@ -15,20 +15,23 @@ This document outlines planned improvements, fixes, and enhancements for the Scr
 - ❌ Fix file path generation edge cases
 - ❌ Test with various file types and sizes
 - ❌ Add retry logic for failed uploads
+- ❌ Verify ContentStorageManager handles all edge cases
 
 **Impact**: Users cannot reliably upload content, blocking core functionality.
 
 ### Media Storage Refactor
 **Priority**: 🔴 High  
-**Status**: Not started
+**Status**: Partially implemented
 
-- ❌ Standardize storage path generation
-- ❌ Add storage backend abstraction layer
+- ✅ ContentStorageManager exists with validation
+- ✅ User-based directory structure implemented
+- ❌ Standardize storage path generation across all code paths
+- ❌ Add storage backend abstraction layer improvements
 - ❌ Implement per-user quota management
 - ❌ Add storage cleanup for orphaned files
 - ❌ Improve S3 integration and testing
 - ❌ Add storage migration tools
-- ❌ Document storage configuration
+- ❌ Document storage configuration thoroughly
 
 **Impact**: Prevents storage issues and makes S3 integration reliable.
 
@@ -36,13 +39,13 @@ This document outlines planned improvements, fixes, and enhancements for the Scr
 **Priority**: 🔴 High  
 **Status**: Not started
 
-- ❌ Fix file_url generation
+- ❌ Fix file_url generation in ContentStorageManager
 - ❌ Ensure MEDIA_URL is properly configured
-- ❌ Add file existence verification
+- ❌ Add file existence verification before serving
 - ❌ Implement proper CORS for media files
 - ❌ Add preview caching
 - ❌ Support for video previews
-- ❌ Add preview error handling
+- ❌ Add preview error handling with user-friendly messages
 
 **Impact**: Users cannot verify uploaded content before activating on screens.
 
@@ -52,11 +55,13 @@ This document outlines planned improvements, fixes, and enhancements for the Scr
 
 - ✅ Added multiple credential extraction methods
 - ✅ Added request body parsing fallbacks
+- ✅ ScreenConnectionRegistry for WebSocket management
 - ❌ Fully resolve 401 authentication issues
 - ❌ Test all credential scenarios (screen_id, auth_token/secret_key, URL params, env vars)
 - ❌ Add comprehensive logging and monitoring
 - ❌ Improve error messages for debugging
 - ❌ Add automatic retry with exponential backoff
+- ❌ Simplify credential extraction logic
 
 **Impact**: Screens cannot reliably report status, breaking monitoring and command execution.
 
@@ -66,12 +71,14 @@ This document outlines planned improvements, fixes, and enhancements for the Scr
 
 - ✅ Pairing session creation and binding
 - ✅ Screen credential generation
+- ✅ Atomic transaction for pairing
+- ✅ Pairing session cleanup management command
 - ❌ Improve pairing expiration handling
-- ❌ Add pairing session cleanup automation
+- ❌ Add pairing session cleanup automation (scheduled task)
 - ❌ Improve error messages for pairing failures
 - ❌ Add pairing retry mechanism
 - ❌ Test pairing flow edge cases
-- ❌ Add pairing session monitoring
+- ❌ Add pairing session monitoring dashboard
 
 **Impact**: Users may experience pairing failures, requiring manual intervention.
 
@@ -81,10 +88,12 @@ This document outlines planned improvements, fixes, and enhancements for the Scr
 **Priority**: 🔴 High  
 **Status**: Models exist, rendering incomplete
 
+- ✅ Template, Layer, Widget, Content models fully implemented
+- ✅ Image widget rendering implemented
 - ❌ Implement all widget type renderers (video, text, webview, chart, clock)
 - ❌ Add widget animation support
 - ❌ Implement layer animations
-- ❌ Add widget positioning tools
+- ❌ Add widget positioning tools in UI
 - ❌ Improve widget resize/snap functionality
 - ❌ Add widget templates/library
 - ❌ Implement widget data binding for dynamic content
@@ -110,6 +119,7 @@ This document outlines planned improvements, fixes, and enhancements for the Scr
 **Status**: Basic implementation exists
 
 - ✅ Responsive scaling implemented
+- ✅ useResponsiveScaling composable exists
 - ❌ Improve scaling algorithm for large displays (8K+)
 - ❌ Add display-specific optimizations
 - ❌ Implement adaptive quality based on screen size
@@ -124,10 +134,11 @@ This document outlines planned improvements, fixes, and enhancements for the Scr
 **Status**: Partially implemented
 
 - ✅ Heartbeat accepts optional metrics (CPU, RAM, latency)
+- ✅ ScreenStatusLog model stores metrics
 - ❌ Add metrics dashboard in admin
 - ❌ Implement metrics alerting
-- ❌ Add historical metrics storage
-- ❌ Create metrics visualization
+- ❌ Add historical metrics storage and retention
+- ❌ Create metrics visualization (charts, graphs)
 - ❌ Add performance benchmarking
 - ❌ Document metrics collection
 
@@ -138,14 +149,16 @@ This document outlines planned improvements, fixes, and enhancements for the Scr
 **Status**: Basic scheduling exists
 
 - ✅ Basic scheduling with repeat types
-- ❌ Improve schedule conflict resolution
+- ✅ SecureRecurrenceCalculator for accurate recurrence
+- ✅ Schedule conflict detection
+- ❌ Improve schedule conflict resolution UI
 - ❌ Add schedule preview/validation
-- ❌ Implement timezone support
+- ❌ Implement timezone support (currently UTC only)
 - ❌ Add schedule templates
-- ❌ Improve recurrence calculation accuracy
+- ❌ Improve recurrence calculation accuracy for edge cases
 - ❌ Add schedule analytics
 
-**Impact**: Scheduling may not work correctly for complex scenarios.
+**Impact**: Scheduling may not work correctly for complex scenarios or timezone-aware schedules.
 
 ### Template Preview & Designer
 **Priority**: 🟡 Medium  
@@ -174,7 +187,7 @@ This document outlines planned improvements, fixes, and enhancements for the Scr
 - ❌ Add caching layers (Redis for sessions, templates)
 - ❌ Optimize media delivery (CDN integration)
 - ❌ Add database read replicas
-- ❌ Implement message queue for async operations
+- ❌ Implement message queue for async operations (Celery already configured)
 
 **Impact**: System may not handle large numbers of screens/users efficiently.
 
@@ -183,12 +196,13 @@ This document outlines planned improvements, fixes, and enhancements for the Scr
 **Status**: Basic support exists
 
 - ✅ Screen CRUD operations
-- ❌ Add screen groups/organizations
+- ✅ Screen grouping by owner/organization
+- ❌ Add screen groups/organizations UI
 - ❌ Implement bulk operations UI
 - ❌ Add screen templates/profiles
 - ❌ Create screen assignment workflows
-- ❌ Add screen location mapping
-- ❌ Implement screen hierarchy
+- ❌ Add screen location mapping (geographic)
+- ❌ Implement screen hierarchy (parent/child screens)
 
 **Impact**: Managing many screens is cumbersome without grouping/organization.
 
@@ -197,12 +211,13 @@ This document outlines planned improvements, fixes, and enhancements for the Scr
 **Status**: Basic scheduling exists
 
 - ✅ Schedule creation and execution
+- ✅ Conflict detection and resolution
 - ❌ Add advanced scheduling (complex recurrences, timezone support)
 - ❌ Implement schedule preview
 - ❌ Add schedule analytics and reporting
 - ❌ Create schedule templates
-- ❌ Implement conditional scheduling
-- ❌ Add schedule conflict prevention
+- ❌ Implement conditional scheduling (based on events)
+- ❌ Add schedule conflict prevention UI
 
 **Impact**: Limited scheduling flexibility may not meet all use cases.
 
@@ -211,6 +226,7 @@ This document outlines planned improvements, fixes, and enhancements for the Scr
 **Status**: Basic analytics exist
 
 - ✅ Basic analytics dashboard
+- ✅ Analytics store and components exist
 - ❌ Add comprehensive reporting system
 - ❌ Implement custom report builder
 - ❌ Add export functionality (PDF, CSV, Excel)
@@ -241,7 +257,7 @@ This document outlines planned improvements, fixes, and enhancements for the Scr
 - ❌ Multi-language support
 - ❌ Custom branding/theming
 - ❌ White-label options
-- ❌ API rate limiting per user/organization
+- ❌ API rate limiting per user/organization (currently per role)
 - ❌ Webhook support for events
 - ❌ Third-party integrations
 - ❌ Plugin system for custom widgets
@@ -257,7 +273,7 @@ This document outlines planned improvements, fixes, and enhancements for the Scr
 - Consider separating API apps more clearly
 - Add shared utilities module
 - Better organization of serializers
-- Separate business logic from views
+- Separate business logic from views (service layer pattern)
 
 ### Media Storage Per-User
 **Priority**: 🟡 Medium  
@@ -273,10 +289,10 @@ This document outlines planned improvements, fixes, and enhancements for the Scr
 **Priority**: 🟡 Medium  
 **Status**: Generally consistent
 
-- Standardize error response format
+- Standardize error response format across all endpoints
 - Implement consistent pagination
-- Add API versioning
-- Improve API documentation
+- Add API versioning (v1, v2, etc.)
+- Improve API documentation (beyond Swagger)
 - Add API deprecation strategy
 
 ### Validation & Error Handling
@@ -294,9 +310,10 @@ This document outlines planned improvements, fixes, and enhancements for the Scr
 **Status**: Good security foundation
 
 - ✅ JWT authentication, RBAC, account lockout implemented
+- ✅ Command security (HMAC signing, nonce protection)
 - ❌ Add rate limiting per user (currently per role)
-- ❌ Implement API key authentication for screens
-- ❌ Add request signing for screen commands
+- ❌ Implement API key authentication for screens (alternative to JWT)
+- ❌ Add request signing for screen commands (enhance existing)
 - ❌ Improve CORS configuration
 - ❌ Add security headers (CSP, HSTS, etc.)
 - ❌ Implement audit log retention policies
@@ -339,15 +356,25 @@ This document outlines planned improvements, fixes, and enhancements for the Scr
 **Priority**: 🟡 Medium  
 **Status**: Basic optimization exists
 
-- Add database query optimization
-- Implement caching strategy
-- Optimize media delivery
+- Add database query optimization (select_related, prefetch_related)
+- Implement caching strategy (template caching, content caching)
+- Optimize media delivery (CDN, compression)
 - Add lazy loading where appropriate
 - Implement pagination consistently
 - Add performance monitoring
+
+### WebSocket Reliability
+**Priority**: 🟡 Medium  
+**Status**: Partially implemented
+
+- ✅ ScreenConnectionRegistry exists
+- ✅ WebSocket support via Django Channels
+- ❌ Improve WebSocket reconnection logic
+- ❌ Add WebSocket health monitoring
+- ❌ Implement WebSocket fallback strategies
+- ❌ Add WebSocket message queuing for offline screens
 
 ---
 
 **Last Updated**: 2024  
 **Priority Legend**: 🔴 High | 🟡 Medium | 🟢 Low
-

@@ -10,13 +10,21 @@ const api = axios.create({
   },
 })
 
-// Request interceptor to add auth token
+// Request interceptor to add auth token and handle FormData
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('auth_token')
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
+    
+    // CRITICAL: Remove Content-Type header for FormData so axios can set it automatically with boundary
+    // If we don't do this, the default 'application/json' header will break multipart/form-data uploads
+    if (config.data instanceof FormData) {
+      delete config.headers['Content-Type']
+      // axios will automatically set: Content-Type: multipart/form-data; boundary=----WebKitFormBoundary...
+    }
+    
     return config
   },
   (error) => {
@@ -380,9 +388,9 @@ export const contentValidationAPI = {
     if (filename) {
       formData.append('filename', filename)
     }
-    return api.post('/content-validation/validate/', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    })
+    // DO NOT set Content-Type manually - let axios set it automatically with boundary
+    // The request interceptor will handle removing the default 'application/json' header
+    return api.post('/content-validation/validate/', formData)
   },
   validateBulk: (files, contentTypes, filenames) => {
     const formData = new FormData()
@@ -399,9 +407,9 @@ export const contentValidationAPI = {
         formData.append('filenames', name)
       })
     }
-    return api.post('/content-validation/bulk/', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    })
+    // DO NOT set Content-Type manually - let axios set it automatically with boundary
+    // The request interceptor will handle removing the default 'application/json' header
+    return api.post('/content-validation/bulk/', formData)
   },
 }
 

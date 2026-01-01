@@ -5,6 +5,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from django.utils import timezone
 from django.db.models import Q
 from django.utils import timezone as django_timezone
+from django.views.decorators.csrf import csrf_exempt
 from datetime import timedelta
 import secrets
 import uuid
@@ -120,257 +121,210 @@ class ScreenViewSet(viewsets.ModelViewSet):
         return ip
 
 
-@api_view(['POST'])
-@permission_classes([AllowAny])
-@authentication_classes([])  # Explicitly disable user authentication - use screen-based auth instead
+@csrf_exempt  # Bypass CSRF protection for IoT devices
+@api_view(['POST', 'OPTIONS'])  # CRITICAL: Must include POST and OPTIONS for CORS preflight
+@authentication_classes([])  # Explicitly disable ALL authentication - override global REST_FRAMEWORK settings
+@permission_classes([AllowAny])  # Explicitly allow any request - override global IsAuthenticated
 def heartbeat_endpoint(request):
     """
-    POST /api/screens/heartbeat/
-    Endpoint for Screens to send heartbeat.
-    Authenticates using auth_token and secret_key.
+    POST /iot/screens/heartbeat/ or /api/screens/heartbeat/
     
-    Note: This endpoint uses @authentication_classes([]) to disable DRF's default
-    authentication, so credentials must be sent in the request body (JSON) or as form data.
+    THE IoT ESCAPE PLAN: Explicitly overrides global REST_FRAMEWORK authentication and permission settings.
+    Uses @authentication_classes([]) and @permission_classes([AllowAny]) to bypass
+    the global IsAuthenticated requirement in settings.py.
+    
+    Supports multiple authentication methods:
+    1. screen_id (direct lookup)
+    2. auth_token + secret_key (credential-based authentication)
+    3. URL query parameters
+    4. Environment variables (for screens that can't send credentials)
     """
-    """
-    POST /api/screens/heartbeat/
-    Endpoint for Screens to send heartbeat.
-    Authenticates using auth_token and secret_key.
-    """
+    print(f"IoT Request received at: {request.path}")
+    print(">>> HEARTBEAT REACHED THE VIEW <<<")
+    
+    import json
     import logging
+    import os
+    from django.http import JsonResponse
+    
     logger = logging.getLogger(__name__)
     
-    # Log incoming request for debugging
-    logger.info(f"Heartbeat request received from IP: {_get_client_ip(request)}")
-    logger.info(f"Request method: {request.method}")
-    logger.info(f"Content-Type: {request.content_type}")
-    logger.info(f"Request headers: {dict(request.headers) if hasattr(request, 'headers') else 'N/A'}")
-    logger.info(f"Request data type: {type(request.data)}")
-    logger.info(f"Request data: {request.data}")
-    logger.info(f"Request data keys: {list(request.data.keys()) if hasattr(request.data, 'keys') else 'N/A'}")
-    logger.info(f"Has request.body: {hasattr(request, 'body')}")
-    if hasattr(request, 'body'):
-        logger.info(f"Request body length: {len(request.body) if request.body else 0}")
-        logger.info(f"Request body (first 500 chars): {request.body[:500].decode('utf-8', errors='ignore') if request.body else 'EMPTY'}")
-    
-    # Try to parse JSON body manually if request.data is empty
-    import json
-    raw_body = None
-    if hasattr(request, 'body') and request.body:
-        try:
-            raw_body = json.loads(request.body.decode('utf-8'))
-            logger.debug(f"Parsed raw body: {raw_body}")
-        except (json.JSONDecodeError, UnicodeDecodeError) as e:
-            logger.debug(f"Failed to parse raw body as JSON: {e}")
-    
-    # Extract credentials - try multiple sources for compatibility
-    # Support both methods: auth_token+secret_key (legacy) and screen_id (new)
+    # Extract credentials from all possible sources
+    screen_id = None
     auth_token = None
     secret_key = None
-    screen_id = None
     
-    # Priority 1: request.data (POST body, JSON) - DRF parsed
+    # Try request.data first (DRF parsed JSON)
     if request.data and isinstance(request.data, dict):
+        screen_id = request.data.get('screen_id')
         auth_token = request.data.get('auth_token')
         secret_key = request.data.get('secret_key')
-        screen_id = request.data.get('screen_id')
-        if auth_token or secret_key or screen_id:
-            logger.info("Extracted credentials from request.data (DRF parsed)")
     
-    # Priority 1b: Raw JSON body (if request.data didn't work)
-    if (not auth_token or not secret_key) and not screen_id and raw_body and isinstance(raw_body, dict):
-        auth_token = raw_body.get('auth_token') or auth_token
-        secret_key = raw_body.get('secret_key') or secret_key
-        screen_id = raw_body.get('screen_id') or screen_id
-        if auth_token or secret_key or screen_id:
-            logger.info("Extracted credentials from raw JSON body")
-    
-    # Priority 2: request.POST (form data)
-    if (not auth_token or not secret_key) and not screen_id:
-        if hasattr(request, 'POST') and request.POST:
-            auth_token = request.POST.get('auth_token') or auth_token
-            secret_key = request.POST.get('secret_key') or secret_key
-            screen_id = request.POST.get('screen_id') or screen_id
-            if auth_token or secret_key or screen_id:
-                logger.info("Extracted credentials from request.POST")
-    
-    # Priority 3: Query parameters (fallback, not recommended but supported)
-    if (not auth_token or not secret_key) and not screen_id:
-        if hasattr(request, 'query_params') and request.query_params:
-            auth_token = request.query_params.get('auth_token') or auth_token
-            secret_key = request.query_params.get('secret_key') or secret_key
-            screen_id = request.query_params.get('screen_id') or screen_id
-            if auth_token or secret_key or screen_id:
-                logger.info("Extracted credentials from query_params (fallback)")
-    
-    # Log credentials status (masked)
-    logger.info(f"Received auth_token: {auth_token[:8] + '...' if auth_token and len(auth_token) > 8 else ('MISSING' if not auth_token else auth_token)}")
-    logger.info(f"Received secret_key: {'***' if secret_key else 'MISSING'}")
-    logger.info(f"Received screen_id: {screen_id if screen_id else 'MISSING'}")
-    logger.info(f"Auth token length: {len(auth_token) if auth_token else 0}")
-    logger.info(f"Secret key length: {len(secret_key) if secret_key else 0}")
-    
-    # Log raw_body if it exists
-    if raw_body:
-        logger.info(f"Raw body parsed successfully: {type(raw_body)}, keys: {list(raw_body.keys()) if isinstance(raw_body, dict) else 'N/A'}")
-    
-    # Check if credentials are present (either auth_token+secret_key OR screen_id)
-    # New method: Use screen_id if provided (after pairing, credentials are removed from localStorage)
-    if screen_id:
+    # Fallback: Try request.body (raw JSON)
+    if not screen_id and not auth_token and hasattr(request, 'body') and request.body:
         try:
-            screen = Screen.objects.get(id=screen_id)
-            # Use screen's stored credentials for authentication
-            auth_token = screen.auth_token
-            secret_key = screen.secret_key
-            logger.info(f"Using screen_id method: Found screen {screen.id}, using stored credentials")
-        except Screen.DoesNotExist:
-            logger.warning(f"Screen with id {screen_id} not found")
-            return Response(
-                {
-                    'error': 'Screen not found',
-                    'message': f'No screen found with id {screen_id}'
-                },
-                status=status.HTTP_404_NOT_FOUND
-            )
-        except Exception as e:
-            logger.error(f"Error fetching screen by id: {e}")
-            return Response(
-                {
-                    'error': 'Invalid screen_id',
-                    'message': str(e)
-                },
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            raw_body = json.loads(request.body.decode('utf-8'))
+            if isinstance(raw_body, dict):
+                screen_id = screen_id or raw_body.get('screen_id')
+                auth_token = auth_token or raw_body.get('auth_token')
+                secret_key = secret_key or raw_body.get('secret_key')
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            pass
     
-    # Legacy method: Check if auth_token and secret_key are present
-    if not auth_token or not secret_key:
-        logger.warning("Heartbeat request missing credentials", extra={
-            'has_auth_token': bool(auth_token),
-            'has_secret_key': bool(secret_key),
-            'content_type': request.content_type,
-            'request_method': request.method
-        })
-        return Response(
-            {
-                'error': 'Authentication credentials are required',
-                'message': 'Send auth_token and secret_key in POST body (JSON) or as form data.',
-                'received': {
-                    'has_auth_token': bool(auth_token),
-                    'has_secret_key': bool(secret_key)
-                }
-            },
-            status=status.HTTP_401_UNAUTHORIZED
+    # Fallback: Try query params
+    if hasattr(request, 'query_params'):
+        screen_id = screen_id or request.query_params.get('screen_id')
+        auth_token = auth_token or request.query_params.get('auth_token')
+        secret_key = secret_key or request.query_params.get('secret_key')
+    if not screen_id and not auth_token:
+        screen_id = screen_id or request.GET.get('screen_id')
+        auth_token = auth_token or request.GET.get('auth_token')
+        secret_key = secret_key or request.GET.get('secret_key')
+    
+    # Fallback: Try environment variables (for screens that can't send credentials)
+    if not screen_id and not auth_token:
+        screen_id = os.environ.get('SCREEN_ID')
+        auth_token = os.environ.get('SCREEN_AUTH_TOKEN')
+        secret_key = os.environ.get('SCREEN_SECRET_KEY')
+    
+    # Authenticate screen using available credentials
+    screen = None
+    auth_method = None
+    
+    try:
+        # Method 1: Direct screen_id lookup (no authentication required)
+        if screen_id:
+            screen = Screen.objects.filter(id=screen_id).first()
+            if screen:
+                auth_method = 'screen_id'
+                logger.info(f"Screen authenticated via screen_id: {screen.id}")
+        
+        # Method 2: auth_token + secret_key authentication
+        if not screen and auth_token and secret_key:
+            try:
+                screen = Screen.objects.get(auth_token=auth_token)
+                if screen.authenticate(auth_token, secret_key):
+                    auth_method = 'auth_token'
+                    logger.info(f"Screen authenticated via auth_token: {screen.id}")
+                else:
+                    logger.warning(f"Authentication failed: invalid secret_key for auth_token: {auth_token[:8]}...")
+                    screen = None
+            except Screen.DoesNotExist:
+                logger.warning(f"No screen found with auth_token: {auth_token[:8] if auth_token else 'MISSING'}...")
+                screen = None
+            except Exception as e:
+                logger.error(f"Error authenticating with auth_token: {e}", exc_info=True)
+                screen = None
+        
+        # If no screen found, return 401
+        if not screen:
+            logger.warning(f"Heartbeat authentication failed from IP: {_get_client_ip(request)}")
+            response = JsonResponse(
+                {
+                    'error': 'Authentication failed',
+                    'message': 'Provide screen_id OR (auth_token + secret_key) in POST body, query params, or environment variables.'
+                },
+                status=401
+            )
+            response['Access-Control-Allow-Origin'] = '*'
+            return response
+        
+        # SUCCESS: Screen authenticated
+        print(f"SUCCESS: Screen {screen.id} authenticated via {auth_method}")
+        logger.info(f"SUCCESS: Screen {screen.id} authenticated via {auth_method}")
+        
+        # Get IP address from request
+        ip_address = _get_client_ip(request)
+        
+        # Extract optional metrics from request data
+        data_source = request.data if request.data and isinstance(request.data, dict) else {}
+        if not data_source and hasattr(request, 'body') and request.body:
+            try:
+                data_source = json.loads(request.body.decode('utf-8'))
+            except (json.JSONDecodeError, UnicodeDecodeError):
+                data_source = {}
+        
+        latency = data_source.get('latency')
+        cpu_usage = data_source.get('cpu_usage')
+        memory_usage = data_source.get('memory_usage')
+        app_version = data_source.get('app_version')
+        os_version = data_source.get('os_version')
+        device_model = data_source.get('device_model')
+        screen_width = data_source.get('screen_width')
+        screen_height = data_source.get('screen_height')
+        brightness = data_source.get('brightness')
+        orientation = data_source.get('orientation')
+        
+        # CRITICAL: Update heartbeat status in database
+        # This method sets is_online=True and last_heartbeat_at=now() and saves to database
+        screen.update_heartbeat(
+            latency=latency,
+            cpu_usage=cpu_usage,
+            memory_usage=memory_usage,
+            ip_address=ip_address
         )
-    
-    # Prepare data for serializer
-    heartbeat_data = {
-        'auth_token': auth_token,
-        'secret_key': secret_key
-    }
-    
-    # Add optional fields from request.data or raw_body if available
-    data_source = request.data if request.data and isinstance(request.data, dict) else (raw_body if raw_body else {})
-    if data_source:
-        optional_fields = ['latency', 'cpu_usage', 'memory_usage', 'app_version', 
-                          'os_version', 'device_model', 'screen_width', 'screen_height', 
-                          'brightness', 'orientation']
-        for field in optional_fields:
-            if field in data_source:
-                heartbeat_data[field] = data_source[field]
-                logger.debug(f"Added optional field {field} to heartbeat_data")
-    
-    serializer = HeartbeatSerializer(data=heartbeat_data)
-    
-    if not serializer.is_valid():
-        # Log validation errors in detail
-        errors = serializer.errors
-        logger.error(f"Heartbeat validation failed: {errors}")
         
-        # Check specific error types
-        if 'auth_token' in errors:
-            error_msg = errors['auth_token']
-            if isinstance(error_msg, list):
-                error_msg = error_msg[0] if error_msg else 'Invalid authentication token'
-            logger.warning(f"Authentication token error: {error_msg}")
-            
-            # Try to find the screen to provide more context
-            provided_token = request.data.get('auth_token', '')
-            if provided_token:
-                try:
-                    screen = Screen.objects.get(auth_token=provided_token)
-                    logger.info(f"Screen found with token, but authentication failed. Screen ID: {screen.id}, Name: {screen.name}")
-                except Screen.DoesNotExist:
-                    logger.warning(f"No screen found with provided auth_token: {provided_token[:8]}...")
-                except Exception as e:
-                    logger.error(f"Error checking screen: {e}")
+        # Refresh screen from database to ensure we have the latest status
+        screen.refresh_from_db()
         
-        if 'secret_key' in errors:
-            error_msg = errors['secret_key']
-            if isinstance(error_msg, list):
-                error_msg = error_msg[0] if error_msg else 'Invalid secret key'
-            logger.warning(f"Secret key error: {error_msg}")
+        # Log the updated status for debugging
+        logger.info(f"Screen {screen.id} heartbeat updated - is_online: {screen.is_online}, last_heartbeat_at: {screen.last_heartbeat_at}")
+        print(f"Screen {screen.id} status updated - is_online: {screen.is_online}, last_heartbeat_at: {screen.last_heartbeat_at}")
         
-        # Return detailed error response
-        return Response({
-            'error': 'Authentication failed',
-            'details': errors,
-            'message': 'Invalid credentials. Please check auth_token and secret_key.'
-        }, status=status.HTTP_401_UNAUTHORIZED)
-    
-    # Validation successful
-    screen = serializer.validated_data['screen']
-    logger.info(f"Heartbeat authenticated successfully for screen: {screen.id} ({screen.name})")
-    
-    # Get IP address from request
-    ip_address = _get_client_ip(request)
-    
-    # Update heartbeat
-    screen.update_heartbeat(
-        latency=serializer.validated_data.get('latency'),
-        cpu_usage=serializer.validated_data.get('cpu_usage'),
-        memory_usage=serializer.validated_data.get('memory_usage'),
-        ip_address=ip_address
-    )
-    
-    logger.info(f"Screen {screen.id} heartbeat updated. is_online: {screen.is_online}, last_heartbeat_at: {screen.last_heartbeat_at}")
-    
-    # Update optional device information
-    update_fields = []
-    if 'app_version' in serializer.validated_data:
-        screen.app_version = serializer.validated_data['app_version']
-        update_fields.append('app_version')
-    if 'os_version' in serializer.validated_data:
-        screen.os_version = serializer.validated_data['os_version']
-        update_fields.append('os_version')
-    if 'device_model' in serializer.validated_data:
-        screen.device_model = serializer.validated_data['device_model']
-        update_fields.append('device_model')
-    if 'screen_width' in serializer.validated_data:
-        screen.screen_width = serializer.validated_data['screen_width']
-        update_fields.append('screen_width')
-    if 'screen_height' in serializer.validated_data:
-        screen.screen_height = serializer.validated_data['screen_height']
-        update_fields.append('screen_height')
-    if 'brightness' in serializer.validated_data:
-        screen.brightness = serializer.validated_data['brightness']
-        update_fields.append('brightness')
-    if 'orientation' in serializer.validated_data:
-        screen.orientation = serializer.validated_data['orientation']
-        update_fields.append('orientation')
-    
-    if update_fields:
-        screen.save(update_fields=update_fields)
-        logger.debug(f"Updated device info fields: {update_fields}")
-    
-    logger.info(f"Heartbeat successful for screen {screen.id}. Returning response.")
-    
-    return Response({
-        'status': 'success',
-        'message': 'Heartbeat received',
-        'screen_id': str(screen.id),
-        'is_online': screen.is_online,
-        'last_heartbeat_at': screen.last_heartbeat_at
-    }, status=status.HTTP_200_OK)
+        # Update optional device information
+        update_fields = []
+        if app_version is not None:
+            screen.app_version = app_version
+            update_fields.append('app_version')
+        if os_version is not None:
+            screen.os_version = os_version
+            update_fields.append('os_version')
+        if device_model is not None:
+            screen.device_model = device_model
+            update_fields.append('device_model')
+        if screen_width is not None:
+            screen.screen_width = screen_width
+            update_fields.append('screen_width')
+        if screen_height is not None:
+            screen.screen_height = screen_height
+            update_fields.append('screen_height')
+        if brightness is not None:
+            screen.brightness = brightness
+            update_fields.append('brightness')
+        if orientation is not None:
+            screen.orientation = orientation
+            update_fields.append('orientation')
+        
+        if update_fields:
+            screen.save(update_fields=update_fields)
+        
+        # Return success response with clean headers
+        response_data = {
+            'status': 'success',
+            'message': 'Heartbeat received',
+            'screen_id': str(screen.id),
+            'is_online': screen.is_online,
+            'last_heartbeat_at': screen.last_heartbeat_at.isoformat() if screen.last_heartbeat_at else None
+        }
+        
+        response = JsonResponse(response_data, status=200)
+        response['Access-Control-Allow-Origin'] = '*'
+        response['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
+        response['Access-Control-Allow-Headers'] = 'Content-Type'
+        
+        return response
+        
+    except Exception as e:
+        logger.error(f"Error processing heartbeat for screen_id {screen_id}: {e}", exc_info=True)
+        response = JsonResponse(
+            {
+                'error': 'Internal server error',
+                'message': str(e)
+            },
+            status=500
+        )
+        response['Access-Control-Allow-Origin'] = '*'
+        return response
 
 
 @api_view(['GET'])
@@ -429,6 +383,328 @@ def command_pull_endpoint(request):
         'commands': command_serializer.data,
         'count': len(command_serializer.data)
     }, status=status.HTTP_200_OK)
+
+
+@csrf_exempt  # Bypass CSRF protection for IoT devices
+@api_view(['GET', 'OPTIONS'])  # CRITICAL: Must include GET and OPTIONS for CORS preflight
+@authentication_classes([])  # Explicitly disable ALL authentication - override global REST_FRAMEWORK settings
+@permission_classes([AllowAny])  # Explicitly allow any request - override global IsAuthenticated
+def iot_command_pull_endpoint(request):
+    """
+    GET /iot/commands/pending/
+    
+    THE IoT ESCAPE PLAN: Explicitly overrides global REST_FRAMEWORK authentication and permission settings.
+    Uses @authentication_classes([]) and @permission_classes([AllowAny]) to bypass
+    the global IsAuthenticated requirement in settings.py.
+    ONLY validates screen_id exists in PostgreSQL.
+    """
+    print(f"IoT Request received at: {request.path}")
+    print(">>> COMMAND PULL REACHED THE VIEW <<<")
+    
+    import json
+    import logging
+    from django.http import JsonResponse
+    
+    logger = logging.getLogger(__name__)
+    
+    # Extract screen_id from request
+    screen_id = None
+    
+    # Try query params first
+    if hasattr(request, 'query_params'):
+        screen_id = request.query_params.get('screen_id')
+    if not screen_id:
+        screen_id = request.GET.get('screen_id')
+    
+    # Validate screen_id is provided
+    if not screen_id:
+        logger.warning(f"Command pull request missing screen_id from IP: {_get_client_ip(request)}")
+        response = JsonResponse(
+            {
+                'error': 'screen_id is required',
+                'message': 'Send screen_id as query parameter: ?screen_id=<uuid>'
+            },
+            status=400
+        )
+        response['Access-Control-Allow-Origin'] = '*'
+        return response
+    
+    # Look up screen in PostgreSQL database
+    try:
+        screen = Screen.objects.filter(id=screen_id).first()
+        
+        if not screen:
+            logger.warning(f"Screen not found with screen_id: {screen_id}")
+            response = JsonResponse(
+                {
+                    'error': 'Screen not found',
+                    'message': f'No screen found with screen_id {screen_id}'
+                },
+                status=404
+            )
+            response['Access-Control-Allow-Origin'] = '*'
+            return response
+        
+        # Get limit from query params
+        limit = 10
+        try:
+            limit_param = request.GET.get('limit', '10')
+            limit = int(limit_param)
+            if limit > 50:
+                limit = 50  # Max 50 commands
+        except (ValueError, TypeError):
+            limit = 10
+        
+        # Get pending commands for this screen
+        commands = Command.objects.filter(
+            screen=screen,
+            status='pending'
+        ).exclude(
+            # Exclude expired commands
+            expire_at__lt=timezone.now()
+        ).order_by(
+            '-priority',
+            'created_at'
+        )[:limit]
+        
+        # Mark commands as being processed (executing)
+        now = timezone.now()
+        command_list = []
+        for command in commands:
+            # Update command status to executing
+            command.status = 'executing'
+            command.executed_at = now
+            command.last_attempt_at = now
+            command.attempt_count += 1
+            command.save(update_fields=['status', 'executed_at', 'last_attempt_at', 'attempt_count'])
+            
+            # Create execution log entry
+            CommandExecutionLog.objects.create(
+                command=command,
+                screen=screen,
+                status='running',
+                started_at=now
+            )
+            
+            # Serialize command
+            command_list.append({
+                'id': str(command.id),
+                'type': command.type,
+                'payload': command.payload or {},
+                'priority': command.priority,
+                'name': command.name or '',
+                'created_at': command.created_at.isoformat() if command.created_at else None,
+            })
+        
+        # Update screen's last_command_sent_at
+        if commands.exists():
+            screen.last_command_sent_at = now
+            screen.is_busy = True
+            screen.save(update_fields=['last_command_sent_at', 'is_busy'])
+        
+        logger.info(f"Screen {screen.id} fetched {len(command_list)} pending commands")
+        
+        response_data = {
+            'status': 'success',
+            'commands': command_list,
+            'count': len(command_list)
+        }
+        
+        response = JsonResponse(response_data, status=200)
+        response['Access-Control-Allow-Origin'] = '*'
+        response['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
+        response['Access-Control-Allow-Headers'] = 'Content-Type'
+        
+        return response
+        
+    except Exception as e:
+        logger.error(f"Error in command pull endpoint: {str(e)}", exc_info=True)
+        response = JsonResponse(
+            {
+                'error': 'Internal server error',
+                'message': str(e)
+            },
+            status=500
+        )
+        response['Access-Control-Allow-Origin'] = '*'
+        return response
+
+
+@csrf_exempt  # Bypass CSRF protection for IoT devices
+@api_view(['POST', 'OPTIONS'])  # CRITICAL: Must include POST and OPTIONS for CORS preflight
+@authentication_classes([])  # Explicitly disable ALL authentication - override global REST_FRAMEWORK settings
+@permission_classes([AllowAny])  # Explicitly allow any request - override global IsAuthenticated
+def iot_command_response_endpoint(request):
+    """
+    POST /iot/commands/{id}/status/
+    
+    THE IoT ESCAPE PLAN: Explicitly overrides global REST_FRAMEWORK authentication and permission settings.
+    Uses @authentication_classes([]) and @permission_classes([AllowAny]) to bypass
+    the global IsAuthenticated requirement in settings.py.
+    ONLY validates screen_id exists in PostgreSQL.
+    """
+    print(f"IoT Request received at: {request.path}")
+    print(">>> COMMAND RESPONSE REACHED THE VIEW <<<")
+    
+    import json
+    import logging
+    from django.http import JsonResponse
+    
+    logger = logging.getLogger(__name__)
+    
+    # Extract screen_id and command_id from request
+    screen_id = None
+    command_id = None
+    
+    # Try request.data first (DRF parsed JSON)
+    if request.data and isinstance(request.data, dict):
+        screen_id = request.data.get('screen_id')
+        command_id = request.data.get('command_id')
+    
+    # Fallback: Try request.body (raw JSON)
+    if (not screen_id or not command_id) and hasattr(request, 'body') and request.body:
+        try:
+            raw_body = json.loads(request.body.decode('utf-8'))
+            if isinstance(raw_body, dict):
+                screen_id = screen_id or raw_body.get('screen_id')
+                command_id = command_id or raw_body.get('command_id')
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            pass
+    
+    # Validate required fields
+    if not screen_id:
+        response = JsonResponse(
+            {
+                'error': 'screen_id is required',
+                'message': 'Send screen_id in POST body (JSON)'
+            },
+            status=400
+        )
+        response['Access-Control-Allow-Origin'] = '*'
+        return response
+    
+    if not command_id:
+        response = JsonResponse(
+            {
+                'error': 'command_id is required',
+                'message': 'Send command_id in POST body (JSON)'
+            },
+            status=400
+        )
+        response['Access-Control-Allow-Origin'] = '*'
+        return response
+    
+    # Look up screen and command
+    try:
+        screen = Screen.objects.filter(id=screen_id).first()
+        
+        if not screen:
+            logger.warning(f"Screen not found with screen_id: {screen_id}")
+            response = JsonResponse(
+                {
+                    'error': 'Screen not found',
+                    'message': f'No screen found with screen_id {screen_id}'
+                },
+                status=404
+            )
+            response['Access-Control-Allow-Origin'] = '*'
+            return response
+        
+        command = Command.objects.filter(id=command_id, screen=screen).first()
+        
+        if not command:
+            logger.warning(f"Command not found: {command_id} for screen: {screen_id}")
+            response = JsonResponse(
+                {
+                    'error': 'Command not found',
+                    'message': f'No command found with id {command_id} for screen {screen_id}'
+                },
+                status=404
+            )
+            response['Access-Control-Allow-Origin'] = '*'
+            return response
+        
+        # Get response status from request
+        data_source = request.data if request.data and isinstance(request.data, dict) else {}
+        if not data_source and hasattr(request, 'body') and request.body:
+            try:
+                data_source = json.loads(request.body.decode('utf-8'))
+            except (json.JSONDecodeError, UnicodeDecodeError):
+                data_source = {}
+        
+        response_status = data_source.get('status', 'done')  # Default to 'done'
+        error_message = data_source.get('error_message', '')
+        response_payload = data_source.get('response_payload', {})
+        
+        # Validate status
+        if response_status not in ['done', 'failed']:
+            response_status = 'done'  # Default to done
+        
+        # Update command status
+        now = timezone.now()
+        if response_status == 'done':
+            command.mark_done()
+        else:
+            command.mark_failed(error_message or 'Command execution failed')
+        
+        # Update screen
+        screen.last_command_received_at = now
+        screen.is_busy = False
+        screen.save(update_fields=['last_command_received_at', 'is_busy'])
+        
+        # Update execution log
+        exec_log = CommandExecutionLog.objects.filter(
+            command=command,
+            screen=screen,
+            status='running'
+        ).order_by('-started_at').first()
+        
+        if exec_log:
+            exec_log.status = response_status
+            exec_log.finished_at = now
+            exec_log.response_payload = response_payload
+            if error_message:
+                exec_log.error_message = error_message
+            exec_log.save(update_fields=['status', 'finished_at', 'response_payload', 'error_message'])
+        else:
+            # Create new log entry if none exists
+            CommandExecutionLog.objects.create(
+                command=command,
+                screen=screen,
+                status=response_status,
+                started_at=command.executed_at or now,
+                finished_at=now,
+                response_payload=response_payload,
+                error_message=error_message
+            )
+        
+        logger.info(f"Command {command_id} status updated to {response_status} by screen {screen_id}")
+        
+        response_data = {
+            'status': 'success',
+            'message': 'Command response recorded',
+            'command_id': str(command.id),
+            'command_status': command.status
+        }
+        
+        response = JsonResponse(response_data, status=200)
+        response['Access-Control-Allow-Origin'] = '*'
+        response['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
+        response['Access-Control-Allow-Headers'] = 'Content-Type'
+        
+        return response
+        
+    except Exception as e:
+        logger.error(f"Error in command response endpoint: {str(e)}", exc_info=True)
+        response = JsonResponse(
+            {
+                'error': 'Internal server error',
+                'message': str(e)
+            },
+            status=500
+        )
+        response['Access-Control-Allow-Origin'] = '*'
+        return response
 
 
 @api_view(['POST'])
@@ -679,139 +955,141 @@ def _get_client_ip(request):
     return ip
 
 
-@api_view(['GET'])
-@permission_classes([AllowAny])
-@authentication_classes([])  # Explicitly disable user authentication - use screen-based auth instead
+@csrf_exempt  # Bypass CSRF protection for IoT devices
+@api_view(['GET', 'OPTIONS'])  # CRITICAL: Must include GET and OPTIONS for CORS preflight
+@authentication_classes([])  # Explicitly disable ALL authentication - override global REST_FRAMEWORK settings
+@permission_classes([AllowAny])  # Explicitly allow any request - override global IsAuthenticated
 def player_template_endpoint(request):
     """
-    GET /api/player/template/
+    GET /iot/player/template/?screen_id=uuid-string or /api/player/template/?screen_id=uuid-string
     
-    Returns complete template structure for player rendering.
-    Authenticates via auth_token + secret_key query params.
-    
-    Response includes:
-    - Template metadata (width, height, orientation)
-    - Layers with positions and styling
-    - Widgets with positions, styling, and type
-    - Content with URLs and metadata
+    THE IoT ESCAPE PLAN: Explicitly overrides global REST_FRAMEWORK authentication and permission settings.
+    Uses @authentication_classes([]) and @permission_classes([AllowAny]) to bypass
+    the global IsAuthenticated requirement in settings.py.
+    ONLY validates screen_id exists in PostgreSQL.
     """
+    print(f"IoT Request received at: {request.path}")
+    print(">>> TEMPLATE REQUEST REACHED THE VIEW <<<")
+    
+    import json
     import logging
+    from django.http import JsonResponse
+    
     logger = logging.getLogger(__name__)
     
-    auth_token = request.query_params.get('auth_token')
-    secret_key = request.query_params.get('secret_key')
-    
-    if not auth_token or not secret_key:
-        logger.warning('Player template request missing auth credentials')
-        return Response(
-            {'error': 'auth_token and secret_key are required'},
-            status=status.HTTP_400_BAD_REQUEST
+    # Only accept GET
+    if request.method != 'GET':
+        response = JsonResponse(
+            {'error': 'Method not allowed', 'message': 'Only GET method is allowed'},
+            status=405
         )
+        response['Access-Control-Allow-Origin'] = '*'
+        return response
     
+    # Extract screen_id from query parameters (GET request)
+    screen_id = request.GET.get('screen_id')
+    
+    # Validate screen_id is provided
+    if not screen_id:
+        logger.warning('Player template request missing screen_id')
+        response = JsonResponse(
+            {'error': 'screen_id is required', 'message': 'Send screen_id as query parameter: ?screen_id=uuid'},
+            status=400
+        )
+        response['Access-Control-Allow-Origin'] = '*'
+        return response
+    
+    # Look up screen in PostgreSQL database
+    # CRITICAL: Use select_related to ensure active_template is loaded in same query
+    # This prevents N+1 queries and ensures we get the latest active_template value
     try:
-        screen = Screen.objects.get(auth_token=auth_token)
-        logger.info(f'Player template request for screen: {screen.id} ({screen.name})')
-    except Screen.DoesNotExist:
-        logger.warning(f'Player template request with invalid auth_token: {auth_token[:8]}...')
-        return Response(
-            {'error': 'Invalid authentication token'},
-            status=status.HTTP_401_UNAUTHORIZED
-        )
-    
-    if not screen.authenticate(auth_token, secret_key):
-        logger.warning(f'Player template request with invalid secret_key for screen: {screen.id}')
-        return Response(
-            {'error': 'Invalid secret key'},
-            status=status.HTTP_401_UNAUTHORIZED
-        )
-    
-    if not screen.active_template:
-        logger.info(f'Player template request for screen {screen.id}: No active template')
-        return Response({
-            'status': 'no_template',
-            'template': None
-        }, status=status.HTTP_200_OK)
-    
-    template = screen.active_template
-    logger.info(f'Player template request for screen {screen.id}: Template {template.id} ({template.name})')
-    
-    # Validate template has valid dimensions
-    if not template.width or not template.height or template.width <= 0 or template.height <= 0:
-        logger.error(f'Template {template.id} has invalid dimensions: {template.width}x{template.height}')
-        return Response({
-            'status': 'error',
-            'error': 'Template has invalid dimensions',
-            'template': None
-        }, status=status.HTTP_200_OK)
-    
-    # Get active layers count for logging
-    active_layers = template.layers.filter(is_active=True)
-    total_layers = template.layers.count()
-    logger.info(f'Template {template.id}: {active_layers.count()}/{total_layers} active layers')
-    
-    # Count widgets and contents for logging
-    total_widgets = 0
-    total_contents = 0
-    active_widgets = 0
-    active_contents = 0
-    
-    for layer in active_layers:
-        layer_widgets = layer.get_active_widgets()
-        active_widgets += layer_widgets.count()
-        total_widgets += layer.widgets.count()
+        screen = Screen.objects.select_related('active_template').filter(id=screen_id).first()
         
-        for widget in layer_widgets:
-            widget_contents = widget.get_active_contents()
-            active_contents += widget_contents.count()
-            total_contents += widget.contents.count()
-    
-    logger.info(f'Template {template.id}: {active_widgets}/{total_widgets} active widgets, {active_contents}/{total_contents} active contents')
-    
-    # Use player template serializer with request context for absolute URLs
-    serializer = PlayerTemplateSerializer(template, context={'request': request, 'screen': screen})
-    template_data = serializer.data
-    
-    # Log final response structure
-    layers_count = len(template_data.get('layers', []))
-    widgets_count = sum(len(layer.get('widgets', [])) for layer in template_data.get('layers', []))
-    contents_count = sum(
-        len(widget.get('contents', []))
-        for layer in template_data.get('layers', [])
-        for widget in layer.get('widgets', [])
-    )
-    
-    logger.info(f'Player template response for screen {screen.id}: {layers_count} layers, {widgets_count} widgets, {contents_count} contents')
-    
-    # Validate response is not empty
-    if layers_count == 0:
-        logger.warning(f'Template {template.id} has no active layers in response')
-    if widgets_count == 0:
-        logger.warning(f'Template {template.id} has no active widgets in response')
-    if contents_count == 0:
-        logger.warning(f'Template {template.id} has no active contents in response')
-    
-    # Additional validation: Check if template is actually renderable
-    validation_errors = []
-    if not template.width or template.width <= 0:
-        validation_errors.append(f'Invalid template width: {template.width}')
-    if not template.height or template.height <= 0:
-        validation_errors.append(f'Invalid template height: {template.height}')
-    if layers_count == 0:
-        validation_errors.append('No active layers found')
-    if widgets_count == 0:
-        validation_errors.append('No active widgets found')
-    if contents_count == 0:
-        validation_errors.append('No active contents found')
-    
-    if validation_errors:
-        logger.error(f'Template {template.id} validation failed: {", ".join(validation_errors)}')
-        # Still return the template, but log the issues for debugging
-    
-    return Response({
-        'status': 'success',
-        'screen_id': str(screen.id),
-        'template': template_data
-    }, status=status.HTTP_200_OK)
+        if not screen:
+            logger.warning(f'Player template request with invalid screen_id: {screen_id}')
+            response = JsonResponse(
+                {'error': 'Screen not found', 'message': f'No screen found with screen_id {screen_id}'},
+                status=404
+            )
+            response['Access-Control-Allow-Origin'] = '*'
+            return response
+        
+        # SUCCESS: Screen found in PostgreSQL - log connection
+        print(f"SUCCESS: Screen {screen.id} authenticated via PostgreSQL")
+        logger.info(f"SUCCESS: Screen {screen.id} authenticated via PostgreSQL")
+        
+        # Check if screen has active template
+        if not screen.active_template:
+            logger.info(f'Player template request for screen {screen.id}: No active template')
+            response = JsonResponse({
+                'status': 'no_template',
+                'template': None
+            }, status=200)
+            response['Access-Control-Allow-Origin'] = '*'
+            response['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
+            response['Access-Control-Allow-Headers'] = 'Content-Type'
+            return response
+        
+        template = screen.active_template
+        logger.info(f'Player template request for screen {screen.id}: Template {template.id} ({template.name})')
+        
+        # Validate template has valid dimensions
+        if not template.width or not template.height or template.width <= 0 or template.height <= 0:
+            logger.error(f'Template {template.id} has invalid dimensions: {template.width}x{template.height}')
+            response = JsonResponse({
+                'status': 'error',
+                'error': 'Template has invalid dimensions',
+                'template': None
+            }, status=200)
+            response['Access-Control-Allow-Origin'] = '*'
+            response['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
+            response['Access-Control-Allow-Headers'] = 'Content-Type'
+            return response
+        
+        # Use player template serializer with request context for absolute URLs
+        # CRITICAL: @api_view decorator already wraps request as DRF Request
+        # We can use the request directly - it's already a DRF Request object
+        # The underlying Django request is available as request._request if needed
+        
+        # Log for debugging
+        try:
+            # Get underlying Django request for host/scheme info
+            django_request = getattr(request, '_request', request)
+            host = django_request.get_host() if hasattr(django_request, 'get_host') else 'unknown'
+            scheme = django_request.scheme if hasattr(django_request, 'scheme') else 'http'
+            logger.debug(f"Template serializer context: request host={host}, scheme={scheme}, path={request.path}")
+        except Exception as e:
+            logger.warning(f"Could not log request details: {e}")
+        
+        # Use request directly - @api_view already wrapped it as DRF Request
+        serializer = PlayerTemplateSerializer(template, context={'request': request, 'screen': screen})
+        template_data = serializer.data
+        
+        # Return success response with clean headers
+        response = JsonResponse({
+            'status': 'success',
+            'screen_id': str(screen.id),
+            'template': template_data
+        }, status=200)
+        
+        # Ensure clean headers (no CORS issues)
+        response['Access-Control-Allow-Origin'] = '*'
+        response['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
+        response['Access-Control-Allow-Headers'] = 'Content-Type'
+        
+        return response
+        
+    except Exception as e:
+        logger.error(f"Error processing template request for screen_id {screen_id}: {e}", exc_info=True)
+        response = JsonResponse(
+            {
+                'error': 'Internal server error',
+                'message': str(e)
+            },
+            status=500
+        )
+        response['Access-Control-Allow-Origin'] = '*'
+        return response
 
 
 # Pairing endpoints

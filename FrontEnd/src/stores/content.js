@@ -197,9 +197,48 @@ export const useContentStore = defineStore('content', {
       this.loading = true
       this.error = null
       try {
+        console.log(`DEBUG [retryDownload]: Starting retry - contentId: ${contentId}, screenId: ${screenId}`)
+        console.log(`DEBUG [retryDownload]: Request payload: { screen_id: ${screenId} }`)
+        
         const response = await contentsAPI.retryDownload(contentId, { screen_id: screenId })
+        
+        console.log('DEBUG [retryDownload]: Response received:', response.data)
+        console.log('DEBUG [retryDownload]: Response content data:', response.data?.content)
+        console.log('DEBUG [retryDownload]: Response download_status:', response.data?.download_status)
+        
+        // CRITICAL: Update content in store immediately if response includes content data
+        // This ensures UI updates without waiting for next fetch
+        if (response.data && response.data.content) {
+          console.log('DEBUG [retryDownload]: Updating Content Store with:', response.data.content)
+          
+          // Import smart update utility
+          const { smartUpdateObject } = await import('@/utils/deepCompare')
+          
+          // Find content in current list and update
+          const index = this.contents.findIndex(c => c.id === contentId)
+          if (index !== -1) {
+            const oldContent = this.contents[index]
+            this.contents[index] = smartUpdateObject(oldContent, response.data.content)
+            console.log('DEBUG [retryDownload]: Content updated in store. New download_status:', this.contents[index]?.download_status)
+          } else {
+            // Content not in list, add it
+            this.contents.push(response.data.content)
+            console.log('DEBUG [retryDownload]: Content added to store')
+          }
+          
+          // Update currentContent if it's the one being updated
+          if (this.currentContent?.id === contentId) {
+            this.currentContent = smartUpdateObject(this.currentContent, response.data.content)
+            console.log('DEBUG [retryDownload]: currentContent updated. New download_status:', this.currentContent?.download_status)
+          }
+        } else {
+          console.warn('DEBUG [retryDownload]: Response does not include content data!')
+        }
+        
         return response.data
       } catch (error) {
+        console.error('DEBUG [retryDownload]: Error:', error)
+        console.error('DEBUG [retryDownload]: Error response:', error.response?.data)
         this.error = error.response?.data?.detail || error.response?.data?.message || error.message
         throw error
       } finally {

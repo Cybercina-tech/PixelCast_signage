@@ -78,14 +78,14 @@
             </div>
 
             <!-- Email Verification Section -->
-            <div v-if="!userData.is_email_verified" class="p-4 bg-orange-50 border border-orange-200 rounded-lg">
-              <p class="text-sm text-secondary mb-3">Your email address is not verified.</p>
+            <div v-if="!userData.is_email_verified" class="p-4 bg-warning/10 border border-warning/20 rounded-lg">
+              <p class="text-sm text-primary mb-3">Your email address is not verified.</p>
               
               <div v-if="!showCodeInput" class="flex items-center gap-3">
                 <button
                   @click="sendVerificationCode"
                   :disabled="loadingSend"
-                  class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
                   <span v-if="loadingSend" class="flex items-center gap-2">
                     <svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -108,13 +108,13 @@
                     maxlength="6"
                     placeholder="Enter 6-digit code"
                     aria-label="Verification code"
-                    class="input-base flex-1 px-3 py-2 rounded-lg"
+                    class="flex-1 px-3 py-2 border border-border-color rounded-lg bg-card text-primary placeholder:text-muted"
                     @keyup.enter="verifyEmail"
                   />
                   <button
                     @click="verifyEmail"
                     :disabled="!verificationCode || verificationCode.length !== 6 || loadingVerify"
-                    class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    class="px-4 py-2 bg-success text-white rounded-lg hover:bg-success/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
                     <span v-if="loadingVerify" class="flex items-center gap-2">
                       <svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -131,14 +131,14 @@
                   <button
                     @click="sendVerificationCode"
                     :disabled="loadingSend || canResend === false"
-                    class="text-sm text-blue-600 hover:text-blue-700 hover:underline disabled:opacity-50 disabled:cursor-not-allowed disabled:no-underline"
+                    class="text-sm text-primary hover:text-primary-hover hover:underline disabled:opacity-50 disabled:cursor-not-allowed disabled:no-underline"
                   >
                     {{ canResend === false ? `Resend code in ${resendCountdown}s` : 'Resend Code' }}
                   </button>
                 </div>
                 
-                <p v-if="verificationError" class="text-red-600 text-sm whitespace-pre-line break-words">{{ verificationError }}</p>
-                <p v-if="verificationSuccess" class="text-green-600 text-sm">{{ verificationSuccess }}</p>
+                <p v-if="verificationError" class="text-error text-sm whitespace-pre-line break-words">{{ verificationError }}</p>
+                <p v-if="verificationSuccess" class="text-success text-sm">{{ verificationSuccess }}</p>
               </div>
             </div>
 

@@ -83,12 +83,12 @@ class ScreenAnalyticsService:
         else:
             # Fallback for other databases: Get unique screen IDs and their most recent logs
             recent_logs = status_logs.order_by('-recorded_at')
-            screen_ids_seen = set()
-            recent_logs_list = []
-            for log in recent_logs:
-                if log.screen_id not in screen_ids_seen:
-                    recent_logs_list.append(log)
-                    screen_ids_seen.add(log.screen_id)
+        screen_ids_seen = set()
+        recent_logs_list = []
+        for log in recent_logs:
+            if log.screen_id not in screen_ids_seen:
+                recent_logs_list.append(log)
+                screen_ids_seen.add(log.screen_id)
         
         # Aggregate metrics from recent logs
         if recent_logs_list:

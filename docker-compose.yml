@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   db:
     image: postgres:15
@@ -7,9 +5,9 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     environment:
-      - POSTGRES_DB=screengram_db
-      - POSTGRES_USER=screengram_user
-      - POSTGRES_PASSWORD=${DB_PASSWORD:-B9HzZGvPwtQOwA2_Dj_sUXH7g4kUtqmJloaGvz5ezR4}
+      - POSTGRES_DB=${DB_NAME:-screengram_db}
+      - POSTGRES_USER=${DB_USER:-screengram_user}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
     ports:
       - "5432:5432"
     healthcheck:

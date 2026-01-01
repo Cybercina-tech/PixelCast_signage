@@ -7,6 +7,8 @@
       v-for="widget in sortedWidgets"
       :key="widget.id"
       :widget="widget"
+      :template-width="props.templateWidth"
+      :template-height="props.templateHeight"
     />
   </div>
 </template>
@@ -19,24 +21,75 @@ const props = defineProps({
   layer: {
     type: Object,
     required: true
+  },
+  templateWidth: {
+    type: Number,
+    default: 1920
+  },
+  templateHeight: {
+    type: Number,
+    default: 1080
   }
 })
 
 /**
  * Layer style with absolute positioning
- * All dimensions scale proportionally via parent transform
+ * CRITICAL FIX: Container is now 100vw x 100vh with no scale
+ * Layers must use percentage dimensions to fill container properly
+ * Pixel dimensions are converted to percentages based on template dimensions
  */
 const layerStyle = computed(() => {
   const { x = 0, y = 0, width = 0, height = 0, z_index = 0, background_color, opacity } = props.layer
   
-  // Safety checks for dimensions
-  const safeWidth = width > 0 ? width : 100
-  const safeHeight = height > 0 ? height : 100
+  // CRITICAL: Since template-container is 100vw x 100vh (no scale),
+  // we need to convert pixel dimensions to percentages
+  // Template dimensions define the "coordinate system" - convert pixels to % of template
+  
+  // If layer matches template dimensions (or close), use 100%
+  // Small dimensions (< 200px) are also treated as placeholders
+  const MIN_REALISTIC_SIZE = 200
+  const TOLERANCE = 10 // Pixels - allow small differences
+  
+  const matchesTemplateWidth = Math.abs(width - props.templateWidth) <= TOLERANCE
+  const matchesTemplateHeight = Math.abs(height - props.templateHeight) <= TOLERANCE
+  const isPlaceholder = (
+    width <= 0 || 
+    height <= 0 || 
+    width < MIN_REALISTIC_SIZE || 
+    height < MIN_REALISTIC_SIZE ||
+    (width === 100 && height === 100)
+  )
+  
+  // Convert pixel dimensions to percentages
+  // If layer matches template or is placeholder, use 100%
+  // Otherwise convert pixels to % based on template dimensions
+  let layerWidth, layerHeight, layerLeft, layerTop
+  
+  if (matchesTemplateWidth || isPlaceholder) {
+    layerWidth = '100%'
+    layerLeft = '0%'
+  } else {
+    // Convert pixel to percentage: (pixel / template) * 100
+    layerWidth = `${(width / props.templateWidth) * 100}%`
+    layerLeft = `${(x / props.templateWidth) * 100}%`
+  }
+  
+  if (matchesTemplateHeight || isPlaceholder) {
+    layerHeight = '100%'
+    layerTop = '0%'
+  } else {
+    // Convert pixel to percentage: (pixel / template) * 100
+    layerHeight = `${(height / props.templateHeight) * 100}%`
+    layerTop = `${(y / props.templateHeight) * 100}%`
+  }
+  
   const safeOpacity = opacity !== undefined && opacity !== null ? Math.max(0, Math.min(1, opacity)) : 1
   
-  // Warn if dimensions are invalid
+  // Warn if dimensions are invalid or suspiciously small
   if (width <= 0 || height <= 0) {
     console.warn(`[LayerRenderer] Layer ${props.layer.id} has invalid dimensions: ${width}x${height}`, props.layer)
+  } else if (width < MIN_REALISTIC_SIZE || height < MIN_REALISTIC_SIZE) {
+    console.warn(`[LayerRenderer] Layer ${props.layer.id} has suspiciously small dimensions: ${width}x${height}. Using 100%.`, props.layer)
   }
   
   // Warn if opacity is 0 (layer will be invisible)
@@ -46,19 +99,22 @@ const layerStyle = computed(() => {
   
   return {
     position: 'absolute',
-    left: `${x}px`,
-    top: `${y}px`,
-    width: `${safeWidth}px`,
-    height: `${safeHeight}px`,
+    left: layerLeft,
+    top: layerTop,
+    // CRITICAL: Use percentage dimensions to fill 100vw x 100vh container
+    // This ensures layer fills container properly without scaling
+    width: layerWidth,
+    height: layerHeight,
     zIndex: z_index,
     backgroundColor: background_color || 'transparent',
     opacity: safeOpacity,
-    overflow: 'hidden',
+    // CRITICAL: overflow: visible allows images larger than layer to render fully
+    overflow: 'visible',
     // Hardware acceleration for smooth rendering
     transform: 'translateZ(0)',
     WebkitTransform: 'translateZ(0)',
-    // Prevent layout shifts
-    contain: 'layout style paint',
+    // CRITICAL: Remove 'contain' property that might clip content
+    contain: 'layout style',
     // Ensure layer is visible
     visibility: 'visible',
     display: 'block'
@@ -105,6 +161,9 @@ const sortedWidgets = computed(() => {
   /* Ensure layers render correctly with scaling */
   will-change: transform;
   backface-visibility: hidden;
+  /* CRITICAL: Ensure overflow is visible to prevent image clipping */
+  /* Do not set overflow: hidden here - it will clip high-resolution images */
+  overflow: visible !important;
 }
 </style>
 

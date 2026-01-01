@@ -25,6 +25,7 @@ The system consists of a Django REST API backend that manages screens, templates
 - ✅ Profile management (view/edit profile, change password, active sessions)
 - ✅ Dynamic sidebar based on user permissions
 - ✅ Audit logging for critical actions
+- ✅ Multi-tenant organization support
 - ⚠️ Session management exists but may need testing for edge cases
 
 ### Screens & Pairing
@@ -33,7 +34,10 @@ The system consists of a Django REST API backend that manages screens, templates
 - ✅ Screen status tracking (online/offline, last heartbeat)
 - ✅ Health check endpoints and metrics
 - ✅ Command queue management per screen
-- ✅ Screen authentication via auth_token + secret_key
+- ✅ Screen authentication via auth_token + secret_key or screen_id
+- ✅ Device information tracking (app version, OS version, screen dimensions, brightness, orientation)
+- ✅ IP address tracking
+- ✅ Pairing session cleanup management command
 - ⚠️ Heartbeat endpoint exists but has documented 401 authentication issues (see Known Issues)
 - ⚠️ Pairing works but credentials handling has been refactored (screen_id method added, legacy auth_token/secret_key method still supported)
 
@@ -56,9 +60,12 @@ The system consists of a Django REST API backend that manages screens, templates
 - ✅ Storage management (local filesystem, S3 support configured)
 - ✅ User-based directory structure (`users/user_{id}/{type}/`)
 - ✅ File validation (type, size limits: 500MB max)
-- ✅ Content download status tracking
+- ✅ Content download status tracking (pending, success, failed)
 - ✅ Content sync commands to screens
-- ⚠️ Upload endpoint has documented 400 error issues (Content-Type header problems fixed, but other issues may persist)
+- ✅ Hash-based integrity checking (SHA-256)
+- ✅ Secure URL generation (signed URLs for S3)
+- ✅ ContentStorageManager with comprehensive validation
+- ⚠️ Upload endpoint has documented 400 error issues (Content-Type header boundary issues fixed, but other issues may persist)
 - ⚠️ Preview reliability may be unstable (file_url generation issues documented)
 - ⚠️ Media files may not save to expected local paths in some cases
 
@@ -70,6 +77,7 @@ The system consists of a Django REST API backend that manages screens, templates
 - ✅ Content assignment to widgets (multiple content items per widget for playlists)
 - ✅ Template activation on screens
 - ✅ Template versioning field (version number stored)
+- ✅ Template configuration via JSON (config_json, meta_data)
 - ⚠️ Template preview/visual editor not implemented (only data model)
 - ⚠️ Template designer UI not implemented (create/edit via forms only)
 - ⚠️ Some widget types (video, text, webview, chart, clock) may not render properly in web player
@@ -81,17 +89,20 @@ The system consists of a Django REST API backend that manages screens, templates
 - ✅ Hash-based integrity checking (SHA-256)
 - ✅ Storage path generation with user-based organization
 - ✅ URL generation for file access
+- ✅ Content validation module with security checks
 - ⚠️ Upload 400 errors documented (Content-Type boundary issues fixed, other issues may remain)
 - ⚠️ Preview not always reliable (file_url may not be accessible)
 - ⚠️ Media files may not save correctly to local storage in some cases
 
 ### Heartbeat & Screen Status
-- ✅ Heartbeat endpoint (`POST /api/screens/heartbeat/`)
+- ✅ Heartbeat endpoint (`POST /api/screens/heartbeat/` and `/iot/screens/heartbeat/`)
 - ✅ Screen status tracking (is_online, last_heartbeat_at)
 - ✅ Stale heartbeat detection (5-minute timeout)
 - ✅ Screen status logs (ScreenStatusLog model)
 - ✅ Optional metrics (latency, CPU usage, memory usage)
 - ✅ Management command to mark offline screens (`check_heartbeats`)
+- ✅ WebSocket heartbeat support
+- ✅ Multiple credential extraction methods (screen_id, auth_token/secret_key, URL params)
 - ⚠️ Heartbeat 401 errors documented - authentication issues with request body parsing
 - ⚠️ Heartbeat endpoint has multiple credential extraction methods but may fail in some scenarios
 
@@ -101,17 +112,23 @@ The system consists of a Django REST API backend that manages screens, templates
 - ✅ Repeat types (none, daily, weekly, monthly)
 - ✅ Priority-based conflict resolution
 - ✅ Schedule execution on screens
-- ✅ Recurrence calculation for repeat schedules
+- ✅ Recurrence calculation for repeat schedules (SecureRecurrenceCalculator)
+- ✅ Schedule status tracking (is_active, is_currently_running)
+- ✅ Schedule conflict detection
 - ⚠️ Schedule execution may not work correctly for all repeat types
+- ⚠️ Timezone support not fully implemented
 
 ### Commands
 - ✅ Command queue system
 - ✅ Command types (restart, refresh, change_template, display_message, sync_content, custom)
 - ✅ Command priority and expiration
 - ✅ Command execution status tracking
-- ✅ Command execution logs
+- ✅ Command execution logs (CommandExecutionLog)
 - ✅ Command pull endpoint for screens
 - ✅ Command response endpoint for screens
+- ✅ WebSocket command delivery (with HTTP fallback)
+- ✅ Command security (HMAC signing, nonce protection, timestamp validation)
+- ✅ ScreenConnectionRegistry for WebSocket management
 - ⚠️ Command execution via WebSocket may not be fully reliable (HTTP fallback exists)
 
 ### Analytics & Logging
@@ -120,15 +137,19 @@ The system consists of a Django REST API backend that manages screens, templates
 - ✅ Content download logs
 - ✅ Command execution logs
 - ✅ Error logging (Super Admin only)
-- ✅ Audit logs for critical actions
+- ✅ Audit logs for critical actions (AuditLog model)
 - ✅ Log filtering and export
+- ✅ Centralized logging middleware (ErrorLoggingMiddleware)
 
 ### Core Infrastructure
-- ✅ Backup system (database and media backups)
+- ✅ Backup system (database and media backups) - SystemBackup model
 - ✅ Rate limiting (configurable per role, per endpoint)
 - ✅ Caching (Redis/LocMem cache)
 - ✅ Error logging middleware
-- ⚠️ Automated backup scheduling configured but may need Celery workers
+- ✅ Content validation module
+- ✅ Bulk operations support
+- ✅ Celery configuration for async tasks
+- ⚠️ Automated backup scheduling configured but may need Celery workers running
 
 ## 3. Current Architecture
 
@@ -159,6 +180,7 @@ The system consists of a Django REST API backend that manages screens, templates
 - **File Naming**: `{type}_{uuid}.{ext}` format
 - **URL Generation**: `/media/users/user_{id}/{type}/...` for local, signed URLs for S3
 - **Hash Verification**: SHA-256 hashes stored for integrity checking
+- **Storage Manager**: ContentStorageManager handles all storage operations
 
 ### Screen ↔ User Connection Flow
 
@@ -167,25 +189,25 @@ The system consists of a Django REST API backend that manages screens, templates
    - Screen displays pairing code and QR code (contains pairing_token)
    - User enters pairing code or scans QR code in dashboard
    - Dashboard calls `/api/pairing/bind/` with pairing_code/token
-   - Backend creates Screen record and links to user
+   - Backend creates Screen record and links to user (atomic transaction)
    - Screen polls `/api/pairing/status/` until status becomes "paired"
    - Screen receives auth_token and secret_key (or screen_id for new method)
 
 2. **Authentication**:
    - Screen authenticates using auth_token + secret_key (or screen_id)
    - Credentials stored in localStorage on screen
-   - Heartbeat endpoint accepts both methods
+   - Heartbeat endpoint accepts both methods (multiple extraction strategies)
 
 3. **Communication**:
    - HTTP REST API for commands and template fetching
-   - WebSocket for real-time updates (if available)
+   - WebSocket for real-time updates (if available via ScreenConnectionRegistry)
    - Polling fallback (template polling every 5 minutes, heartbeat every 30-60 seconds)
 
 ### Web Player Lifecycle
 
 1. **Initialization**:
    - Load credentials from localStorage, URL params, or env vars
-   - Fetch template from `/api/player/template/` endpoint
+   - Fetch template from `/api/player/template/` or `/iot/player/template/` endpoint
    - Initialize responsive scaling
 
 2. **Rendering**:
@@ -210,24 +232,25 @@ The system consists of a Django REST API backend that manages screens, templates
 - **Issue**: Content upload endpoint (`POST /api/contents/{id}/upload/`) may return 400 errors
 - **Status**: Content-Type header boundary issue has been fixed, but other issues may persist
 - **Symptoms**: "File is required" error even when file is sent, validation errors
-- **Documentation**: See `CONTENT_UPLOAD_DEBUG_GUIDE.md` (to be removed)
 - **Workaround**: Ensure FormData is sent correctly, check browser Network tab for request format
+- **Root Cause**: May be related to MultiPartParser configuration or file validation logic
 
 ### Preview Problems
 - **Issue**: Content preview may not display correctly after upload
 - **Possible Causes**: 
-  - `file_url` not generated correctly
+  - `file_url` not generated correctly by ContentStorageManager
   - `MEDIA_URL` not configured properly
   - CORS issues preventing file access
-  - File not actually saved to disk
+  - File not actually saved to disk (storage backend issue)
 - **Status**: Needs investigation
+- **Workaround**: Check file_url in content details, verify file exists in media directory
 
 ### Heartbeat 401 Issues
-- **Issue**: Heartbeat endpoint (`POST /api/screens/heartbeat/`) may return 401 Unauthorized
+- **Issue**: Heartbeat endpoint (`POST /api/screens/heartbeat/` or `/iot/screens/heartbeat/`) may return 401 Unauthorized
 - **Status**: Multiple fixes applied (request body parsing, credential extraction from multiple sources)
 - **Symptoms**: "Authentication credentials were not provided" even when credentials are sent
-- **Documentation**: See `HEARTBEAT_401_FIX.md` (to be removed)
 - **Workaround**: Ensure credentials are sent in POST body as JSON, check backend logs for parsing issues
+- **Root Cause**: Complex credential extraction logic may fail in edge cases (screen_id vs auth_token/secret_key)
 
 ### Template Black Screen Problems
 - **Issue**: Web player may show black screen when rendering templates
@@ -236,6 +259,7 @@ The system consists of a Django REST API backend that manages screens, templates
   - Template has no active widgets
   - Template has no active content
   - Invalid template dimensions (width/height = 0)
+  - Widget renderer not implemented for widget type
 - **Status**: Template validation exists but may not catch all cases
 - **Workaround**: Verify template has active layers, widgets, and content before activating
 
@@ -244,15 +268,16 @@ The system consists of a Django REST API backend that manages screens, templates
 - **Possible Causes**:
   - `MEDIA_ROOT` directory doesn't exist
   - Permission issues (directory not writable)
-  - Storage path generation errors
+  - Storage path generation errors in ContentStorageManager
   - Storage backend misconfiguration
 - **Status**: Needs investigation
-- **Workaround**: Verify `BackEnd/media/` directory exists and is writable
+- **Workaround**: Verify `BackEnd/media/` directory exists and is writable, check storage logs
 
 ### Missing Validations
 - Template activation on offline screens (allows activation but content won't sync)
 - Content type validation may not catch all invalid files
 - Widget type rendering (only image widgets fully implemented)
+- Schedule timezone validation (timezone support not fully implemented)
 
 ### Missing Permissions
 - Some endpoints may not have proper permission checks
@@ -261,7 +286,7 @@ The system consists of a Django REST API backend that manages screens, templates
 
 ### Partial Implementations
 - **Video Widgets**: Models exist but rendering not implemented in web player
-- **Text Widgets**: Models exist but rendering not implemented
+- **Text Widgets**: Models exist but rendering not implemented (TextWidget.vue exists but may be incomplete)
 - **Webview Widgets**: Models exist but rendering not implemented
 - **Chart Widgets**: Models exist but rendering not implemented
 - **Clock Widgets**: Models exist but rendering not implemented
@@ -274,6 +299,7 @@ The system consists of a Django REST API backend that manages screens, templates
 - Heartbeat frequency may need adjustment (currently 30-60 seconds)
 - Large file uploads may timeout (500MB max)
 - No CDN integration for media files (S3 can be used but not required)
+- Database queries may not be optimized for large datasets
 
 ### Database
 - SQLite used by default (not suitable for production with multiple concurrent users)
@@ -282,9 +308,9 @@ The system consists of a Django REST API backend that manages screens, templates
 
 ### Deployment
 - No production deployment guide
-- Nginx configuration example exists but may need updates
 - Environment variables not fully documented
 - No Docker/containerization setup
+- Celery workers need to be started separately for async tasks
 
 ---
 

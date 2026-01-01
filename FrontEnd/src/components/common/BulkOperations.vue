@@ -16,15 +16,15 @@
       <div class="p-6 space-y-4">
         <!-- Selected Items Count -->
         <div class="badge-primary border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-          <p class="text-sm">
-            <strong>{{ (selectedItems || []).length }}</strong> item(s) selected
+          <p class="text-sm text-primary dark:text-slate-300">
+            <strong class="text-primary dark:text-slate-100">{{ (selectedItems || []).length }}</strong> item(s) selected
           </p>
         </div>
 
         <!-- Operation Form -->
         <slot name="form" :selectedItems="selectedItems || []">
           <div v-if="operation === 'delete'" class="badge-error border border-red-200 dark:border-red-800 rounded-lg p-4">
-            <p class="text-sm">
+            <p class="text-sm text-primary dark:text-slate-300">
               Are you sure you want to delete {{ (selectedItems || []).length }} item(s)? This action cannot be undone.
             </p>
           </div>
@@ -55,9 +55,9 @@
                 v-model="syncContent"
                 type="checkbox"
                 id="syncContent"
-                class="mr-2"
+                class="checkbox-base mr-2"
               />
-              <label for="syncContent" class="text-sm text-primary">Sync content after activation</label>
+              <label for="syncContent" class="text-sm text-primary dark:text-slate-300">Sync content after activation</label>
             </div>
           </div>
 
@@ -114,14 +114,14 @@
 
         <!-- Success Result -->
         <div v-if="result && !loading" class="badge-success border border-emerald-200 dark:border-emerald-800 rounded-lg p-4">
-          <p class="text-sm font-medium mb-2">Operation Completed</p>
-          <ul class="text-sm space-y-1">
+          <p class="text-sm font-medium mb-2 text-primary dark:text-slate-300">Operation Completed</p>
+          <ul class="text-sm space-y-1 text-primary dark:text-slate-300">
             <li>Success: {{ result.success_count || 0 }}</li>
             <li>Failed: {{ result.failure_count || 0 }}</li>
           </ul>
           <div v-if="result.results && result.results.length > 0" class="mt-4 max-h-48 overflow-y-auto">
-            <p class="text-xs font-medium mb-2">Details:</p>
-            <ul class="text-xs space-y-1">
+            <p class="text-xs font-medium mb-2 text-primary dark:text-slate-300">Details:</p>
+            <ul class="text-xs space-y-1 text-primary dark:text-slate-300">
               <li v-for="(item, idx) in result.results" :key="idx">
                 {{ item.item_id }}: {{ item.status }} - {{ item.message }}
               </li>
