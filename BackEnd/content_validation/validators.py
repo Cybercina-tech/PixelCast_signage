@@ -15,14 +15,27 @@ from django.core.exceptions import ValidationError
 try:
     import magic
 except ImportError:
-    magic = None
-    logging.warning("python-magic not installed. MIME type detection will be limited.")
+    try:
+        import magic as python_magic
+        magic = python_magic
+    except ImportError:
+        magic = None
+        logging.warning("python-magic not installed. MIME type detection will be limited.")
 
 try:
     from PIL import Image
 except ImportError:
     Image = None
     logging.warning("Pillow not installed. Image validation will be limited.")
+
+# ffprobe for video validation
+try:
+    import subprocess
+    import json
+    FFPROBE_AVAILABLE = True
+except ImportError:
+    FFPROBE_AVAILABLE = False
+    logging.warning("subprocess not available. Video resolution checking will be limited.")
 
 import io
 
@@ -197,7 +210,9 @@ class ContentValidator:
     @classmethod
     def validate_mime_type(cls, file_obj: UploadedFile, content_type: str) -> Tuple[bool, Optional[str]]:
         """
-        Validate MIME type matches content type.
+        Validate MIME type matches content type using python-magic for actual file content verification.
+        
+        This is critical for security - we verify the actual file content, not just the extension.
         
         Args:
             file_obj: Uploaded file object
@@ -206,26 +221,32 @@ class ContentValidator:
         Returns:
             Tuple of (is_valid, detected_mime_type or error_message)
         """
-        # Get MIME type from file object
+        # Get declared MIME type from file object (may be spoofed)
         declared_mime = getattr(file_obj, 'content_type', '')
         
-        # Read file content for actual MIME type detection
+        # Read file content for actual MIME type detection (magic numbers)
         file_obj.seek(0)
-        file_content = file_obj.read(1024)  # Read first 1KB for MIME detection
+        file_content = file_obj.read(8192)  # Read first 8KB for better MIME detection
         file_obj.seek(0)
         
-        # Detect actual MIME type using python-magic or file signature
+        # Detect actual MIME type using python-magic (reads magic numbers/bytes)
         detected_mime = None
         try:
-            # Try python-magic if available
+            # Try python-magic if available - this reads actual file bytes, not extension
             if magic:
                 detected_mime = magic.from_buffer(file_content, mime=True)
-        except:
-            pass
+                logger.info(f"python-magic detected MIME type: {detected_mime} (declared: {declared_mime})")
+        except Exception as e:
+            logger.warning(f"python-magic detection failed: {e}")
         
-        # Fallback to declared MIME type
+        # If python-magic not available, try basic file signature detection
+        if not detected_mime:
+            detected_mime = cls._detect_mime_from_signature(file_content)
+        
+        # Fallback to declared MIME type only if we can't detect
         if not detected_mime:
             detected_mime = declared_mime
+            logger.warning(f"Could not detect MIME type, using declared: {declared_mime}")
         
         # Check for dangerous MIME types
         if detected_mime in cls.DANGEROUS_MIME_TYPES:
@@ -234,19 +255,77 @@ class ContentValidator:
         # Validate against allowed MIME types for content type
         allowed_mimes = cls.ALLOWED_MIME_TYPES.get(content_type, [])
         
-        # If detected_mime is available, use it; otherwise use declared
-        mime_to_check = detected_mime or declared_mime
+        # Use detected MIME for validation (this is the actual file content)
+        mime_to_check = detected_mime
         
         if mime_to_check and mime_to_check not in allowed_mimes:
-            return False, f"MIME type '{mime_to_check}' not allowed for content type '{content_type}'. Allowed: {allowed_mimes}"
+            # Provide detailed error message
+            filename = getattr(file_obj, 'name', 'unknown')
+            error_msg = (
+                f"The file '{filename}' has been rejected for security reasons. "
+                f"Declared type: '{declared_mime}', Actual type: '{detected_mime}'. "
+                f"Allowed types for '{content_type}': {allowed_mimes}"
+            )
+            if detected_mime != declared_mime:
+                error_msg += f" (MIME type mismatch detected - file may be a fake {content_type})"
+            return False, error_msg
         
-        # Check for MIME type mismatch (extension vs actual MIME)
+        # Check for MIME type mismatch (extension vs actual MIME) - security warning
         if detected_mime and declared_mime and detected_mime != declared_mime:
-            logger.warning(f"MIME type mismatch: declared={declared_mime}, detected={detected_mime}")
-            # Use detected MIME for validation
+            filename = getattr(file_obj, 'name', 'unknown')
+            logger.warning(
+                f"MIME type mismatch detected for '{filename}': "
+                f"declared={declared_mime}, detected={detected_mime}. "
+                f"This may indicate a spoofed file."
+            )
+            # Use detected MIME for validation (actual content)
             mime_to_check = detected_mime
         
         return True, mime_to_check or declared_mime
+    
+    @staticmethod
+    def _detect_mime_from_signature(file_content: bytes) -> Optional[str]:
+        """
+        Detect MIME type from file signature (magic numbers) as fallback.
+        
+        Args:
+            file_content: First bytes of file
+            
+        Returns:
+            Detected MIME type or None
+        """
+        if not file_content or len(file_content) < 4:
+            return None
+        
+        # JPEG
+        if file_content[:3] == b'\xff\xd8\xff':
+            return 'image/jpeg'
+        
+        # PNG
+        if file_content[:8] == b'\x89PNG\r\n\x1a\n':
+            return 'image/png'
+        
+        # GIF
+        if file_content[:6] in [b'GIF87a', b'GIF89a']:
+            return 'image/gif'
+        
+        # WebP
+        if file_content[:4] == b'RIFF' and file_content[8:12] == b'WEBP':
+            return 'image/webp'
+        
+        # MP4
+        if file_content[4:8] == b'ftyp':
+            return 'video/mp4'
+        
+        # WebM
+        if file_content[:4] == b'\x1a\x45\xdf\xa3':
+            return 'video/webm'
+        
+        # AVI
+        if file_content[:4] == b'RIFF' and file_content[8:12] == b'AVI ':
+            return 'video/x-msvideo'
+        
+        return None
     
     @classmethod
     def validate_file_size(cls, file_obj: UploadedFile, content_type: str) -> Tuple[bool, Optional[str]]:
@@ -341,7 +420,9 @@ class ContentValidator:
     @classmethod
     def validate_video_format(cls, file_obj: UploadedFile) -> Tuple[bool, Optional[str], Optional[Dict]]:
         """
-        Validate video format and extract basic metadata.
+        Validate video format and extract metadata including resolution using ffprobe.
+        
+        Rejects videos higher than 4K (3840x2160) for hardware compatibility.
         
         Args:
             file_obj: Uploaded file object
@@ -358,7 +439,7 @@ class ContentValidator:
             
             # Check for video file signatures (magic numbers)
             # MP4: ftyp box at beginning
-            if file_content[:4] == b'ftyp':
+            if file_content[4:8] == b'ftyp':
                 metadata['format'] = 'MP4'
                 metadata['codec'] = 'H.264/H.265'  # Generic
             # WebM: starts with EBML header
@@ -366,7 +447,7 @@ class ContentValidator:
                 metadata['format'] = 'WebM'
                 metadata['codec'] = 'VP8/VP9'
             # AVI: RIFF header
-            elif file_content[:4] == b'RIFF':
+            elif file_content[:4] == b'RIFF' and file_content[8:12] == b'AVI ':
                 metadata['format'] = 'AVI'
                 metadata['codec'] = 'Various'
             # MOV/QuickTime: ftyp or moov
@@ -375,11 +456,114 @@ class ContentValidator:
                 metadata['codec'] = 'QuickTime'
             else:
                 # Could be valid video but signature not recognized
-                # Try to proceed with basic validation
                 pass
             
-            # For more detailed validation, would need ffprobe or similar
-            # For now, basic signature check is sufficient
+            # Use ffprobe for detailed video metadata (resolution, codec, duration)
+            if FFPROBE_AVAILABLE:
+                try:
+                    # Save file to temp location for ffprobe
+                    import tempfile
+                    import os
+                    
+                    # Create temporary file
+                    with tempfile.NamedTemporaryFile(delete=False, suffix='.tmp') as tmp_file:
+                        file_obj.seek(0)
+                        tmp_file.write(file_obj.read())
+                        tmp_path = tmp_file.name
+                    
+                    try:
+                        # Run ffprobe to get video metadata
+                        cmd = [
+                            'ffprobe',
+                            '-v', 'quiet',
+                            '-print_format', 'json',
+                            '-show_format',
+                            '-show_streams',
+                            tmp_path
+                        ]
+                        
+                        result = subprocess.run(
+                            cmd,
+                            capture_output=True,
+                            text=True,
+                            timeout=30  # 30 second timeout
+                        )
+                        
+                        if result.returncode == 0:
+                            probe_data = json.loads(result.stdout)
+                            
+                            # Extract video stream info
+                            video_stream = None
+                            for stream in probe_data.get('streams', []):
+                                if stream.get('codec_type') == 'video':
+                                    video_stream = stream
+                                    break
+                            
+                            if video_stream:
+                                # Get resolution
+                                width = video_stream.get('width', 0)
+                                height = video_stream.get('height', 0)
+                                
+                                # Check for 4K limit (3840x2160)
+                                MAX_WIDTH = 3840
+                                MAX_HEIGHT = 2160
+                                
+                                if width > MAX_WIDTH or height > MAX_HEIGHT:
+                                    error_msg = (
+                                        f"Video resolution ({width}x{height}) exceeds maximum allowed "
+                                        f"({MAX_WIDTH}x{MAX_HEIGHT}). This video may not play on all screens."
+                                    )
+                                    return False, error_msg, None
+                                
+                                # Get codec
+                                codec = video_stream.get('codec_name', 'unknown')
+                                
+                                # Get duration
+                                duration = float(probe_data.get('format', {}).get('duration', 0))
+                                
+                                # Update metadata
+                                metadata.update({
+                                    'width': width,
+                                    'height': height,
+                                    'resolution': f"{width}x{height}",
+                                    'codec': codec,
+                                    'duration': duration,
+                                    'duration_seconds': int(duration),
+                                })
+                                
+                                # Check for supported codecs
+                                supported_codecs = ['h264', 'h265', 'hevc', 'vp8', 'vp9']
+                                if codec.lower() not in supported_codecs:
+                                    metadata['codec_warning'] = f"Codec '{codec}' may not be supported on all screens"
+                                
+                                logger.info(f"Video validated: {width}x{height}, codec: {codec}, duration: {duration}s")
+                            else:
+                                logger.warning("No video stream found in file")
+                        else:
+                            logger.warning(f"ffprobe failed: {result.stderr}")
+                    finally:
+                        # Clean up temp file
+                        try:
+                            os.unlink(tmp_path)
+                        except:
+                            pass
+                    
+                    # Reset file pointer
+                    file_obj.seek(0)
+                    
+                except FileNotFoundError:
+                    logger.warning("ffprobe not found. Install ffmpeg for video resolution checking.")
+                    # Continue with basic validation - ffprobe is optional
+                except subprocess.TimeoutExpired:
+                    logger.error("ffprobe timed out")
+                    return False, "Video validation timed out. File may be corrupted or too large.", None
+                except json.JSONDecodeError:
+                    logger.error("ffprobe returned invalid JSON")
+                    # Continue with basic validation
+                except Exception as e:
+                    logger.error(f"Error running ffprobe: {str(e)}")
+                    # Continue with basic validation if ffprobe fails
+                    # This allows uploads to proceed if ffprobe is not available
             
             return True, None, metadata
             

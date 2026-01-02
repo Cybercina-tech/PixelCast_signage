@@ -1,341 +1,504 @@
 <template>
   <AppLayout>
-    <div class="space-y-6">
-      <div class="flex justify-between items-center">
-        <h1 class="text-2xl font-bold text-primary">Contents</h1>
+    <!-- Animated Starry Background -->
+    <div class="fixed inset-0 pointer-events-none overflow-hidden z-0">
+      <div class="absolute inset-0" ref="starsContainer"></div>
+      <div class="absolute top-0 left-1/4 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl animate-pulse"></div>
+      <div class="absolute bottom-0 right-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl animate-pulse" style="animation-delay: 1s;"></div>
+      <div class="absolute top-1/2 left-1/2 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl animate-pulse" style="animation-delay: 2s;"></div>
+    </div>
+
+    <div class="relative z-10 min-h-full space-y-6 pb-6">
+      <!-- Header -->
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <h1 class="text-3xl md:text-4xl font-bold text-white mb-2">
+            <span class="bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+              Media Library
+            </span>
+          </h1>
+          <p class="text-slate-400">Manage and organize your digital assets</p>
+        </div>
         <button
           @click="showUploadModal = true"
-          class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
+          class="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl font-medium transition-all duration-200 flex items-center gap-2 backdrop-blur-sm border border-indigo-500/30 shadow-lg hover:shadow-xl"
         >
-          Upload Content
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+          </svg>
+          Upload Media
         </button>
       </div>
-      
-      <!-- Filters -->
-      <Card>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <label class="label-base block text-sm mb-1">Search</label>
+
+      <!-- Stats Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="backdrop-blur-md bg-white/5 border border-white/10 rounded-2xl p-4">
+          <div class="text-sm text-slate-400 mb-1">Total Media</div>
+          <div class="text-2xl font-bold text-white">{{ contentStore.contents.length }}</div>
+        </div>
+        <div class="backdrop-blur-md bg-white/5 border border-white/10 rounded-2xl p-4">
+          <div class="text-sm text-slate-400 mb-1">Images</div>
+          <div class="text-2xl font-bold text-white">{{ imageCount }}</div>
+        </div>
+        <div class="backdrop-blur-md bg-white/5 border border-white/10 rounded-2xl p-4">
+          <div class="text-sm text-slate-400 mb-1">Videos</div>
+          <div class="text-2xl font-bold text-white">{{ videoCount }}</div>
+        </div>
+        <div class="backdrop-blur-md bg-white/5 border border-white/10 rounded-2xl p-4">
+          <div class="text-sm text-slate-400 mb-1">Unassigned</div>
+          <div class="text-2xl font-bold text-white">{{ unassignedCount }}</div>
+        </div>
+      </div>
+
+      <!-- Filters & Search -->
+      <div class="backdrop-blur-md bg-white/5 border border-white/10 rounded-2xl p-4">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div class="md:col-span-2">
             <input
-              v-model="contentStore.filters.search"
+              v-model="searchQuery"
               type="text"
-              placeholder="Search contents..."
-              class="input-base w-full px-3 py-2 rounded-lg"
+              placeholder="Search media..."
+              class="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
             />
           </div>
           <div>
-            <label class="label-base block text-sm mb-1">Type</label>
-            <select v-model="contentStore.filters.type" class="select-base w-full px-3 py-2 rounded-lg">
-              <option :value="null">All</option>
-              <option value="image">Image</option>
-              <option value="video">Video</option>
-              <option value="text">Text</option>
-              <option value="webview">WebView</option>
-              <option value="chart">Chart</option>
-              <option value="json">JSON</option>
+            <select
+              v-model="filterType"
+              class="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+            >
+              <option :value="null">All Types</option>
+              <option value="image">Images</option>
+              <option value="video">Videos</option>
             </select>
           </div>
           <div>
-            <label class="label-base block text-sm mb-1">Download Status</label>
-            <select v-model="contentStore.filters.download_status" class="select-base w-full px-3 py-2 rounded-lg">
-              <option :value="null">All</option>
-              <option value="pending">Pending</option>
-              <option value="downloading">Downloading</option>
-              <option value="success">Success</option>
-              <option value="failed">Failed</option>
+            <select
+              v-model="filterStatus"
+              class="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+            >
+              <option :value="null">All Status</option>
+              <option value="assigned">Assigned</option>
+              <option value="unassigned">Unassigned</option>
             </select>
           </div>
         </div>
-      </Card>
-      
-      <!-- Contents Table -->
-      <Card>
-        <div v-if="contentStore.loading" class="text-center py-8">Loading...</div>
-        <div v-else-if="contentStore.error" class="text-center py-8 text-error">
-          {{ contentStore.error }}
+      </div>
+
+      <!-- Bulk Actions Bar -->
+      <div
+        v-if="selectedItems.length > 0"
+        class="backdrop-blur-md bg-indigo-500/20 border border-indigo-500/30 rounded-2xl p-4 flex items-center justify-between"
+      >
+        <div class="text-white font-medium">
+          {{ selectedItems.length }} {{ selectedItems.length === 1 ? 'item' : 'items' }} selected
         </div>
-        <Table
-          v-else
-          :columns="columns"
-          :data="contentStore.filteredContents"
-          :actions="['view', 'edit', 'delete']"
-          @view="handleView"
-          @edit="handleEdit"
-          @delete="handleDelete"
+        <div class="flex gap-2">
+          <button
+            @click="handleBulkDelete"
+            class="px-4 py-2 bg-red-600/80 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition-colors duration-200 flex items-center gap-2"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+            Delete Selected
+          </button>
+          <button
+            @click="selectedItems = []"
+            class="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg text-sm font-medium transition-colors duration-200"
+          >
+            Clear Selection
+          </button>
+        </div>
+      </div>
+
+      <!-- Loading State -->
+      <div v-if="contentStore.loading && contentStore.contents.length === 0" class="flex items-center justify-center py-20">
+        <div class="text-center">
+          <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500 mx-auto mb-4"></div>
+          <p class="text-slate-400">Loading media library...</p>
+        </div>
+      </div>
+
+      <!-- Error State -->
+      <div v-else-if="contentStore.error && contentStore.contents.length === 0" class="text-center py-20">
+        <div class="backdrop-blur-md bg-red-500/10 border border-red-500/30 rounded-2xl p-8 max-w-md mx-auto">
+          <svg class="w-16 h-16 text-red-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <p class="text-red-400 font-medium mb-2">{{ contentStore.error }}</p>
+          <button
+            @click="loadContents"
+            class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm transition-colors duration-200 mt-4"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+
+      <!-- Empty State -->
+      <div v-else-if="filteredContents.length === 0" class="text-center py-20">
+        <div class="backdrop-blur-md bg-white/5 border border-white/10 rounded-2xl p-12 max-w-md mx-auto">
+          <svg class="w-20 h-20 text-slate-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+          <h3 class="text-xl font-medium text-white mb-2">No media found</h3>
+          <p class="text-slate-400 text-sm mb-6">
+            {{ searchQuery || filterType || filterStatus ? 'Try adjusting your filters' : 'Upload some content to get started' }}
+          </p>
+          <button
+            @click="showUploadModal = true"
+            class="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl font-medium transition-all duration-200"
+          >
+            Upload Media
+          </button>
+        </div>
+      </div>
+
+      <!-- Media Grid -->
+      <div
+        v-else
+        ref="gridContainer"
+        class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4"
+        @scroll="handleScroll"
+      >
+        <div
+          v-for="content in filteredContents"
+          :key="content.id"
+          @click="toggleSelection(content.id)"
+          :class="[
+            'group relative cursor-pointer rounded-xl overflow-hidden border-2 transition-all duration-200 backdrop-blur-md bg-white/5',
+            selectedItems.includes(content.id)
+              ? 'border-indigo-500 ring-2 ring-indigo-500/50 shadow-lg scale-105'
+              : 'border-white/10 hover:border-white/20 hover:shadow-lg'
+          ]"
         >
-          <template #cell-type="{ value }">
-            <span class="badge-primary px-2 py-1 rounded text-xs">{{ value }}</span>
-          </template>
-          <template #cell-download_status="{ value }">
-            <span
-              :class="[
-                'px-2 py-1 rounded-full text-xs font-medium',
-                value === 'success' ? 'badge-success' : '',
-                value === 'failed' ? 'badge-error' : '',
-                value === 'downloading' ? 'badge-warning' : '',
-                value === 'pending' ? 'badge-info' : '',
-              ]"
-            >
-              {{ value || 'pending' }}
-            </span>
-          </template>
-          <template #actions="{ row }">
-            <div class="flex items-center justify-end gap-1">
-              <router-link
-                :to="`/contents/${row.id}`"
-                class="action-btn-view"
-                title="View"
+          <!-- Thumbnail -->
+          <div class="aspect-square bg-gray-900 relative overflow-hidden">
+            <!-- Image Preview -->
+            <img
+              v-if="content.type === 'image' && (content.secure_url || content.absolute_file_url || content.file_url)"
+              :src="content.secure_url || content.absolute_file_url || content.file_url"
+              :alt="content.name || 'Media'"
+              class="w-full h-full object-cover"
+              @error="handleImageError"
+            />
+            <!-- Video Preview -->
+            <div v-else-if="content.type === 'video' && (content.secure_url || content.absolute_file_url || content.file_url)" class="w-full h-full flex items-center justify-center bg-gray-900">
+              <video
+                :src="content.secure_url || content.absolute_file_url || content.file_url"
+                class="w-full h-full object-cover"
+                muted
+                preload="metadata"
+              />
+              <div class="absolute inset-0 flex items-center justify-center bg-black/30">
+                <svg class="w-12 h-12 text-white" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M8 5v14l11-7z" />
+                </svg>
+              </div>
+              <div v-if="content.video_duration" class="absolute bottom-2 right-2 px-2 py-1 bg-black/70 text-white text-xs rounded">
+                {{ formatDuration(content.video_duration) }}
+              </div>
+            </div>
+            <!-- Placeholder -->
+            <div v-else class="w-full h-full flex items-center justify-center">
+              <svg class="w-12 h-12 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+            </div>
+
+            <!-- Selection Checkbox -->
+            <div class="absolute top-2 left-2">
+              <div
+                :class="[
+                  'w-6 h-6 rounded border-2 flex items-center justify-center transition-all duration-200',
+                  selectedItems.includes(content.id)
+                    ? 'bg-indigo-500 border-indigo-500'
+                    : 'bg-black/50 border-white/30 group-hover:border-white/50'
+                ]"
               >
-                <EyeIcon class="w-4 h-4" />
-              </router-link>
+                <svg
+                  v-if="selectedItems.includes(content.id)"
+                  class="w-4 h-4 text-white"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+            </div>
+
+            <!-- Status Badge -->
+            <div class="absolute top-2 right-2 flex gap-1">
+              <span
+                :class="[
+                  'px-2 py-1 rounded text-xs font-medium',
+                  content.is_assigned ? 'bg-green-500/80 text-white' : 'bg-amber-500/80 text-white'
+                ]"
+              >
+                {{ content.is_assigned ? 'Assigned' : 'Unassigned' }}
+              </span>
+              <span
+                :class="[
+                  'px-2 py-1 rounded text-xs font-medium',
+                  content.type === 'image' ? 'bg-blue-500/80 text-white' : 'bg-purple-500/80 text-white'
+                ]"
+              >
+                {{ content.type === 'image' ? 'IMG' : 'VID' }}
+              </span>
+            </div>
+
+            <!-- Hover Overlay -->
+            <div class="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors duration-200 flex items-center justify-center opacity-0 group-hover:opacity-100">
               <button
-                @click="handleEdit(row)"
-                class="action-btn-edit"
-                title="Edit"
+                @click.stop="handleDelete(content)"
+                class="px-3 py-2 bg-red-600/80 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition-colors duration-200 flex items-center gap-2"
               >
-                <PencilIcon class="w-4 h-4" />
-              </button>
-              <button
-                @click="handleDelete(row)"
-                class="action-btn-delete"
-                title="Delete"
-              >
-                <TrashIcon class="w-4 h-4" />
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                Delete
               </button>
             </div>
-          </template>
-        </Table>
-      </Card>
-      
-      <!-- Upload Modal -->
-      <Modal :show="showUploadModal" title="Upload Content" @close="showUploadModal = false">
-        <div class="space-y-4">
-          <div>
-            <label class="label-base block text-sm mb-1">Name</label>
-            <input v-model="uploadForm.name" type="text" required class="input-base w-full px-3 py-2 rounded-lg" />
           </div>
-          <div>
-            <label class="label-base block text-sm mb-1">Type</label>
-            <select v-model="uploadForm.type" required class="select-base w-full px-3 py-2 rounded-lg">
-              <option value="image">Image</option>
-              <option value="video">Video</option>
-              <option value="text">Text</option>
-              <option value="webview">WebView</option>
-              <option value="chart">Chart</option>
-              <option value="json">JSON</option>
-            </select>
-          </div>
-          <div v-if="uploadForm.type === 'text'">
-            <label class="label-base block text-sm mb-1">Text Content (Optional)</label>
-            <textarea
-              v-model="uploadForm.text_content"
-              rows="5"
-              class="textarea-base w-full px-3 py-2 rounded-lg"
-              placeholder="Enter text content manually or upload a text file below"
-            ></textarea>
-            <p class="mt-1 text-xs text-muted">You can either enter text manually or upload a text file</p>
-          </div>
-          <div>
-            <label class="label-base block text-sm mb-1">
-              File
-              <span v-if="uploadForm.type !== 'text'" class="text-red-500">*</span>
-              <span v-else class="text-muted text-xs">(Optional for text type)</span>
-            </label>
-            <input
-              type="file"
-              @change="handleFileSelect"
-              class="input-base w-full px-3 py-2 rounded-lg"
-            />
-          </div>
-          <div>
-            <label class="label-base block text-sm mb-1">Widget <span class="text-red-500">*</span></label>
-            <select v-model="uploadForm.widget" required class="select-base w-full px-3 py-2 rounded-lg">
-              <option value="">Select widget (required)</option>
-              <option v-for="widget in widgets" :key="widget.id" :value="widget.id">
-                {{ widget.name }}
-              </option>
-            </select>
-            <p v-if="widgets.length === 0" class="mt-1 text-xs text-warning">
-              No widgets available. Please create a widget first.
+
+          <!-- Content Info -->
+          <div class="p-3 bg-white/5">
+            <p class="text-sm text-white font-medium truncate" :title="content.name">
+              {{ content.name || 'Untitled' }}
             </p>
+            <div class="flex items-center justify-between mt-2 text-xs text-slate-400">
+              <span v-if="content.image_width && content.image_height">
+                {{ content.image_width }}×{{ content.image_height }}
+              </span>
+              <span v-if="content.file_size">
+                {{ formatFileSize(content.file_size) }}
+              </span>
+            </div>
+            <div class="text-xs text-slate-500 mt-1">
+              {{ formatDate(content.created_at) }}
+            </div>
           </div>
         </div>
-        <template #footer>
-          <button type="button" @click="handleUpload" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
-            Upload
-          </button>
-          <button type="button" @click="showUploadModal = false" class="btn-outline px-4 py-2 rounded-lg">
-            Cancel
-          </button>
-        </template>
-      </Modal>
+      </div>
+
+      <!-- Infinite Scroll Loader -->
+      <div v-if="loadingMore" class="flex items-center justify-center py-8">
+        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-500"></div>
+      </div>
     </div>
+
+    <!-- Upload Modal -->
+    <MediaLibraryModal
+      :show="showUploadModal"
+      @close="showUploadModal = false"
+      @select="handleMediaSelected"
+    />
   </AppLayout>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import { EyeIcon, PencilIcon, TrashIcon } from '@heroicons/vue/24/outline'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useContentStore } from '@/stores/content'
-import { useTemplatesStore } from '@/stores/templates'
-import { widgetsAPI } from '@/services/api'
 import { useNotification } from '@/composables/useNotification'
-import { useDeleteConfirmation } from '@/composables/useDeleteConfirmation'
 import AppLayout from '@/components/layout/AppLayout.vue'
-import Card from '@/components/common/Card.vue'
-import Table from '@/components/common/Table.vue'
-import Modal from '@/components/common/Modal.vue'
+import MediaLibraryModal from '@/components/common/MediaLibraryModal.vue'
 
-const router = useRouter()
 const contentStore = useContentStore()
-const templatesStore = useTemplatesStore()
 const notify = useNotification()
 
+// State
 const showUploadModal = ref(false)
-const selectedFile = ref(null)
-const widgets = computed(() => templatesStore.widgets)
+const searchQuery = ref('')
+const filterType = ref(null)
+const filterStatus = ref(null)
+const selectedItems = ref([])
+const loadingMore = ref(false)
+const gridContainer = ref(null)
+const starsContainer = ref(null)
+const page = ref(1)
+const hasMore = ref(true)
 
-const uploadForm = ref({
-  name: '',
-  type: 'image',
-  widget: '',
-  text_content: '',
+// Computed
+const imageCount = computed(() => contentStore.contents.filter(c => c.type === 'image').length)
+const videoCount = computed(() => contentStore.contents.filter(c => c.type === 'video').length)
+const unassignedCount = computed(() => contentStore.contents.filter(c => !c.is_assigned).length)
+
+const filteredContents = computed(() => {
+  let filtered = contentStore.contents || []
+
+  // Filter by search query
+  if (searchQuery.value) {
+    const query = searchQuery.value.toLowerCase()
+    filtered = filtered.filter(c =>
+      c.name?.toLowerCase().includes(query) ||
+      c.description?.toLowerCase().includes(query)
+    )
+  }
+
+  // Filter by type
+  if (filterType.value) {
+    filtered = filtered.filter(c => c.type === filterType.value)
+  }
+
+  // Filter by status
+  if (filterStatus.value === 'assigned') {
+    filtered = filtered.filter(c => c.is_assigned)
+  } else if (filterStatus.value === 'unassigned') {
+    filtered = filtered.filter(c => !c.is_assigned)
+  }
+
+  return filtered
 })
 
-const columns = [
-  { key: 'name', label: 'Name' },
-  { key: 'type', label: 'Type' },
-  { key: 'download_status', label: 'Status' },
-  { key: 'created_at', label: 'Created' },
-]
-
-const handleFileSelect = (event) => {
-  selectedFile.value = event.target.files[0]
-}
-
-const handleView = (row) => {
-  router.push(`/contents/${row.id}`)
-}
-
-const handleEdit = (row) => {
-  // TODO: Implement edit
-  notify.info('Edit functionality coming soon')
-}
-
-const handleDelete = async (row) => {
+// Methods
+const loadContents = async () => {
   try {
-    const { confirmDelete } = useDeleteConfirmation()
-    await confirmDelete(
-      row.id,
-      async () => {
-        await contentStore.deleteContent(row.id)
-      },
-      {
-        title: 'Delete Content?',
-        message: 'This will permanently delete the content. This action cannot be undone.',
-        itemName: row.name,
-        confirmText: 'Yes, Delete Content',
-        cancelText: 'Cancel'
-      }
-    )
-    notify.success('Content deleted successfully')
+    await contentStore.fetchContents({ page: page.value })
   } catch (error) {
-    if (error.message !== 'Delete cancelled') {
-      notify.error('Failed to delete content')
-    }
+    console.error('Failed to load contents:', error)
   }
 }
 
-const handleUpload = async () => {
-  // For text type, either file or text_content must be provided
-  if (uploadForm.value.type === 'text') {
-    if (!selectedFile.value && !uploadForm.value.text_content?.trim()) {
-      notify.error('Please either enter text content or upload a text file')
-      return
+const handleScroll = () => {
+  if (!gridContainer.value || loadingMore.value || !hasMore.value) return
+
+  const container = gridContainer.value
+  const scrollTop = container.scrollTop
+  const scrollHeight = container.scrollHeight
+  const clientHeight = container.clientHeight
+
+  // Load more when 80% scrolled
+  if (scrollTop + clientHeight >= scrollHeight * 0.8) {
+    loadMore()
+  }
+}
+
+const loadMore = async () => {
+  if (loadingMore.value || !hasMore.value) return
+
+  loadingMore.value = true
+  try {
+    page.value++
+    const response = await contentStore.fetchContents({ page: page.value })
+    const results = response?.results || response || []
+    if (results.length === 0) {
+      hasMore.value = false
     }
+  } catch (error) {
+    console.error('Failed to load more:', error)
+    page.value-- // Revert page on error
+  } finally {
+    loadingMore.value = false
+  }
+}
+
+const toggleSelection = (id) => {
+  const index = selectedItems.value.indexOf(id)
+  if (index > -1) {
+    selectedItems.value.splice(index, 1)
   } else {
-    // For other types, file is required
-    if (!selectedFile.value) {
-      notify.error('Please select a file')
-      return
-    }
+    selectedItems.value.push(id)
   }
-  
-  if (!uploadForm.value.name) {
-    notify.error('Please enter a name for the content')
+}
+
+const handleBulkDelete = async () => {
+  if (selectedItems.value.length === 0) return
+
+  if (!confirm(`Are you sure you want to delete ${selectedItems.value.length} item(s)?`)) {
     return
   }
-  
-  if (!uploadForm.value.widget) {
-    notify.error('Please select a widget for the content')
-    return
-  }
-  
+
   try {
-    // First create the content
-    const contentData = {
-      name: uploadForm.value.name,
-      type: uploadForm.value.type,
-      widget: uploadForm.value.widget, // Widget is required
+    for (const id of selectedItems.value) {
+      await contentStore.deleteContent(id)
     }
-    
-    // Add text_content if provided (for text type)
-    if (uploadForm.value.type === 'text' && uploadForm.value.text_content?.trim()) {
-      contentData.text_content = uploadForm.value.text_content.trim()
-    }
-    
-    const content = await contentStore.createContent(contentData)
-    
-    // Then upload the file if provided
-    if (selectedFile.value) {
-      console.log('[ContentsList] Uploading file for content', {
-        contentId: content.id,
-        fileName: selectedFile.value.name,
-        fileSize: selectedFile.value.size,
-        fileType: selectedFile.value.type,
-        contentType: uploadForm.value.type
-      })
-      
-      try {
-        await contentStore.uploadContent(content.id, selectedFile.value)
-        console.log('[ContentsList] File uploaded successfully')
-      } catch (uploadError) {
-        console.error('[ContentsList] File upload failed:', uploadError)
-        // Error is already handled in uploadContent, but log details here
-        const uploadErrorMessage = uploadError.response?.data?.message || 
-                                   uploadError.response?.data?.error ||
-                                   uploadError.message ||
-                                   'Failed to upload file'
-        notify.error(`File upload failed: ${uploadErrorMessage}`)
-        throw uploadError // Re-throw to prevent success notification
-      }
-    }
-    
-    notify.success('Content created successfully')
-    showUploadModal.value = false
-    uploadForm.value = { name: '', type: 'image', widget: '', text_content: '' }
-    selectedFile.value = null
-    await contentStore.fetchContents() // Refresh the list
+    notify.success(`Deleted ${selectedItems.value.length} item(s) successfully`)
+    selectedItems.value = []
   } catch (error) {
-    const errorMessage = error.response?.data?.detail || 
-                         error.response?.data?.message || 
-                         error.response?.data?.errors || 
-                         'Failed to upload content'
-    notify.error(typeof errorMessage === 'string' ? errorMessage : JSON.stringify(errorMessage))
-    console.error('Upload error:', error)
+    notify.error('Failed to delete items')
+  }
+}
+
+const handleDelete = async (content) => {
+  if (!confirm(`Are you sure you want to delete "${content.name}"?`)) {
+    return
+  }
+
+  try {
+    await contentStore.deleteContent(content.id)
+    notify.success('Content deleted successfully')
+    if (selectedItems.value.includes(content.id)) {
+      selectedItems.value = selectedItems.value.filter(id => id !== content.id)
+    }
+  } catch (error) {
+    notify.error('Failed to delete content')
+  }
+}
+
+const handleMediaSelected = (data) => {
+  // Media was selected from library - refresh list
+  loadContents()
+}
+
+const handleImageError = (event) => {
+  event.target.style.display = 'none'
+}
+
+const formatFileSize = (bytes) => {
+  if (!bytes) return '0 B'
+  const k = 1024
+  const sizes = ['B', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i]
+}
+
+const formatDuration = (seconds) => {
+  if (!seconds) return ''
+  const mins = Math.floor(seconds / 60)
+  const secs = Math.floor(seconds % 60)
+  return `${mins}:${secs.toString().padStart(2, '0')}`
+}
+
+const formatDate = (dateString) => {
+  if (!dateString) return ''
+  const date = new Date(dateString)
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+}
+
+// Create animated stars
+const createStars = () => {
+  if (!starsContainer.value) return
+
+  const container = starsContainer.value
+  const starCount = 50
+
+  for (let i = 0; i < starCount; i++) {
+    const star = document.createElement('div')
+    star.className = 'absolute rounded-full bg-white'
+    star.style.width = `${Math.random() * 3 + 1}px`
+    star.style.height = star.style.width
+    star.style.left = `${Math.random() * 100}%`
+    star.style.top = `${Math.random() * 100}%`
+    star.style.opacity = Math.random() * 0.5 + 0.5
+    star.style.animation = `starry-twinkle ${Math.random() * 3 + 2}s ease-in-out infinite`
+    star.style.animationDelay = `${Math.random() * 2}s`
+    container.appendChild(star)
   }
 }
 
 onMounted(async () => {
-  await contentStore.fetchContents()
-  // Fetch all widgets for dropdown
-  try {
-    const response = await widgetsAPI.list()
-    templatesStore.widgets = response.data.results || response.data || []
-  } catch (error) {
-    console.error('Failed to fetch widgets:', error)
-    notify.error('Failed to load widgets')
+  await loadContents()
+  createStars()
+})
+
+onUnmounted(() => {
+  if (starsContainer.value) {
+    starsContainer.value.innerHTML = ''
   }
 })
 </script>
+
+<style scoped>
+/* Additional styles if needed */
+</style>

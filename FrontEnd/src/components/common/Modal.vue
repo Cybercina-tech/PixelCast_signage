@@ -3,13 +3,14 @@
     <Transition name="modal">
       <div v-if="show" class="fixed inset-0 z-50 overflow-y-auto" @click.self="$emit('close')">
         <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
-          <div class="fixed inset-0 transition-opacity bg-black/50 dark:bg-black/70 backdrop-blur-sm" aria-hidden="true"></div>
+          <div class="fixed inset-0 transition-opacity bg-black/40 backdrop-blur-md" aria-hidden="true"></div>
           <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
           <div
             :class="[
-              'inline-block align-bottom bg-card backdrop-blur-lg rounded-2xl text-left overflow-hidden shadow-2xl border border-border-color transform transition-all duration-300 sm:my-8 sm:align-middle animate-fade-in',
+              'inline-block align-bottom bg-card backdrop-blur-lg rounded-2xl text-left overflow-hidden shadow-2xl border border-border-color transform transition-all duration-300 sm:my-8 sm:align-middle',
               size === 'large' ? 'sm:max-w-4xl sm:w-full' : 'sm:max-w-lg sm:w-full'
             ]"
+            style="animation: modalFadeUp 0.3s ease-out;"
           >
             <div class="bg-card px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
               <div class="flex items-center justify-between mb-4">
@@ -91,13 +92,13 @@ defineEmits(['close', 'confirm'])
 }
 
 .modal-enter-active .inline-block {
-  animation: fade-in 0.3s ease-out;
+  animation: modalFadeUp 0.3s ease-out;
 }
 
-@keyframes fade-in {
+@keyframes modalFadeUp {
   from {
     opacity: 0;
-    transform: scale(0.95) translateY(-10px);
+    transform: scale(0.95) translateY(10px);
   }
   to {
     opacity: 1;

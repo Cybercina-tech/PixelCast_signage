@@ -13,6 +13,10 @@ import './style.css'
 // Initialize Chart.js plugin before app creation
 import './plugins/chartjs'
 
+// Initialize client-side error logging
+import { initClientLogger } from './services/clientLogger'
+initClientLogger()
+
 const app = createApp(App)
 
 app.use(createPinia())

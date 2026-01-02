@@ -3,7 +3,7 @@
     :class="[
       'fixed left-0 top-0 h-full bg-secondary/80 dark:bg-slate-900/80 backdrop-blur-lg border-r border-border-color transition-transform duration-300 z-40',
       isOpen ? 'translate-x-0' : '-translate-x-full',
-      'md:translate-x-0 md:static md:z-auto'
+      'lg:translate-x-0 lg:static lg:z-auto'
     ]"
     class="w-64"
   >
@@ -17,7 +17,7 @@
         </div>
       </div>
       
-      <nav class="flex-1 overflow-y-auto p-4">
+      <nav class="flex-1 overflow-y-auto p-4 custom-scrollbar scroll-container">
         <div v-if="sidebarStore.loading" class="flex items-center justify-center py-8">
           <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500"></div>
         </div>
@@ -27,9 +27,9 @@
             <div v-if="item.children && item.children.length > 0">
               <button
                 @click="toggleSubmenu(item.id)"
-                class="w-full flex items-center justify-between px-4 py-2 rounded-xl hover:bg-card transition-all duration-200 text-slate-900 dark:text-slate-300 group"
+                class="w-full flex items-center justify-between px-4 py-2 rounded-xl hover:bg-card hover:opacity-80 transition-all duration-200 text-slate-900 dark:text-slate-300 group relative"
                 :class="{
-                  'bg-gradient-to-r from-emerald-50 to-emerald-100/50 dark:from-emerald-900/30 dark:to-emerald-800/20 text-emerald-900 dark:text-emerald-300 font-medium border border-emerald-200 dark:border-emerald-700': isParentActive(item),
+                  'bg-gradient-to-r from-blue-600/20 to-indigo-600/20 text-blue-400 dark:text-blue-300 font-medium border-l-4 border-blue-600': isParentActive(item),
                 }"
               >
                 <div class="flex items-center flex-1">
@@ -38,7 +38,7 @@
                     :class="[
                       'w-5 h-5 mr-3 flex-shrink-0 transition-transform duration-200 group-hover:scale-110',
                       isParentActive(item)
-                        ? 'text-emerald-900 dark:text-emerald-300'
+                        ? 'text-blue-400 dark:text-blue-300'
                         : 'text-slate-900 dark:text-slate-300'
                     ]" 
                   />
@@ -65,9 +65,9 @@
                 <li v-for="child in item.children" :key="child.id">
                   <router-link
                     :to="child.path"
-                    class="flex items-center px-4 py-2 rounded-lg hover:bg-card transition-all duration-200 text-slate-900 dark:text-slate-300 group"
+                    class="flex items-center px-4 py-2 rounded-lg hover:bg-card hover:opacity-80 transition-all duration-200 text-slate-900 dark:text-slate-300 group relative"
                     :class="{
-                      'bg-gradient-to-r from-emerald-50 to-emerald-100/50 dark:from-emerald-900/30 dark:to-emerald-800/20 text-emerald-900 dark:text-emerald-300 font-medium': isActive(child.path),
+                      'bg-gradient-to-r from-blue-600/20 to-indigo-600/20 text-blue-400 dark:text-blue-300 font-medium border-l-4 border-blue-600': isActive(child.path),
                     }"
                   >
                     <component 
@@ -75,7 +75,7 @@
                       :class="[
                         'w-4 h-4 mr-3 flex-shrink-0 transition-transform duration-200 group-hover:scale-110',
                         isActive(child.path)
-                          ? 'text-emerald-900 dark:text-emerald-300'
+                          ? 'text-blue-400 dark:text-blue-300'
                           : 'text-slate-900 dark:text-slate-300'
                       ]" 
                     />
@@ -97,7 +97,7 @@
               :to="item.path"
               class="flex items-center px-4 py-2 rounded-xl hover:bg-card transition-all duration-200 text-slate-900 dark:text-slate-300 group"
               :class="{ 
-                'bg-gradient-to-r from-emerald-50 to-emerald-100/50 dark:from-emerald-900/30 dark:to-emerald-800/20 text-emerald-900 dark:text-emerald-300 font-medium border border-emerald-200 dark:border-emerald-700': isActive(item.path),
+                'bg-gradient-to-r from-blue-600/20 to-indigo-600/20 text-blue-400 dark:text-blue-300 font-medium border-l-4 border-blue-600': isActive(item.path),
                 'font-normal': !isActive(item.path)
               }"
             >
@@ -144,7 +144,7 @@
   <!-- Overlay for mobile -->
   <div
     v-if="isOpen"
-    class="fixed inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm z-30 md:hidden transition-opacity duration-300"
+    class="fixed inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm z-30 lg:hidden transition-opacity duration-300"
     @click="$emit('close')"
   ></div>
 </template>

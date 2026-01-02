@@ -190,16 +190,27 @@ class AuditLog(models.Model):
         if not self.changes:
             return "No changes recorded"
 
-        before = self.changes.get('before', {})
-        after = self.changes.get('after', {})
+        # Ensure before and after are dictionaries, not None
+        before = self.changes.get('before') or {}
+        after = self.changes.get('after') or {}
+        
+        # Additional safety check: ensure they're actually dicts
+        if not isinstance(before, dict):
+            before = {}
+        if not isinstance(after, dict):
+            after = {}
 
         if not before and not after:
             return "No changes recorded"
 
         summary_parts = []
-        for key in set(list(before.keys()) + list(after.keys())):
-            old_value = before.get(key, 'N/A')
-            new_value = after.get(key, 'N/A')
+        # Safely get keys from both dicts
+        before_keys = list(before.keys()) if before else []
+        after_keys = list(after.keys()) if after else []
+        
+        for key in set(before_keys + after_keys):
+            old_value = before.get(key, 'N/A') if before else 'N/A'
+            new_value = after.get(key, 'N/A') if after else 'N/A'
             if old_value != new_value:
                 summary_parts.append(f"{key}: {old_value} → {new_value}")
 

@@ -17,6 +17,7 @@ import ScreenDetails from '../pages/screens/ScreenDetails.vue'
 // Templates
 import TemplatesList from '../pages/templates/TemplatesList.vue'
 import TemplateDetails from '../pages/templates/TemplateDetails.vue'
+import TemplateEditor from '../pages/templates/TemplateEditor.vue'
 
 // Contents
 import ContentsList from '../pages/contents/ContentsList.vue'
@@ -143,6 +144,18 @@ const routes = [
     path: '/templates/:id',
     name: 'template-details',
     component: TemplateDetails,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/templates/:id/edit',
+    name: 'template-editor',
+    component: TemplateEditor,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/templates/new/edit',
+    name: 'template-editor-new',
+    component: TemplateEditor,
     meta: { requiresAuth: true },
   },
   {

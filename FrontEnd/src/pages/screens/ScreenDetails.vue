@@ -1,206 +1,233 @@
 <template>
   <AppLayout>
-    <div v-if="screensStore.loading" class="text-center py-8">Loading...</div>
-    <div v-else-if="screensStore.error" class="text-center py-8 text-red-600">
-      {{ screensStore.error }}
+    <!-- Loading State -->
+    <div v-if="screensStore.loading && !screen" class="flex items-center justify-center min-h-[60vh]">
+      <div class="text-center">
+        <svg class="animate-spin h-12 w-12 text-primary mx-auto mb-4" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        <p class="text-muted">Loading screen details...</p>
+      </div>
     </div>
-    <div v-else-if="screen" class="space-y-6">
-      <div class="flex justify-between items-center">
+
+    <!-- Error State -->
+    <div v-else-if="screensStore.error && !screen" class="flex items-center justify-center min-h-[60vh]">
+      <div class="text-center backdrop-blur-md bg-gray-800/40 border border-white/10 rounded-2xl p-8">
+        <svg class="w-16 h-16 text-red-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <h3 class="text-xl font-semibold text-primary mb-2">Error Loading Screen</h3>
+        <p class="text-secondary mb-4">{{ screensStore.error }}</p>
+        <button @click="loadScreenData" class="btn-primary px-4 py-2 rounded-lg">Retry</button>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <div v-else-if="screen" class="space-y-6 pb-6">
+      <!-- Header -->
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 class="text-2xl font-bold text-primary">{{ screen.name }}</h1>
+          <h1 class="text-3xl font-bold text-primary mb-2">{{ screen.name || 'Unnamed Screen' }}</h1>
           <p class="text-secondary">{{ screen.device_id }}</p>
         </div>
-        <div class="flex gap-2">
-          <button
-            @click="showCommandModal = true"
-            class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            Send Command
-          </button>
-          <button
-            @click="showTemplateModal = true"
-            class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
-          >
-            Activate Template
-          </button>
-        </div>
-      </div>
-      
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <!-- General Info -->
-        <Card title="General Information">
-          <dl class="space-y-3">
-            <div>
-              <dt class="text-sm font-medium text-muted">Device ID</dt>
-              <dd class="mt-1 text-sm text-primary">{{ screen.device_id }}</dd>
-            </div>
-            <div>
-              <dt class="text-sm font-medium text-muted">Location</dt>
-              <dd class="mt-1 text-sm text-primary">{{ screen.location || 'N/A' }}</dd>
-            </div>
-            <div>
-              <dt class="text-sm font-medium text-muted">Status</dt>
-              <dd class="mt-1">
-                <span
-                  :class="[
-                    'px-2 py-1 rounded-full text-xs font-medium',
-                    getStatusClass(screen),
-                  ]"
-                >
-                  {{ getStatusText(screen) }}
-                </span>
-              </dd>
-            </div>
-            <div>
-              <dt class="text-sm font-medium text-muted">Last Heartbeat</dt>
-              <dd class="mt-1 text-sm text-primary">
-                {{ screen.last_heartbeat_at ? formatDate(screen.last_heartbeat_at) : 'Never' }}
-              </dd>
-            </div>
-            <div>
-              <dt class="text-sm font-medium text-muted">Active Template</dt>
-              <dd class="mt-1 text-sm text-primary">
-                {{ screen.active_template?.name || 'None' }}
-              </dd>
-            </div>
-          </dl>
-        </Card>
-        
-        <!-- Health Metrics -->
-        <Card title="Health Metrics">
-          <dl class="space-y-3">
-            <div>
-              <dt class="text-sm font-medium text-muted">CPU Usage</dt>
-              <dd class="mt-1">
-                <div class="flex items-center">
-                  <div class="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-2 mr-2">
-                    <div
-                      class="bg-blue-600 h-2 rounded-full"
-                      :style="{ width: `${healthMetrics.cpu_usage || 0}%` }"
-                    ></div>
-                  </div>
-                  <span class="text-sm text-primary">{{ healthMetrics.cpu_usage || 0 }}%</span>
-                </div>
-              </dd>
-            </div>
-            <div>
-              <dt class="text-sm font-medium text-muted">Memory Usage</dt>
-              <dd class="mt-1">
-                <div class="flex items-center">
-                  <div class="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-2 mr-2">
-                    <div
-                      class="bg-green-600 h-2 rounded-full"
-                      :style="{ width: `${healthMetrics.memory_usage || 0}%` }"
-                    ></div>
-                  </div>
-                  <span class="text-sm text-primary">{{ healthMetrics.memory_usage || 0 }}%</span>
-                </div>
-              </dd>
-            </div>
-            <div>
-              <dt class="text-sm font-medium text-muted">Latency</dt>
-              <dd class="mt-1 text-sm text-primary">
-                {{ healthMetrics.latency || 0 }}ms
-              </dd>
-            </div>
-            <div>
-              <dt class="text-sm font-medium text-muted">Brightness</dt>
-              <dd class="mt-1 text-sm text-primary">
-                {{ screen.brightness || 'N/A' }}
-              </dd>
-            </div>
-          </dl>
-        </Card>
-        
-        <!-- System Info -->
-        <Card title="System Information">
-          <dl class="space-y-3">
-            <div>
-              <dt class="text-sm font-medium text-muted">App Version</dt>
-              <dd class="mt-1 text-sm text-primary">{{ screen.app_version || 'N/A' }}</dd>
-            </div>
-            <div>
-              <dt class="text-sm font-medium text-muted">OS Version</dt>
-              <dd class="mt-1 text-sm text-primary">{{ screen.os_version || 'N/A' }}</dd>
-            </div>
-            <div>
-              <dt class="text-sm font-medium text-muted">Device Model</dt>
-              <dd class="mt-1 text-sm text-primary">{{ screen.device_model || 'N/A' }}</dd>
-            </div>
-            <div>
-              <dt class="text-sm font-medium text-muted">Screen Resolution</dt>
-              <dd class="mt-1 text-sm text-primary">
-                <span v-if="screen.screen_width && screen.screen_height">
-                  {{ screen.screen_width }}x{{ screen.screen_height }}
-                </span>
-                <span v-else>N/A</span>
-              </dd>
-            </div>
-            <div>
-              <dt class="text-sm font-medium text-muted">Last IP</dt>
-              <dd class="mt-1 text-sm text-primary">{{ screen.last_ip || 'N/A' }}</dd>
-            </div>
-          </dl>
-        </Card>
-      </div>
-      
-      <!-- Commands Queue -->
-      <Card title="Commands Queue">
-        <div v-if="!pendingCommands || pendingCommands.length === 0" class="text-center text-muted py-4">
-          No pending commands
-        </div>
-        <Table
-          v-else
-          :columns="commandColumns"
-          :data="pendingCommands || []"
-        />
-      </Card>
-      
-      <!-- Command History -->
-      <Card title="Command History">
-        <div class="space-y-2">
-          <div
-            v-for="cmd in commandHistory"
-            :key="cmd.id"
-            class="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg"
-          >
-            <div class="flex justify-between items-start">
-              <div>
-                <p class="font-medium text-primary">{{ cmd.type }}</p>
-                <p class="text-sm text-secondary">{{ cmd.name }}</p>
-              </div>
-              <span
-                :class="[
-                  'px-2 py-1 rounded-full text-xs font-medium',
-                  cmd.status === 'done' ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300' : '',
-                  cmd.status === 'failed' ? 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300' : '',
-                  cmd.status === 'pending' ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300' : '',
-                  cmd.status === 'executing' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300' : '',
-                ]"
-              >
-                {{ cmd.status }}
-              </span>
-            </div>
-            <p class="text-xs text-muted mt-2">
-              {{ formatDate(cmd.created_at) }}
-            </p>
+        <div class="flex items-center gap-2">
+          <!-- Online Status Indicator -->
+          <div class="flex items-center gap-2 px-4 py-2 rounded-lg backdrop-blur-md bg-gray-800/40 border border-white/10">
+            <div
+              :class="[
+                'w-3 h-3 rounded-full',
+                isOnline ? 'bg-green-500 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.8)]' : 'bg-gray-500',
+              ]"
+            ></div>
+            <span class="text-sm font-medium" :class="isOnline ? 'text-green-400' : 'text-gray-400'">
+              {{ isOnline ? 'Online' : 'Offline' }}
+            </span>
           </div>
         </div>
-      </Card>
-      
-      <!-- Logs -->
-      <Card title="Recent Logs">
-        <div class="space-y-2">
+      </div>
+
+      <!-- 3-Column Dashboard Layout -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+        <!-- Left Column: General Info -->
+        <div class="space-y-6">
+          <div class="backdrop-blur-md bg-gray-800/40 border border-white/10 rounded-2xl p-6">
+            <h2 class="text-lg font-semibold text-primary mb-4">General Information</h2>
+            <dl class="space-y-4">
+              <div>
+                <dt class="text-xs font-medium text-muted uppercase tracking-wider mb-1">Device ID</dt>
+                <dd class="text-sm text-primary font-mono">{{ screen.device_id }}</dd>
+              </div>
+              <div>
+                <dt class="text-xs font-medium text-muted uppercase tracking-wider mb-1">Name</dt>
+                <dd class="text-sm text-primary">
+                  <input
+                    v-if="editingName"
+                    v-model="editableName"
+                    @blur="handleSaveName"
+                    @keyup.enter="handleSaveName"
+                    @keyup.esc="cancelEditName"
+                    class="w-full px-2 py-1 bg-gray-900/50 border border-white/10 rounded text-primary focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                    autofocus
+                  />
+                  <span v-else @click="startEditName" class="cursor-pointer hover:text-blue-400 transition-colors">
+                    {{ screen.name || 'Unnamed Screen' }}
+                    <svg class="inline w-4 h-4 ml-1 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                  </span>
+                </dd>
+              </div>
+              <div>
+                <dt class="text-xs font-medium text-muted uppercase tracking-wider mb-1">IP Address</dt>
+                <dd class="text-sm text-primary font-mono">{{ screen.last_ip || 'N/A' }}</dd>
+              </div>
+              <div>
+                <dt class="text-xs font-medium text-muted uppercase tracking-wider mb-1">OS Version</dt>
+                <dd class="text-sm text-primary">{{ screen.os_version || 'N/A' }}</dd>
+              </div>
+              <div>
+                <dt class="text-xs font-medium text-muted uppercase tracking-wider mb-1">App Version</dt>
+                <dd class="text-sm text-primary">{{ screen.app_version || 'N/A' }}</dd>
+              </div>
+            </dl>
+          </div>
+        </div>
+
+        <!-- Center Column: Live Status & Metrics -->
+        <div class="space-y-6">
+          <!-- Virtual Monitor Preview -->
+          <div class="backdrop-blur-md bg-gray-800/40 border border-white/10 rounded-2xl p-6">
+            <h2 class="text-lg font-semibold text-primary mb-4">Live Preview</h2>
+            <VirtualMonitor
+              :active-template="screen.active_template"
+              :is-online="isOnline"
+              :loading="screenshotLoading"
+              @take-screenshot="handleTakeScreenshot"
+            />
+          </div>
+
+          <!-- Health Gauges -->
+          <div class="backdrop-blur-md bg-gray-800/40 border border-white/10 rounded-2xl p-6">
+            <h2 class="text-lg font-semibold text-primary mb-4">Health Metrics</h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
+              <HealthGauge :value="healthMetrics.cpu_usage || 0" label="CPU" />
+              <HealthGauge :value="healthMetrics.memory_usage || 0" label="Memory" />
+            </div>
+            <div class="mt-6 space-y-3">
+              <div class="flex items-center justify-between">
+                <span class="text-sm text-muted">Latency</span>
+                <span class="text-sm font-semibold text-primary">{{ healthMetrics.latency || 0 }}ms</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-sm text-muted">Last Heartbeat</span>
+                <div class="flex items-center gap-2">
+                  <div
+                    :class="[
+                      'w-2 h-2 rounded-full',
+                      isOnline ? 'bg-green-500 animate-pulse' : 'bg-gray-500',
+                    ]"
+                  ></div>
+                  <span class="text-sm text-primary">{{ formatLastHeartbeat(screen.last_heartbeat_at) }}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Column: Command Center -->
+        <div class="space-y-6">
+          <!-- Remote Actions -->
+          <div class="backdrop-blur-md bg-gray-800/40 border border-white/10 rounded-2xl p-6">
+            <h2 class="text-lg font-semibold text-primary mb-4">Remote Actions</h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <button
+                @click="handleRefresh"
+                class="px-4 py-2 bg-blue-600/80 hover:bg-blue-600 text-white rounded-lg transition-all duration-200 flex items-center justify-center gap-2 backdrop-blur-sm border border-blue-500/30"
+                :disabled="!isOnline || actionLoading"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                <span>Refresh</span>
+              </button>
+              <button
+                @click="handleReboot"
+                class="px-4 py-2 bg-amber-600/80 hover:bg-amber-600 text-white rounded-lg transition-all duration-200 flex items-center justify-center gap-2 backdrop-blur-sm border border-amber-500/30"
+                :disabled="!isOnline || actionLoading"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                <span>Reboot</span>
+              </button>
+              <button
+                @click="handleIdentify"
+                class="px-4 py-2 bg-purple-600/80 hover:bg-purple-600 text-white rounded-lg transition-all duration-200 flex items-center justify-center gap-2 backdrop-blur-sm border border-purple-500/30"
+                :disabled="!isOnline || actionLoading"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" />
+                </svg>
+                <span>Identify</span>
+              </button>
+              <button
+                @click="showTemplateModal = true"
+                class="px-4 py-2 bg-indigo-600/80 hover:bg-indigo-600 text-white rounded-lg transition-all duration-200 flex items-center justify-center gap-2 backdrop-blur-sm border border-indigo-500/30"
+                :disabled="actionLoading"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>Template</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Live Command Queue -->
+          <div class="backdrop-blur-md bg-gray-800/40 border border-white/10 rounded-2xl p-6">
+            <h2 class="text-lg font-semibold text-primary mb-4">Command Queue</h2>
+            <div class="max-h-96 overflow-y-auto custom-scrollbar">
+              <CommandTimeline :commands="allCommands" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Logs (Full Width) -->
+      <div class="backdrop-blur-md bg-gray-800/40 border border-white/10 rounded-2xl p-6">
+        <h2 class="text-lg font-semibold text-primary mb-4">Recent Logs</h2>
+        <div class="max-h-64 overflow-y-auto custom-scrollbar space-y-2">
           <div
             v-for="log in recentLogs"
             :key="log.id"
-            class="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg"
+            class="p-3 bg-gray-900/50 rounded-lg border border-white/5 hover:bg-gray-900/70 transition-colors"
           >
             <p class="text-sm text-primary">{{ log.message || `${log.status} - ${formatDate(log.recorded_at || log.created_at)}` }}</p>
+            <p class="text-xs text-muted mt-1">{{ formatDate(log.recorded_at || log.created_at) }}</p>
+          </div>
+          <div v-if="recentLogs.length === 0" class="text-center text-muted py-8">
+            <p class="text-sm">No logs available</p>
           </div>
         </div>
-      </Card>
-      
+      </div>
+
+      <!-- Delete Screen Button (Danger Zone) -->
+      <div class="backdrop-blur-md bg-gray-800/40 border border-red-500/30 rounded-2xl p-6">
+        <div class="flex items-center justify-between">
+          <div>
+            <h3 class="text-lg font-semibold text-red-400 mb-1">Danger Zone</h3>
+            <p class="text-sm text-muted">Permanently remove this screen from your system</p>
+          </div>
+          <button
+            @click="handleDeleteScreen"
+            class="px-6 py-2 border-2 border-red-500/50 hover:bg-red-500/20 hover:border-red-500 text-red-400 rounded-lg transition-all duration-200 font-semibold"
+          >
+            Delete Screen
+          </button>
+        </div>
+      </div>
+
       <!-- Modals -->
       <Modal :show="showCommandModal" title="Send Command" @close="showCommandModal = false">
         <div class="space-y-4">
@@ -245,7 +272,7 @@
           </button>
         </template>
       </Modal>
-      
+
       <Modal :show="showTemplateModal" title="Activate Template" @close="showTemplateModal = false">
         <div class="space-y-4">
           <div>
@@ -274,32 +301,42 @@
         </template>
       </Modal>
     </div>
+
+    <!-- Delete Confirmation Modal -->
+    <DeleteConfirmation />
   </AppLayout>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { smartUpdateArray } from '@/utils/deepCompare'
-import { useRoute } from 'vue-router'
 import { useScreensStore } from '@/stores/screens'
 import { useTemplatesStore } from '@/stores/templates'
 import { useCommandsStore } from '@/stores/commands'
 import { useLogsStore } from '@/stores/logs'
 import { useNotification } from '@/composables/useNotification'
+import { useDeleteConfirmation } from '@/composables/useDeleteConfirmation'
 import AppLayout from '@/components/layout/AppLayout.vue'
-import Card from '@/components/common/Card.vue'
-import Table from '@/components/common/Table.vue'
 import Modal from '@/components/common/Modal.vue'
+import DeleteConfirmation from '@/components/common/DeleteConfirmation.vue'
+import HealthGauge from '@/components/screens/HealthGauge.vue'
+import VirtualMonitor from '@/components/screens/VirtualMonitor.vue'
+import CommandTimeline from '@/components/screens/CommandTimeline.vue'
 
 const route = useRoute()
+const router = useRouter()
 const screensStore = useScreensStore()
 const templatesStore = useTemplatesStore()
 const commandsStore = useCommandsStore()
 const logsStore = useLogsStore()
 const notify = useNotification()
+const { confirmDelete } = useDeleteConfirmation()
 
 const screen = computed(() => screensStore.currentScreen)
 const templates = computed(() => templatesStore.templates)
+const isOnline = computed(() => screensStore.getScreenStatus(screen.value) === 'online')
+
 const pendingCommands = ref([])
 const commandHistory = ref([])
 const recentLogs = ref([])
@@ -311,6 +348,10 @@ const healthMetrics = ref({
 
 const showCommandModal = ref(false)
 const showTemplateModal = ref(false)
+const editingName = ref(false)
+const editableName = ref('')
+const actionLoading = ref(false)
+const screenshotLoading = ref(false)
 
 const commandForm = ref({
   type: 'restart',
@@ -323,46 +364,75 @@ const templateForm = ref({
   sync_content: true,
 })
 
-/**
- * Get status class for screen badge
- */
-const getStatusClass = (screen) => {
-  if (!screen) return 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300'
-  const status = screensStore.getScreenStatus(screen)
-  if (status === 'online') {
-    return 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300'
-  } else if (status === 'connecting') {
-    return 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300'
-  } else {
-    return 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300'
-  }
-}
+// Combine pending and recent commands for timeline
+const allCommands = computed(() => {
+  return [...pendingCommands.value, ...commandHistory.value].sort((a, b) => {
+    return new Date(b.created_at) - new Date(a.created_at)
+  })
+})
 
-/**
- * Get status text for screen
- */
-const getStatusText = (screen) => {
-  if (!screen) return 'Offline'
-  const status = screensStore.getScreenStatus(screen)
-  if (status === 'online') {
-    return 'Online'
-  } else if (status === 'connecting') {
-    return 'Connecting...'
-  } else {
-    return 'Offline'
-  }
-}
+let refreshInterval = null
 
-const commandColumns = [
-  { key: 'type', label: 'Type' },
-  { key: 'name', label: 'Name' },
-  { key: 'status', label: 'Status' },
-  { key: 'created_at', label: 'Created' },
-]
+// Fix route parameter handling - use route.params.id
+const getScreenId = () => {
+  // Try route.params.id first (standard Vue Router param)
+  if (route.params.id) {
+    return route.params.id
+  }
+  // Fallback to route.query.id if params not available
+  if (route.query.id) {
+    return route.query.id
+  }
+  return null
+}
 
 const formatDate = (dateString) => {
   if (!dateString) return 'N/A'
   return new Date(dateString).toLocaleString()
+}
+
+const formatLastHeartbeat = (dateString) => {
+  if (!dateString) return 'Never'
+  const date = new Date(dateString)
+  const now = new Date()
+  const diffMs = now - date
+  const diffMins = Math.floor(diffMs / 60000)
+  const diffSecs = Math.floor((diffMs % 60000) / 1000)
+  
+  if (diffMins < 1) {
+    return `${diffSecs}s ago`
+  } else if (diffMins < 60) {
+    return `${diffMins}m ago`
+  } else {
+    const diffHours = Math.floor(diffMins / 60)
+    return `${diffHours}h ago`
+  }
+}
+
+const startEditName = () => {
+  editingName.value = true
+  editableName.value = screen.value?.name || ''
+}
+
+const cancelEditName = () => {
+  editingName.value = false
+  editableName.value = ''
+}
+
+const handleSaveName = async () => {
+  if (!editableName.value.trim()) {
+    cancelEditName()
+    return
+  }
+  
+  try {
+    await screensStore.updateScreen(screen.value.id, { name: editableName.value.trim() })
+    editingName.value = false
+    notify.success('Screen name updated')
+  } catch (error) {
+    const errorMsg = error.response?.data?.detail || error.response?.data?.message || error.message || 'Failed to update name'
+    notify.error(errorMsg)
+  }
 }
 
 const handleSendCommand = async () => {
@@ -393,7 +463,7 @@ const handleSendCommand = async () => {
 
 const handleActivateTemplate = async () => {
   try {
-    const response = await templatesStore.activateOnScreen(
+    await templatesStore.activateOnScreen(
       templateForm.value.template_id,
       screen.value.id,
       templateForm.value.sync_content
@@ -403,91 +473,212 @@ const handleActivateTemplate = async () => {
     showTemplateModal.value = false
     templateForm.value = { template_id: '', sync_content: true }
     
-    // CRITICAL: Update screen immediately from response data if available
-    // This ensures UI shows active_template without waiting for fetch
-    if (response && response.screen) {
-      // Screen was already updated in templates store, but refresh to be sure
-      await screensStore.fetchScreen(screen.value.id)
-    } else {
-      // Fallback: Fetch screen if response doesn't include screen data
-      await screensStore.fetchScreen(screen.value.id)
-    }
+    // Refresh screen data
+    await screensStore.fetchScreen(screen.value.id)
   } catch (error) {
     const errorMsg = error.response?.data?.detail || error.response?.data?.message || error.message || 'Failed to activate template'
     notify.error(errorMsg)
   }
 }
 
+const handleRefresh = async () => {
+  actionLoading.value = true
+  try {
+    await commandsStore.createCommand({
+      screen_id: screen.value.id,
+      type: 'refresh',
+      payload: {},
+      priority: 5,
+    })
+    notify.success('Refresh command sent')
+    await loadCommands()
+  } catch (error) {
+    const errorMsg = error.response?.data?.detail || error.response?.data?.message || error.message || 'Failed to send refresh command'
+    notify.error(errorMsg)
+  } finally {
+    actionLoading.value = false
+  }
+}
+
+const handleReboot = async () => {
+  actionLoading.value = true
+  try {
+    await commandsStore.createCommand({
+      screen_id: screen.value.id,
+      type: 'restart',
+      payload: {},
+      priority: 8,
+    })
+    notify.success('Reboot command sent')
+    await loadCommands()
+  } catch (error) {
+    const errorMsg = error.response?.data?.detail || error.response?.data?.message || error.message || 'Failed to send reboot command'
+    notify.error(errorMsg)
+  } finally {
+    actionLoading.value = false
+  }
+}
+
+const handleIdentify = async () => {
+  actionLoading.value = true
+  try {
+    await commandsStore.createCommand({
+      screen_id: screen.value.id,
+      type: 'display_message',
+      payload: { message: 'This screen is being identified' },
+      priority: 7,
+    })
+    notify.success('Identify command sent')
+    await loadCommands()
+  } catch (error) {
+    const errorMsg = error.response?.data?.detail || error.response?.data?.message || error.message || 'Failed to send identify command'
+    notify.error(errorMsg)
+  } finally {
+    actionLoading.value = false
+  }
+}
+
+const handleTakeScreenshot = async () => {
+  screenshotLoading.value = true
+  try {
+    await commandsStore.createCommand({
+      screen_id: screen.value.id,
+      type: 'custom',
+      payload: { action: 'screenshot' },
+      priority: 6,
+    })
+    notify.success('Screenshot command sent')
+    await loadCommands()
+  } catch (error) {
+    const errorMsg = error.response?.data?.detail || error.response?.data?.message || error.message || 'Failed to send screenshot command'
+    notify.error(errorMsg)
+  } finally {
+    screenshotLoading.value = false
+  }
+}
+
+const handleDeleteScreen = async () => {
+  try {
+    await confirmDelete(
+      screen.value.id,
+      async (id) => {
+        await screensStore.deleteScreen(id)
+        notify.success('Screen deleted successfully')
+        router.push({ name: 'screens' })
+      },
+      {
+        title: 'Unpair Screen?',
+        message: 'Are you sure you want to unpair this screen? This action is permanent and cannot be undone.',
+        itemName: screen.value.name || screen.value.device_id,
+        confirmText: 'Yes, Unpair',
+        cancelText: 'Cancel',
+      }
+    )
+  } catch (error) {
+    if (error.message !== 'Delete cancelled') {
+      const errorMsg = error.response?.data?.detail || error.response?.data?.message || error.message || 'Failed to delete screen'
+      notify.error(errorMsg)
+    }
+  }
+}
+
 const loadCommands = async () => {
+  if (!screen.value?.id) return
+  
   try {
     const response = await commandsStore.fetchCommands({ screen: screen.value.id })
-    // Backend returns paginated results or array
     const commands = response.results || response.data?.results || response.data || response || []
     
-    // Smart update: Only update if commands changed
-    const newPending = commands.filter(c => c.status === 'pending')
-    const newHistory = commands.filter(c => c.status !== 'pending').slice(0, 10)
+    const newPending = commands.filter(c => c.status === 'pending' || c.status === 'executing')
+    const newHistory = commands.filter(c => c.status !== 'pending' && c.status !== 'executing').slice(0, 10)
     
     pendingCommands.value = smartUpdateArray(pendingCommands.value || [], newPending, 'id')
     commandHistory.value = smartUpdateArray(commandHistory.value || [], newHistory, 'id')
   } catch (error) {
-    const errorMsg = error.response?.data?.detail || error.response?.data?.message || error.message
-    notify.error(errorMsg || 'Failed to load commands')
+    console.error('Failed to load commands:', error)
   }
 }
 
 const loadLogs = async () => {
+  if (!screen.value?.id) return
+  
   try {
     const response = await logsStore.fetchScreenStatusLogs({ screen_id: screen.value.id, page_size: 10 })
-    // Backend returns paginated results or array
     const newLogs = response.results || response.data?.results || response.data || response || []
     
-    // Smart update: Only update if logs changed
     recentLogs.value = smartUpdateArray(recentLogs.value || [], newLogs, 'id')
     
-    // Get latest health metrics from most recent log (only update if changed)
+    // Update health metrics from most recent log
     if (recentLogs.value.length > 0) {
       const latestLog = recentLogs.value[0]
-      const newMetrics = {
+      healthMetrics.value = {
         cpu_usage: latestLog.cpu_usage || 0,
         memory_usage: latestLog.memory_usage || 0,
         latency: latestLog.heartbeat_latency || 0,
       }
-      // Only update if metrics actually changed
-      if (JSON.stringify(healthMetrics.value) !== JSON.stringify(newMetrics)) {
-        healthMetrics.value = newMetrics
-      }
     }
   } catch (error) {
-    const errorMsg = error.response?.data?.detail || error.response?.data?.message || error.message
-    notify.error(errorMsg || 'Failed to load logs')
+    console.error('Failed to load logs:', error)
   }
 }
 
+const loadScreenData = async () => {
+  const screenId = getScreenId()
+  if (!screenId) {
+    notify.error('Screen ID not found in route')
+    return
+  }
+  
+  try {
+    await screensStore.fetchScreen(screenId)
+    await templatesStore.fetchTemplates()
+    await loadCommands()
+    await loadLogs()
+  } catch (error) {
+    console.error('Failed to load screen data:', error)
+  }
+}
+
+// Real-time polling every 20 seconds
+const startPolling = () => {
+  if (refreshInterval) {
+    clearInterval(refreshInterval)
+  }
+  
+  refreshInterval = setInterval(async () => {
+    const screenId = getScreenId()
+    if (screenId && screen.value?.id) {
+      try {
+        await screensStore.fetchScreen(screenId)
+        await loadCommands()
+        await loadLogs()
+      } catch (error) {
+        console.error('Failed to refresh screen data:', error)
+      }
+    }
+  }, 20000) // 20 seconds
+}
+
+// Watch for route changes
+watch(() => route.params.id, async (newId) => {
+  if (newId) {
+    await loadScreenData()
+    startPolling()
+  }
+}, { immediate: false })
+
 onMounted(async () => {
-  const screenId = route.params.id
-  await screensStore.fetchScreen(screenId)
-  await templatesStore.fetchTemplates()
-  await loadCommands()
-  await loadLogs()
-  
-  // Refresh every 60 seconds (reduced polling frequency)
-  // Note: Real-time updates should come via WebSocket when available
-  const refreshInterval = setInterval(async () => {
-    try {
-      await screensStore.fetchScreen(screenId)
-      await loadCommands()
-      await loadLogs()
-    } catch (error) {
-      console.error('Failed to refresh screen data:', error)
-    }
-  }, 60000) // Increased from 30s to 60s
-  
-  // Cleanup interval on unmount
-  onUnmounted(() => {
-    if (refreshInterval) {
-      clearInterval(refreshInterval)
-    }
-  })
+  await loadScreenData()
+  startPolling()
+})
+
+onUnmounted(() => {
+  if (refreshInterval) {
+    clearInterval(refreshInterval)
+  }
 })
 </script>
+
+<style scoped>
+/* Additional custom styles if needed */
+</style>

@@ -10,12 +10,13 @@ This document outlines planned improvements, fixes, and enhancements for the Scr
 
 - ✅ Fixed Content-Type header boundary issue
 - ❌ Investigate remaining 400 errors
-- ❌ Improve error messages and logging
+- ❌ Improve error messages and logging (prompt in line)
 - ❌ Add comprehensive file validation
 - ❌ Fix file path generation edge cases
 - ❌ Test with various file types and sizes
 - ❌ Add retry logic for failed uploads
 - ❌ Verify ContentStorageManager handles all edge cases
+- ❌ Add file upload progress indicators in frontend
 
 **Impact**: Users cannot reliably upload content, blocking core functionality.
 
@@ -32,6 +33,7 @@ This document outlines planned improvements, fixes, and enhancements for the Scr
 - ❌ Improve S3 integration and testing
 - ❌ Add storage migration tools
 - ❌ Document storage configuration thoroughly
+- ❌ Verify MEDIA_ROOT directory creation on startup
 
 **Impact**: Prevents storage issues and makes S3 integration reliable.
 
@@ -46,6 +48,7 @@ This document outlines planned improvements, fixes, and enhancements for the Scr
 - ❌ Add preview caching
 - ❌ Support for video previews
 - ❌ Add preview error handling with user-friendly messages
+- ❌ Verify file accessibility after upload
 
 **Impact**: Users cannot verify uploaded content before activating on screens.
 
@@ -53,15 +56,17 @@ This document outlines planned improvements, fixes, and enhancements for the Scr
 **Priority**: 🔴 High  
 **Status**: Partially fixed
 
-- ✅ Added multiple credential extraction methods
+- ✅ Added multiple credential extraction methods (body, query params, env vars)
 - ✅ Added request body parsing fallbacks
 - ✅ ScreenConnectionRegistry for WebSocket management
+- ✅ IoT endpoints with @authentication_classes([]) and @permission_classes([AllowAny])
 - ❌ Fully resolve 401 authentication issues
 - ❌ Test all credential scenarios (screen_id, auth_token/secret_key, URL params, env vars)
 - ❌ Add comprehensive logging and monitoring
 - ❌ Improve error messages for debugging
 - ❌ Add automatic retry with exponential backoff
 - ❌ Simplify credential extraction logic
+- ❌ Add heartbeat authentication test suite
 
 **Impact**: Screens cannot reliably report status, breaking monitoring and command execution.
 
@@ -71,7 +76,7 @@ This document outlines planned improvements, fixes, and enhancements for the Scr
 
 - ✅ Pairing session creation and binding
 - ✅ Screen credential generation
-- ✅ Atomic transaction for pairing
+- ✅ Atomic transaction for pairing (select_for_update)
 - ✅ Pairing session cleanup management command
 - ❌ Improve pairing expiration handling
 - ❌ Add pairing session cleanup automation (scheduled task)
@@ -89,8 +94,13 @@ This document outlines planned improvements, fixes, and enhancements for the Scr
 **Status**: Models exist, rendering incomplete
 
 - ✅ Template, Layer, Widget, Content models fully implemented
-- ✅ Image widget rendering implemented
-- ❌ Implement all widget type renderers (video, text, webview, chart, clock)
+- ✅ Image widget rendering implemented (ImageWidget.vue)
+- ✅ VideoWidget.vue and TextWidget.vue components exist
+- ❌ Complete video widget rendering implementation
+- ❌ Complete text widget rendering implementation
+- ❌ Implement webview widget renderer
+- ❌ Implement chart widget renderer
+- ❌ Implement clock widget renderer
 - ❌ Add widget animation support
 - ❌ Implement layer animations
 - ❌ Add widget positioning tools in UI
@@ -111,6 +121,7 @@ This document outlines planned improvements, fixes, and enhancements for the Scr
 - ❌ Create widget data binding UI
 - ❌ Add caching for external data sources
 - ❌ Document data field API
+- ❌ Add data source authentication/authorization
 
 **Impact**: Templates cannot display dynamic/real-time data (prices, menus, weather, etc.).
 
@@ -118,14 +129,15 @@ This document outlines planned improvements, fixes, and enhancements for the Scr
 **Priority**: 🟡 Medium  
 **Status**: Basic implementation exists
 
-- ✅ Responsive scaling implemented
-- ✅ useResponsiveScaling composable exists
+- ✅ Responsive scaling implemented (useResponsiveScaling composable)
+- ✅ CSS transform: scale() for aspect ratio preservation
 - ❌ Improve scaling algorithm for large displays (8K+)
 - ❌ Add display-specific optimizations
 - ❌ Implement adaptive quality based on screen size
 - ❌ Add performance monitoring
 - ❌ Optimize rendering for low-end devices
 - ❌ Add display calibration tools
+- ❌ Improve template container sizing logic
 
 **Impact**: May not render optimally on very large displays or low-end devices.
 
@@ -141,6 +153,7 @@ This document outlines planned improvements, fixes, and enhancements for the Scr
 - ❌ Create metrics visualization (charts, graphs)
 - ❌ Add performance benchmarking
 - ❌ Document metrics collection
+- ❌ Add metrics export functionality
 
 **Impact**: Limited visibility into screen performance and health.
 
@@ -148,7 +161,7 @@ This document outlines planned improvements, fixes, and enhancements for the Scr
 **Priority**: 🟡 Medium  
 **Status**: Basic scheduling exists
 
-- ✅ Basic scheduling with repeat types
+- ✅ Basic scheduling with repeat types (none, daily, weekly, monthly)
 - ✅ SecureRecurrenceCalculator for accurate recurrence
 - ✅ Schedule conflict detection
 - ❌ Improve schedule conflict resolution UI
@@ -157,6 +170,7 @@ This document outlines planned improvements, fixes, and enhancements for the Scr
 - ❌ Add schedule templates
 - ❌ Improve recurrence calculation accuracy for edge cases
 - ❌ Add schedule analytics
+- ❌ Add schedule execution monitoring
 
 **Impact**: Scheduling may not work correctly for complex scenarios or timezone-aware schedules.
 
@@ -171,6 +185,7 @@ This document outlines planned improvements, fixes, and enhancements for the Scr
 - ❌ Add template export/import (JSON)
 - ❌ Create template versioning UI
 - ❌ Add template collaboration features
+- ❌ Add template thumbnail generation
 
 **Impact**: Users must create templates via forms without visual feedback.
 
@@ -180,14 +195,15 @@ This document outlines planned improvements, fixes, and enhancements for the Scr
 **Priority**: 🔴 High  
 **Status**: Not started
 
-- ❌ Database optimization (indexes, query optimization)
+- ❌ Database optimization (indexes, query optimization, select_related/prefetch_related)
 - ❌ Implement database connection pooling
 - ❌ Add horizontal scaling support
 - ❌ Implement load balancing
-- ❌ Add caching layers (Redis for sessions, templates)
+- ❌ Add caching layers (Redis for sessions, templates, content)
 - ❌ Optimize media delivery (CDN integration)
 - ❌ Add database read replicas
 - ❌ Implement message queue for async operations (Celery already configured)
+- ❌ Add database query monitoring and optimization
 
 **Impact**: System may not handle large numbers of screens/users efficiently.
 
@@ -203,6 +219,7 @@ This document outlines planned improvements, fixes, and enhancements for the Scr
 - ❌ Create screen assignment workflows
 - ❌ Add screen location mapping (geographic)
 - ❌ Implement screen hierarchy (parent/child screens)
+- ❌ Add screen search and filtering
 
 **Impact**: Managing many screens is cumbersome without grouping/organization.
 
@@ -218,6 +235,7 @@ This document outlines planned improvements, fixes, and enhancements for the Scr
 - ❌ Create schedule templates
 - ❌ Implement conditional scheduling (based on events)
 - ❌ Add schedule conflict prevention UI
+- ❌ Add schedule execution history
 
 **Impact**: Limited scheduling flexibility may not meet all use cases.
 
@@ -233,6 +251,7 @@ This document outlines planned improvements, fixes, and enhancements for the Scr
 - ❌ Create report scheduling
 - ❌ Add data visualization improvements
 - ❌ Implement analytics API
+- ❌ Add real-time analytics
 
 **Impact**: Limited insights into system usage and performance.
 
@@ -247,6 +266,7 @@ This document outlines planned improvements, fixes, and enhancements for the Scr
 - ❌ Add offline diagnostics
 - ❌ Create offline playback mode
 - ❌ Document offline behavior
+- ❌ Add offline content versioning
 
 **Impact**: Screens may not display content when network is unavailable.
 
@@ -261,6 +281,7 @@ This document outlines planned improvements, fixes, and enhancements for the Scr
 - ❌ Webhook support for events
 - ❌ Third-party integrations
 - ❌ Plugin system for custom widgets
+- ❌ Mobile app for screen management
 
 **Impact**: Limited customization and integration options.
 
@@ -274,6 +295,7 @@ This document outlines planned improvements, fixes, and enhancements for the Scr
 - Add shared utilities module
 - Better organization of serializers
 - Separate business logic from views (service layer pattern)
+- Add API versioning structure (v1/, v2/)
 
 ### Media Storage Per-User
 **Priority**: 🟡 Medium  
@@ -284,6 +306,7 @@ This document outlines planned improvements, fixes, and enhancements for the Scr
 - ❌ Implement storage cleanup for deleted users
 - ❌ Add storage usage reporting
 - ❌ Implement storage migration tools
+- ❌ Add storage usage dashboard
 
 ### API Consistency
 **Priority**: 🟡 Medium  
@@ -294,6 +317,7 @@ This document outlines planned improvements, fixes, and enhancements for the Scr
 - Add API versioning (v1, v2, etc.)
 - Improve API documentation (beyond Swagger)
 - Add API deprecation strategy
+- Standardize authentication methods across endpoints
 
 ### Validation & Error Handling
 **Priority**: 🟡 Medium  
@@ -304,6 +328,7 @@ This document outlines planned improvements, fixes, and enhancements for the Scr
 - Add validation error aggregation
 - Improve client-side validation
 - Add server-side validation testing
+- Add validation error logging
 
 ### Security Improvements
 **Priority**: 🔴 High  
@@ -311,6 +336,7 @@ This document outlines planned improvements, fixes, and enhancements for the Scr
 
 - ✅ JWT authentication, RBAC, account lockout implemented
 - ✅ Command security (HMAC signing, nonce protection)
+- ✅ Screen authentication via auth_token/secret_key or screen_id
 - ❌ Add rate limiting per user (currently per role)
 - ❌ Implement API key authentication for screens (alternative to JWT)
 - ❌ Add request signing for screen commands (enhance existing)
@@ -318,6 +344,7 @@ This document outlines planned improvements, fixes, and enhancements for the Scr
 - ❌ Add security headers (CSP, HSTS, etc.)
 - ❌ Implement audit log retention policies
 - ❌ Add security monitoring and alerting
+- ❌ Add input sanitization for all user inputs
 
 ### Testing
 **Priority**: 🟡 Medium  
@@ -329,6 +356,7 @@ This document outlines planned improvements, fixes, and enhancements for the Scr
 - Create test data fixtures
 - Add performance/load testing
 - Document testing strategy
+- Add automated testing in CI/CD
 
 ### Documentation
 **Priority**: 🟡 Medium  
@@ -341,6 +369,7 @@ This document outlines planned improvements, fixes, and enhancements for the Scr
 - ❌ Document database schema
 - ❌ Create troubleshooting guide
 - ❌ Add architecture diagrams
+- ❌ Document environment variables
 
 ### Database Migration Strategy
 **Priority**: 🟡 Medium  
@@ -351,6 +380,7 @@ This document outlines planned improvements, fixes, and enhancements for the Scr
 - Create migration testing strategy
 - Document schema changes
 - Add migration monitoring
+- Add migration backup procedures
 
 ### Performance Optimization
 **Priority**: 🟡 Medium  
@@ -362,6 +392,7 @@ This document outlines planned improvements, fixes, and enhancements for the Scr
 - Add lazy loading where appropriate
 - Implement pagination consistently
 - Add performance monitoring
+- Optimize WebSocket message handling
 
 ### WebSocket Reliability
 **Priority**: 🟡 Medium  
@@ -373,6 +404,7 @@ This document outlines planned improvements, fixes, and enhancements for the Scr
 - ❌ Add WebSocket health monitoring
 - ❌ Implement WebSocket fallback strategies
 - ❌ Add WebSocket message queuing for offline screens
+- ❌ Add WebSocket connection pooling
 
 ---
 

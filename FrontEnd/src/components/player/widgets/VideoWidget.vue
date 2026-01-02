@@ -12,10 +12,10 @@
         :data-content-id="content.id"
         class="content-video"
         :style="videoStyle"
-        :autoplay="shouldAutoplay(content)"
-        :muted="shouldMute(content)"
-        :loop="shouldLoop(content)"
-        :playsinline="true"
+        autoplay
+        loop
+        muted
+        playsinline
         @loadedmetadata="onVideoLoaded"
         @play="onVideoPlay"
         @pause="onVideoPause"
@@ -88,77 +88,23 @@ const contentStyle = computed(() => {
 
 /**
  * Video style with responsive object-fit
- * CRITICAL FIX: Changed default from 'contain' to 'cover'
- * 'contain' creates empty black spaces when aspect ratios don't match
- * 'cover' fills entire widget area, cropping edges if needed (no black bars)
+ * Applies same logic as images: width/height 100% with object-fit contain/cover based on preference
  */
 const videoStyle = computed(() => {
   const contentJson = props.widget.content_json || {}
-  // CRITICAL: Default to 'cover' instead of 'contain' to prevent black spaces
-  // User can still override via content_json.objectFit if needed
-  const objectFit = contentJson.objectFit || 'cover'
+  // Default to 'contain' to fit without cropping, user can override to 'cover' via content_json.objectFit
+  const objectFit = contentJson.objectFit || 'contain'
   
   return {
     width: '100%',
     height: '100%',
     objectFit: objectFit,
     display: 'block',
-    // Center the video (important for cover mode - centers the crop area)
-    objectPosition: 'center center',
-    // Prevent video distortion
-    imageRendering: 'auto',
-    // Smooth scaling
-    imageRendering: '-webkit-optimize-contrast'
+    // Center the video (important for both contain and cover modes)
+    objectPosition: 'center center'
   }
 })
 
-/**
- * Determine if video should autoplay
- * Priority: content.autoplay > content_json.autoplay > widget.content_json.autoplay > true (default)
- */
-const shouldAutoplay = (content) => {
-  if (content.autoplay !== undefined) {
-    return content.autoplay !== false
-  }
-  if (content.content_json?.autoplay !== undefined) {
-    return content.content_json.autoplay !== false
-  }
-  if (props.widget.content_json?.autoplay !== undefined) {
-    return props.widget.content_json.autoplay !== false
-  }
-  // Default: autoplay for digital signage
-  return true
-}
-
-/**
- * Determine if video should be muted
- * Priority: content_json.muted > widget.content_json.muted > true (default for autoplay)
- */
-const shouldMute = (content) => {
-  if (content.content_json?.muted !== undefined) {
-    return content.content_json.muted !== false
-  }
-  if (props.widget.content_json?.muted !== undefined) {
-    return props.widget.content_json.muted !== false
-  }
-  // Default: muted for autoplay (required by browsers)
-  return true
-}
-
-/**
- * Determine if video should loop
- * Priority: content_json.loop > widget.content_json.loop > true (default for digital signage)
- */
-const shouldLoop = (content) => {
-  if (content.content_json?.loop !== undefined) {
-    return content.content_json.loop !== false
-  }
-  if (props.widget.content_json?.loop !== undefined) {
-    return props.widget.content_json.loop !== false
-  }
-  // Default: loop for digital signage
-  return true
-}
 
 const onVideoLoaded = (event) => {
   const video = event.target
@@ -173,12 +119,10 @@ const onVideoLoaded = (event) => {
       duration: video.duration
     })
     
-    // Try to play if autoplay is enabled
-    if (shouldAutoplay(props.widget.contents?.find(c => c.id === contentId))) {
-      video.play().catch(err => {
-        console.warn(`[VideoWidget] Autoplay failed for content ${contentId}:`, err)
-      })
-    }
+    // Try to play (autoplay attribute is set, but we also try programmatically as fallback)
+    video.play().catch(err => {
+      console.warn(`[VideoWidget] Autoplay failed for content ${contentId}:`, err)
+    })
   }
 }
 
@@ -269,12 +213,9 @@ const onVideoError = (event) => {
 .content-video {
   width: 100%;
   height: 100%;
-  /* CRITICAL FIX: Changed from 'contain' to 'cover'
-     'contain' creates empty black spaces when aspect ratios don't match widget
-     'cover' fills entire widget, cropping edges if needed (eliminates black spaces) */
-  object-fit: cover;
+  /* Responsive scaling: object-fit is set via inline style (contain/cover based on preference) */
   display: block;
-  /* Center the video - important for cover mode to center the visible crop area */
+  /* Center the video - important for both contain and cover modes */
   object-position: center center;
   /* Hardware acceleration for smooth playback */
   backface-visibility: hidden;
@@ -286,7 +227,6 @@ const onVideoError = (event) => {
   -khtml-user-drag: none;
   -moz-user-drag: none;
   -o-user-drag: none;
-  user-drag: none;
   pointer-events: auto;
   /* Video rendering optimization */
   image-rendering: auto;
@@ -300,7 +240,7 @@ const onVideoError = (event) => {
   outline: none;
 }
 
-/* Hide video controls for digital signage */
+/* Hide video controls completely for digital signage */
 .content-video::-webkit-media-controls {
   display: none !important;
 }
@@ -310,6 +250,24 @@ const onVideoError = (event) => {
 }
 
 .content-video::-webkit-media-controls-panel {
+  display: none !important;
+}
+
+.content-video::-webkit-media-controls-play-button {
+  display: none !important;
+}
+
+.content-video::-webkit-media-controls-start-playback-button {
+  display: none !important;
+}
+
+/* Hide controls for Firefox */
+.content-video::-moz-media-controls {
+  display: none !important;
+}
+
+/* Hide controls for other browsers */
+.content-video::-ms-media-controls {
   display: none !important;
 }
 </style>

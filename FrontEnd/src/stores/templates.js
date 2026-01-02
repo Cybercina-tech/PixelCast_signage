@@ -80,6 +80,41 @@ export const useTemplatesStore = defineStore('templates', {
         this.loading = false
       }
     },
+    async duplicateTemplate(templateId) {
+      this.loading = true
+      this.error = null
+      try {
+        // Fetch the full template details
+        // If template is already in store, use it; otherwise fetch
+        let originalTemplate = this.templates.find(t => t.id === templateId)
+        if (!originalTemplate) {
+          originalTemplate = await this.fetchTemplate(templateId)
+        }
+        
+        // Create duplicate with "Copy of" naming
+        const duplicateData = {
+          name: `Copy of ${originalTemplate.name}`,
+          description: originalTemplate.description || '',
+          width: originalTemplate.width,
+          height: originalTemplate.height,
+          orientation: originalTemplate.orientation || 'landscape',
+          is_active: false, // Duplicates start as inactive
+          config_json: originalTemplate.config_json || {},
+        }
+        
+        const newTemplate = await this.createTemplate(duplicateData)
+        
+        // Note: Layers and widgets are not duplicated automatically
+        // User can manually recreate them in the template editor if needed
+        
+        return newTemplate
+      } catch (error) {
+        this.error = error.response?.data?.detail || error.response?.data?.message || error.message
+        throw error
+      } finally {
+        this.loading = false
+      }
+    },
     async updateTemplate(id, data) {
       this.loading = true
       this.error = null

@@ -12,19 +12,22 @@ class ContentSerializer(serializers.ModelSerializer):
     is_media_file = serializers.BooleanField(read_only=True)
     estimated_size_mb = serializers.FloatField(read_only=True)
     absolute_file_url = serializers.SerializerMethodField()
+    secure_url = serializers.SerializerMethodField()
+    is_assigned = serializers.SerializerMethodField()
     
     class Meta:
         model = Content
         fields = [
-            'id', 'name', 'description', 'type', 'file_url', 'absolute_file_url', 'content_json',
+            'id', 'name', 'description', 'type', 'file_url', 'absolute_file_url', 'secure_url', 'content_json',
             'text_content', 'duration', 'autoplay', 'order', 'widget', 'is_active',
             'downloaded', 'download_status', 'last_download_attempt',
             'retry_count', 'is_downloaded', 'needs_download', 'file_extension',
-            'is_media_file', 'estimated_size_mb', 'created_at', 'updated_at'
+            'is_media_file', 'estimated_size_mb', 'image_width', 'image_height', 'video_duration',
+            'file_size', 'is_assigned', 'created_at', 'updated_at'
         ]
         read_only_fields = [
             'id', 'downloaded', 'download_status', 'last_download_attempt',
-            'retry_count', 'created_at', 'updated_at'
+            'retry_count', 'created_at', 'updated_at', 'image_width', 'image_height', 'video_duration', 'file_size'
         ]
     
     def get_absolute_file_url(self, obj):
@@ -62,6 +65,17 @@ class ContentSerializer(serializers.ModelSerializer):
         
         # Construct full absolute URL
         return f"{base_url.rstrip('/')}{media_url.rstrip('/')}/{clean_url}"
+    
+    def get_secure_url(self, obj):
+        """Return secure URL for the content file"""
+        try:
+            return obj.get_secure_url()
+        except Exception:
+            return obj.absolute_file_url or obj.file_url
+    
+    def get_is_assigned(self, obj):
+        """Check if content is assigned to a widget"""
+        return obj.widget is not None
 
 
 class WidgetSerializer(serializers.ModelSerializer):

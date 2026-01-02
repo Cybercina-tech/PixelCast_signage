@@ -20,6 +20,7 @@ from .serializers import (
 )
 from accounts.permissions import RolePermissions
 from log.models import ContentDownloadLog
+from core.audit import AuditLogger
 
 
 class TemplateViewSet(viewsets.ModelViewSet):
@@ -63,17 +64,50 @@ class TemplateViewSet(viewsets.ModelViewSet):
         try:
             serializer.is_valid(raise_exception=True)
             self.perform_create(serializer)
+            template = serializer.instance
+            
+            # Log audit event
+            try:
+                AuditLogger.log_action(
+                    action_type='create',
+                    user=request.user,
+                    resource=template,
+                    description=f"Created template '{template.name}'",
+                    changes={'before': None, 'after': {'name': template.name, 'width': template.width, 'height': template.height}},
+                    request=request,
+                )
+            except Exception as audit_error:
+                logger.error(f"Failed to log template creation audit: {audit_error}", exc_info=True)
+            
             headers = self.get_success_headers(serializer.data)
             return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
         except serializers.ValidationError as e:
             # Return detailed validation errors
+            logger.warning(
+                f"Template creation validation failed for user {request.user.id}: {e.detail}",
+                extra={
+                    'user_id': request.user.id if request.user.is_authenticated else None,
+                    'organization': getattr(request.user, 'organization', None) if request.user.is_authenticated else None,
+                    'action_type': 'create_template',
+                    'endpoint': request.path,
+                }
+            )
             return Response({
                 'status': 'error',
                 'errors': e.detail,
                 'message': 'Template creation failed. Please check the provided data.'
             }, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
-            logger.error(f"Error creating template: {str(e)}", exc_info=True)
+            logger.error(
+                f"Error creating template: {str(e)}",
+                exc_info=True,
+                extra={
+                    'user_id': request.user.id if request.user.is_authenticated else None,
+                    'organization': getattr(request.user, 'organization', None) if request.user.is_authenticated else None,
+                    'action_type': 'create_template',
+                    'endpoint': request.path,
+                }
+            )
             return Response({
                 'status': 'error',
                 'message': 'An error occurred while creating the template. Please try again later.'
@@ -82,6 +116,10 @@ class TemplateViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         """Set created_by to current user"""
         serializer.save(created_by=self.request.user)
+        
+        # Sync widgets from config_json to database
+        template = serializer.instance
+        self._sync_widgets_from_config(template, self.request.user)
     
     def perform_update(self, serializer):
         """Check permissions before update"""
@@ -92,7 +130,134 @@ class TemplateViewSet(viewsets.ModelViewSet):
         if not RolePermissions.can_edit_resource(user, template):
             raise PermissionDenied("You do not have permission to edit this template")
         
+        # Store before state for audit log
+        before_state = {
+            'name': template.name,
+            'width': template.width,
+            'height': template.height,
+            'is_active': template.is_active,
+        }
+        
         serializer.save()
+        
+        # Sync widgets from config_json to database
+        # This ensures widgets exist as database records for content creation
+        self._sync_widgets_from_config(template, user)
+        
+        # Log audit event
+        try:
+            after_state = {
+                'name': template.name,
+                'width': template.width,
+                'height': template.height,
+                'is_active': template.is_active,
+            }
+            AuditLogger.log_action(
+                action_type='update',
+                user=user,
+                resource=template,
+                description=f"Updated template '{template.name}'",
+                changes={'before': before_state, 'after': after_state},
+                request=self.request,
+            )
+        except Exception as audit_error:
+            logger.error(f"Failed to log template update audit: {audit_error}", exc_info=True)
+    
+    def _sync_widgets_from_config(self, template, user):
+        """
+        Sync widgets from config_json to database Widget records.
+        This ensures widgets exist as database records for content creation.
+        """
+        if not template.config_json or not isinstance(template.config_json, dict):
+            return
+        
+        widgets_data = template.config_json.get('widgets', [])
+        if not widgets_data or not isinstance(widgets_data, list):
+            return
+        
+        # Get or create a default layer for this template
+        from .models import Layer, Widget
+        default_layer, _ = Layer.objects.get_or_create(
+            template=template,
+            defaults={
+                'name': 'Default Layer',
+                'description': 'Default layer for template widgets',
+                'z_index': 0,
+            }
+        )
+        
+        # Check permissions for the layer
+        if not RolePermissions.can_edit_resource(user, template):
+            logger.warning(f"User {user.id} cannot edit template {template.id}, skipping widget sync")
+            return
+        
+        # Process each widget from config_json
+        for widget_data in widgets_data:
+            widget_id_str = widget_data.get('id')
+            if not widget_id_str:
+                continue
+            
+            # Try to parse as UUID (backend format)
+            try:
+                import uuid
+                widget_uuid = uuid.UUID(widget_id_str)
+            except (ValueError, TypeError):
+                # Not a valid UUID - generate a new one
+                widget_uuid = uuid.uuid4()
+            
+            # Check if widget already exists
+            widget, created = Widget.objects.get_or_create(
+                id=widget_uuid,
+                defaults={
+                    'name': widget_data.get('name', f"{widget_data.get('type', 'widget')} Widget"),
+                    'type': widget_data.get('type', 'text'),
+                    'layer': default_layer,
+                    'x': self._parse_position(widget_data.get('x', '0'), template.width),
+                    'y': self._parse_position(widget_data.get('y', '0'), template.height),
+                    'width': self._parse_position(widget_data.get('width', '100'), template.width),
+                    'height': self._parse_position(widget_data.get('height', '100'), template.height),
+                    'z_index': widget_data.get('zIndex', widget_data.get('z_index', 0)),
+                    'is_active': widget_data.get('visible', True) if 'visible' in widget_data else True,
+                    'content_url': widget_data.get('content', '') or None,
+                    'content_json': widget_data.get('style', {}),
+                }
+            )
+            
+            # Update existing widget if needed
+            if not created:
+                widget.name = widget_data.get('name', widget.name)
+                widget.type = widget_data.get('type', widget.type)
+                widget.x = self._parse_position(widget_data.get('x', str(widget.x)), template.width)
+                widget.y = self._parse_position(widget_data.get('y', str(widget.y)), template.height)
+                widget.width = self._parse_position(widget_data.get('width', str(widget.width)), template.width)
+                widget.height = self._parse_position(widget_data.get('height', str(widget.height)), template.height)
+                widget.z_index = widget_data.get('zIndex', widget_data.get('z_index', widget.z_index))
+                widget.is_active = widget_data.get('visible', widget.is_active) if 'visible' in widget_data else widget.is_active
+                widget.content_url = widget_data.get('content', '') or widget.content_url
+                if 'style' in widget_data:
+                    widget.content_json = widget_data.get('style', {})
+                widget.save()
+            
+            # Update config_json with the actual widget UUID
+            widget_data['id'] = str(widget.id)
+        
+        # Save updated config_json back to template with backend widget IDs
+        template.config_json['widgets'] = widgets_data
+        template.save(update_fields=['config_json'])
+    
+    def _parse_position(self, value, canvas_size):
+        """Parse position value (percentage or pixel) to pixels"""
+        if isinstance(value, (int, float)):
+            return int(value)
+        if isinstance(value, str):
+            if value.endswith('%'):
+                percentage = float(value.rstrip('%'))
+                return int((percentage / 100) * canvas_size)
+            try:
+                return int(float(value))
+            except (ValueError, TypeError):
+                return 0
+        return 0
     
     def perform_destroy(self, instance):
         """Check permissions before delete"""
@@ -102,7 +267,25 @@ class TemplateViewSet(viewsets.ModelViewSet):
         if not (user.has_full_access() or instance.created_by == user):
             raise PermissionDenied("You do not have permission to delete this template")
         
+        # Store template info before deletion for audit log
+        template_name = instance.name
+        template_id = instance.id
+        
         instance.delete()
+        
+        # Log audit event
+        try:
+            AuditLogger.log_action(
+                action_type='delete',
+                user=user,
+                resource_type='Template',
+                resource_name=template_name,
+                description=f"Deleted template '{template_name}'",
+                changes={'before': {'id': str(template_id), 'name': template_name}, 'after': None},
+                request=self.request,
+            )
+        except Exception as audit_error:
+            logger.error(f"Failed to log template deletion audit: {audit_error}", exc_info=True)
     
     @action(detail=True, methods=['post'])
     def activate_on_screen(self, request, id=None):
@@ -416,15 +599,15 @@ class ContentViewSet(viewsets.ModelViewSet):
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
     def get_queryset(self):
-        """Filter queryset based on user permissions"""
+        """Filter queryset based on user permissions - returns all content for user/org"""
         queryset = super().get_queryset()
         user = self.request.user
         
-        # Filter by widget permissions (which filter by layer/template)
+        # Filter by user/organization ownership
         if user.has_full_access():
             return queryset
         
-        # Get accessible templates
+        # Get accessible templates for widget-based content
         if user.can_manage_own_resources():
             org_users = user.get_organization_users()
             accessible_templates = Template.objects.filter(
@@ -438,56 +621,61 @@ class ContentViewSet(viewsets.ModelViewSet):
         accessible_layers = Layer.objects.filter(template__in=accessible_templates)
         accessible_widgets = Widget.objects.filter(layer__in=accessible_layers)
         
-        return queryset.filter(widget__in=accessible_widgets)
+        # Return content that either:
+        # 1. Belongs to accessible widgets, OR
+        # 2. Has no widget (standalone media library content)
+        # For standalone content, we'll filter by organization/user later if needed
+        return queryset.filter(
+            Q(widget__in=accessible_widgets) | Q(widget__isnull=True)
+        )
     
     def perform_create(self, serializer):
-        """Check permissions for widget"""
+        """Check permissions for widget (optional - allows standalone media library)"""
         widget = serializer.validated_data.get('widget')
         user = self.request.user
         
-        if not widget:
-            raise PermissionDenied("Widget is required to create content")
+        # Widget is now optional - allow standalone media library uploads
+        if widget:
+            try:
+                if not widget.layer:
+                    raise PermissionDenied("Widget must have a layer assigned")
+                
+                if not widget.layer.template:
+                    raise PermissionDenied("Widget layer must have a template assigned")
+                
+                if not RolePermissions.can_edit_resource(user, widget.layer.template):
+                    raise PermissionDenied("You do not have permission to create content for this widget")
+            except AttributeError as e:
+                logger.error(f"Error accessing widget relationships during content creation: {str(e)}", exc_info=True)
+                raise PermissionDenied("Error checking permissions. Widget may have invalid relationships.")
         
-        try:
-            if not widget.layer:
-                raise PermissionDenied("Widget must have a layer assigned")
-            
-            if not widget.layer.template:
-                raise PermissionDenied("Widget layer must have a template assigned")
-            
-            if not RolePermissions.can_edit_resource(user, widget.layer.template):
-                raise PermissionDenied("You do not have permission to create content for this widget")
-        except AttributeError as e:
-            logger.error(f"Error accessing widget relationships during content creation: {str(e)}", exc_info=True)
-            raise PermissionDenied("Error checking permissions. Widget may have invalid relationships.")
-        
+        # Allow creating content without widget (standalone media library)
         serializer.save()
     
     def perform_update(self, serializer):
-        """Check permissions before update"""
+        """Check permissions before update (widget is now optional)"""
         content = self.get_object()
         user = self.request.user
         
-        # Check if content has required relationships (handle potential None values)
+        # Check if content has widget - if not, allow update (standalone media library)
         try:
             widget = content.widget
-            if not widget:
-                logger.error(f"Content {content.id} has no widget assigned")
-                raise PermissionDenied("Content must have a widget assigned")
-            
-            layer = widget.layer
-            if not layer:
-                logger.error(f"Widget {widget.id} has no layer assigned")
-                raise PermissionDenied("Content widget must have a layer assigned")
-            
-            template = layer.template
-            if not template:
-                logger.error(f"Layer {layer.id} has no template assigned")
-                raise PermissionDenied("Content widget layer must have a template assigned")
-            
-            # Check permissions
-            if not RolePermissions.can_edit_resource(user, template):
-                raise PermissionDenied("You do not have permission to edit this content")
+            if widget:
+                # Content has widget - check widget permissions
+                layer = widget.layer
+                if not layer:
+                    logger.error(f"Widget {widget.id} has no layer assigned")
+                    raise PermissionDenied("Content widget must have a layer assigned")
+                
+                template = layer.template
+                if not template:
+                    logger.error(f"Layer {layer.id} has no template assigned")
+                    raise PermissionDenied("Content widget layer must have a template assigned")
+                
+                # Check permissions
+                if not RolePermissions.can_edit_resource(user, template):
+                    raise PermissionDenied("You do not have permission to edit this content")
+            # If no widget, allow update (standalone media library)
             
         except AttributeError as e:
             logger.error(f"Error accessing content relationships during update: {str(e)}", exc_info=True)
@@ -509,7 +697,26 @@ class ContentViewSet(viewsets.ModelViewSet):
         if not RolePermissions.can_edit_resource(user, instance.widget.layer.template):
             raise PermissionDenied("You do not have permission to delete this content")
         
+        # Store content info before deletion for audit log
+        content_name = instance.name
+        content_id = instance.id
+        content_type = instance.type
+        
         instance.delete()
+        
+        # Log audit event
+        try:
+            AuditLogger.log_action(
+                action_type='delete',
+                user=user,
+                resource_type='Content',
+                resource_name=content_name,
+                description=f"Deleted content '{content_name}' (type: {content_type})",
+                changes={'before': {'id': str(content_id), 'name': content_name, 'type': content_type}, 'after': None},
+                request=self.request,
+            )
+        except Exception as audit_error:
+            logger.error(f"Failed to log content deletion audit: {audit_error}", exc_info=True)
     
     @action(detail=True, methods=['post'])
     def download_to_screen(self, request, id=None):
@@ -897,35 +1104,31 @@ class ContentViewSet(viewsets.ModelViewSet):
         logger.info(f"Content found: {content.id} ({content.name}), Type: {content.type}")
         logger.info(f"User: {user.id if hasattr(user, 'id') else 'Anonymous'} ({user.username if hasattr(user, 'username') else 'N/A'})")
         
-        # Check permissions with proper null checks
+        # Check permissions with proper null checks (widget is now optional)
         try:
             widget = content.widget
-            if not widget:
-                logger.error(f"Content {content.id} has no widget assigned")
-                return Response(
-                    {'error': 'Content must have a widget assigned'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-            
-            layer = widget.layer
-            if not layer:
-                logger.error(f"Widget {widget.id} has no layer assigned")
-                return Response(
-                    {'error': 'Content widget must have a layer assigned'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-            
-            template = layer.template
-            if not template:
-                logger.error(f"Layer {layer.id} has no template assigned")
-                return Response(
-                    {'error': 'Content widget layer must have a template assigned'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-            
-            # Check permissions
-            if not RolePermissions.can_edit_resource(user, template):
-                raise PermissionDenied("You do not have permission to upload content for this widget")
+            if widget:
+                # Content has widget - check widget permissions
+                layer = widget.layer
+                if not layer:
+                    logger.error(f"Widget {widget.id} has no layer assigned")
+                    return Response(
+                        {'error': 'Content widget must have a layer assigned'},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+                
+                template = layer.template
+                if not template:
+                    logger.error(f"Layer {layer.id} has no template assigned")
+                    return Response(
+                        {'error': 'Content widget layer must have a template assigned'},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+                
+                # Check permissions
+                if not RolePermissions.can_edit_resource(user, template):
+                    raise PermissionDenied("You do not have permission to upload content for this widget")
+            # If no widget, allow upload (standalone media library)
                 
         except AttributeError as e:
             logger.error(f"Error accessing content relationships during upload: {str(e)}", exc_info=True)
@@ -1075,13 +1278,35 @@ class ContentViewSet(viewsets.ModelViewSet):
         except ValueError as e:
             error_msg = str(e)
             logger.error(f"Validation error during content upload: {error_msg}", exc_info=True)
-            return Response({
+            
+            # Extract detailed error information
+            error_details = {
                 'status': 'error',
                 'error': 'Validation failed',
                 'message': error_msg,
                 'content_id': str(content.id),
                 'file_name': file_obj.name if file_obj else None
-            }, status=status.HTTP_400_BAD_REQUEST)
+            }
+            
+            # Add specific error type if available
+            if 'MIME type' in error_msg or 'fake' in error_msg.lower():
+                error_details['error_type'] = 'MIME_TYPE_MISMATCH'
+                error_details['message'] = (
+                    f"The file '{file_obj.name if file_obj else 'unknown'}' has been rejected for security reasons. "
+                    f"{error_msg}"
+                )
+            elif 'resolution' in error_msg.lower() or '4K' in error_msg:
+                error_details['error_type'] = 'RESOLUTION_EXCEEDED'
+            elif 'size' in error_msg.lower() or 'MB' in error_msg:
+                error_details['error_type'] = 'FILE_SIZE_EXCEEDED'
+            elif 'Security' in error_msg or 'security' in error_msg.lower():
+                error_details['error_type'] = 'SECURITY_VIOLATION'
+                error_details['message'] = (
+                    f"The file '{file_obj.name if file_obj else 'unknown'}' has been rejected for security reasons. "
+                    f"{error_msg}"
+                )
+            
+            return Response(error_details, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             error_msg = str(e)
             error_type = type(e).__name__

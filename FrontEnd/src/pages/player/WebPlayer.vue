@@ -197,6 +197,88 @@ const templateContainerStyle = computed(() => {
 // Event handlers
 let contextMenuHandler = null
 let keydownHandler = null
+let debugKeyHandler = null
+
+// Full-screen management
+const toggleFullscreen = async () => {
+  const element = playerContainer.value
+  if (!element) {
+    console.warn('[WebPlayer] Cannot toggle fullscreen: playerContainer ref not available')
+    return
+  }
+
+  try {
+    if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.mozFullScreenElement && !document.msFullscreenElement) {
+      // Enter fullscreen
+      if (element.requestFullscreen) {
+        await element.requestFullscreen()
+      } else if (element.webkitRequestFullscreen) {
+        await element.webkitRequestFullscreen()
+      } else if (element.mozRequestFullScreen) {
+        await element.mozRequestFullScreen()
+      } else if (element.msRequestFullscreen) {
+        await element.msRequestFullscreen()
+      }
+      console.log('[WebPlayer] Entered fullscreen mode')
+    } else {
+      // Exit fullscreen
+      if (document.exitFullscreen) {
+        await document.exitFullscreen()
+      } else if (document.webkitExitFullscreen) {
+        await document.webkitExitFullscreen()
+      } else if (document.mozCancelFullScreen) {
+        await document.mozCancelFullScreen()
+      } else if (document.msExitFullscreen) {
+        await document.msExitFullscreen()
+      }
+      console.log('[WebPlayer] Exited fullscreen mode')
+    }
+  } catch (error) {
+    console.error('[WebPlayer] Fullscreen toggle failed:', error)
+  }
+}
+
+// Debug helper: Log PlayerStore and activeLayers state
+const logDebugState = () => {
+  console.group('🔍 WebPlayer Debug State')
+  
+  // Log PlayerStore state
+  console.log('📦 PlayerStore State:', {
+    status: playerStore.status,
+    template: playerStore.template ? {
+      id: playerStore.template.id,
+      name: playerStore.template.name,
+      width: playerStore.template.width,
+      height: playerStore.template.height,
+      layersCount: playerStore.template.layers?.length || 0
+    } : null,
+    errorMessage: playerStore.errorMessage,
+    retryCountdown: playerStore.retryCountdown,
+    overlayVisible: playerStore.overlayVisible,
+    overlayMessage: playerStore.overlayMessage
+  })
+  
+  // Log active layers (sortedLayers)
+  console.log('📋 Active Layers:', sortedLayers.value.map(layer => ({
+    id: layer.id,
+    name: layer.name,
+    z_index: layer.z_index,
+    is_active: layer.is_active,
+    widgetsCount: layer.widgets?.length || 0,
+    widgets: layer.widgets?.map(w => ({
+      id: w.id,
+      name: w.name,
+      type: w.type,
+      is_active: w.is_active,
+      contentsCount: w.contents?.length || 0
+    })) || []
+  })))
+  
+  // Log full PlayerStore object (for deep inspection)
+  console.log('📦 Full PlayerStore Object:', playerStore)
+  
+  console.groupEnd()
+}
 
   // Initialize player on mount
   onMounted(async () => {
@@ -210,13 +292,43 @@ let keydownHandler = null
     contextMenuHandler = (e) => e.preventDefault()
     document.addEventListener('contextmenu', contextMenuHandler)
     
-    // Prevent keyboard shortcuts that might interfere (allow F12 for debugging)
+    // Prevent keyboard shortcuts that might interfere (allow F12, F key, and Ctrl+Shift+L for debugging)
     keydownHandler = (e) => {
-      if (e.key !== 'F12' && !e.ctrlKey && !e.metaKey) {
+      // Allow F12 for browser inspector
+      if (e.key === 'F12') {
+        return // Don't prevent default
+      }
+      
+      // Allow F key for fullscreen toggle
+      if (e.key === 'f' || e.key === 'F') {
+        toggleFullscreen()
+        e.preventDefault()
+        return
+      }
+      
+      // Allow Ctrl+Shift+L for debug logging (handled by debugKeyHandler)
+      if (e.ctrlKey && e.shiftKey && (e.key === 'L' || e.key === 'l')) {
+        return // Don't prevent default, let debugKeyHandler handle it
+      }
+      
+      // Allow Ctrl/Cmd combinations (for browser shortcuts)
+      if (e.ctrlKey || e.metaKey) {
+        return // Don't prevent default
+      }
+      
+      // Prevent all other keys
+      e.preventDefault()
+    }
+    document.addEventListener('keydown', keydownHandler, true)
+    
+    // Separate handler for debug logging (Ctrl+Shift+L) - must be after keydownHandler
+    debugKeyHandler = (e) => {
+      if (e.ctrlKey && e.shiftKey && (e.key === 'L' || e.key === 'l')) {
+        logDebugState()
         e.preventDefault()
       }
     }
-    document.addEventListener('keydown', keydownHandler, true)
+    document.addEventListener('keydown', debugKeyHandler, true)
 
     // Prevent text selection
     document.addEventListener('selectstart', (e) => e.preventDefault())
@@ -301,6 +413,10 @@ let keydownHandler = null
       
       // Start polling only if we have credentials
       playerStore.startPolling()
+      
+      // Optionally enter fullscreen on successful initialization
+      // Uncomment the next line to auto-enter fullscreen when player initializes
+      // await nextTick(() => toggleFullscreen())
     } catch (error) {
       // If credentials are missing or invalid, redirect to pairing page
       console.error('[WebPlayer] Player initialization failed:', error)
@@ -334,6 +450,9 @@ onUnmounted(() => {
   }
   if (keydownHandler) {
     document.removeEventListener('keydown', keydownHandler, true)
+  }
+  if (debugKeyHandler) {
+    document.removeEventListener('keydown', debugKeyHandler, true)
   }
   cleanupResizeListener()
   playerStore.stopPolling()
@@ -373,6 +492,8 @@ onUnmounted(() => {
   justify-content: center;
   background: rgba(0, 0, 0, 0.35);
   z-index: 99999;
+  /* CRITICAL: pointer-events: none ensures overlay doesn't block mouse interactions
+     This allows right-click "Inspect Element" to work properly */
   pointer-events: none;
 }
 
@@ -383,6 +504,8 @@ onUnmounted(() => {
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 10px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  /* Ensure message box itself doesn't block pointer events (child of pointer-events: none parent) */
+  pointer-events: auto;
 }
 
 .message-text {

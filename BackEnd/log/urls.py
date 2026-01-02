@@ -4,7 +4,8 @@ from .views import (
     ScreenStatusLogViewSet,
     ContentDownloadLogViewSet,
     CommandExecutionLogViewSet,
-    ErrorLogViewSet
+    ErrorLogViewSet,
+    client_log_view
 )
 
 # Create router for ViewSets
@@ -16,4 +17,6 @@ router.register(r'command-execution', CommandExecutionLogViewSet, basename='comm
 urlpatterns = [
     # Router URLs (includes /api/logs/screen-status/, /api/logs/content-download/, etc.)
     path('', include(router.urls)),
+    # Client-side error logging endpoint (Black Box)
+    path('client/', client_log_view, name='client-log'),
 ]

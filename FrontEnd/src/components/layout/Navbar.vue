@@ -4,17 +4,17 @@
       <div class="flex items-center justify-between h-14">
         <!-- Left: Logo + Breadcrumb -->
         <div class="flex items-center flex-1 min-w-0">
-          <!-- Sidebar Toggle (Mobile) -->
+          <!-- Sidebar Toggle (Mobile/Tablet) -->
           <button
             @click="$emit('toggle-sidebar')"
-            class="md:hidden p-2 -ml-2 rounded-lg hover:bg-card text-slate-900 dark:text-slate-300"
+            class="lg:hidden p-2 -ml-2 rounded-lg hover:bg-card text-slate-900 dark:text-slate-300"
             aria-label="Toggle sidebar"
           >
             <Bars3Icon class="w-5 h-5 text-slate-900 dark:text-slate-300" />
           </button>
 
           <!-- Logo (Desktop) -->
-          <div class="hidden md:flex items-center mr-4">
+          <div class="hidden lg:flex items-center mr-4">
             <div class="w-8 h-8 rounded-lg bg-slate-900 flex items-center justify-center mr-2">
               <BoltIcon class="w-5 h-5 text-white" />
             </div>

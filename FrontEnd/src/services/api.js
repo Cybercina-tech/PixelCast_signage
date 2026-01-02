@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { getNotification } from '@/composables/useNotification'
 
 // API base URL - update this to match your backend
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api'
@@ -9,6 +10,82 @@ const api = axios.create({
     'Content-Type': 'application/json',
   },
 })
+
+// Error message mapping for user-friendly notifications
+const ERROR_MESSAGES = {
+  400: 'Invalid request. Please check your input.',
+  401: 'Authentication required. Please log in.',
+  403: 'You do not have permission to perform this action.',
+  404: 'The requested resource was not found.',
+  413: 'File too large. Please choose a smaller file.',
+  415: 'Unsupported file type. Please choose a different file.',
+  422: 'Validation error. Please check your input.',
+  429: 'Too many requests. Please wait a moment and try again.',
+  500: 'Server error. Please try again later.',
+  502: 'Service temporarily unavailable. Please try again later.',
+  503: 'Service unavailable. Please try again later.',
+  504: 'Request timeout. Please try again.',
+}
+
+/**
+ * Get user-friendly error message from error response
+ */
+function getUserFriendlyMessage(error) {
+  const status = error.response?.status
+  const data = error.response?.data
+  
+  // Check for custom error message from backend
+  if (data?.message) {
+    return data.message
+  }
+  
+  // Check for error field
+  if (data?.error) {
+    return data.error
+  }
+  
+  // Check for detail field (DRF format)
+  if (data?.detail) {
+    return data.detail
+  }
+  
+  // Use status code mapping
+  if (status && ERROR_MESSAGES[status]) {
+    return ERROR_MESSAGES[status]
+  }
+  
+  // Fallback to generic message
+  return 'An error occurred. Please try again.'
+}
+
+/**
+ * Extract field-specific validation errors from response
+ */
+function getFieldErrors(error) {
+  const data = error.response?.data
+  
+  if (!data) return {}
+  
+  // DRF validation errors format: { field: ['error1', 'error2'] }
+  if (data.errors && typeof data.errors === 'object') {
+    return data.errors
+  }
+  
+  // Alternative format: { field: 'error' }
+  if (data.error && typeof data.error === 'object' && !Array.isArray(data.error)) {
+    return data.error
+  }
+  
+  // Nested errors format
+  const fieldErrors = {}
+  for (const key in data) {
+    if (key !== 'message' && key !== 'error' && key !== 'detail' && key !== 'status') {
+      fieldErrors[key] = Array.isArray(data[key]) ? data[key] : [data[key]]
+    }
+  }
+  
+  return Object.keys(fieldErrors).length > 0 ? fieldErrors : {}
+}
 
 // Request interceptor to add auth token and handle FormData
 api.interceptors.request.use(
@@ -86,6 +163,9 @@ api.interceptors.response.use(
         isRefreshing = false
         processQueue(new Error('No refresh token'), null)
         
+        const notify = getNotification()
+        notify.error('Session expired. Please log in again.')
+        
         if (window.location.pathname !== '/login' && 
             window.location.pathname !== '/' &&
             !window.location.pathname.startsWith('/401')) {
@@ -115,6 +195,9 @@ api.interceptors.response.use(
         isRefreshing = false
         processQueue(refreshError, null)
         
+        const notify = getNotification()
+        notify.error('Session expired. Please log in again.')
+        
         if (window.location.pathname !== '/login' && 
             window.location.pathname !== '/' &&
             !window.location.pathname.startsWith('/401')) {
@@ -122,16 +205,55 @@ api.interceptors.response.use(
         }
         return Promise.reject(refreshError)
       }
-    } else if (status === 403) {
-      // Handle forbidden - redirect to 403 page
-      if (!window.location.pathname.startsWith('/403')) {
-        window.location.href = '/403'
-      }
-    } else if (status >= 500) {
-      // Handle server errors - redirect to 500 page
-      if (!window.location.pathname.startsWith('/500')) {
-        const errorMsg = error.response?.data?.error || error.response?.data?.detail || error.message
-        window.location.href = `/500?error=${encodeURIComponent(errorMsg)}`
+    }
+    
+    // Handle 4xx and 5xx errors with user-friendly notifications
+    if (status && status >= 400) {
+      const userMessage = getUserFriendlyMessage(error)
+      const errorData = error.response?.data || {}
+      
+      // Suppress screen_id errors - these are expected for global dashboard endpoints
+      // and shouldn't be shown to users
+      const isScreenIdError = userMessage?.includes('screen_id') || 
+                              errorData?.message?.includes('screen_id') ||
+                              errorData?.error?.includes('screen_id') ||
+                              originalRequest.url?.includes('/screens/command-pull/') ||
+                              originalRequest.url?.includes('/screens/health-check/')
+      
+      // Only show notification if it's not a suppressed screen_id error
+      if (!isScreenIdError) {
+        const notify = getNotification()
+        const fieldErrors = getFieldErrors(error)
+        
+        // Show toast notification
+        if (status >= 500) {
+          notify.error(userMessage, { title: 'Server Error', duration: 5000 })
+        } else if (status === 403) {
+          notify.error(userMessage, { title: 'Access Denied', duration: 4000 })
+          // Redirect to 403 page if not already there
+          if (!window.location.pathname.startsWith('/403')) {
+            setTimeout(() => {
+              window.location.href = '/403'
+            }, 2000)
+          }
+        } else if (status === 401) {
+          notify.error(userMessage, { title: 'Authentication Required', duration: 3000 })
+        } else {
+          // 4xx errors (400, 404, 413, 422, etc.)
+          notify.error(userMessage, { title: 'Request Error', duration: 4000 })
+        }
+        
+        // Attach field errors to error object for component-level handling
+        if (Object.keys(fieldErrors).length > 0) {
+          error.fieldErrors = fieldErrors
+        }
+      } else {
+        // Log suppressed error for debugging (but don't show to user)
+        console.debug('Suppressed screen_id error:', {
+          url: originalRequest.url,
+          message: userMessage,
+          error: errorData
+        })
       }
     }
     

@@ -8,10 +8,15 @@
     </div>
     
     <Sidebar :is-open="sidebarOpen" @close="sidebarOpen = false" />
-    <div class="flex-1 flex flex-col overflow-hidden md:ml-0 relative z-10">
+    <div class="flex-1 flex flex-col overflow-hidden lg:ml-0 relative z-10">
       <Navbar :title="title" @toggle-sidebar="sidebarOpen = !sidebarOpen" />
-      <main class="flex-1 overflow-y-auto p-6">
-        <slot />
+      <main :class="['flex-1 flex flex-col scroll-container', isEditorRoute ? 'overflow-hidden' : 'overflow-y-auto custom-scrollbar']">
+        <div :class="[
+          'flex-1 w-full',
+          isEditorRoute ? 'p-0' : 'p-4 md:p-6 lg:p-8'
+        ]">
+          <slot />
+        </div>
       </main>
       <Footer />
     </div>
@@ -19,7 +24,8 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useScreensStore } from '@/stores/screens'
 import { useWebSocket } from '@/composables/useWebSocket'
@@ -34,7 +40,13 @@ defineProps({
   },
 })
 
+const route = useRoute()
 const sidebarOpen = ref(false)
+
+// Check if we're on the template editor route to prevent main scroll
+const isEditorRoute = computed(() => {
+  return route.name === 'template-editor' || route.name === 'template-editor-new' || (route.path.includes('/templates/') && route.path.includes('/edit'))
+})
 const authStore = useAuthStore()
 const screensStore = useScreensStore()
 const { connect, disconnect, on, off, isConnected } = useWebSocket()

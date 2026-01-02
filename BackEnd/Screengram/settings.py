@@ -116,6 +116,7 @@ MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'log.middleware.ErrorLoggingMiddleware',  # Error logging middleware (must be after auth)
+    'core.middleware.JSONErrorResponseMiddleware',  # JSON error responses (must be after ErrorLoggingMiddleware)
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'core.rate_limiting.RateLimitMiddleware',  # Rate limiting middleware
@@ -259,6 +260,7 @@ REST_FRAMEWORK = {
         'rest_framework.parsers.MultiPartParser',
     ],
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    'EXCEPTION_HANDLER': 'core.middleware.drf_exception_handler',  # Custom JSON error handler
 }
 
 # JWT Settings

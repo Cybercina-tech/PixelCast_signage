@@ -1,7 +1,9 @@
 <template>
-  <RouterView />
-  <NotificationContainer />
-  <DeleteConfirmation />
+  <div class="h-screen w-screen overflow-hidden">
+    <RouterView />
+    <NotificationContainer />
+    <DeleteConfirmation />
+  </div>
 </template>
 
 <script setup>

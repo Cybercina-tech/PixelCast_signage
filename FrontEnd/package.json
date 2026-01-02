@@ -17,7 +17,8 @@
     "qrcode": "^1.5.4",
     "vue": "^3.4.21",
     "vue-chartjs": "^5.2.0",
-    "vue-router": "^4.3.0"
+    "vue-router": "^4.3.0",
+    "vue3-moveable": "^0.28.0"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.0.4",

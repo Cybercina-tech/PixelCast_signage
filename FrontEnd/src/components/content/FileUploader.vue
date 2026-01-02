@@ -50,6 +50,19 @@
           <div>
             <p class="text-sm font-medium text-primary">{{ selectedFile.name }}</p>
             <p class="text-xs text-muted">{{ formatFileSize(selectedFile.size) }}</p>
+            <!-- File Metadata -->
+            <div v-if="selectedFile._metadata" class="mt-1 text-xs text-muted">
+              <span v-if="selectedFile._metadata.type === 'image'">
+                {{ selectedFile._metadata.width }}×{{ selectedFile._metadata.height }}px
+                ({{ selectedFile._metadata.aspectRatio.toFixed(2) }}:1)
+              </span>
+              <span v-else-if="selectedFile._metadata.type === 'video'">
+                {{ selectedFile._metadata.durationFormatted }}
+                <span v-if="selectedFile._metadata.width && selectedFile._metadata.height">
+                  • {{ selectedFile._metadata.width }}×{{ selectedFile._metadata.height }}px
+                </span>
+              </span>
+            </div>
           </div>
         </div>
         <button
@@ -117,6 +130,12 @@ const props = defineProps({
     type: Boolean,
     default: true,
   },
+  targetZone: {
+    type: Object,
+    default: null,
+    // Expected format: { width: number, height: number }
+    // Used for aspect ratio validation
+  },
 })
 
 const emit = defineEmits(['file-selected', 'validation-result', 'clear'])
@@ -133,9 +152,154 @@ const handleFileChange = async (event) => {
   selectedFile.value = file
   emit('file-selected', file)
 
+  // Read file metadata before validation
+  await readFileMetadata(file)
+
   if (props.autoValidate) {
     await validateFile(file)
   }
+}
+
+/**
+ * Read file metadata (dimensions for images, duration for videos)
+ */
+const readFileMetadata = async (file) => {
+  try {
+    if (props.contentType === 'image') {
+      await readImageMetadata(file)
+    } else if (props.contentType === 'video') {
+      await readVideoMetadata(file)
+    }
+  } catch (error) {
+    console.warn('Failed to read file metadata:', error)
+  }
+}
+
+/**
+ * Read image dimensions and check aspect ratio
+ */
+const readImageMetadata = (file) => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    const img = new Image()
+    
+    reader.onload = (e) => {
+      img.onload = () => {
+        const width = img.width
+        const height = img.height
+        const aspectRatio = width / height
+        
+        // Store metadata
+        file._metadata = {
+          width,
+          height,
+          aspectRatio,
+          type: 'image'
+        }
+        
+        // Check aspect ratio if target zone is provided
+        if (props.targetZone) {
+          const targetAspectRatio = props.targetZone.width / props.targetZone.height
+          const ratioDifference = Math.abs(aspectRatio - targetAspectRatio) / targetAspectRatio
+          
+          // Warn if aspect ratio differs significantly (>20%)
+          if (ratioDifference > 0.2) {
+            const warning = `Image aspect ratio (${width}x${height}) differs significantly from target zone (${props.targetZone.width}x${props.targetZone.height}). This may cause distortion.`
+            if (validationResult.value) {
+              if (!validationResult.value.warnings) {
+                validationResult.value.warnings = []
+              }
+              validationResult.value.warnings.push(warning)
+            }
+          }
+        }
+        
+        resolve()
+      }
+      
+      img.onerror = () => {
+        reject(new Error('Failed to load image'))
+      }
+      
+      img.src = e.target.result
+    }
+    
+    reader.onerror = reject
+    reader.readAsDataURL(file)
+  })
+}
+
+/**
+ * Read video metadata (duration, format)
+ */
+const readVideoMetadata = (file) => {
+  return new Promise((resolve, reject) => {
+    const video = document.createElement('video')
+    const url = URL.createObjectURL(file)
+    
+    video.onloadedmetadata = () => {
+      const duration = video.duration
+      const width = video.videoWidth
+      const height = video.videoHeight
+      const aspectRatio = width / height
+      
+      // Store metadata
+      file._metadata = {
+        duration,
+        durationFormatted: formatDuration(duration),
+        width,
+        height,
+        aspectRatio,
+        type: 'video'
+      }
+      
+      // Check duration
+      if (duration > 3600) { // 1 hour
+        const warning = `Video duration (${formatDuration(duration)}) is very long. This may cause performance issues on some screens.`
+        if (validationResult.value) {
+          if (!validationResult.value.warnings) {
+            validationResult.value.warnings = []
+          }
+          validationResult.value.warnings.push(warning)
+        }
+      }
+      
+      // Check resolution
+      if (width > 3840 || height > 2160) {
+        const warning = `Video resolution (${width}x${height}) exceeds 4K. This may not play on all screens.`
+        if (validationResult.value) {
+          if (!validationResult.value.warnings) {
+            validationResult.value.warnings = []
+          }
+          validationResult.value.warnings.push(warning)
+        }
+      }
+      
+      URL.revokeObjectURL(url)
+      resolve()
+    }
+    
+    video.onerror = () => {
+      URL.revokeObjectURL(url)
+      reject(new Error('Failed to load video'))
+    }
+    
+    video.src = url
+  })
+}
+
+/**
+ * Format duration in seconds to readable string
+ */
+const formatDuration = (seconds) => {
+  const hours = Math.floor(seconds / 3600)
+  const minutes = Math.floor((seconds % 3600) / 60)
+  const secs = Math.floor(seconds % 60)
+  
+  if (hours > 0) {
+    return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
+  }
+  return `${minutes}:${secs.toString().padStart(2, '0')}`
 }
 
 const validateFile = async (file) => {

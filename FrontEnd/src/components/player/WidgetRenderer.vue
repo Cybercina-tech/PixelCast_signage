@@ -77,6 +77,9 @@ onMounted(() => {
  * CRITICAL FIX: Widgets ALWAYS fill 100% of their parent layer
  * This ensures widgets fill entire screen without gaps or black spaces
  * Pixel dimensions from backend are ignored - widget always uses 100% × 100%
+ * 
+ * IMPORTANT: Video widgets specifically bypass any fixed pixel/percentage widths
+ * (like 52% or 1000px) and always occupy 100% of the parent layer's space
  */
 const widgetStyle = computed(() => {
   const { z_index = 0 } = props.widget
@@ -84,10 +87,12 @@ const widgetStyle = computed(() => {
   // CRITICAL: Widgets must ALWAYS be 100% × 100% to fill entire layer/screen
   // We ignore pixel dimensions from backend (x, y, width, height)
   // Widget should fill the entire parent layer, which fills the entire screen
+  // Video widgets specifically bypass fixed widths/percentages and use 100% × 100%
   
   console.log(`[WidgetRenderer] Widget ${props.widget.id} using 100% × 100% to fill entire screen`, {
     widgetId: props.widget.id,
     widgetName: props.widget.name,
+    widgetType: props.widget.type,
     zIndex: z_index
   })
   
@@ -99,10 +104,11 @@ const widgetStyle = computed(() => {
     top: '0',
     // CRITICAL: Always use 100% × 100% to fill entire parent layer
     // This ensures widget fills entire screen without gaps
+    // Video widgets bypass any fixed pixel/percentage widths and use 100% × 100%
     width: '100%',
     height: '100%',
     zIndex: z_index,
-    // CRITICAL: overflow: visible allows images larger than widget to render fully
+    // CRITICAL: overflow: visible allows images/videos larger than widget to render fully
     overflow: 'visible',
     // Hardware acceleration
     transform: 'translateZ(0)',
@@ -122,6 +128,7 @@ const widgetStyle = computed(() => {
   position: absolute;
   /* CRITICAL: Force widget to always fill entire parent layer (100% × 100%) */
   /* Use !important to override any inline styles or computed styles that might try to set pixel values */
+  /* Video widgets specifically bypass fixed pixel/percentage widths (52%, 1000px, etc.) and use 100% × 100% */
   width: 100% !important;
   height: 100% !important;
   left: 0 !important;
@@ -129,8 +136,8 @@ const widgetStyle = computed(() => {
   /* Ensure widgets render correctly */
   will-change: transform;
   backface-visibility: hidden;
-  /* CRITICAL: Ensure overflow is visible to prevent image clipping */
-  /* Do not set overflow: hidden here - it will clip high-resolution images */
+  /* CRITICAL: Ensure overflow is visible to prevent image/video clipping */
+  /* Do not set overflow: hidden here - it will clip high-resolution content */
   overflow: visible !important;
 }
 </style>

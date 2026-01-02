@@ -570,7 +570,9 @@ class Content(models.Model):
         Widget,
         on_delete=models.CASCADE,
         related_name='contents',
-        help_text="Widget that this content belongs to"
+        null=True,
+        blank=True,
+        help_text="Widget that this content belongs to (optional - allows standalone media library)"
     )
     
     # Status & Metadata
@@ -626,6 +628,24 @@ class Content(models.Model):
         max_length=20,
         default='sha256',
         help_text="Hash algorithm used for file_hash"
+    )
+    
+    # Media Metadata
+    image_width = models.PositiveIntegerField(
+        blank=True,
+        null=True,
+        help_text="Image width in pixels (for image content)"
+    )
+    image_height = models.PositiveIntegerField(
+        blank=True,
+        null=True,
+        help_text="Image height in pixels (for image content)"
+    )
+    video_duration = models.FloatField(
+        blank=True,
+        null=True,
+        validators=[MinValueValidator(0.0)],
+        help_text="Video duration in seconds (for video content)"
     )
     
     created_at = models.DateTimeField(
@@ -763,6 +783,82 @@ class Content(models.Model):
         return None
     
     # Operational Methods for Content Delivery
+    def _extract_media_metadata(self, file_obj):
+        """
+        Extract metadata from media files (image dimensions, video duration).
+        
+        Args:
+            file_obj: File object to extract metadata from
+        """
+        try:
+            if self.type == 'image':
+                # Extract image dimensions
+                from PIL import Image
+                import io
+                
+                # Reset file pointer
+                if hasattr(file_obj, 'seek'):
+                    file_obj.seek(0)
+                
+                # Read image
+                image = Image.open(io.BytesIO(file_obj.read()))
+                self.image_width = image.width
+                self.image_height = image.height
+                
+                # Reset file pointer again
+                if hasattr(file_obj, 'seek'):
+                    file_obj.seek(0)
+                    
+            elif self.type == 'video':
+                # Extract video duration
+                try:
+                    import cv2
+                    
+                    # Reset file pointer
+                    if hasattr(file_obj, 'seek'):
+                        file_obj.seek(0)
+                    
+                    # Save to temporary file for OpenCV
+                    import tempfile
+                    import os
+                    
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(file_obj.name)[1] if hasattr(file_obj, 'name') else '.mp4') as tmp_file:
+                        tmp_file.write(file_obj.read())
+                        tmp_path = tmp_file.name
+                    
+                    try:
+                        # Open video with OpenCV
+                        cap = cv2.VideoCapture(tmp_path)
+                        if cap.isOpened():
+                            fps = cap.get(cv2.CAP_PROP_FPS)
+                            frame_count = cap.get(cv2.CAP_PROP_FRAME_COUNT)
+                            if fps > 0:
+                                self.video_duration = frame_count / fps
+                        cap.release()
+                    finally:
+                        # Clean up temp file
+                        if os.path.exists(tmp_path):
+                            os.unlink(tmp_path)
+                    
+                    # Reset file pointer
+                    if hasattr(file_obj, 'seek'):
+                        file_obj.seek(0)
+                except ImportError:
+                    # OpenCV not available, skip video duration extraction
+                    pass
+                except Exception as e:
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.warning(f"Failed to extract video duration: {str(e)}")
+                    
+        except ImportError:
+            # PIL not available, skip image dimension extraction
+            pass
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Failed to extract media metadata: {str(e)}")
+    
     def save_uploaded_file(self, file_obj, user=None):
         """
         Save uploaded file to storage backend using ContentStorageManager.
@@ -794,8 +890,18 @@ class Content(models.Model):
             # Store storage_path for later use
             self._storage_path = storage_path
             
+            # Extract metadata (image dimensions, video duration)
+            self._extract_media_metadata(file_obj)
+            
             # Save model
-            self.save(update_fields=['storage_path', 'file_url', 'file_size', 'file_hash', 'hash_algorithm'])
+            update_fields = ['storage_path', 'file_url', 'file_size', 'file_hash', 'hash_algorithm']
+            if self.image_width:
+                update_fields.append('image_width')
+            if self.image_height:
+                update_fields.append('image_height')
+            if self.video_duration:
+                update_fields.append('video_duration')
+            self.save(update_fields=update_fields)
             
             return metadata
             

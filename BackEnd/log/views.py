@@ -1,18 +1,21 @@
 from rest_framework import viewsets, status
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.pagination import PageNumberPagination
 from django.core.exceptions import PermissionDenied
 from django.utils import timezone
 from django.db.models import Q
 from datetime import timedelta, datetime
+import logging
 
 from .models import ScreenStatusLog, ContentDownloadLog, CommandExecutionLog, ErrorLog
 from .serializers import (
     ScreenStatusLogSerializer, ContentDownloadLogSerializer,
     CommandExecutionLogSerializer, LogSummarySerializer, ErrorLogSerializer
 )
+
+logger = logging.getLogger(__name__)
 
 
 class LogPagination(PageNumberPagination):
@@ -623,3 +626,105 @@ class ErrorLogViewSet(viewsets.ReadOnlyModelViewSet):
                 'top_exceptions': list(top_exceptions),
             }
         }, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])  # Allow unauthenticated for client-side error reporting
+def client_log_view(request):
+    """
+    Endpoint for receiving client-side JavaScript errors from Player/Editor.
+    
+    This is the "Black Box" - allows debugging screens that are physically far away.
+    
+    POST /api/logs/client/
+    
+    Body:
+    {
+        "level": "error|warning|info|debug",
+        "message": "Error message",
+        "filename": "script.js",
+        "lineno": 42,
+        "colno": 10,
+        "stack": "Stack trace...",
+        "user_agent": "Browser user agent",
+        "url": "Current page URL",
+        "timestamp": "ISO timestamp",
+        "metadata": {
+            "screen_id": "...",
+            "template_id": "...",
+            "viewport": {...}
+        }
+    }
+    """
+    try:
+        data = request.data
+        
+        # Map client log level to ErrorLog level
+        level_mapping = {
+            'error': 'ERROR',
+            'warning': 'WARNING',
+            'info': 'INFO',
+            'debug': 'DEBUG',
+        }
+        error_level = level_mapping.get(data.get('level', 'error'), 'ERROR')
+        
+        # Build error message
+        message_parts = [data.get('message', 'Unknown client error')]
+        if data.get('filename'):
+            message_parts.append(f"File: {data.get('filename')}")
+        if data.get('lineno'):
+            message_parts.append(f"Line: {data.get('lineno')}")
+        if data.get('colno'):
+            message_parts.append(f"Column: {data.get('colno')}")
+        
+        error_message = ' | '.join(message_parts)
+        
+        # Extract metadata
+        metadata = data.get('metadata', {})
+        metadata['source'] = 'client'
+        metadata['url'] = data.get('url', '')
+        if data.get('viewport'):
+            metadata['viewport'] = data.get('viewport')
+        
+        # Get client IP
+        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+        if x_forwarded_for:
+            ip_address = x_forwarded_for.split(',')[0].strip()
+        else:
+            ip_address = request.META.get('REMOTE_ADDR', 'unknown')
+        
+        # Create ErrorLog entry
+        ErrorLog.objects.create(
+            level=error_level,
+            message=error_message,
+            stack_trace=data.get('stack', ''),
+            endpoint=data.get('url', ''),
+            request_method='CLIENT',
+            ip_address=ip_address,
+            user_agent=data.get('user_agent', ''),
+            exception_type='ClientError',
+            metadata=metadata,
+        )
+        
+        # Also log to standard logger
+        logger.info(
+            f"Client error logged: {error_message}",
+            extra={
+                'level': error_level,
+                'url': data.get('url'),
+                'screen_id': metadata.get('screen_id'),
+                'template_id': metadata.get('template_id'),
+            }
+        )
+        
+        return Response({
+            'status': 'success',
+            'message': 'Client error logged successfully'
+        }, status=status.HTTP_201_CREATED)
+        
+    except Exception as e:
+        logger.error(f"Failed to log client error: {str(e)}", exc_info=True)
+        return Response({
+            'status': 'error',
+            'message': 'Failed to log client error'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

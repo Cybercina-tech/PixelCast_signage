@@ -20,6 +20,10 @@ from .serializers import (
 from commands.models import Command
 from templates.models import Template, Content
 from log.models import CommandExecutionLog, ScreenStatusLog, ContentDownloadLog
+from core.audit import AuditLogger
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class ScreenViewSet(viewsets.ModelViewSet):
@@ -1238,6 +1242,19 @@ def bind_pairing_session(request):
             
             # Mark session as paired (this updates status atomically)
             session.mark_paired(screen, request.user)
+            
+            # Log audit event
+            try:
+                AuditLogger.log_action(
+                    action_type='create',
+                    user=request.user,
+                    resource=screen,
+                    description=f"Paired screen '{screen.name}' (pairing code: {session.pairing_code})",
+                    changes={'before': None, 'after': {'name': screen.name, 'device_id': screen.device_id, 'pairing_code': session.pairing_code}},
+                    request=request,
+                )
+            except Exception as audit_error:
+                logger.error(f"Failed to log screen pairing audit: {audit_error}", exc_info=True)
             
     except PairingSession.DoesNotExist:
         return Response({
