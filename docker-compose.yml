@@ -1,6 +1,8 @@
+version: '3.8'
+
 services:
   db:
-    image: postgres:15
+    image: postgres:15-alpine
     container_name: screengram_postgres
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -8,14 +10,142 @@ services:
       - POSTGRES_DB=${DB_NAME:-screengram_db}
       - POSTGRES_USER=${DB_USER:-screengram_user}
       - POSTGRES_PASSWORD=${DB_PASSWORD}
-    ports:
-      - "5432:5432"
+      - PGDATA=/var/lib/postgresql/data/pgdata
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U screengram_user -d screengram_db"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-screengram_user} -d ${DB_NAME:-screengram_db}"]
       interval: 10s
       timeout: 5s
       retries: 5
-    restart: unless-stopped
+      start_period: 10s
+    restart: always
+    networks:
+      - screengram-net
+    # Security: Don't expose ports to host in production
+    # ports:
+    #   - "${DB_PORT:-5432}:5432"
+
+  redis:
+    image: redis:7-alpine
+    container_name: screengram_redis
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    restart: always
+    networks:
+      - screengram-net
+    # Security: Don't expose ports to host in production
+    # ports:
+    #   - "${REDIS_PORT:-6379}:6379"
+
+  backend:
+    build:
+      context: ./BackEnd
+      dockerfile: Dockerfile
+    container_name: screengram_backend
+    command: /app/entrypoint.sh
+    volumes:
+      # Mount .env file for configuration persistence (read-only)
+      - ./.env:/app/.env:ro
+      # Mount installed.lock for installation state persistence (persistent across updates)
+      # Using named volume ensures it persists even if the file doesn't exist on host
+      - installation_state:/app/installed.lock
+      # Static files (collected by Django) - persists across container restarts
+      - backend_static:/app/staticfiles
+      # User-uploaded media content - CRITICAL: Must persist across updates
+      - backend_media:/app/media
+      # Backups - persists across container restarts
+      - backend_backups:/app/backups
+    environment:
+      - SECRET_KEY=${SECRET_KEY}
+      - DEBUG=${DEBUG:-False}
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-localhost,127.0.0.1,backend,frontend}
+      - DB_NAME=${DB_NAME:-screengram_db}
+      - DB_USER=${DB_USER:-screengram_user}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_HOST=db
+      - DB_PORT=5432
+      - USE_SQLITE=${USE_SQLITE:-False}
+      - BASE_URL=${BASE_URL:-http://localhost}
+      - CELERY_BROKER_URL=${CELERY_BROKER_URL:-redis://redis:6379/0}
+      - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND:-redis://redis:6379/0}
+      - USE_REDIS_CACHE=${USE_REDIS_CACHE:-True}
+      - REDIS_CACHE_URL=${REDIS_CACHE_URL:-redis://redis:6379/1}
+      - CHANNEL_LAYERS_BACKEND=${CHANNEL_LAYERS_BACKEND:-redis}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+    healthcheck:
+      # Health check that works both before and after installation
+      test: ["CMD", "python", "-c", "import urllib.request; import sys; response = urllib.request.urlopen('http://localhost:8000/api/setup/status/', timeout=5); sys.exit(0 if response.getcode() in [200, 503] else 1)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s  # Increased to allow migrations to complete
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: always
+    networks:
+      - screengram-net
+    # Backend is not exposed to host - only accessible via frontend proxy
+
+  frontend:
+    build:
+      context: ./FrontEnd
+      dockerfile: Dockerfile
+    container_name: screengram_frontend
+    ports:
+      - "${FRONTEND_PORT:-80}:80"
+      # Uncomment for HTTPS
+      # - "${FRONTEND_HTTPS_PORT:-443}:443"
+    depends_on:
+      - backend
+    restart: always
+    networks:
+      - screengram-net
+    # Health check for frontend
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
 
 volumes:
+  # Database data - CRITICAL: Must persist across updates
   postgres_data:
+    driver: local
+    name: screengram_postgres_data
+  # Redis data - persists cache and session data
+  redis_data:
+    driver: local
+    name: screengram_redis_data
+  # Static files - collected by Django, persists across container restarts
+  backend_static:
+    driver: local
+    name: screengram_backend_static
+  # Media uploads - CRITICAL: User-uploaded content must persist
+  backend_media:
+    driver: local
+    name: screengram_backend_media
+  # Backups - persists backup files
+  backend_backups:
+    driver: local
+    name: screengram_backend_backups
+  # Installation state - ensures installation wizard doesn't re-trigger on updates
+  installation_state:
+    driver: local
+    name: screengram_installation_state
+
+networks:
+  screengram-net:
+    driver: bridge
+    name: screengram-net

@@ -179,9 +179,9 @@
                         <div
                           v-if="selectedContentId === content.id"
                           class="absolute inset-0 flex items-center justify-center"
-                          style="background: rgba(30, 58, 138, 0.15);"
+                          :style="{ background: 'rgba(9, 132, 227, 0.15)' }"
                         >
-                          <div class="w-8 h-8 rounded-full flex items-center justify-center" style="background: #1e3a8a;">
+                          <div class="w-8 h-8 rounded-full flex items-center justify-center" style="background: var(--accent-color);">
                             <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                             </svg>
@@ -1045,7 +1045,7 @@ onMounted(() => {
 }
 
 .media-thumbnail-selected {
-  border-color: #1e3a8a; /* Navy Blue */
+  border-color: var(--accent-color);
   box-shadow: 0 0 0 2px rgba(30, 58, 138, 0.2), 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 }
 
@@ -1073,7 +1073,7 @@ onMounted(() => {
 
 /* File Information Sidebar - Paper White */
 .media-sidebar {
-  background: #F9F9F7; /* Paper White */
+  background: var(--card-bg);
   border-left: 1px solid var(--border-color);
   transition: all 0.4s ease;
 }
@@ -1084,7 +1084,7 @@ onMounted(() => {
 
 /* Upload Zone - Dashed Border with Warm Grey */
 .upload-zone-default {
-  border: 2px dashed #9CA3AF; /* Warm grey */
+  border: 2px dashed var(--border-color);
   background: var(--bg-secondary);
   transition: all 0.4s ease;
 }
@@ -1137,19 +1137,15 @@ onMounted(() => {
 }
 
 .filter-button-active {
-  background: linear-gradient(to bottom, var(--accent-color), #0871c2);
-  color: white;
+  background: linear-gradient(to bottom, var(--accent-color), var(--accent-color));
+  color: var(--button-text);
   border-color: var(--accent-color);
-  box-shadow: 
-    0 2px 4px rgba(9, 132, 227, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  box-shadow: var(--button-shadow);
 }
 
 .filter-button-active:hover {
-  background: linear-gradient(to bottom, #0871c2, #065a9e);
-  box-shadow: 
-    0 4px 6px rgba(9, 132, 227, 0.4),
-    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  background: linear-gradient(to bottom, var(--accent-color), var(--accent-color));
+  box-shadow: var(--button-shadow-hover);
 }
 
 .dark .filter-button {
@@ -1168,9 +1164,7 @@ onMounted(() => {
 }
 
 .dark .filter-button-active {
-  background: linear-gradient(to bottom, var(--accent-color), #0871c2);
-  box-shadow: 
-    0 2px 4px rgba(9, 132, 227, 0.5),
-    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  background: linear-gradient(to bottom, var(--accent-color), var(--accent-color));
+  box-shadow: var(--button-shadow);
 }
 </style>

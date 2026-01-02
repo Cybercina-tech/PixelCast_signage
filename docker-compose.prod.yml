@@ -1,0 +1,94 @@
+# Production Override File
+# Use with: docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#
+# This file contains production-specific overrides:
+# - Removes port mappings for db and redis (security)
+# - Sets production environment variables
+# - Configures resource limits
+# - Enables logging configuration
+
+version: '3.8'
+
+services:
+  db:
+    # Production: No port exposure for security
+    ports: []
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '1'
+          memory: 1G
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  redis:
+    # Production: No port exposure for security
+    ports: []
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  backend:
+    # Production environment overrides
+    environment:
+      - DEBUG=False
+      - GUNICORN_WORKERS=4
+      - GUNICORN_TIMEOUT=120
+      - GUNICORN_LOG_LEVEL=info
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '1'
+          memory: 1G
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  frontend:
+    # Production: HTTPS support (uncomment and configure SSL certificates)
+    # volumes:
+    #   - ./nginx/ssl:/etc/nginx/ssl:ro
+    #   - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+

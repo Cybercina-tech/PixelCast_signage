@@ -10,7 +10,7 @@ This document outlines planned improvements, fixes, and enhancements for the Scr
 
 - ✅ Fixed Content-Type header boundary issue
 - ❌ Investigate remaining 400 errors
-- ❌ Improve error messages and logging (prompt in line)
+- ❌ Improve error messages and logging
 - ❌ Add comprehensive file validation
 - ❌ Fix file path generation edge cases
 - ❌ Test with various file types and sizes
@@ -375,6 +375,7 @@ This document outlines planned improvements, fixes, and enhancements for the Scr
 **Priority**: 🟡 Medium  
 **Status**: Django migrations exist
 
+- ✅ Auto-migration on container startup (entrypoint.sh)
 - Document migration procedure
 - Add rollback procedures
 - Create migration testing strategy

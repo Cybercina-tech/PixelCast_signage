@@ -67,11 +67,20 @@ import ServerError from '../pages/errors/ServerError.vue'
 import WebPlayer from '../pages/player/WebPlayer.vue'
 import PlayerConnect from '../pages/player/PlayerConnect.vue'
 
+// Installation
+import Install from '../pages/Install.vue'
+
 const routes = [
   {
     path: '/',
     name: 'landing',
     component: Landing,
+    meta: { public: true },
+  },
+  {
+    path: '/install',
+    name: 'install',
+    component: () => import('../pages/SetupWizard.vue'),
     meta: { public: true },
   },
   {

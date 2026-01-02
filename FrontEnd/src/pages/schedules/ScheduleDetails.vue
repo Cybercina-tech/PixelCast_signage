@@ -379,8 +379,8 @@ onMounted(async () => {
       to right,
       transparent,
       transparent calc(100% / 24 - 1px),
-      #E2E8F0 calc(100% / 24 - 1px),
-      #E2E8F0 calc(100% / 24)
+      var(--grid-color) calc(100% / 24 - 1px),
+      var(--grid-color) calc(100% / 24)
     );
 }
 
@@ -398,14 +398,14 @@ onMounted(async () => {
 .timeline-grid-line {
   @apply absolute top-0 bottom-0;
   width: 1px;
-  background: #E2E8F0;
+  background: var(--grid-color);
 }
 
 .dark .timeline-grid-line {
   background: rgba(255, 255, 255, 0.1);
 }
 
-/* Current Time Indicator - Soft Terracotta Red */
+/* Current Time Indicator - Using accent color */
 .timeline-current-time {
   @apply absolute top-0 bottom-0 pointer-events-none;
   width: 2px;
@@ -414,26 +414,25 @@ onMounted(async () => {
 
 .timeline-current-time-line {
   @apply absolute top-0 bottom-0 w-full;
-  background: #C85A3A; /* Terracotta Red */
-  box-shadow: 0 0 4px rgba(200, 90, 58, 0.4);
+  background: var(--accent-color);
+  box-shadow: 0 0 4px rgba(9, 132, 227, 0.4);
 }
 
 .timeline-current-time-label {
   @apply absolute top-0 left-1/2 transform -translate-x-1/2 -translate-y-full;
   @apply px-2 py-1 rounded text-xs font-medium;
-  background: #C85A3A;
-  color: white;
+  background: var(--accent-color);
+  color: var(--button-text);
   white-space: nowrap;
   margin-bottom: 4px;
 }
 
 .dark .timeline-current-time-line {
-  background: #E07A5F;
-  box-shadow: 0 0 6px rgba(224, 122, 95, 0.6);
+  box-shadow: 0 0 6px rgba(9, 132, 227, 0.6);
 }
 
 .dark .timeline-current-time-label {
-  background: #E07A5F;
+  /* Same accent color works in both themes */
 }
 
 /* Event Blocks - Pastel Palette with 2px Rounded Corners */
@@ -455,59 +454,62 @@ onMounted(async () => {
   transform: translateY(-2px);
 }
 
-/* Pastel Color Palette */
+/* Pastel Color Palette - Using theme-aware colors */
 .event-color-0 {
-  background: #E6D5F7; /* Light Lavender */
-  border-left: 3px solid #B794F6;
+  background: var(--card-bg);
+  border-left: 3px solid var(--accent-color);
+  opacity: 0.9;
 }
 
 .event-color-1 {
-  background: #D1F2EB; /* Soft Mint */
-  border-left: 3px solid #7FCDBB;
+  background: var(--card-bg);
+  border-left: 3px solid var(--accent-color);
+  opacity: 0.85;
 }
 
 .event-color-2 {
-  background: #FFE5CC; /* Pale Peach */
-  border-left: 3px solid #FFB366;
+  background: var(--card-bg);
+  border-left: 3px solid var(--accent-color);
+  opacity: 0.8;
 }
 
 .dark .event-color-0 {
-  background: rgba(183, 148, 246, 0.3);
-  border-left-color: #B794F6;
+  background: rgba(9, 132, 227, 0.2);
+  border-left-color: var(--accent-color);
 }
 
 .dark .event-color-1 {
-  background: rgba(127, 205, 187, 0.3);
-  border-left-color: #7FCDBB;
+  background: rgba(9, 132, 227, 0.15);
+  border-left-color: var(--accent-color);
 }
 
 .dark .event-color-2 {
-  background: rgba(255, 179, 102, 0.3);
-  border-left-color: #FFB366;
+  background: rgba(9, 132, 227, 0.1);
+  border-left-color: var(--accent-color);
 }
 
-/* Event Block Content - Dark Charcoal Text */
+/* Event Block Content - Using theme text colors */
 .event-block-content {
   @apply h-full flex flex-col justify-center;
 }
 
 .event-block-title {
   @apply text-sm font-semibold;
-  color: #2D3436; /* Dark Charcoal */
+  color: var(--text-main);
   margin-bottom: 4px;
 }
 
 .event-block-time {
   @apply text-xs;
-  color: #636E72; /* Muted Charcoal */
+  color: var(--text-muted);
 }
 
 .dark .event-block-title {
-  color: #fafafa;
+  color: var(--text-main);
 }
 
 .dark .event-block-time {
-  color: #94a3b8;
+  color: var(--text-muted);
 }
 
 /* Drag and Drop - Ghost Shadow */

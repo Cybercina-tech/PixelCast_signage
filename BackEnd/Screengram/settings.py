@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 from pathlib import Path
 import os
 from dotenv import load_dotenv
+from typing import Any, Optional, Union
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -21,6 +22,67 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # BASE_DIR is BackEnd, so .env is in BASE_DIR.parent
 PROJECT_ROOT = BASE_DIR.parent
 load_dotenv(dotenv_path=PROJECT_ROOT / '.env')
+
+
+def env(key: str, default: Any = None, cast: Optional[type] = None) -> Any:
+    """
+    Get environment variable with safe defaults.
+    
+    This function provides update-safe environment variable handling:
+    - If a variable is missing, returns the default (never crashes)
+    - Supports type casting (str, int, bool, list)
+    - Handles empty strings as missing values
+    
+    Args:
+        key: Environment variable name
+        default: Default value if variable is not set
+        cast: Type to cast the value to (str, int, bool, list)
+    
+    Returns:
+        Environment variable value (cast to type if specified) or default
+    
+    Examples:
+        SECRET_KEY = env('SECRET_KEY', default='fallback-key')
+        DEBUG = env('DEBUG', default=False, cast=bool)
+        PORT = env('PORT', default=8000, cast=int)
+        HOSTS = env('ALLOWED_HOSTS', default='localhost', cast=list)
+    """
+    value = os.environ.get(key)
+    
+    # If value is not set or is empty string, return default
+    if value is None or value == '':
+        return default
+    
+    # If no casting needed, return as-is
+    if cast is None:
+        return value
+    
+    # Type casting
+    if cast == bool:
+        # Handle string booleans
+        if isinstance(value, str):
+            return value.lower() in ('true', '1', 'yes', 'on')
+        return bool(value)
+    elif cast == int:
+        try:
+            return int(value)
+        except (ValueError, TypeError):
+            return default
+    elif cast == float:
+        try:
+            return float(value)
+        except (ValueError, TypeError):
+            return default
+    elif cast == list:
+        # Split by comma and strip whitespace
+        if isinstance(value, str):
+            return [item.strip() for item in value.split(',') if item.strip()]
+        return value if isinstance(value, list) else [value]
+    elif cast == str:
+        return str(value)
+    else:
+        # Unknown cast type, return as-is
+        return value
 
 # Import Fernet for notification encryption key generation
 try:
@@ -34,12 +96,13 @@ except ImportError:
 
 # SECURITY WARNING: keep the secret key used in production secret!
 # In production, set SECRET_KEY as an environment variable
-SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-7szgl4mmm9n0!&u3d4-=iut39ffowsvlr^r9img3r!izj=n3tq')
+SECRET_KEY = env('SECRET_KEY', default='django-insecure-7szgl4mmm9n0!&u3d4-=iut39ffowsvlr^r9img3r!izj=n3tq')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DEBUG', 'True').lower() == 'true'
+DEBUG = env('DEBUG', default=False, cast=bool)
 
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '').split(',') if os.environ.get('ALLOWED_HOSTS') else []
+# Allowed hosts - safe default for development
+ALLOWED_HOSTS = env('ALLOWED_HOSTS', default='localhost,127.0.0.1,backend,frontend', cast=list)
 
 # CORS Configuration
 CORS_ALLOWED_ORIGINS = [
@@ -94,6 +157,7 @@ INSTALLED_APPS = [
     'channels',  # Django Channels for WebSocket support
     'rest_framework',  # Django REST Framework
     'rest_framework_simplejwt',  # JWT Authentication
+    'setup',  # Setup/Installation wizard (must be early for middleware)
     'core',  # Core infrastructure (caching, rate limiting, audit, backup)
     'accounts',  # App for User management (must be before other apps)
     'signage',  # App for Screen management
@@ -111,6 +175,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'corsheaders.middleware.CorsMiddleware',  # CORS middleware (should be as high as possible)
+    'setup.middleware.InstallationCheckMiddleware',  # Installation check middleware (must be early)
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -147,7 +212,7 @@ WSGI_APPLICATION = 'Screengram.wsgi.application'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
 # Check if SQLite should be used (fallback for development without Docker)
-USE_SQLITE = os.environ.get('USE_SQLITE', 'False').lower() == 'true'
+USE_SQLITE = env('USE_SQLITE', default=False, cast=bool)
 
 if USE_SQLITE:
     # SQLite database (fallback for development)
@@ -162,11 +227,11 @@ else:
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
-            'NAME': os.environ.get('DB_NAME', 'screengram_db'),
-            'USER': os.environ.get('DB_USER', 'screengram_user'),
-            'PASSWORD': os.environ.get('DB_PASSWORD', ''),
-            'HOST': os.environ.get('DB_HOST', '127.0.0.1'),
-            'PORT': os.environ.get('DB_PORT', '5432'),
+            'NAME': env('DB_NAME', default='screengram_db'),
+            'USER': env('DB_USER', default='screengram_user'),
+            'PASSWORD': env('DB_PASSWORD', default=''),
+            'HOST': env('DB_HOST', default='127.0.0.1'),
+            'PORT': env('DB_PORT', default='5432'),
             'OPTIONS': {
                 'connect_timeout': 10,
             },
@@ -227,7 +292,7 @@ MEDIA_URL = '/media/'
 
 # Base URL for building absolute URLs (used in serializers)
 # In production, set this to your domain (e.g., 'https://yourdomain.com')
-BASE_URL = os.environ.get('BASE_URL', 'http://localhost:8000')
+BASE_URL = env('BASE_URL', default='http://localhost:8000')
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
@@ -288,16 +353,26 @@ ASGI_APPLICATION = 'Screengram.asgi.application'
 # Channel Layers Configuration
 # For development: use in-memory channel layer
 # For production: use Redis
-CHANNEL_LAYERS = {
-    'default': {
-        'BACKEND': 'channels.layers.InMemoryChannelLayer',
-        # For production with Redis, use:
-        # 'BACKEND': 'channels_redis.core.RedisChannelLayer',
-        # 'CONFIG': {
-        #     "hosts": [('127.0.0.1', 6379)],
-        # },
-    },
-}
+CHANNEL_LAYERS_BACKEND = env('CHANNEL_LAYERS_BACKEND', default='memory')
+
+if CHANNEL_LAYERS_BACKEND == 'redis':
+    REDIS_HOST = env('REDIS_HOST', default='127.0.0.1')
+    REDIS_PORT = env('REDIS_PORT', default=6379, cast=int)
+    CHANNEL_LAYERS = {
+        'default': {
+            'BACKEND': 'channels_redis.core.RedisChannelLayer',
+            'CONFIG': {
+                "hosts": [(REDIS_HOST, REDIS_PORT)],
+            },
+        },
+    }
+else:
+    # Use in-memory channel layer for development
+    CHANNEL_LAYERS = {
+        'default': {
+            'BACKEND': 'channels.layers.InMemoryChannelLayer',
+        },
+    }
 
 # Security settings for screen communication
 SCREEN_COMMUNICATION = {
@@ -318,8 +393,8 @@ if USE_S3_STORAGE:
     DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
     
     # AWS Credentials (set via environment variables in production)
-    AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID', '')
-    AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY', '')
+    AWS_ACCESS_KEY_ID = env('AWS_ACCESS_KEY_ID', default='')
+    AWS_SECRET_ACCESS_KEY = env('AWS_SECRET_ACCESS_KEY', default='')
     AWS_STORAGE_BUCKET_NAME = os.environ.get('AWS_STORAGE_BUCKET_NAME', 'screengram-content')
     AWS_S3_REGION_NAME = os.environ.get('AWS_S3_REGION_NAME', 'us-east-1')
     

@@ -129,6 +129,17 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config
     const status = error.response?.status
+    const errorData = error.response?.data || {}
+    
+    // Handle installation required (503 with installation_required error)
+    if (status === 503 && (errorData.error === 'installation_required' || errorData.status === 'not_installed')) {
+      // Redirect to install page if not already there
+      if (window.location.pathname !== '/install' && !originalRequest.url?.includes('/setup/')) {
+        console.warn('Installation required - redirecting to /install')
+        window.location.href = '/install'
+        return Promise.reject(error)
+      }
+    }
     
     // Don't try to refresh token for auth endpoints (login, signup, etc.)
     const isAuthEndpoint = originalRequest.url?.includes('/auth/login/') || 
@@ -562,6 +573,15 @@ export const adminAPI = {
     resolve: (id) => api.patch(`/admin/errors/${id}/resolve/`),
     stats: (params) => api.get('/admin/errors/stats/', { params }),
   },
+}
+
+// Setup/Installation API
+export const setupAPI = {
+  status: () => api.get('/setup/status/'),
+  testDb: (data) => api.post('/setup/db-check/', data),
+  runMigrations: () => api.post('/setup/run-migrations/'),
+  createAdmin: (data) => api.post('/setup/create-admin/', data),
+  finalize: () => api.post('/setup/finalize/'),
 }
 
 // WebSocket URL helper

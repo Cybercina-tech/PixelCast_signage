@@ -28,6 +28,9 @@ admin_router.register(r'errors', ErrorLogViewSet, basename='error-log')
 urlpatterns = [
     path('admin/', admin.site.urls),
     
+    # Setup/Installation endpoints (must be before other API routes)
+    path('api/setup/', include('setup.urls')),
+    
     # THE IoT ESCAPE PLAN: IoT endpoints outside /api/ namespace to bypass strict security filters
     # This allows IoT devices to communicate without authentication middleware interference
     path('iot/', include('signage.urls')),  # IoT endpoints (heartbeat, template) - bypasses /api/ security

@@ -2,10 +2,8 @@
 
 ## 1. Project Overview
 
-ScreenGram is a digital signage management platform that enables users to remotely manage digital displays (screens), create and schedule content templates, monitor screen health, and execute commands on remote devices.
-
 **What this system is:**
-A centralized web-based platform for managing multiple digital signage displays. It consists of a Django REST API backend and a Vue.js frontend dashboard. Screens connect via a web player (HTML/JavaScript) that renders templates in fullscreen mode.
+ScreenGram is a centralized web-based platform for managing multiple digital signage displays. It consists of a Django REST API backend and a Vue.js frontend dashboard. Screens connect via a web player (HTML/JavaScript) that renders templates in fullscreen mode.
 
 **What problem it solves:**
 - Centralized management of multiple digital signage displays
@@ -163,6 +161,9 @@ The system uses a Django REST API backend to manage screens, templates, content,
 - ✅ Bulk operations support
 - ✅ Celery configuration for async tasks
 - ✅ Notification system (encrypted notifications, async delivery)
+- ✅ Installation wizard with environment configuration
+- ✅ Docker containerization with auto-migration entrypoint
+- ✅ GitHub webhook deployment automation
 - ⚠️ Automated backup scheduling configured but may need Celery workers running
 - ⚠️ Redis cache requires USE_REDIS_CACHE=True in production
 
@@ -177,6 +178,7 @@ The system uses a Django REST API backend to manage screens, templates, content,
 - **Caching**: Redis (production, USE_REDIS_CACHE=True) or LocMemCache (development)
 - **Task Queue**: Celery (configured, but may need workers running)
 - **API Documentation**: drf-spectacular (Swagger/OpenAPI)
+- **Deployment**: Docker with docker-compose, auto-deployment via GitHub webhooks
 
 ### Frontend Stack
 - **Framework**: Vue.js 3.4+ with Composition API
@@ -187,6 +189,7 @@ The system uses a Django REST API backend to manage screens, templates, content,
 - **Styling**: Tailwind CSS 3.4+
 - **Charts**: Chart.js with vue-chartjs
 - **Icons**: Heroicons
+- **Theme**: Aether (Light) and Cosmic (Dark) themes with CSS variables
 
 ### Media Storage Approach
 - **Local Storage**: Files stored in `BackEnd/media/users/user_{user_id}/{type}/`
@@ -321,15 +324,16 @@ The system uses a Django REST API backend to manage screens, templates, content,
 
 ### Database
 - SQLite used by default (not suitable for production with multiple concurrent users)
-- No database migrations strategy documented
-- No database backup/restore procedure documented
+- PostgreSQL recommended for production (configured in docker-compose.yml)
+- Database migrations run automatically on container startup via entrypoint.sh
 
 ### Deployment
-- No production deployment guide
-- Environment variables not fully documented
-- No Docker/containerization setup
+- Docker containerization fully implemented
+- Auto-migration on container startup
+- GitHub webhook deployment automation available
+- Environment variables documented in env.example
 - Celery workers need to be started separately for async tasks
-- Redis required for production WebSocket and caching (not documented)
+- Redis required for production WebSocket and caching
 
 ---
 
