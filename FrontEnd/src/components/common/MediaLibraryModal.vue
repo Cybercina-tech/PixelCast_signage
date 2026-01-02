@@ -3,19 +3,19 @@
     <Transition name="modal">
       <div v-if="show" class="fixed inset-0 z-50 overflow-y-auto" @click.self="$emit('close')">
         <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
-          <div class="fixed inset-0 transition-opacity bg-black/60 backdrop-blur-md" aria-hidden="true"></div>
+          <div class="fixed inset-0 transition-opacity bg-black/40 dark:bg-black/60 backdrop-blur-md" aria-hidden="true"></div>
           <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
           <div
-            class="inline-block align-bottom bg-gray-800 backdrop-blur-lg rounded-2xl text-left overflow-hidden shadow-2xl border border-gray-700 transform transition-all duration-300 sm:my-8 sm:align-middle sm:max-w-5xl sm:w-full"
+            class="inline-block align-bottom bg-card backdrop-blur-lg rounded-2xl text-left overflow-hidden shadow-2xl border border-border-color transform transition-all duration-400 sm:my-8 sm:align-middle sm:max-w-5xl sm:w-full"
             style="animation: modalFadeUp 0.3s ease-out;"
           >
             <!-- Header -->
-            <div class="bg-gray-800 px-6 pt-6 pb-4 border-b border-gray-700">
+            <div class="bg-card px-6 pt-6 pb-4 border-b border-border-color">
               <div class="flex items-center justify-between mb-4">
-                <h3 class="text-xl font-semibold text-white">Media Library</h3>
+                <h3 class="text-xl font-semibold text-primary">Media Library</h3>
                 <button
                   @click="$emit('close')"
-                  class="text-gray-400 hover:text-white transition-colors duration-200 p-2 rounded-lg hover:bg-gray-700"
+                  class="text-muted hover:text-primary transition-colors duration-400 p-2 rounded-lg hover:bg-secondary"
                 >
                   <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -24,15 +24,16 @@
               </div>
               
               <!-- Tabs -->
-              <div class="flex gap-2 border-b border-gray-700">
+              <div class="flex gap-2 border-b border-border-color">
                 <button
                   @click="activeTab = 'gallery'"
                   :class="[
-                    'px-4 py-2 text-sm font-medium transition-colors duration-200 border-b-2',
+                    'px-4 py-2 text-sm font-medium transition-colors duration-400 border-b-2',
                     activeTab === 'gallery'
-                      ? 'text-blue-400 border-blue-400'
-                      : 'text-gray-400 border-transparent hover:text-gray-300'
+                      ? 'text-accent-color border-accent-color'
+                      : 'text-muted border-transparent hover:text-primary'
                   ]"
+                  style="--accent-color: var(--accent-color);"
                 >
                   <span class="flex items-center gap-2">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -44,11 +45,12 @@
                 <button
                   @click="activeTab = 'upload'"
                   :class="[
-                    'px-4 py-2 text-sm font-medium transition-colors duration-200 border-b-2',
+                    'px-4 py-2 text-sm font-medium transition-colors duration-400 border-b-2',
                     activeTab === 'upload'
-                      ? 'text-blue-400 border-blue-400'
-                      : 'text-gray-400 border-transparent hover:text-gray-300'
+                      ? 'text-accent-color border-accent-color'
+                      : 'text-muted border-transparent hover:text-primary'
                   ]"
+                  style="--accent-color: var(--accent-color);"
                 >
                   <span class="flex items-center gap-2">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -61,7 +63,7 @@
             </div>
 
             <!-- Tab Content -->
-            <div class="bg-gray-800">
+            <div class="bg-card">
               <!-- Gallery Tab -->
               <div v-if="activeTab === 'gallery'" class="px-6 py-4">
                 <!-- Search and Filter -->
@@ -71,36 +73,57 @@
                       v-model="searchQuery"
                       type="text"
                       placeholder="Search media..."
-                      class="w-full px-4 py-2 bg-gray-700/50 border border-gray-600 rounded-lg text-sm text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                      class="input-base w-full px-4 py-2 text-sm"
                     />
                   </div>
-                  <select
-                    v-model="filterType"
-                    class="px-4 py-2 bg-gray-700/50 border border-gray-600 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
-                  >
-                    <option :value="null">All Types</option>
-                    <option value="image">Images</option>
-                    <option value="video">Videos</option>
-                  </select>
+                  <div class="flex gap-2">
+                    <button
+                      @click="filterType = null"
+                      :class="[
+                        'filter-button',
+                        filterType === null ? 'filter-button-active' : 'filter-button-inactive'
+                      ]"
+                    >
+                      All Types
+                    </button>
+                    <button
+                      @click="filterType = 'image'"
+                      :class="[
+                        'filter-button',
+                        filterType === 'image' ? 'filter-button-active' : 'filter-button-inactive'
+                      ]"
+                    >
+                      Images
+                    </button>
+                    <button
+                      @click="filterType = 'video'"
+                      :class="[
+                        'filter-button',
+                        filterType === 'video' ? 'filter-button-active' : 'filter-button-inactive'
+                      ]"
+                    >
+                      Videos
+                    </button>
+                  </div>
                 </div>
 
                 <!-- Loading State -->
                 <div v-if="contentStore.loading" class="flex items-center justify-center py-12">
-                  <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500"></div>
-                  <span class="ml-3 text-gray-400">Loading media...</span>
+                  <div class="animate-spin rounded-full h-10 w-10 border-b-2" style="border-color: var(--accent-color);"></div>
+                  <span class="ml-3 text-muted">Loading media...</span>
                 </div>
 
                 <!-- Error State -->
                 <div v-else-if="contentStore.error" class="text-center py-12">
-                  <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-500/10 mb-4">
-                    <svg class="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-50 dark:bg-red-900/30 mb-4">
+                    <svg class="w-8 h-8 text-red-500 dark:text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                   </div>
-                  <p class="text-red-400 font-medium mb-2">{{ contentStore.error }}</p>
+                  <p class="text-red-600 dark:text-red-400 font-medium mb-2">{{ contentStore.error }}</p>
                   <button
                     @click="loadContents"
-                    class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm transition-colors duration-200"
+                    class="btn-primary px-4 py-2 rounded-lg text-sm"
                   >
                     Retry
                   </button>
@@ -108,113 +131,160 @@
 
                 <!-- Empty State -->
                 <div v-else-if="filteredContents.length === 0" class="text-center py-12">
-                  <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-700/50 mb-4">
-                    <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-secondary mb-4">
+                    <svg class="w-8 h-8 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
                   </div>
-                  <h3 class="text-lg font-medium text-gray-300 mb-2">No media found</h3>
-                  <p class="text-gray-400 text-sm mb-4">{{ searchQuery || filterType ? 'Try adjusting your search or filters' : 'Upload some content to get started' }}</p>
+                  <h3 class="text-lg font-medium text-primary mb-2">No media found</h3>
+                  <p class="text-muted text-sm mb-4">{{ searchQuery || filterType ? 'Try adjusting your search or filters' : 'Upload some content to get started' }}</p>
                   <button
                     @click="activeTab = 'upload'"
-                    class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm transition-colors duration-200"
+                    class="btn-primary px-4 py-2 rounded-lg text-sm"
                   >
                     Upload Media
                   </button>
                 </div>
 
-                <!-- Media Grid -->
-                <div v-else class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 max-h-[60vh] overflow-y-auto">
-                  <div
-                    v-for="content in filteredContents"
-                    :key="content.id"
-                    @click="selectContent(content)"
-                    :class="[
-                      'relative group cursor-pointer rounded-lg overflow-hidden border-2 transition-all duration-200',
-                      selectedContentId === content.id
-                        ? 'border-blue-500 ring-2 ring-blue-500/50 shadow-lg'
-                        : 'border-gray-700 hover:border-gray-600 hover:shadow-md'
-                    ]"
-                  >
-                    <!-- Thumbnail/Preview -->
-                    <div class="aspect-square bg-gray-700 relative overflow-hidden">
-                      <!-- Image Preview -->
-                      <img
-                        v-if="content.type === 'image' && content.secure_url"
-                        :src="content.secure_url"
-                        :alt="content.name || 'Media'"
-                        class="w-full h-full object-cover"
-                        @error="handleImageError"
-                      />
-                      <!-- Video Preview -->
-                      <div v-else-if="content.type === 'video' && content.secure_url" class="w-full h-full flex items-center justify-center bg-gray-900">
-                        <video
-                          :src="content.secure_url"
-                          class="w-full h-full object-cover"
-                          muted
-                          preload="metadata"
+                <!-- Media Grid with Sidebar -->
+                <div v-else class="flex gap-6">
+                  <!-- Media Grid -->
+                  <div class="flex-1 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 max-h-[60vh] overflow-y-auto">
+                    <div
+                      v-for="content in filteredContents"
+                      :key="content.id"
+                      @click="selectContent(content)"
+                      :class="[
+                        'relative group cursor-pointer rounded-lg overflow-hidden transition-all duration-400 media-thumbnail',
+                        selectedContentId === content.id
+                          ? 'media-thumbnail-selected'
+                          : 'media-thumbnail-default'
+                      ]"
+                    >
+                      <!-- Thumbnail/Preview -->
+                      <div class="aspect-square bg-secondary relative overflow-hidden">
+                        <!-- Smart Media Preview -->
+                        <SmartMediaPreview
+                          :file-url="content.secure_url || content.absolute_file_url || content.file_url"
+                          :file-type="content.type"
+                          :alt="content.name || 'Media'"
+                          :video-duration="content.video_duration"
+                          :enable-hover-zoom="true"
+                          :play-on-hover="true"
+                          :show-duration="true"
+                          class="w-full h-full"
                         />
-                        <div class="absolute inset-0 flex items-center justify-center bg-black/30">
-                          <svg class="w-12 h-12 text-white" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M8 5v14l11-7z" />
-                          </svg>
-                        </div>
-                      </div>
-                      <!-- Placeholder -->
-                      <div v-else class="w-full h-full flex items-center justify-center">
-                        <svg class="w-12 h-12 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
-                      </div>
 
-                      <!-- Selection Indicator -->
-                      <div
-                        v-if="selectedContentId === content.id"
-                        class="absolute inset-0 bg-blue-500/20 flex items-center justify-center"
-                      >
-                        <div class="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center">
-                          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                          </svg>
-                        </div>
-                      </div>
-
-                      <!-- Type Badge -->
-                      <div class="absolute top-2 right-2">
-                        <span
-                          :class="[
-                            'px-2 py-1 rounded text-xs font-medium',
-                            content.type === 'image' ? 'bg-green-500/80 text-white' : 'bg-purple-500/80 text-white'
-                          ]"
+                        <!-- Selection Indicator - Navy Blue -->
+                        <div
+                          v-if="selectedContentId === content.id"
+                          class="absolute inset-0 flex items-center justify-center"
+                          style="background: rgba(30, 58, 138, 0.15);"
                         >
-                          {{ content.type === 'image' ? 'IMG' : 'VID' }}
-                        </span>
+                          <div class="w-8 h-8 rounded-full flex items-center justify-center" style="background: #1e3a8a;">
+                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                            </svg>
+                          </div>
+                        </div>
+
+                        <!-- Type Badge -->
+                        <div class="absolute top-2 right-2">
+                          <span
+                            :class="[
+                              'px-2 py-1 rounded text-xs font-medium backdrop-blur-sm',
+                              content.type === 'image' ? 'bg-green-500/80 text-white' : 'bg-purple-500/80 text-white'
+                            ]"
+                          >
+                            {{ content.type === 'image' ? 'IMG' : 'VID' }}
+                          </span>
+                        </div>
+
+                        <!-- Delete Button (on hover) -->
+                        <button
+                          @click.stop="handleDeleteContent(content)"
+                          class="absolute top-2 left-2 w-7 h-7 bg-red-500/80 hover:bg-red-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-400 backdrop-blur-sm"
+                          title="Delete"
+                        >
+                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+
+                        <!-- Frosted Glass File Name Overlay -->
+                        <div class="absolute bottom-0 left-0 right-0 p-2 media-name-overlay">
+                          <p class="text-xs text-primary font-medium truncate" :title="content.name">
+                            {{ content.name || 'Untitled' }}
+                          </p>
+                        </div>
                       </div>
-
-                      <!-- Delete Button (on hover) -->
-                      <button
-                        @click.stop="handleDeleteContent(content)"
-                        class="absolute top-2 left-2 w-7 h-7 bg-red-500/80 hover:bg-red-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                        title="Delete"
-                      >
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      </button>
                     </div>
+                  </div>
 
-                    <!-- Content Info -->
-                    <div class="p-2 bg-gray-900/80">
-                      <p class="text-xs text-white font-medium truncate" :title="content.name">
-                        {{ content.name || 'Untitled' }}
-                      </p>
-                      <p v-if="content.description" class="text-xs text-gray-400 truncate mt-1" :title="content.description">
-                        {{ content.description }}
-                      </p>
+                  <!-- File Information Sidebar -->
+                  <div
+                    v-if="selectedContentId"
+                    class="w-80 flex-shrink-0 media-sidebar"
+                  >
+                    <div class="card-base rounded-xl p-6 h-full">
+                      <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold text-primary">File Details</h3>
+                        <button
+                          @click="selectedContentId = null"
+                          class="text-muted hover:text-primary transition-colors duration-400 p-1 rounded"
+                        >
+                          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </div>
+                      
+                      <div v-if="selectedContent" class="space-y-4">
+                        <!-- Preview -->
+                        <div class="aspect-video bg-secondary rounded-lg overflow-hidden mb-4">
+                          <SmartMediaPreview
+                            :file-url="selectedContent.secure_url || selectedContent.absolute_file_url || selectedContent.file_url"
+                            :file-type="selectedContent.type"
+                            :alt="selectedContent.name || 'Media'"
+                            :video-duration="selectedContent.video_duration"
+                            class="w-full h-full"
+                          />
+                        </div>
+
+                        <!-- Metadata -->
+                        <div class="space-y-3">
+                          <div>
+                            <dt class="text-xs font-medium text-muted uppercase tracking-wider mb-1">Name</dt>
+                            <dd class="text-sm text-primary font-medium">{{ selectedContent.name || 'Untitled' }}</dd>
+                          </div>
+                          
+                          <div v-if="selectedContent.description">
+                            <dt class="text-xs font-medium text-muted uppercase tracking-wider mb-1">Description</dt>
+                            <dd class="text-sm text-primary">{{ selectedContent.description }}</dd>
+                          </div>
+
+                          <div>
+                            <dt class="text-xs font-medium text-muted uppercase tracking-wider mb-1">Type</dt>
+                            <dd class="text-sm text-primary capitalize">{{ selectedContent.type || 'Unknown' }}</dd>
+                          </div>
+
+                          <div v-if="selectedContent.file_size">
+                            <dt class="text-xs font-medium text-muted uppercase tracking-wider mb-1">Size</dt>
+                            <dd class="text-sm text-primary">{{ formatFileSize(selectedContent.file_size) }}</dd>
+                          </div>
+
+                          <div v-if="selectedContent.width && selectedContent.height">
+                            <dt class="text-xs font-medium text-muted uppercase tracking-wider mb-1">Resolution</dt>
+                            <dd class="text-sm text-primary">{{ selectedContent.width }} × {{ selectedContent.height }}</dd>
+                          </div>
+
+                          <div v-if="selectedContent.created_at">
+                            <dt class="text-xs font-medium text-muted uppercase tracking-wider mb-1">Date</dt>
+                            <dd class="text-sm text-primary">{{ formatDate(selectedContent.created_at) }}</dd>
+                          </div>
+                        </div>
+                      </div>
                     </div>
-
-                    <!-- Hover Overlay -->
-                    <div class="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-200 pointer-events-none"></div>
                   </div>
                 </div>
               </div>
@@ -228,10 +298,10 @@
                   @dragleave.prevent="isDragging = false"
                   @dragenter.prevent="isDragging = true"
                   :class="[
-                    'border-2 border-dashed rounded-lg p-8 text-center transition-colors duration-200',
+                    'upload-zone rounded-lg p-8 text-center transition-all duration-400',
                     isDragging
-                      ? 'border-blue-500 bg-blue-500/10'
-                      : 'border-gray-600 bg-gray-700/30 hover:border-gray-500'
+                      ? 'upload-zone-active'
+                      : 'upload-zone-default'
                   ]"
                 >
                   <input
@@ -244,18 +314,18 @@
                   />
                   
                   <div v-if="!uploadingFiles.length && !uploadedFiles.length">
-                    <svg class="w-16 h-16 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-16 h-16 mx-auto text-muted mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                     </svg>
-                    <p class="text-gray-300 font-medium mb-2">Drag & drop files here</p>
-                    <p class="text-gray-400 text-sm mb-4">or</p>
+                    <p class="text-primary font-medium mb-2">Drag & drop files here</p>
+                    <p class="text-muted text-sm mb-4">or</p>
                     <button
                       @click="fileInput?.click()"
-                      class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors duration-200"
+                      class="btn-primary px-6 py-2 rounded-lg text-sm font-medium"
                     >
                       Browse Files
                     </button>
-                    <p class="text-gray-500 text-xs mt-3">
+                    <p class="text-muted text-xs mt-3">
                       Supported: {{ filterByType === 'image' ? 'Images' : filterByType === 'video' ? 'Videos' : 'Images & Videos' }}
                     </p>
                   </div>
@@ -265,16 +335,16 @@
                     <div
                       v-for="file in uploadingFiles"
                       :key="file.id"
-                      class="bg-gray-700/50 rounded-lg p-4"
+                      class="bg-secondary rounded-lg p-4"
                     >
                       <div class="flex items-center justify-between mb-2">
-                        <span class="text-sm text-white font-medium truncate flex-1">{{ file.name }}</span>
-                        <span class="text-xs text-gray-400 ml-2">{{ Math.round(file.progress) }}%</span>
+                        <span class="text-sm text-primary font-medium truncate flex-1">{{ file.name }}</span>
+                        <span class="text-xs text-muted ml-2">{{ Math.round(file.progress) }}%</span>
                       </div>
-                      <div class="w-full bg-gray-600 rounded-full h-2">
+                      <div class="w-full bg-secondary rounded-full h-2" style="background: rgba(0, 0, 0, 0.1);">
                         <div
-                          class="bg-blue-500 h-2 rounded-full transition-all duration-300"
-                          :style="{ width: `${file.progress}%` }"
+                          class="h-2 rounded-full transition-all duration-300"
+                          :style="{ width: `${file.progress}%`, background: 'var(--accent-color)' }"
                         ></div>
                       </div>
                     </div>
@@ -306,18 +376,18 @@
                 <!-- Upload Form (if needed for additional metadata) -->
                 <div v-if="selectedFiles.length > 0 && !uploadingFiles.length && !uploadedFiles.length" class="mt-4 space-y-3">
                   <div>
-                    <label class="block text-xs font-medium text-gray-400 mb-1.5">Content Name</label>
+                    <label class="block text-xs font-medium text-muted mb-1.5">Content Name</label>
                     <input
                       v-model="uploadForm.name"
                       type="text"
                       placeholder="Enter a name for the content"
-                      class="w-full px-3 py-2 bg-gray-700/50 border border-gray-600 rounded-lg text-sm text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                      class="input-base w-full px-3 py-2 text-sm"
                     />
                   </div>
                   <button
                     @click="handleUpload"
                     :disabled="!uploadForm.name || uploadingFiles.length > 0"
-                    class="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white rounded-lg text-sm font-medium transition-colors duration-200"
+                    class="btn-primary w-full px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Upload {{ selectedFiles.length }} {{ selectedFiles.length === 1 ? 'File' : 'Files' }}
                   </button>
@@ -326,11 +396,11 @@
             </div>
 
             <!-- Footer -->
-            <div class="bg-gray-800 px-6 py-4 border-t border-gray-700 flex items-center justify-between">
-              <div class="text-sm text-gray-400">
+            <div class="bg-card px-6 py-4 border-t border-border-color flex items-center justify-between">
+              <div class="text-sm text-muted">
                 <span v-if="activeTab === 'gallery'">
                   {{ filteredContents.length }} {{ filteredContents.length === 1 ? 'item' : 'items' }}
-                  <span v-if="searchQuery || filterType" class="text-gray-500">(filtered)</span>
+                  <span v-if="searchQuery || filterType" class="opacity-70">(filtered)</span>
                 </span>
                 <span v-else-if="activeTab === 'upload'">
                   {{ selectedFiles.length }} {{ selectedFiles.length === 1 ? 'file' : 'files' }} selected
@@ -339,14 +409,14 @@
               <div class="flex gap-3">
                 <button
                   @click="$emit('close')"
-                  class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm font-medium transition-colors duration-200"
+                  class="btn-outline px-4 py-2 rounded-lg text-sm font-medium"
                 >
                   {{ activeTab === 'upload' && uploadedFiles.length ? 'Done' : 'Cancel' }}
                 </button>
                 <button
                   v-if="activeTab === 'gallery' && selectedContentId"
                   @click="confirmSelection"
-                  class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors duration-200"
+                  class="btn-primary px-4 py-2 rounded-lg text-sm font-medium"
                 >
                   Select
                 </button>
@@ -363,6 +433,7 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { useContentStore } from '@/stores/content'
 import { useNotification } from '@/composables/useNotification'
+import SmartMediaPreview from './SmartMediaPreview.vue'
 
 const props = defineProps({
   show: {
@@ -392,6 +463,34 @@ const activeTab = ref('gallery')
 const searchQuery = ref('')
 const filterType = ref(props.filterByType)
 const selectedContentId = ref(null)
+
+// Get selected content object
+const selectedContent = computed(() => {
+  if (!selectedContentId.value) return null
+  return contentStore.contents.find(c => c.id === selectedContentId.value)
+})
+
+// Format file size
+const formatFileSize = (bytes) => {
+  if (!bytes) return 'Unknown'
+  const k = 1024
+  const sizes = ['Bytes', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i]
+}
+
+// Format date
+const formatDate = (dateString) => {
+  if (!dateString) return 'Unknown'
+  const date = new Date(dateString)
+  return date.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+}
 
 // Upload state
 const fileInput = ref(null)
@@ -465,13 +564,12 @@ const selectContent = (content) => {
 
 // Confirm selection and emit
 const confirmSelection = () => {
-  if (!selectedContentId.value) return
+  if (!selectedContentId.value || !selectedContent.value) return
 
-  const selectedContent = contentStore.contents.find(c => c.id === selectedContentId.value)
-  if (selectedContent && selectedContent.secure_url) {
+  if (selectedContent.value.secure_url) {
     emit('select', {
-      url: selectedContent.secure_url,
-      content: selectedContent
+      url: selectedContent.value.secure_url,
+      content: selectedContent.value
     })
     emit('close')
   }
@@ -896,10 +994,6 @@ const handleDeleteContent = async (content) => {
   }
 }
 
-// Handle image load errors
-const handleImageError = (event) => {
-  event.target.style.display = 'none'
-}
 
 onMounted(() => {
   // Pre-load contents if not already loaded
@@ -932,5 +1026,151 @@ onMounted(() => {
     opacity: 1;
     transform: scale(1) translateY(0);
   }
+}
+
+/* Media Thumbnails - 1px Subtle Border */
+.media-thumbnail {
+  border: 1px solid var(--border-color);
+  background: var(--card-bg);
+}
+
+.media-thumbnail-default {
+  border-color: var(--border-color);
+}
+
+.media-thumbnail-default:hover {
+  border-color: var(--accent-color);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  transform: translateY(-2px);
+}
+
+.media-thumbnail-selected {
+  border-color: #1e3a8a; /* Navy Blue */
+  box-shadow: 0 0 0 2px rgba(30, 58, 138, 0.2), 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.dark .media-thumbnail {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.dark .media-thumbnail-selected {
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 2px rgba(9, 132, 227, 0.3), 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+}
+
+/* Frosted Glass File Name Overlay */
+.media-name-overlay {
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-top: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.dark .media-name-overlay {
+  background: rgba(30, 41, 59, 0.85);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* File Information Sidebar - Paper White */
+.media-sidebar {
+  background: #F9F9F7; /* Paper White */
+  border-left: 1px solid var(--border-color);
+  transition: all 0.4s ease;
+}
+
+.dark .media-sidebar {
+  background: var(--card-bg);
+}
+
+/* Upload Zone - Dashed Border with Warm Grey */
+.upload-zone-default {
+  border: 2px dashed #9CA3AF; /* Warm grey */
+  background: var(--bg-secondary);
+  transition: all 0.4s ease;
+}
+
+.upload-zone-default:hover {
+  border-color: var(--accent-color);
+  background: rgba(9, 132, 227, 0.05);
+}
+
+.upload-zone-active {
+  border: 2px dashed var(--accent-color);
+  background: rgba(9, 132, 227, 0.1);
+  box-shadow: 0 0 0 4px rgba(9, 132, 227, 0.1);
+}
+
+.dark .upload-zone-default {
+  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(30, 41, 59, 0.5);
+}
+
+.dark .upload-zone-default:hover {
+  border-color: var(--accent-color);
+  background: rgba(9, 132, 227, 0.1);
+}
+
+.dark .upload-zone-active {
+  border-color: var(--accent-color);
+  background: rgba(9, 132, 227, 0.2);
+  box-shadow: 0 0 0 4px rgba(9, 132, 227, 0.2);
+}
+
+/* Physical Button Look for Filters */
+.filter-button {
+  @apply px-4 py-2 text-sm font-medium rounded-lg transition-all;
+  transition-duration: 0.4s;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.7));
+  border: 1px solid var(--border-color);
+  box-shadow: 
+    0 1px 2px rgba(0, 0, 0, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  color: var(--text-primary);
+}
+
+.filter-button:hover {
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 1), rgba(255, 255, 255, 0.85));
+  box-shadow: 
+    0 2px 4px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+  transform: translateY(-1px);
+}
+
+.filter-button-active {
+  background: linear-gradient(to bottom, var(--accent-color), #0871c2);
+  color: white;
+  border-color: var(--accent-color);
+  box-shadow: 
+    0 2px 4px rgba(9, 132, 227, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.filter-button-active:hover {
+  background: linear-gradient(to bottom, #0871c2, #065a9e);
+  box-shadow: 
+    0 4px 6px rgba(9, 132, 227, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.dark .filter-button {
+  background: linear-gradient(to bottom, rgba(30, 41, 59, 0.8), rgba(30, 41, 59, 0.6));
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 
+    0 1px 2px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.dark .filter-button:hover {
+  background: linear-gradient(to bottom, rgba(30, 41, 59, 0.9), rgba(30, 41, 59, 0.7));
+  box-shadow: 
+    0 2px 4px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+.dark .filter-button-active {
+  background: linear-gradient(to bottom, var(--accent-color), #0871c2);
+  box-shadow: 
+    0 2px 4px rgba(9, 132, 227, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 </style>

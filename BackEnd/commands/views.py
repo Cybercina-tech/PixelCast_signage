@@ -230,32 +230,67 @@ class CommandViewSet(viewsets.ModelViewSet):
         
         try:
             limit = int(limit)
-        except ValueError:
+            if limit < 1:
+                limit = 10
+        except (ValueError, TypeError):
             limit = 10
         
-        if screen_id:
-            from signage.models import Screen
-            try:
-                screen = Screen.objects.get(id=screen_id)
-                if not RolePermissions.can_view_resource(request.user, screen):
-                    raise PermissionDenied("You do not have permission to view commands for this screen.")
-                commands = Command.get_pending_commands(screen=screen, limit=limit)
-            except Screen.DoesNotExist:
-                return Response(
-                    {'error': 'Screen not found'},
-                    status=status.HTTP_404_NOT_FOUND
-                )
-        else:
-            commands = Command.get_pending_commands(limit=limit)
-            # Filter by user permissions
-            commands = self.get_queryset().filter(id__in=commands.values_list('id', flat=True))
-        
-        serializer = self.get_serializer(commands, many=True)
-        return Response({
-            'status': 'success',
-            'commands': serializer.data,
-            'count': len(serializer.data)
-        }, status=status.HTTP_200_OK)
+        try:
+            if screen_id:
+                from signage.models import Screen
+                try:
+                    screen = Screen.objects.get(id=screen_id)
+                    if not RolePermissions.can_view_resource(request.user, screen):
+                        return Response(
+                            {'error': 'You do not have permission to view commands for this screen.'},
+                            status=status.HTTP_403_FORBIDDEN
+                        )
+                    commands = Command.get_pending_commands(screen=screen, limit=limit)
+                except Screen.DoesNotExist:
+                    return Response(
+                        {'error': 'Screen not found'},
+                        status=status.HTTP_404_NOT_FOUND
+                    )
+                except Exception as e:
+                    logger.error(f"Error fetching pending commands for screen {screen_id}: {str(e)}")
+                    return Response(
+                        {'error': 'An error occurred while fetching commands'},
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                    )
+            else:
+                # Get all pending commands first
+                all_pending = Command.get_pending_commands(limit=limit)
+                
+                # Get user's accessible queryset
+                user_queryset = self.get_queryset()
+                
+                # Filter pending commands by user permissions
+                pending_ids = list(all_pending.values_list('id', flat=True))
+                
+                if pending_ids:
+                    commands = user_queryset.filter(id__in=pending_ids)
+                else:
+                    # Return empty queryset if no pending commands
+                    commands = user_queryset.none()
+            
+            serializer = self.get_serializer(commands, many=True)
+            return Response({
+                'status': 'success',
+                'commands': serializer.data,
+                'count': len(serializer.data)
+            }, status=status.HTTP_200_OK)
+            
+        except PermissionDenied as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        except Exception as e:
+            logger.error(f"Error in pending commands endpoint: {str(e)}", exc_info=True)
+            return Response(
+                {'error': 'An error occurred while fetching pending commands'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
     
     @action(detail=True, methods=['post'])
     def retry(self, request, id=None):

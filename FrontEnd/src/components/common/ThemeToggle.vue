@@ -2,7 +2,8 @@
   <button
     @click="toggleTheme"
     :aria-label="`Switch to ${themeStore.theme === 'dark' ? 'light' : 'dark'} mode`"
-    class="relative p-2 rounded-xl bg-card border border-border-color hover:bg-secondary transition-all duration-200 group focus:outline-none focus:ring-2 focus:ring-emerald-500/50 dark:focus:ring-emerald-400/50"
+    class="relative p-2 rounded-xl bg-card border border-border-color hover:bg-secondary transition-all duration-300 group focus:outline-none focus:ring-2 focus:ring-blue-500/50 dark:focus:ring-emerald-400/50"
+    style="backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);"
   >
     <Transition
       name="theme-icon"
@@ -12,11 +13,13 @@
         v-if="themeStore.theme === 'dark'"
         key="sun"
         class="w-5 h-5 text-amber-500 dark:text-amber-400 transition-all duration-300 group-hover:rotate-180"
+        stroke-width="2.5"
       />
       <MoonIcon
         v-else
         key="moon"
-        class="w-5 h-5 text-slate-700 dark:text-slate-300 transition-all duration-300 group-hover:-rotate-12"
+        class="w-5 h-5 text-blue-600 dark:text-slate-300 transition-all duration-300 group-hover:-rotate-12"
+        stroke-width="2.5"
       />
     </Transition>
   </button>

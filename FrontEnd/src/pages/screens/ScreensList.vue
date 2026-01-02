@@ -3,50 +3,50 @@
     <div class="space-y-6">
       <!-- Stats Header -->
       <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div class="bg-gray-800 border border-gray-700 rounded-xl p-4 backdrop-blur-sm">
+        <div class="card-base rounded-xl p-4">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-sm text-gray-400 mb-1">Total Screens</p>
-              <p class="text-2xl font-bold text-white">{{ stats.total }}</p>
+              <p class="text-sm text-muted mb-1">Total Screens</p>
+              <p class="text-2xl font-bold text-primary">{{ stats.total }}</p>
             </div>
-            <div class="w-12 h-12 rounded-lg bg-gray-700/50 flex items-center justify-center">
-              <TvIcon class="w-6 h-6 text-gray-300" />
+            <div class="w-12 h-12 rounded-lg bg-secondary flex items-center justify-center">
+              <TvIcon class="w-6 h-6 text-accent-color" style="color: var(--accent-color);" />
             </div>
           </div>
         </div>
         
-        <div class="bg-gray-800 border border-gray-700 rounded-xl p-4 backdrop-blur-sm">
+        <div class="card-base rounded-xl p-4">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-sm text-gray-400 mb-1">Online</p>
-              <p class="text-2xl font-bold text-emerald-400">{{ stats.online }}</p>
+              <p class="text-sm text-muted mb-1">Online</p>
+              <p class="text-2xl font-bold" style="color: var(--forest-green);">{{ stats.online }}</p>
             </div>
-            <div class="w-12 h-12 rounded-lg bg-emerald-500/20 flex items-center justify-center">
-              <div class="w-3 h-3 rounded-full bg-emerald-400 animate-pulse"></div>
+            <div class="w-12 h-12 rounded-lg bg-secondary flex items-center justify-center">
+              <div class="w-3 h-3 rounded-full bg-forest-green animate-pulse"></div>
             </div>
           </div>
         </div>
         
-        <div class="bg-gray-800 border border-gray-700 rounded-xl p-4 backdrop-blur-sm">
+        <div class="card-base rounded-xl p-4">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-sm text-gray-400 mb-1">Offline</p>
-              <p class="text-2xl font-bold text-red-400">{{ stats.offline }}</p>
+              <p class="text-sm text-muted mb-1">Offline</p>
+              <p class="text-2xl font-bold text-dusty-red">{{ stats.offline }}</p>
             </div>
-            <div class="w-12 h-12 rounded-lg bg-red-500/20 flex items-center justify-center">
-              <div class="w-3 h-3 rounded-full bg-red-400"></div>
+            <div class="w-12 h-12 rounded-lg bg-secondary flex items-center justify-center">
+              <div class="w-3 h-3 rounded-full bg-dusty-red"></div>
             </div>
           </div>
         </div>
         
-        <div class="bg-gray-800 border border-gray-700 rounded-xl p-4 backdrop-blur-sm">
+        <div class="card-base rounded-xl p-4">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-sm text-gray-400 mb-1">Syncing</p>
-              <p class="text-2xl font-bold text-yellow-400">{{ stats.syncing }}</p>
+              <p class="text-sm text-muted mb-1">Syncing</p>
+              <p class="text-2xl font-bold" style="color: #D97706;">{{ stats.syncing }}</p>
             </div>
-            <div class="w-12 h-12 rounded-lg bg-yellow-500/20 flex items-center justify-center">
-              <ArrowPathIcon class="w-6 h-6 text-yellow-400 animate-spin" />
+            <div class="w-12 h-12 rounded-lg bg-secondary flex items-center justify-center">
+              <ArrowPathIcon class="w-6 h-6 animate-spin" style="color: #D97706;" />
             </div>
           </div>
         </div>
@@ -54,29 +54,31 @@
 
       <!-- Header with View Toggle -->
       <div class="flex justify-between items-center">
-        <h1 class="text-2xl font-bold text-white">Screens</h1>
+        <h1 class="text-2xl font-bold text-primary">Screens</h1>
         <div class="flex items-center space-x-3">
           <!-- View Toggle -->
-          <div class="flex items-center bg-gray-800 border border-gray-700 rounded-lg p-1">
+          <div class="flex items-center bg-secondary border border-border-color rounded-lg p-1">
             <button
               @click="viewMode = 'grid'"
               :class="[
-                'px-3 py-2 rounded-md text-sm font-medium transition-all',
+                'px-3 py-2 rounded-md text-sm font-medium transition-all duration-400',
                 viewMode === 'grid'
-                  ? 'bg-blue-600 text-white'
-                  : 'text-gray-400 hover:text-white'
+                  ? 'bg-accent-color text-white'
+                  : 'text-muted hover:text-primary'
               ]"
+              style="--accent-color: var(--accent-color);"
             >
               <Squares2X2Icon class="w-5 h-5" />
             </button>
             <button
               @click="viewMode = 'table'"
               :class="[
-                'px-3 py-2 rounded-md text-sm font-medium transition-all',
+                'px-3 py-2 rounded-md text-sm font-medium transition-all duration-400',
                 viewMode === 'table'
-                  ? 'bg-blue-600 text-white'
-                  : 'text-gray-400 hover:text-white'
+                  ? 'bg-accent-color text-white'
+                  : 'text-muted hover:text-primary'
               ]"
+              style="--accent-color: var(--accent-color);"
             >
               <TableCellsIcon class="w-5 h-5" />
             </button>
@@ -84,7 +86,7 @@
           
           <button
             @click="$router.push('/screens/add')"
-            class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-all flex items-center gap-2"
+            class="btn-primary px-4 py-2 rounded-lg font-medium flex items-center gap-2"
           >
             <PlusIcon class="w-5 h-5" />
             Pair New Screen
@@ -93,27 +95,27 @@
       </div>
 
       <!-- Search & Filters -->
-      <div class="bg-gray-800 border border-gray-700 rounded-xl p-4">
+      <div class="card-base rounded-xl p-4">
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div class="md:col-span-2">
-            <label class="block text-sm text-gray-400 mb-2">Search</label>
+            <label class="block text-sm text-muted mb-2">Search</label>
             <div class="relative">
-              <MagnifyingGlassIcon class="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <MagnifyingGlassIcon class="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted" />
               <input
                 v-model="screensStore.filters.search"
                 type="text"
                 placeholder="Search by name, IP, or pairing code..."
-                class="w-full pl-10 pr-4 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="input-base w-full pl-10 pr-4 py-2"
                 @input="handleSearch"
               />
             </div>
           </div>
           
           <div>
-            <label class="block text-sm text-gray-400 mb-2">Status</label>
+            <label class="block text-sm text-muted mb-2">Status</label>
             <select
               v-model="screensStore.filters.status"
-              class="w-full px-4 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="select-base w-full px-4 py-2"
               @change="handleFilter"
             >
               <option :value="null">All Status</option>
@@ -125,7 +127,7 @@
           <div class="flex items-end">
             <button
               @click="clearFilters"
-              class="w-full px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg font-medium transition-all"
+              class="btn-outline w-full px-4 py-2 rounded-lg font-medium"
             >
               Clear Filters
             </button>
@@ -135,22 +137,22 @@
 
       <!-- Content Area -->
       <div v-if="screensStore.loading && screensStore.screens.length === 0" class="text-center py-12">
-        <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-        <p class="mt-4 text-gray-400">Loading screens...</p>
+        <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2" style="border-color: var(--accent-color);"></div>
+        <p class="mt-4 text-muted">Loading screens...</p>
       </div>
       
       <div v-else-if="screensStore.error && screensStore.screens.length === 0" class="text-center py-12">
-        <p class="text-red-400">{{ screensStore.error }}</p>
+        <p class="text-dusty-red">{{ screensStore.error }}</p>
       </div>
       
       <!-- Empty State -->
       <div v-else-if="filteredScreens.length === 0" class="text-center py-16">
         <div class="max-w-md mx-auto">
-          <div class="w-24 h-24 mx-auto mb-6 rounded-full bg-gray-800 border border-gray-700 flex items-center justify-center">
-            <TvIcon class="w-12 h-12 text-gray-500" />
+          <div class="w-24 h-24 mx-auto mb-6 rounded-full bg-secondary border border-border-color flex items-center justify-center">
+            <TvIcon class="w-12 h-12 text-muted" />
           </div>
-          <h3 class="text-xl font-semibold text-white mb-2">No Screens Found</h3>
-          <p class="text-gray-400 mb-6">
+          <h3 class="text-xl font-semibold text-primary mb-2">No Screens Found</h3>
+          <p class="text-muted mb-6">
             {{ screensStore.filters.search || screensStore.filters.status 
               ? 'Try adjusting your filters to see more results.' 
               : 'Get started by pairing your first screen.' }}
@@ -158,7 +160,7 @@
           <button
             v-if="!screensStore.filters.search && !screensStore.filters.status"
             @click="$router.push('/screens/add')"
-            class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-all inline-flex items-center gap-2"
+            class="btn-primary px-6 py-3 rounded-lg font-medium inline-flex items-center gap-2"
           >
             <PlusIcon class="w-5 h-5" />
             Pair New Screen
@@ -179,43 +181,47 @@
       </div>
 
       <!-- Table View -->
-      <div v-else class="bg-gray-800 border border-gray-700 rounded-xl overflow-hidden">
+      <div v-else class="card-base rounded-xl overflow-hidden">
         <div class="overflow-x-auto">
           <table class="w-full">
-            <thead class="bg-gray-900/50 border-b border-gray-700">
+            <thead class="bg-secondary border-b border-border-color">
               <tr>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Status</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Name</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Pairing Code</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">IP Address</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Last Seen</th>
-                <th class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Template</th>
-                <th class="px-6 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">Actions</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">Status</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">Name</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">Pairing Code</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">IP Address</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">Last Seen</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">Template</th>
+                <th class="px-6 py-3 text-right text-xs font-medium text-muted uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-gray-700">
+            <tbody class="divide-y divide-border-color">
               <tr
-                v-for="screen in paginatedScreens"
+                v-for="(screen, index) in paginatedScreens"
                 :key="screen.id"
-                class="hover:bg-gray-700/50 transition-colors"
+                :class="[
+                  'transition-colors duration-400',
+                  index % 2 === 0 ? 'bg-card' : 'bg-zebra-stripe',
+                  'hover:bg-secondary'
+                ]"
               >
                 <td class="px-6 py-4 whitespace-nowrap">
                   <StatusIndicator :status="getScreenStatus(screen)" />
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
-                  <div class="text-sm font-medium text-white">{{ screen.name || 'Unnamed' }}</div>
+                  <div class="text-sm font-medium text-primary">{{ screen.name || 'Unnamed' }}</div>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
-                  <div class="text-sm text-gray-400 font-mono">{{ screen.pairing_code || 'N/A' }}</div>
+                  <div class="text-sm text-muted font-mono">{{ screen.pairing_code || 'N/A' }}</div>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
-                  <div class="text-sm text-gray-400">{{ screen.current_ip || 'N/A' }}</div>
+                  <div class="text-sm text-muted">{{ screen.current_ip || 'N/A' }}</div>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
-                  <div class="text-sm text-gray-400">{{ formatLastSeen(screen.last_heartbeat_at) }}</div>
+                  <div class="text-sm text-muted">{{ formatLastSeen(screen.last_heartbeat_at) }}</div>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap">
-                  <div class="text-sm text-gray-400">
+                  <div class="text-sm text-muted">
                     {{ screen.active_template?.name || 'None' }}
                   </div>
                 </td>
@@ -223,21 +229,21 @@
                   <div class="flex items-center justify-end gap-2">
                     <button
                       @click="handleRefresh(screen)"
-                      class="p-2 text-gray-400 hover:text-blue-400 hover:bg-gray-700 rounded-lg transition-all"
+                      class="action-btn-edit p-2 rounded-lg transition-all duration-400"
                       title="Refresh"
                     >
                       <ArrowPathIcon class="w-4 h-4" />
                     </button>
                     <button
                       @click="handleIdentify(screen)"
-                      class="p-2 text-gray-400 hover:text-yellow-400 hover:bg-gray-700 rounded-lg transition-all"
+                      class="action-btn-view p-2 rounded-lg transition-all duration-400"
                       title="Identify"
                     >
                       <FingerPrintIcon class="w-4 h-4" />
                     </button>
                     <button
                       @click="handleEdit(screen)"
-                      class="p-2 text-gray-400 hover:text-green-400 hover:bg-gray-700 rounded-lg transition-all"
+                      class="action-btn-edit p-2 rounded-lg transition-all duration-400"
                       title="Edit"
                     >
                       <PencilIcon class="w-4 h-4" />
@@ -255,14 +261,14 @@
         <button
           v-if="!showAll"
           @click="showAll = true"
-          class="px-6 py-3 bg-gray-800 hover:bg-gray-700 border border-gray-700 text-white rounded-lg font-medium transition-all"
+          class="btn-outline px-6 py-3 rounded-lg font-medium"
         >
           Load More ({{ filteredScreens.length - itemsPerPage }} remaining)
         </button>
         <button
           v-else
           @click="showAll = false"
-          class="px-6 py-3 bg-gray-800 hover:bg-gray-700 border border-gray-700 text-white rounded-lg font-medium transition-all"
+          class="btn-outline px-6 py-3 rounded-lg font-medium"
         >
           Show Less
         </button>

@@ -1,5 +1,5 @@
 <template>
-  <div class="h-screen w-screen overflow-hidden">
+  <div :class="['w-screen', route.name === 'landing' ? 'min-h-screen overflow-x-hidden' : 'h-screen overflow-hidden']">
     <RouterView />
     <NotificationContainer />
     <DeleteConfirmation />

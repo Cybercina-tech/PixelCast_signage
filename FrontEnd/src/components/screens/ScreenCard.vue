@@ -1,6 +1,10 @@
 <template>
   <div
-    class="group relative bg-gray-800 border border-gray-700 rounded-xl overflow-hidden hover:ring-2 hover:ring-blue-500 transition-all"
+    class="group relative screen-card rounded-xl overflow-hidden transition-all duration-400"
+    :class="{
+      'screen-card-online': status === 'online',
+      'screen-card-offline': status === 'offline'
+    }"
   >
     <!-- Status Indicator -->
     <div class="absolute top-4 right-4 z-10">
@@ -8,26 +12,26 @@
     </div>
 
     <!-- Monitor Preview -->
-    <div class="relative bg-gray-900 border-b border-gray-700 p-4">
-      <div class="aspect-video bg-black rounded-lg overflow-hidden relative">
+    <div class="relative bg-secondary border-b border-border-color p-4">
+      <div class="aspect-video bg-base rounded-lg overflow-hidden relative">
         <!-- Monitor Frame Effect -->
-        <div class="absolute inset-0 border-2 border-gray-700 rounded-lg pointer-events-none"></div>
+        <div class="absolute inset-0 border-2 border-border-color rounded-lg pointer-events-none"></div>
         
         <!-- Template Preview -->
-        <div v-if="screen.active_template" class="w-full h-full flex items-center justify-center bg-gradient-to-br from-indigo-500/20 to-blue-500/20">
+        <div v-if="screen.active_template" class="w-full h-full flex items-center justify-center bg-secondary">
           <div class="text-center p-4">
-            <DocumentTextIcon class="w-12 h-12 text-indigo-400 mx-auto mb-2" />
-            <p class="text-xs text-gray-300 font-medium truncate max-w-[200px]">
+            <DocumentTextIcon class="w-12 h-12 text-accent-color mx-auto mb-2" style="color: var(--accent-color);" />
+            <p class="text-xs text-primary font-medium truncate max-w-[200px]">
               {{ screen.active_template.name }}
             </p>
           </div>
         </div>
         
         <!-- No Template State -->
-        <div v-else class="w-full h-full flex items-center justify-center bg-gray-800">
+        <div v-else class="w-full h-full flex items-center justify-center bg-secondary">
           <div class="text-center">
-            <TvIcon class="w-8 h-8 text-gray-600 mx-auto mb-2" />
-            <p class="text-xs text-gray-500">No Template</p>
+            <TvIcon class="w-8 h-8 text-muted mx-auto mb-2" />
+            <p class="text-xs text-muted">No Template</p>
           </div>
         </div>
       </div>
@@ -37,10 +41,10 @@
     <div class="p-4 space-y-3">
       <!-- Header -->
       <div>
-        <h3 class="text-lg font-semibold text-white mb-1 truncate">
+        <h3 class="text-lg font-semibold text-primary mb-1 truncate">
           {{ screen.name || 'Unnamed Screen' }}
         </h3>
-        <div class="flex items-center gap-2 text-sm text-gray-400">
+        <div class="flex items-center gap-2 text-sm text-muted">
           <span class="font-mono">{{ screen.pairing_code || 'N/A' }}</span>
         </div>
       </div>
@@ -48,25 +52,25 @@
       <!-- Metadata -->
       <div class="space-y-2 text-sm">
         <div class="flex items-center justify-between">
-          <span class="text-gray-400">Last Seen</span>
-          <span class="text-gray-300">{{ formatLastSeen(screen.last_heartbeat_at) }}</span>
+          <span class="text-muted">Last Seen</span>
+          <span class="text-primary">{{ formatLastSeen(screen.last_heartbeat_at) }}</span>
         </div>
         <div class="flex items-center justify-between">
-          <span class="text-gray-400">IP Address</span>
-          <span class="text-gray-300 font-mono text-xs">{{ screen.current_ip || 'N/A' }}</span>
+          <span class="text-muted">IP Address</span>
+          <span class="text-primary font-mono text-xs">{{ screen.current_ip || 'N/A' }}</span>
         </div>
         <div class="flex items-center justify-between">
-          <span class="text-gray-400">Player Version</span>
-          <span class="text-gray-300 text-xs">{{ screen.player_version || 'Unknown' }}</span>
+          <span class="text-muted">Player Version</span>
+          <span class="text-primary text-xs">{{ screen.player_version || 'Unknown' }}</span>
         </div>
       </div>
     </div>
 
     <!-- Hover Overlay with Actions -->
-    <div class="absolute inset-0 bg-black/80 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3 z-20">
+    <div class="absolute inset-0 bg-base/95 dark:bg-black/80 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-400 flex items-center justify-center gap-3 z-20">
       <button
         @click="$emit('refresh', screen)"
-        class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-all flex items-center gap-2"
+        class="btn-primary px-4 py-2 rounded-lg font-medium flex items-center gap-2"
         title="Refresh Screen"
       >
         <ArrowPathIcon class="w-4 h-4" />
@@ -74,7 +78,7 @@
       </button>
       <button
         @click="$emit('identify', screen)"
-        class="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg font-medium transition-all flex items-center gap-2"
+        class="btn-secondary px-4 py-2 rounded-lg font-medium flex items-center gap-2"
         title="Identify Screen"
       >
         <FingerPrintIcon class="w-4 h-4" />
@@ -82,7 +86,7 @@
       </button>
       <button
         @click="$emit('edit', screen)"
-        class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-all flex items-center gap-2"
+        class="btn-success px-4 py-2 rounded-lg font-medium flex items-center gap-2"
         title="Edit Screen"
       >
         <PencilIcon class="w-4 h-4" />
@@ -135,4 +139,77 @@ const formatLastSeen = (timestamp) => {
   return lastSeen.toLocaleDateString()
 }
 </script>
+
+<style scoped>
+/* Screen Card - Soft White with Floating Shadow */
+.screen-card {
+  background: var(--cream-bg);
+  border: 1px solid var(--border-color);
+  box-shadow: 
+    0 4px 6px -1px rgba(0, 0, 0, 0.05),
+    0 2px 4px -1px rgba(0, 0, 0, 0.03);
+  transition: all 0.4s ease;
+}
+
+.dark .screen-card {
+  background: rgba(31, 41, 55, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: none;
+}
+
+.screen-card:hover {
+  box-shadow: 
+    0 10px 15px -3px rgba(0, 0, 0, 0.1),
+    0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  transform: translateY(-2px);
+}
+
+.dark .screen-card:hover {
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+  transform: none;
+}
+
+/* Online Screen - Outer Glow Effect */
+.screen-card-online {
+  position: relative;
+}
+
+.screen-card-online::before {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 0.875rem;
+  background: linear-gradient(135deg, rgba(22, 101, 52, 0.15), rgba(22, 101, 52, 0.05));
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  z-index: -1;
+  pointer-events: none;
+}
+
+.screen-card-online:hover::before {
+  opacity: 1;
+}
+
+.dark .screen-card-online::before {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(16, 185, 129, 0.1));
+}
+
+/* Offline Screen - Muted Effect */
+.screen-card-offline {
+  opacity: 0.85;
+}
+
+.screen-card-offline::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 0.75rem;
+  background: rgba(185, 28, 28, 0.02);
+  pointer-events: none;
+}
+
+.dark .screen-card-offline {
+  opacity: 0.7;
+}
+</style>
 

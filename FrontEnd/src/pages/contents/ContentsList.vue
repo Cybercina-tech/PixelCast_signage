@@ -174,37 +174,17 @@
         >
           <!-- Thumbnail -->
           <div class="aspect-square bg-gray-900 relative overflow-hidden">
-            <!-- Image Preview -->
-            <img
-              v-if="content.type === 'image' && (content.secure_url || content.absolute_file_url || content.file_url)"
-              :src="content.secure_url || content.absolute_file_url || content.file_url"
+            <!-- Smart Media Preview -->
+            <SmartMediaPreview
+              :file-url="content.secure_url || content.absolute_file_url || content.file_url"
+              :file-type="content.type"
               :alt="content.name || 'Media'"
-              class="w-full h-full object-cover"
-              @error="handleImageError"
+              :video-duration="content.video_duration"
+              :enable-hover-zoom="true"
+              :play-on-hover="true"
+              :show-duration="true"
+              class="w-full h-full"
             />
-            <!-- Video Preview -->
-            <div v-else-if="content.type === 'video' && (content.secure_url || content.absolute_file_url || content.file_url)" class="w-full h-full flex items-center justify-center bg-gray-900">
-              <video
-                :src="content.secure_url || content.absolute_file_url || content.file_url"
-                class="w-full h-full object-cover"
-                muted
-                preload="metadata"
-              />
-              <div class="absolute inset-0 flex items-center justify-center bg-black/30">
-                <svg class="w-12 h-12 text-white" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M8 5v14l11-7z" />
-                </svg>
-              </div>
-              <div v-if="content.video_duration" class="absolute bottom-2 right-2 px-2 py-1 bg-black/70 text-white text-xs rounded">
-                {{ formatDuration(content.video_duration) }}
-              </div>
-            </div>
-            <!-- Placeholder -->
-            <div v-else class="w-full h-full flex items-center justify-center">
-              <svg class="w-12 h-12 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-            </div>
 
             <!-- Selection Checkbox -->
             <div class="absolute top-2 left-2">
@@ -249,10 +229,22 @@
             </div>
 
             <!-- Hover Overlay -->
-            <div class="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors duration-200 flex items-center justify-center opacity-0 group-hover:opacity-100">
+            <div class="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors duration-200 flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100">
+              <button
+                @click.stop="handlePreview(content)"
+                class="px-3 py-2 bg-indigo-600/80 hover:bg-indigo-600 text-white rounded-lg text-sm font-medium transition-colors duration-200 flex items-center gap-2"
+                title="Preview"
+              >
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+                Preview
+              </button>
               <button
                 @click.stop="handleDelete(content)"
                 class="px-3 py-2 bg-red-600/80 hover:bg-red-600 text-white rounded-lg text-sm font-medium transition-colors duration-200 flex items-center gap-2"
+                title="Delete"
               >
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -294,6 +286,23 @@
       @close="showUploadModal = false"
       @select="handleMediaSelected"
     />
+
+    <!-- Full Screen Preview Modal -->
+    <FullScreenPreviewModal
+      :show="showPreviewModal"
+      :file-url="previewContent?.secure_url || previewContent?.absolute_file_url || previewContent?.file_url"
+      :file-type="previewContent?.type"
+      :media-name="previewContent?.name"
+      :video-duration="previewContent?.video_duration"
+      :metadata="{
+        width: previewContent?.image_width,
+        height: previewContent?.image_height,
+        fileSize: previewContent?.file_size,
+        duration: previewContent?.video_duration,
+        createdAt: previewContent?.created_at
+      }"
+      @close="showPreviewModal = false"
+    />
   </AppLayout>
 </template>
 
@@ -303,12 +312,16 @@ import { useContentStore } from '@/stores/content'
 import { useNotification } from '@/composables/useNotification'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import MediaLibraryModal from '@/components/common/MediaLibraryModal.vue'
+import SmartMediaPreview from '@/components/common/SmartMediaPreview.vue'
+import FullScreenPreviewModal from '@/components/common/FullScreenPreviewModal.vue'
 
 const contentStore = useContentStore()
 const notify = useNotification()
 
 // State
 const showUploadModal = ref(false)
+const showPreviewModal = ref(false)
+const previewContent = ref(null)
 const searchQuery = ref('')
 const filterType = ref(null)
 const filterStatus = ref(null)
@@ -420,6 +433,11 @@ const handleBulkDelete = async () => {
   }
 }
 
+const handlePreview = (content) => {
+  previewContent.value = content
+  showPreviewModal.value = true
+}
+
 const handleDelete = async (content) => {
   if (!confirm(`Are you sure you want to delete "${content.name}"?`)) {
     return
@@ -441,9 +459,6 @@ const handleMediaSelected = (data) => {
   loadContents()
 }
 
-const handleImageError = (event) => {
-  event.target.style.display = 'none'
-}
 
 const formatFileSize = (bytes) => {
   if (!bytes) return '0 B'

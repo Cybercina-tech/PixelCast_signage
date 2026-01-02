@@ -13,7 +13,7 @@
 
     <!-- Error State -->
     <div v-else-if="screensStore.error && !screen" class="flex items-center justify-center min-h-[60vh]">
-      <div class="text-center backdrop-blur-md bg-gray-800/40 border border-white/10 rounded-2xl p-8">
+      <div class="text-center card-base rounded-2xl p-8">
         <svg class="w-16 h-16 text-red-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
@@ -33,14 +33,14 @@
         </div>
         <div class="flex items-center gap-2">
           <!-- Online Status Indicator -->
-          <div class="flex items-center gap-2 px-4 py-2 rounded-lg backdrop-blur-md bg-gray-800/40 border border-white/10">
+          <div class="flex items-center gap-2 px-4 py-2 rounded-lg card-base">
             <div
               :class="[
                 'w-3 h-3 rounded-full',
-                isOnline ? 'bg-green-500 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.8)]' : 'bg-gray-500',
+                isOnline ? 'bg-forest-green animate-pulse' : 'bg-dusty-red',
               ]"
             ></div>
-            <span class="text-sm font-medium" :class="isOnline ? 'text-green-400' : 'text-gray-400'">
+            <span class="text-sm font-medium" :class="isOnline ? 'text-forest-green' : 'text-dusty-red'">
               {{ isOnline ? 'Online' : 'Offline' }}
             </span>
           </div>
@@ -51,7 +51,7 @@
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
         <!-- Left Column: General Info -->
         <div class="space-y-6">
-          <div class="backdrop-blur-md bg-gray-800/40 border border-white/10 rounded-2xl p-6">
+          <div class="card-base rounded-2xl p-6">
             <h2 class="text-lg font-semibold text-primary mb-4">General Information</h2>
             <dl class="space-y-4">
               <div>
@@ -67,7 +67,7 @@
                     @blur="handleSaveName"
                     @keyup.enter="handleSaveName"
                     @keyup.esc="cancelEditName"
-                    class="w-full px-2 py-1 bg-gray-900/50 border border-white/10 rounded text-primary focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                    class="input-base w-full px-2 py-1 rounded"
                     autofocus
                   />
                   <span v-else @click="startEditName" class="cursor-pointer hover:text-blue-400 transition-colors">
@@ -97,7 +97,7 @@
         <!-- Center Column: Live Status & Metrics -->
         <div class="space-y-6">
           <!-- Virtual Monitor Preview -->
-          <div class="backdrop-blur-md bg-gray-800/40 border border-white/10 rounded-2xl p-6">
+          <div class="card-base rounded-2xl p-6">
             <h2 class="text-lg font-semibold text-primary mb-4">Live Preview</h2>
             <VirtualMonitor
               :active-template="screen.active_template"
@@ -108,7 +108,7 @@
           </div>
 
           <!-- Health Gauges -->
-          <div class="backdrop-blur-md bg-gray-800/40 border border-white/10 rounded-2xl p-6">
+          <div class="card-base rounded-2xl p-6">
             <h2 class="text-lg font-semibold text-primary mb-4">Health Metrics</h2>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
               <HealthGauge :value="healthMetrics.cpu_usage || 0" label="CPU" />
@@ -138,12 +138,12 @@
         <!-- Right Column: Command Center -->
         <div class="space-y-6">
           <!-- Remote Actions -->
-          <div class="backdrop-blur-md bg-gray-800/40 border border-white/10 rounded-2xl p-6">
+          <div class="card-base rounded-2xl p-6">
             <h2 class="text-lg font-semibold text-primary mb-4">Remote Actions</h2>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <button
                 @click="handleRefresh"
-                class="px-4 py-2 bg-blue-600/80 hover:bg-blue-600 text-white rounded-lg transition-all duration-200 flex items-center justify-center gap-2 backdrop-blur-sm border border-blue-500/30"
+                class="btn-primary px-4 py-2 rounded-lg transition-all duration-400 flex items-center justify-center gap-2"
                 :disabled="!isOnline || actionLoading"
               >
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -153,7 +153,7 @@
               </button>
               <button
                 @click="handleReboot"
-                class="px-4 py-2 bg-amber-600/80 hover:bg-amber-600 text-white rounded-lg transition-all duration-200 flex items-center justify-center gap-2 backdrop-blur-sm border border-amber-500/30"
+                class="btn-secondary px-4 py-2 rounded-lg transition-all duration-400 flex items-center justify-center gap-2"
                 :disabled="!isOnline || actionLoading"
               >
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -163,7 +163,7 @@
               </button>
               <button
                 @click="handleIdentify"
-                class="px-4 py-2 bg-purple-600/80 hover:bg-purple-600 text-white rounded-lg transition-all duration-200 flex items-center justify-center gap-2 backdrop-blur-sm border border-purple-500/30"
+                class="btn-secondary px-4 py-2 rounded-lg transition-all duration-400 flex items-center justify-center gap-2"
                 :disabled="!isOnline || actionLoading"
               >
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -173,7 +173,7 @@
               </button>
               <button
                 @click="showTemplateModal = true"
-                class="px-4 py-2 bg-indigo-600/80 hover:bg-indigo-600 text-white rounded-lg transition-all duration-200 flex items-center justify-center gap-2 backdrop-blur-sm border border-indigo-500/30"
+                class="btn-primary px-4 py-2 rounded-lg transition-all duration-400 flex items-center justify-center gap-2"
                 :disabled="actionLoading"
               >
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -185,7 +185,7 @@
           </div>
 
           <!-- Live Command Queue -->
-          <div class="backdrop-blur-md bg-gray-800/40 border border-white/10 rounded-2xl p-6">
+          <div class="card-base rounded-2xl p-6">
             <h2 class="text-lg font-semibold text-primary mb-4">Command Queue</h2>
             <div class="max-h-96 overflow-y-auto custom-scrollbar">
               <CommandTimeline :commands="allCommands" />
@@ -195,13 +195,13 @@
       </div>
 
       <!-- Recent Logs (Full Width) -->
-      <div class="backdrop-blur-md bg-gray-800/40 border border-white/10 rounded-2xl p-6">
+      <div class="card-base rounded-2xl p-6">
         <h2 class="text-lg font-semibold text-primary mb-4">Recent Logs</h2>
         <div class="max-h-64 overflow-y-auto custom-scrollbar space-y-2">
           <div
             v-for="log in recentLogs"
             :key="log.id"
-            class="p-3 bg-gray-900/50 rounded-lg border border-white/5 hover:bg-gray-900/70 transition-colors"
+            class="p-3 bg-secondary rounded-lg border border-border-color hover:bg-secondary transition-colors duration-400"
           >
             <p class="text-sm text-primary">{{ log.message || `${log.status} - ${formatDate(log.recorded_at || log.created_at)}` }}</p>
             <p class="text-xs text-muted mt-1">{{ formatDate(log.recorded_at || log.created_at) }}</p>
@@ -213,10 +213,10 @@
       </div>
 
       <!-- Delete Screen Button (Danger Zone) -->
-      <div class="backdrop-blur-md bg-gray-800/40 border border-red-500/30 rounded-2xl p-6">
+      <div class="card-base rounded-2xl p-6 border-dusty-red/30">
         <div class="flex items-center justify-between">
           <div>
-            <h3 class="text-lg font-semibold text-red-400 mb-1">Danger Zone</h3>
+            <h3 class="text-lg font-semibold text-dusty-red mb-1">Danger Zone</h3>
             <p class="text-sm text-muted">Permanently remove this screen from your system</p>
           </div>
           <button

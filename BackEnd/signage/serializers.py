@@ -450,6 +450,7 @@ class PlayerLayerSerializer(serializers.ModelSerializer):
 class PlayerTemplateSerializer(serializers.ModelSerializer):
     """Serializer for complete template structure for player"""
     layers = serializers.SerializerMethodField()
+    config_json = serializers.SerializerMethodField()
     
     class Meta:
         model = Template
@@ -459,9 +460,104 @@ class PlayerTemplateSerializer(serializers.ModelSerializer):
         ]
     
     def get_layers(self, obj):
-        """Get only active layers, ordered by z_index"""
-        active_layers = obj.layers.filter(is_active=True).order_by('z_index', 'name')
+        """
+        Get only active layers, ordered by z_index.
+        CRITICAL: This fetches layers from the database (not config_json).
+        Widgets are loaded via PlayerLayerSerializer -> PlayerWidgetSerializer.
+        """
+        # Use prefetch_related to efficiently load widgets and contents
+        active_layers = obj.layers.filter(is_active=True).prefetch_related(
+            'widgets__contents'
+        ).order_by('z_index', 'name')
         return PlayerLayerSerializer(active_layers, many=True, context=self.context).data
+    
+    def get_config_json(self, obj):
+        """
+        Get config_json with all URLs converted to absolute URLs.
+        This ensures screens can properly load images and media files.
+        """
+        if not obj.config_json:
+            return obj.config_json
+        
+        import copy
+        config = copy.deepcopy(obj.config_json)
+        
+        # Get request context for building absolute URLs
+        request = self.context.get('request')
+        screen = self.context.get('screen')
+        
+        # Helper function to convert relative URL to absolute
+        def make_absolute_url(url):
+            """Convert relative URL to absolute URL"""
+            if not url or not isinstance(url, str):
+                return url
+            
+            # If already absolute URL, return as is
+            if url.startswith('http://') or url.startswith('https://'):
+                return url
+            
+            # Try to build absolute URL from request
+            if request:
+                actual_request = getattr(request, '_request', request)
+                if hasattr(actual_request, 'build_absolute_uri'):
+                    try:
+                        absolute_url = actual_request.build_absolute_uri(url)
+                        logger.debug(f"Built absolute URL in config_json: {absolute_url} (from {url})")
+                        return absolute_url
+                    except Exception as e:
+                        logger.warning(f"Failed to build absolute URI from request: {e}, falling back to BASE_URL")
+            
+            # Fallback: construct absolute URL from settings
+            from django.conf import settings
+            base_url = getattr(settings, 'BASE_URL', 'http://localhost:8000')
+            media_url = getattr(settings, 'MEDIA_URL', '/media/')
+            
+            # Clean up the URL
+            clean_url = url.lstrip('/')
+            
+            # If URL already starts with MEDIA_URL, use it as is
+            if url.startswith(media_url):
+                clean_url = url[len(media_url):].lstrip('/')
+            
+            # Construct full absolute URL
+            absolute_url = f"{base_url.rstrip('/')}{media_url.rstrip('/')}/{clean_url}"
+            logger.debug(f"Constructed absolute URL in config_json: {absolute_url} (from {url})")
+            return absolute_url
+        
+        # Recursively process config_json to find and convert URLs
+        def process_widget(widget):
+            """Process a widget and convert all URLs to absolute"""
+            if not isinstance(widget, dict):
+                return widget
+            
+            # Process content field (common for image/video widgets)
+            if 'content' in widget and widget['content']:
+                widget['content'] = make_absolute_url(widget['content'])
+            
+            # Process style object for background images
+            if 'style' in widget and isinstance(widget['style'], dict):
+                if 'backgroundImage' in widget['style']:
+                    widget['style']['backgroundImage'] = make_absolute_url(widget['style']['backgroundImage'])
+                if 'background-image' in widget['style']:
+                    widget['style']['background-image'] = make_absolute_url(widget['style']['background-image'])
+            
+            # Process any other URL-like fields
+            url_fields = ['image_url', 'file_url', 'file_path', 'src', 'url', 'media_url']
+            for field in url_fields:
+                if field in widget and widget[field]:
+                    widget[field] = make_absolute_url(widget[field])
+            
+            return widget
+        
+        # Process widgets array if present
+        if 'widgets' in config and isinstance(config['widgets'], list):
+            config['widgets'] = [process_widget(widget) for widget in config['widgets']]
+        
+        # Process backgroundImage in config_json root
+        if 'backgroundImage' in config:
+            config['backgroundImage'] = make_absolute_url(config['backgroundImage'])
+        
+        return config
 
 
 # Pairing serializers

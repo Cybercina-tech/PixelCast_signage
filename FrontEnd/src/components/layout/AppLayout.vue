@@ -12,7 +12,7 @@
       <Navbar :title="title" @toggle-sidebar="sidebarOpen = !sidebarOpen" />
       <main :class="['flex-1 flex flex-col scroll-container', isEditorRoute ? 'overflow-hidden' : 'overflow-y-auto custom-scrollbar']">
         <div :class="[
-          'flex-1 w-full',
+          'flex-1 w-full main-content-wrapper',
           isEditorRoute ? 'p-0' : 'p-4 md:p-6 lg:p-8'
         ]">
           <slot />
@@ -83,3 +83,14 @@ onUnmounted(() => {
   disconnect()
 })
 </script>
+
+<style scoped>
+/* Ensure content has space above footer when scrolling */
+.main-content-wrapper:not(.p-0) {
+  padding-bottom: calc(1.5rem + 30px);
+}
+
+.main-content-wrapper.p-0 {
+  padding-bottom: 30px;
+}
+</style>

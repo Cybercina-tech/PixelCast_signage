@@ -8,11 +8,11 @@
     </div>
     <div v-else class="template-editor h-screen w-full flex flex-col bg-gray-900 text-white overflow-hidden">
       <!-- Top Toolbar -->
-      <div class="flex items-center justify-between px-4 py-3 bg-gray-800 border-b border-gray-700">
+      <div class="flex items-center justify-between px-4 py-3 bg-card border-b border-border-color">
         <div class="flex items-center gap-4">
           <button
             @click="goBack"
-            class="px-3 py-2 bg-gray-700 hover:bg-gray-600 active:scale-95 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 text-white"
+            class="btn-outline px-3 py-2 active:scale-95 rounded-lg text-sm font-medium transition-all duration-400 flex items-center gap-2"
             title="Back to Templates List"
           >
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -20,41 +20,54 @@
             </svg>
             Back to List
           </button>
-          <h1 class="text-xl font-semibold text-white">{{ templateName || 'Untitled Template' }}</h1>
+          <h1 class="text-xl font-semibold text-primary">{{ templateName || 'Untitled Template' }}</h1>
           <button
             @click="saveTemplate"
             :disabled="saving"
-            class="px-4 py-2 bg-blue-600 hover:bg-blue-700 active:scale-95 disabled:bg-gray-600 disabled:cursor-not-allowed disabled:opacity-50 rounded-lg text-sm font-medium text-white transition-all duration-200 shadow-md hover:shadow-lg"
+            class="btn-primary px-4 py-2 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-sm font-medium transition-all duration-400"
           >
             {{ saving ? 'Saving...' : 'Save Template' }}
           </button>
           <button
             @click="exportJSON"
-            class="px-4 py-2 bg-green-600 hover:bg-green-700 active:scale-95 rounded-lg text-sm font-medium text-white transition-all duration-200 shadow-md hover:shadow-lg"
+            class="btn-success px-4 py-2 active:scale-95 rounded-lg text-sm font-medium transition-all duration-400"
           >
             Export JSON
           </button>
+          <button
+            v-if="templateId"
+            @click="handlePushToScreen"
+            :disabled="saving || pushing"
+            class="btn-secondary px-4 py-2 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-sm font-medium transition-all duration-400 flex items-center gap-2"
+          >
+            <svg v-if="!pushing" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            </svg>
+            <div v-else class="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+            {{ pushing ? 'Pushing...' : 'Push to Screen' }}
+          </button>
         </div>
-        <div class="flex items-center gap-2 text-sm text-gray-400">
+        <div class="flex items-center gap-2 text-sm text-muted">
           <span>Canvas: {{ canvasWidth }}×{{ canvasHeight }}</span>
           <span>|</span>
           <span>Scale: {{ Math.round(scale * 100) }}%</span>
-          <span class="text-xs text-gray-500">(Auto-fit)</span>
+          <span class="text-xs opacity-70">(Auto-fit)</span>
         </div>
       </div>
 
       <!-- Main Editor Area -->
       <div class="flex-1 flex overflow-hidden">
         <!-- Left Sidebar: Widget Library -->
-        <div class="hidden lg:block w-64 bg-gray-800 border-r border-gray-700 overflow-y-auto custom-scrollbar scroll-container">
-          <div class="bg-gray-900/80 border-b border-white/5 px-4 py-3 sticky top-0 z-10 backdrop-blur-sm">
-            <h2 class="text-lg font-semibold text-white">Widget Library</h2>
+        <div class="hidden lg:block w-64 bg-card border-r border-border-color overflow-y-auto custom-scrollbar scroll-container">
+          <div class="bg-secondary border-b border-border-color px-4 py-3 sticky top-0 z-10 backdrop-blur-sm">
+            <h2 class="text-lg font-semibold text-primary">Widget Library</h2>
           </div>
           <div class="p-4">
             <div class="space-y-2">
               <button
                 @click="addWidget('text')"
-                class="w-full px-4 py-3 bg-gray-700 hover:bg-gray-600 active:scale-95 rounded-lg text-left text-white transition-all duration-200 flex items-center gap-2 font-medium"
+                class="w-full px-4 py-3 bg-secondary hover:bg-secondary active:scale-95 rounded-lg text-left text-primary transition-all duration-400 flex items-center gap-2 font-medium border border-border-color hover:border-accent-color/50"
+                style="--accent-color: var(--accent-color);"
               >
                 <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7" />
@@ -123,8 +136,9 @@
                   :class="[
                     'px-3 py-2.5 rounded-lg cursor-pointer transition-all duration-200 text-sm border',
                     selectedWidgetId === widget.id
-                      ? 'bg-blue-600 text-white border-blue-500 shadow-lg'
-                      : 'bg-gray-700/50 hover:bg-gray-700 border-gray-600 text-gray-300',
+                      ? 'bg-accent-color text-white border-accent-color shadow-lg'
+                      : 'bg-secondary hover:bg-secondary border-border-color text-primary',
+                    'dark:bg-gray-700/50 dark:hover:bg-gray-700 dark:border-gray-600 dark:text-gray-300',
                     draggingWidgetId === widget.id ? 'opacity-50' : '',
                     dragOverWidgetId === widget.id ? 'ring-2 ring-blue-400' : ''
                   ]"
@@ -237,7 +251,7 @@
                   v-if="widgets.length === 0"
                   class="absolute inset-0 flex items-center justify-center pointer-events-none"
                 >
-                  <span class="text-slate-300 text-lg font-light opacity-30 select-none">
+                  <span class="text-muted text-lg font-light opacity-50 select-none">
                     Drag widgets here to start
                   </span>
                 </div>
@@ -248,7 +262,7 @@
                   :ref="el => setWidgetRef(el, widget.id)"
                   :data-widget-id="widget.id"
                   class="widget-element absolute cursor-move"
-                  :class="{ 'ring-2 ring-blue-500': selectedWidgetId === widget.id }"
+                  :class="{ 'widget-selected': selectedWidgetId === widget.id }"
                   :style="getWidgetStyle(widget)"
                   @click.stop="selectWidget(widget.id)"
                 >
@@ -274,9 +288,12 @@
                   :snapCenter="true"
                   :elementGuidelines="widgetElements"
                   :bounds="canvasBounds"
+                  :zoom="1 / scale"
+                  :persistRect="true"
+                  :keepRatio="false"
                   :edge="false"
                   :throttleDrag="0"
-                  :throttleResize="0"
+                  :throttleResize="1"
                   :throttleRotate="0"
                   @drag="handleDrag"
                   @dragEnd="handleDragEnd"
@@ -291,73 +308,73 @@
         </div>
 
         <!-- Right Sidebar: Properties Panel -->
-        <div class="hidden lg:block w-80 bg-gray-800 border-l border-gray-700 overflow-y-auto custom-scrollbar scroll-container">
-          <div class="bg-gray-900/80 border-b border-white/5 px-4 py-3 sticky top-0 z-10 backdrop-blur-sm">
-            <h2 class="text-lg font-semibold text-white">Properties</h2>
+        <div class="hidden lg:block w-80 bg-card border-l border-border-color overflow-y-auto custom-scrollbar scroll-container">
+          <div class="bg-secondary border-b border-border-color px-4 py-3 sticky top-0 z-10 backdrop-blur-sm">
+            <h2 class="text-lg font-semibold text-primary">Properties</h2>
           </div>
           <div class="p-4">
             
             <div v-if="selectedWidget" class="space-y-6">
               <!-- Common Properties -->
               <div>
-                <h3 class="text-sm font-semibold mb-3 text-gray-400 uppercase">Position & Size</h3>
+                <h3 class="text-sm font-semibold mb-3 text-muted uppercase">Position & Size</h3>
                 <div class="space-y-3">
                   <div class="grid grid-cols-2 gap-2">
                     <div>
-                      <label class="block text-xs font-medium text-gray-400 mb-1.5">X (px)</label>
+                      <label class="block text-xs font-medium text-muted mb-1.5">X (px)</label>
                       <input
                         :value="Math.round(selectedWidget.x)"
                         type="number"
-                        class="w-full px-3 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                        class="input-base w-full px-3 py-2 text-sm"
                         @input="updateWidgetProperty('x', $event.target.value)"
                       />
                     </div>
                     <div>
-                      <label class="block text-xs font-medium text-gray-400 mb-1.5">Y (px)</label>
+                      <label class="block text-xs font-medium text-muted mb-1.5">Y (px)</label>
                       <input
                         :value="Math.round(selectedWidget.y)"
                         type="number"
-                        class="w-full px-3 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                        class="input-base w-full px-3 py-2 text-sm"
                         @input="updateWidgetProperty('y', $event.target.value)"
                       />
                     </div>
                   </div>
                   <div class="grid grid-cols-2 gap-2">
                     <div>
-                      <label class="block text-xs font-medium text-gray-400 mb-1.5">Width (px)</label>
+                      <label class="block text-xs font-medium text-muted mb-1.5">Width (px)</label>
                       <input
                         :value="Math.round(selectedWidget.width)"
                         type="number"
-                        class="w-full px-3 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                        class="input-base w-full px-3 py-2 text-sm"
                         @input="updateWidgetProperty('width', $event.target.value)"
                       />
                     </div>
                     <div>
-                      <label class="block text-xs font-medium text-gray-400 mb-1.5">Height (px)</label>
+                      <label class="block text-xs font-medium text-muted mb-1.5">Height (px)</label>
                       <input
                         :value="Math.round(selectedWidget.height)"
                         type="number"
-                        class="w-full px-3 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                        class="input-base w-full px-3 py-2 text-sm"
                         @input="updateWidgetProperty('height', $event.target.value)"
                       />
                     </div>
                   </div>
                   <div>
-                    <label class="block text-xs font-medium text-gray-400 mb-1.5">Rotation (°)</label>
+                    <label class="block text-xs font-medium text-muted mb-1.5">Rotation (°)</label>
                     <input
                       v-model.number="selectedWidget.rotation"
                       type="number"
                       step="1"
-                      class="w-full px-3 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                      class="input-base w-full px-3 py-2 text-sm"
                       @input="updateWidgetProperty('rotation', $event.target.value)"
                     />
                   </div>
                   <div>
-                    <label class="block text-xs font-medium text-gray-400 mb-1.5">Z-Index</label>
+                    <label class="block text-xs font-medium text-muted mb-1.5">Z-Index</label>
                     <input
                       v-model.number="selectedWidget.zIndex"
                       type="number"
-                      class="w-full px-3 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                      class="input-base w-full px-3 py-2 text-sm"
                       @input="updateWidgetProperty('zIndex', $event.target.value)"
                     />
                   </div>
@@ -366,22 +383,22 @@
 
               <!-- Text Widget Properties -->
               <div v-if="selectedWidget.type === 'text'">
-                <h3 class="text-sm font-semibold mb-3 text-gray-400 uppercase">Text Properties</h3>
+                <h3 class="text-sm font-semibold mb-3 text-muted uppercase">Text Properties</h3>
                 <div class="space-y-3">
                   <div>
-                    <label class="block text-xs font-medium text-gray-400 mb-1.5">Content</label>
+                    <label class="block text-xs font-medium text-muted mb-1.5">Content</label>
                     <textarea
                       v-model="selectedWidget.content"
                       rows="3"
-                      class="w-full px-3 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                      class="textarea-base w-full px-3 py-2 text-sm"
                       @input="updateWidgetProperty('content', $event.target.value)"
                     />
                   </div>
                   <div>
-                    <label class="block text-xs font-medium text-gray-400 mb-1.5">Font Family</label>
+                    <label class="block text-xs font-medium text-muted mb-1.5">Font Family</label>
                     <select
                       v-model="selectedWidget.style.fontFamily"
-                      class="w-full px-3 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                      class="select-base w-full px-3 py-2 text-sm"
                       @change="updateWidgetStyle('fontFamily', $event.target.value)"
                     >
                       <option value="Arial, sans-serif">Arial</option>
@@ -547,6 +564,16 @@
       @close="showMediaLibrary = false"
       @select="handleMediaSelect"
     />
+
+    <!-- Push to Screen Modal -->
+    <PushToScreenModal
+      :show="showPushModal"
+      :template="currentTemplate"
+      :online-screens="onlineScreens"
+      :loading="pushing"
+      @close="showPushModal = false"
+      @select="handlePushToScreenSelect"
+    />
   </AppLayout>
 </template>
 
@@ -559,10 +586,13 @@ import Moveable from 'vue3-moveable'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import WidgetPreview from './components/WidgetPreview.vue'
 import MediaLibraryModal from '@/components/common/MediaLibraryModal.vue'
+import PushToScreenModal from '@/components/templates/PushToScreenModal.vue'
+import { useScreensStore } from '@/stores/screens'
 
 const route = useRoute()
 const router = useRouter()
 const templatesStore = useTemplatesStore()
+const screensStore = useScreensStore()
 const notify = useNotification()
 
 // Expose Math for template usage
@@ -580,6 +610,9 @@ const canvasBackgroundImage = ref('')
 const targetScreenId = ref(route.query.screen_id || null)
 const saving = ref(false)
 const loading = ref(false)
+const pushing = ref(false)
+const showPushModal = ref(false)
+const currentTemplate = ref(null)
 
 // Widgets array
 const widgets = ref([])
@@ -649,18 +682,15 @@ const widgetElements = computed(() => {
     .filter(Boolean)
 })
 
-// Canvas bounds for Moveable (in viewport coordinates)
-// Moveable needs bounds in viewport coordinates to constrain movement
+// Canvas bounds for Moveable (in internal/canvas coordinates)
+// Using internal bounds instead of viewport bounds works better with zoom transform
+// Moveable with zoom prop can handle internal coordinate bounds
 const canvasBounds = computed(() => {
-  if (!canvasArea.value) {
-    return { left: 0, top: 0, right: 0, bottom: 0 }
-  }
-  const rect = canvasArea.value.getBoundingClientRect()
   return {
-    left: rect.left,
-    top: rect.top,
-    right: rect.right,
-    bottom: rect.bottom
+    left: 0,
+    top: 0,
+    right: canvasWidth.value,
+    bottom: canvasHeight.value
   }
 })
 
@@ -784,11 +814,12 @@ const deleteWidget = (widgetId) => {
 
 // Get widget style for rendering
 const getWidgetStyle = (widget) => {
-  // Round values to avoid sub-pixel rendering issues
+  // Round all values to avoid sub-pixel rendering issues and prevent blurring
   const x = Math.round(widget.x)
   const y = Math.round(widget.y)
   const width = Math.round(widget.width)
   const height = Math.round(widget.height)
+  const rotation = Math.round(widget.rotation * 100) / 100 // Round to 2 decimal places for rotation
   
   // Check visibility
   const isVisible = widget.visible !== false
@@ -798,10 +829,12 @@ const getWidgetStyle = (widget) => {
     top: `${y}px`,
     width: `${width}px`,
     height: `${height}px`,
-    transform: `rotate(${widget.rotation}deg)`,
+    transform: `rotate(${rotation}deg)`,
     zIndex: widget.zIndex,
     display: isVisible ? 'block' : 'none',
     opacity: isVisible ? 1 : 0,
+    // Enable GPU acceleration to prevent flickering during movement
+    willChange: 'transform, top, left',
   }
 }
 
@@ -860,6 +893,11 @@ const handleMediaSelect = async (data) => {
   
   // Update widget content with selected URL
   updateWidgetProperty('content', data.url)
+  
+  // CRITICAL: Store content_id in widget object for saving
+  if (data.content && data.content.id) {
+    selectedWidget.value.content_id = data.content.id
+  }
   
   // Link content to widget if content ID is available and widget has backend ID
   if (data.content && data.content.id && selectedWidget.value.id) {
@@ -927,36 +965,29 @@ const handleDrop = (event, targetWidgetId) => {
   draggingWidgetId.value = null
 }
 
-// Get canvas area bounding rect (relative to viewport)
-const getCanvasBoundingRect = () => {
-  if (!canvasArea.value) return null
-  return canvasArea.value.getBoundingClientRect()
-}
-
 // Handle drag
-const handleDrag = ({ target, left, top }) => {
-  if (!selectedWidget.value || !canvasArea.value) return
+const handleDrag = ({ target, beforeDelta }) => {
+  if (!selectedWidget.value) return
 
-  // Get canvas area position relative to viewport
-  const canvasRect = getCanvasBoundingRect()
-  if (!canvasRect) return
+  // Use beforeDelta for stable delta-based movement instead of recalculating from getBoundingClientRect
+  // beforeDelta is [dx, dy] in viewport coordinates, divide by scale to get canvas coordinates
+  const deltaX = beforeDelta[0] / scale.value
+  const deltaY = beforeDelta[1] / scale.value
 
-  // Moveable gives coordinates relative to viewport (left, top)
-  // We need to convert to canvas-relative coordinates (0,0 at top-left of canvas)
-  // Subtract canvas position from Moveable coordinates, then divide by scale
-  const x = (left - canvasRect.left) / scale.value
-  const y = (top - canvasRect.top) / scale.value
+  // Calculate new position by adding delta
+  let newX = selectedWidget.value.x + deltaX
+  let newY = selectedWidget.value.y + deltaY
 
   // Round to nearest integer to avoid decimal precision issues
-  const roundedX = Math.round(x)
-  const roundedY = Math.round(y)
+  newX = Math.round(newX)
+  newY = Math.round(newY)
 
-  // Ensure widget stays within canvas boundaries
+  // Clamp to canvas boundaries AFTER delta movement
   const maxX = canvasWidth.value - selectedWidget.value.width
   const maxY = canvasHeight.value - selectedWidget.value.height
   
-  selectedWidget.value.x = Math.max(0, Math.min(maxX, roundedX))
-  selectedWidget.value.y = Math.max(0, Math.min(maxY, roundedY))
+  selectedWidget.value.x = Math.max(0, Math.min(maxX, newX))
+  selectedWidget.value.y = Math.max(0, Math.min(maxY, newY))
 }
 
 const handleDragEnd = () => {
@@ -964,41 +995,62 @@ const handleDragEnd = () => {
 }
 
 // Handle resize
-const handleResize = ({ target, width, height, drag }) => {
-  if (!selectedWidget.value || !canvasArea.value) return
+const handleResize = (event) => {
+  if (!selectedWidget.value || !event.target) return
 
-  // Get canvas area position relative to viewport
-  const canvasRect = getCanvasBoundingRect()
-  if (!canvasRect) return
+  const { target, delta, drag } = event
 
-  // Moveable gives dimensions in actual DOM pixels (accounting for CSS transform scale)
-  // Divide by scale to get canvas coordinates
-  const newWidth = width / scale.value
-  const newHeight = height / scale.value
+  // CRITICAL: Use ONLY delta values to prevent feedback loop with absolute width/height
+  // Delta represents "how much the mouse moved" - the only stable value
+  if (delta && delta.length >= 2) {
+    // Convert delta from viewport coordinates to canvas coordinates
+    const widthDelta = delta[0] / scale.value
+    const heightDelta = delta[1] / scale.value
 
-  // Round to nearest integer
-  const roundedWidth = Math.round(Math.max(50, newWidth))
-  const roundedHeight = Math.round(Math.max(50, newHeight))
+    // Update dimensions by adding delta (incremental change only)
+    let newWidth = selectedWidget.value.width + widthDelta
+    let newHeight = selectedWidget.value.height + heightDelta
 
-  selectedWidget.value.width = roundedWidth
-  selectedWidget.value.height = roundedHeight
+    // Only enforce minimum size - let bounds handle maximum constraints
+    newWidth = Math.max(50, newWidth)
+    newHeight = Math.max(50, newHeight)
 
-  // Update position if drag is provided (for corner resizing)
-  if (drag) {
-    // Convert drag coordinates to canvas-relative coordinates
-    const x = (drag.left - canvasRect.left) / scale.value
-    const y = (drag.top - canvasRect.top) / scale.value
+    // Sync Moveable's target element style first to prevent visual lag
+    target.style.width = `${newWidth}px`
+    target.style.height = `${newHeight}px`
+
+    // Update reactive state (rounded for pixel-perfect rendering)
+    selectedWidget.value.width = Math.round(newWidth)
+    selectedWidget.value.height = Math.round(newHeight)
+  }
+
+  // Update position if drag.beforeDelta is provided (for corner resizing)
+  if (drag && drag.beforeDelta) {
+    // Use drag.beforeDelta for stable position updates
+    const deltaX = drag.beforeDelta[0] / scale.value
+    const deltaY = drag.beforeDelta[1] / scale.value
+
+    let newX = selectedWidget.value.x + deltaX
+    let newY = selectedWidget.value.y + deltaY
     
-    const roundedX = Math.round(x)
-    const roundedY = Math.round(y)
+    // Sync Moveable's target element style first
+    target.style.left = `${newX}px`
+    target.style.top = `${newY}px`
     
-    selectedWidget.value.x = Math.max(0, Math.min(canvasWidth.value - selectedWidget.value.width, roundedX))
-    selectedWidget.value.y = Math.max(0, Math.min(canvasHeight.value - selectedWidget.value.height, roundedY))
+    // Update reactive state (rounded for pixel-perfect rendering)
+    // NO manual clamping - let bounds handle constraints
+    selectedWidget.value.x = Math.round(newX)
+    selectedWidget.value.y = Math.round(newY)
   }
 }
 
 const handleResizeEnd = () => {
-  // Optional: Save state or trigger update
+  // Sync Moveable's internal state after resize ends
+  nextTick(() => {
+    if (moveableRef.value) {
+      moveableRef.value.updateRect()
+    }
+  })
 }
 
 // Handle rotate
@@ -1144,6 +1196,7 @@ const loadTemplateData = async () => {
           zIndex: widget.zIndex || widget.z_index || 0,
           visible: widget.visible !== undefined ? widget.visible : true, // Default to visible
           content: widget.content || '',
+          content_id: widget.content_id || null, // Preserve content_id when loading
           style: widget.style || {}
         }
         
@@ -1203,11 +1256,15 @@ const saveTemplate = async () => {
           rotation: widget.rotation,
           zIndex: widget.zIndex,
           visible: widget.visible !== undefined ? widget.visible : true, // Include visibility state
-          content: widget.content,
-          style: widget.style
+          content: widget.content || '',
+          content_id: widget.content_id || null, // Include content_id if available
+          style: widget.style || {}
         }))
       }
     }
+    
+    // DEBUG: Log payload before sending
+    console.log('Payload to be saved:', JSON.stringify(templateData, null, 2))
     
     // Add description if available from query params
     if (route.query.description) {
@@ -1256,6 +1313,67 @@ const saveTemplate = async () => {
 // Navigate back to templates list
 const goBack = () => {
   router.push('/templates')
+}
+
+// Push to Screen functionality
+const onlineScreens = computed(() => {
+  return screensStore.onlineScreens || screensStore.screens.filter(s => screensStore.getScreenStatus(s) === 'online')
+})
+
+const handlePushToScreen = async () => {
+  if (!templateId.value) {
+    notify.error('Please save the template first before pushing to screen')
+    return
+  }
+
+  // Fetch screens to ensure we have the latest online status
+  try {
+    await screensStore.fetchScreens()
+    // Load current template data
+    const template = await templatesStore.fetchTemplate(templateId.value)
+    currentTemplate.value = template
+    showPushModal.value = true
+  } catch (error) {
+    notify.error('Failed to load screens')
+  }
+}
+
+// Handle screen selection from push modal
+const handlePushToScreenSelect = async (screen) => {
+  if (!templateId.value || !currentTemplate.value) return
+  
+  pushing.value = true
+  try {
+    // Step 1: Activate template on the screen
+    await templatesStore.activateOnScreen(
+      templateId.value,
+      screen.id,
+      true // sync_content
+    )
+    
+    // Step 2: Send RELOAD command to the screen
+    const { useCommandsStore } = await import('@/stores/commands')
+    const commandsStore = useCommandsStore()
+    
+    await commandsStore.createCommand({
+      screen_id: screen.id,
+      type: 'refresh', // This is the RELOAD command
+      payload: {},
+      priority: 8, // High priority
+    })
+    
+    notify.success(`Template successfully pushed to ${screen.name || screen.device_id}`)
+    showPushModal.value = false
+    currentTemplate.value = null
+    
+    // Refresh templates to update screen counts
+    await templatesStore.fetchTemplates()
+  } catch (error) {
+    const errorMsg = error.response?.data?.detail || error.response?.data?.message || error.message || 'Failed to push template to screen'
+    notify.error(errorMsg)
+  } finally {
+    pushing.value = false
+  }
 }
 
 // Export JSON
@@ -1337,10 +1455,51 @@ onUnmounted(() => {
 .widget-element {
   user-select: none;
   outline: none;
+  transition: box-shadow 0.4s ease;
 }
 
 .widget-element:focus {
   outline: none;
+}
+
+/* Widget Selection Border - High Contrast for Light Mode */
+.widget-selected {
+  box-shadow: 0 0 0 2px var(--accent-color);
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
+}
+
+.dark .widget-selected {
+  box-shadow: 0 0 0 2px #3b82f6;
+  outline: 2px solid #3b82f6;
+}
+
+/* Moveable Library Overrides for Light Mode */
+:deep(.moveable-control-box) {
+  border-color: var(--accent-color) !important;
+}
+
+.dark :deep(.moveable-control-box) {
+  border-color: #3b82f6 !important;
+}
+
+:deep(.moveable-line) {
+  background-color: var(--accent-color) !important;
+  opacity: 0.6;
+}
+
+.dark :deep(.moveable-line) {
+  background-color: #3b82f6 !important;
+}
+
+:deep(.moveable-control) {
+  background-color: var(--accent-color) !important;
+  border-color: var(--accent-color) !important;
+}
+
+.dark :deep(.moveable-control) {
+  background-color: #3b82f6 !important;
+  border-color: #3b82f6 !important;
 }
 
 /* Monitor Frame Styles - Wall-Mounted Display */
@@ -1364,14 +1523,33 @@ onUnmounted(() => {
   box-shadow: 0 0 8px rgba(74, 222, 128, 0.6), 0 0 12px rgba(74, 222, 128, 0.4);
 }
 
-/* Canvas Area with Professional Grid Background */
+/* Canvas Area with Professional Grid Background - Eye-Care Optimized */
 .canvas-area {
-  background-color: #f0f0f0;
-  /* Subtle engineering grid pattern */
+  background-color: var(--bg-primary);
+  /* Premium light mode grid pattern */
   background-image: 
-    linear-gradient(rgba(200, 200, 200, 0.2) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(200, 200, 200, 0.2) 1px, transparent 1px);
+    linear-gradient(var(--grid-color) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
   background-size: 50px 50px;
+  transition: background-color 0.4s ease, background-image 0.4s ease;
+}
+
+.dark .canvas-area {
+  background-color: #1e293b;
+  /* Dark mode cosmic grid pattern */
+  background-image: 
+    linear-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.1) 1px, transparent 1px);
+}
+
+/* Widget soft shadows for light mode */
+.canvas-area > * {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+  transition: box-shadow 0.4s ease;
+}
+
+.dark .canvas-area > * {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 </style>
 

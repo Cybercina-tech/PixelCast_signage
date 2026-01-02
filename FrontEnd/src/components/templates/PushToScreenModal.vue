@@ -150,7 +150,12 @@
             </div>
 
             <!-- Footer -->
-            <div class="bg-gray-900/50 border-t border-white/10 px-6 py-4 flex items-center justify-end gap-3">
+            <div class="bg-gray-900/50 border-t border-white/10 px-6 py-4 flex items-center justify-between">
+              <div v-if="loading" class="flex items-center gap-2 text-sm text-blue-400">
+                <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-400"></div>
+                <span>Pushing template to screen...</span>
+              </div>
+              <div v-else class="flex-1"></div>
               <button
                 @click="$emit('close')"
                 :disabled="loading"

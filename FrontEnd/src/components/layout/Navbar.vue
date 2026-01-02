@@ -1,206 +1,209 @@
 <template>
-  <nav class="sticky top-0 z-40 bg-secondary/80 dark:bg-slate-900/80 backdrop-blur-lg border-b border-border-color shadow-sm">
-    <div class="px-4 sm:px-6 lg:px-8">
-      <div class="flex items-center justify-between h-14">
-        <!-- Left: Logo + Breadcrumb -->
-        <div class="flex items-center flex-1 min-w-0">
+  <nav class="sleek-navbar">
+    <div class="navbar-container">
+      <div class="navbar-content">
+        <!-- Left: Sidebar Toggle + Breadcrumb -->
+        <div class="navbar-left">
           <!-- Sidebar Toggle (Mobile/Tablet) -->
           <button
             @click="$emit('toggle-sidebar')"
-            class="lg:hidden p-2 -ml-2 rounded-lg hover:bg-card text-slate-900 dark:text-slate-300"
+            class="sidebar-toggle"
             aria-label="Toggle sidebar"
           >
-            <Bars3Icon class="w-5 h-5 text-slate-900 dark:text-slate-300" />
+            <Bars3Icon class="w-5 h-5" />
           </button>
 
-          <!-- Logo (Desktop) -->
-          <div class="hidden lg:flex items-center mr-4">
-            <div class="w-8 h-8 rounded-lg bg-slate-900 flex items-center justify-center mr-2">
-              <BoltIcon class="w-5 h-5 text-white" />
-            </div>
-            <span class="text-lg font-semibold text-zinc-900 dark:text-white">ScreenGram</span>
-          </div>
-
           <!-- Breadcrumb -->
-          <nav class="flex items-center space-x-2 text-sm text-zinc-600 dark:text-zinc-400 min-w-0 flex-1">
+          <nav class="breadcrumb-nav">
             <router-link
               to="/dashboard"
-              class="hover:text-zinc-900 dark:hover:text-white transition-colors duration-200 truncate"
+              class="breadcrumb-item"
             >
               Dashboard
             </router-link>
             <template v-if="breadcrumbs.length > 0">
-              <ChevronRightIcon class="w-4 h-4 flex-shrink-0 text-zinc-400 dark:text-zinc-600" />
+              <span class="breadcrumb-separator">›</span>
               <template v-for="(crumb, index) in breadcrumbs" :key="index">
-                <span
-                  v-if="index === breadcrumbs.length - 1"
-                  class="text-zinc-900 dark:text-white font-medium truncate"
-                >
-                  {{ crumb.label }}
-                </span>
                 <router-link
-                  v-else
+                  v-if="index < breadcrumbs.length - 1"
                   :to="crumb.path"
-                  class="hover:text-zinc-900 dark:hover:text-white transition-colors duration-200 truncate"
+                  class="breadcrumb-item breadcrumb-link"
                 >
                   {{ crumb.label }}
                 </router-link>
-                <ChevronRightIcon
+                <span
+                  v-else
+                  class="breadcrumb-item breadcrumb-current"
+                >
+                  {{ crumb.label }}
+                </span>
+                <span
                   v-if="index < breadcrumbs.length - 1"
-                  class="w-4 h-4 flex-shrink-0"
-                />
+                  class="breadcrumb-separator"
+                >
+                  ›
+                </span>
               </template>
             </template>
           </nav>
         </div>
 
-        <!-- Right: Theme Toggle + System Info + Notifications + User Menu -->
-        <div class="flex items-center space-x-3 ml-4">
+        <!-- Center: Ghost Search -->
+        <div class="navbar-center">
+          <div class="ghost-search" :class="{ 'search-expanded': searchExpanded }">
+            <button
+              v-if="!searchExpanded"
+              @click="searchExpanded = true"
+              class="search-trigger"
+              aria-label="Search"
+            >
+              <MagnifyingGlassIcon class="w-4 h-4" />
+            </button>
+            <div v-else class="search-input-wrapper">
+              <MagnifyingGlassIcon class="w-4 h-4 search-icon" />
+              <input
+                ref="searchInput"
+                v-model="searchQuery"
+                type="text"
+                placeholder="Search..."
+                class="search-input"
+                @blur="handleSearchBlur"
+                @keyup.esc="closeSearch"
+              />
+              <button
+                @click="closeSearch"
+                class="search-close"
+                aria-label="Close search"
+              >
+                <XMarkIcon class="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Icons -->
+        <div class="navbar-right">
           <!-- Theme Toggle -->
           <ThemeToggle />
           
-          <!-- Environment Badge (optional) -->
-          <span
-            v-if="environment && environment !== 'production'"
-            :class="[
-              'hidden lg:inline-flex px-2 py-1 rounded text-xs font-medium',
-              environment === 'staging' ? 'bg-yellow-100 text-yellow-700' : 'bg-blue-100 text-blue-700'
-            ]"
-          >
-            {{ environment }}
-          </span>
-
-          <!-- API Status Alert (if disconnected) -->
-          <div
-            v-if="apiStatus === 'disconnected'"
-            class="hidden lg:flex items-center gap-1.5 px-2 py-1 bg-red-50 text-red-700 rounded text-xs"
-            title="API Connection Lost"
-          >
-            <ExclamationTriangleIcon class="w-4 h-4" />
-            <span>API Offline</span>
-          </div>
-
           <!-- Notifications -->
-          <div class="relative">
+          <div class="icon-button-wrapper">
             <button
               @click="toggleNotifications"
-              class="p-2 rounded-lg hover:bg-card text-slate-900 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-50 transition-colors relative"
+              class="icon-button"
+              :class="{ 'bell-shake': bellShake }"
               aria-label="Notifications"
             >
-              <BellIcon class="w-5 h-5 text-slate-900 dark:text-slate-300" />
+              <BellIcon class="w-5 h-5 icon-thin" />
               <span
                 v-if="unreadNotifications > 0"
-                class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"
+                class="notification-dot notification-dot-neon"
               ></span>
             </button>
 
             <!-- Notifications Dropdown -->
-            <div
-              v-if="showNotifications"
-              ref="notificationsDropdown"
-              class="absolute right-0 mt-2 w-80 bg-card rounded-lg shadow-lg border border-border-color py-2 z-50"
-            >
-              <div class="px-4 py-2 border-b border-gray-200 flex items-center justify-between">
-                <h3 class="text-sm font-semibold text-primary">Notifications</h3>
-                <button
-                  v-if="unreadNotifications > 0"
-                  @click="markAllAsRead"
-                  class="text-xs text-blue-600 hover:text-blue-700"
-                >
-                  Mark all read
-                </button>
-              </div>
-              <div class="max-h-96 overflow-y-auto">
-                <div
-                  v-if="notifications.length === 0"
-                  class="px-4 py-8 text-center text-sm text-muted"
-                >
-                  No notifications
+            <transition name="slide-down">
+              <div
+                v-if="showNotifications"
+                ref="notificationsDropdown"
+                class="notifications-dropdown space-dropdown"
+              >
+                <div class="dropdown-header">
+                  <h3 class="dropdown-title">Notifications</h3>
+                  <button
+                    v-if="unreadNotifications > 0"
+                    @click="markAllAsRead"
+                    class="dropdown-action space-action"
+                  >
+                    Mark all read
+                  </button>
                 </div>
-                <div
-                  v-for="notification in notifications"
-                  :key="notification.id"
-                  :class="[
-                    'px-4 py-3 hover:bg-secondary border-b border-border-color last:border-0 cursor-pointer',
-                    !notification.read ? 'bg-blue-50' : ''
-                  ]"
-                  @click="handleNotificationClick(notification)"
-                >
-                  <div class="flex items-start gap-3">
-                    <div
+                <div class="dropdown-content">
+                  <div
+                    v-if="notifications.length === 0"
+                    class="dropdown-empty space-empty"
+                  >
+                    <SparklesIcon class="w-5 h-5 empty-icon" />
+                    <p>All systems clear. No new alerts.</p>
+                  </div>
+                  <div
+                    v-for="notification in notifications"
+                    :key="notification.id"
+                    :class="[
+                      'notification-item space-notification-item',
+                      !notification.is_read ? 'notification-unread' : ''
+                    ]"
+                    @click="handleNotificationClick(notification)"
+                  >
+                    <component
+                      :is="getNotificationIcon(notification.type)"
                       :class="[
-                        'w-2 h-2 rounded-full mt-1.5 flex-shrink-0',
-                        notification.type === 'success' ? 'bg-green-500' : '',
-                        notification.type === 'error' ? 'bg-red-500' : '',
-                        notification.type === 'warning' ? 'bg-yellow-500' : '',
-                        notification.type === 'info' ? 'bg-blue-500' : ''
+                        'notification-icon',
+                        `icon-${notification.type}`
                       ]"
-                    ></div>
-                    <div class="flex-1 min-w-0">
-                      <p class="text-sm text-primary font-medium">{{ notification.title }}</p>
-                      <p class="text-xs text-secondary mt-0.5">{{ notification.message }}</p>
-                      <p class="text-xs text-muted mt-1">{{ formatTime(notification.timestamp) }}</p>
+                    />
+                    <div class="notification-content">
+                      <p class="notification-title">{{ notification.title }}</p>
+                      <p class="notification-message">{{ notification.message }}</p>
+                      <p class="notification-time">{{ formatTime(notification.created_at) }}</p>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
+            </transition>
           </div>
 
           <!-- User Menu -->
-          <div class="relative">
+          <div class="icon-button-wrapper">
             <button
               @click="toggleUserMenu"
-              class="flex items-center gap-2 p-1.5 rounded-lg hover:bg-card transition-colors"
+              class="icon-button"
               aria-label="User menu"
             >
-              <div class="w-8 h-8 rounded-full bg-slate-900 flex items-center justify-center text-white text-sm font-medium">
-                {{ userInitials }}
-              </div>
-              <ChevronDownIcon class="w-4 h-4 text-slate-900 dark:text-slate-300 hidden sm:block" />
+              <UserIcon class="w-5 h-5 icon-thin" />
             </button>
 
             <!-- User Dropdown -->
             <div
               v-if="showUserMenu"
               ref="userMenuDropdown"
-              class="absolute right-0 mt-2 w-56 bg-card rounded-lg shadow-lg border border-border-color py-2 z-50"
+              class="user-dropdown"
             >
-              <div class="px-4 py-3 border-b border-gray-200">
-                <p class="text-sm font-semibold text-primary">{{ user?.username || 'Guest' }}</p>
-                <p class="text-xs text-muted mt-0.5">{{ user?.email || '' }}</p>
+              <div class="dropdown-header">
+                <p class="user-name">{{ user?.username || 'Guest' }}</p>
+                <p class="user-email">{{ user?.email || '' }}</p>
               </div>
-              <div class="py-1">
+              <div class="dropdown-menu">
                 <router-link
                   to="/profile"
-                  class="flex items-center px-4 py-2 text-sm text-slate-900 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                  class="dropdown-item"
                   @click="closeUserMenu"
                 >
-                  <UserIcon class="w-4 h-4 mr-3 text-slate-900 dark:text-slate-300" />
+                  <UserIcon class="w-4 h-4" />
                   Profile
                 </router-link>
                 <router-link
                   to="/security"
-                  class="flex items-center px-4 py-2 text-sm text-slate-900 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                  class="dropdown-item"
                   @click="closeUserMenu"
                 >
-                  <ShieldCheckIcon class="w-4 h-4 mr-3 text-slate-900 dark:text-slate-300" />
+                  <ShieldCheckIcon class="w-4 h-4" />
                   Security
                 </router-link>
                 <router-link
                   to="/sessions"
-                  class="flex items-center px-4 py-2 text-sm text-slate-900 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+                  class="dropdown-item"
                   @click="closeUserMenu"
                 >
-                  <DevicePhoneMobileIcon class="w-4 h-4 mr-3 text-slate-900 dark:text-slate-300" />
+                  <DevicePhoneMobileIcon class="w-4 h-4" />
                   Sessions
                 </router-link>
-                <div class="border-t border-border-color my-1"></div>
+                <div class="dropdown-divider"></div>
                 <button
                   @click="handleLogout"
-                  class="w-full flex items-center px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20"
+                  class="dropdown-item dropdown-item-danger"
                 >
-                  <ArrowRightOnRectangleIcon class="w-4 h-4 mr-3 text-red-600 dark:text-red-400" />
+                  <ArrowRightOnRectangleIcon class="w-4 h-4" />
                   Logout
                 </button>
               </div>
@@ -213,20 +216,25 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useNotificationsStore } from '@/stores/notificationsStore'
 import {
   Bars3Icon,
-  BoltIcon,
   ChevronRightIcon,
-  ChevronDownIcon,
   BellIcon,
   UserIcon,
   ShieldCheckIcon,
   DevicePhoneMobileIcon,
   ArrowRightOnRectangleIcon,
-  ExclamationTriangleIcon
+  MagnifyingGlassIcon,
+  XMarkIcon,
+  ExclamationCircleIcon,
+  CheckCircleIcon,
+  InformationCircleIcon,
+  ExclamationTriangleIcon,
+  SparklesIcon,
 } from '@heroicons/vue/24/outline'
 import ThemeToggle from '@/components/common/ThemeToggle.vue'
 
@@ -235,60 +243,30 @@ defineEmits(['toggle-sidebar'])
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
+const notificationsStore = useNotificationsStore()
 
 // UI State
 const showNotifications = ref(false)
 const showUserMenu = ref(false)
-const apiStatus = ref('connected')
+const searchExpanded = ref(false)
+const searchQuery = ref('')
+const searchInput = ref(null)
 const notificationsDropdown = ref(null)
 const userMenuDropdown = ref(null)
+const bellShake = ref(false)
 
-// Environment (can be from env variable)
-const environment = ref(null) // 'production', 'staging', 'development', or null
+// Notifications from store
+const notifications = computed(() => notificationsStore.notifications)
+const unreadNotifications = computed(() => notificationsStore.unreadCount)
 
-// Notifications (TODO: Replace with backend API integration)
-// Currently using mock data for UI display only
-// Backend should provide: GET /api/notifications/ endpoint
-const notifications = ref([
-  {
-    id: 1,
-    title: 'Screen Updated',
-    message: 'Screen "Main Hall" has been updated successfully',
-    type: 'success',
-    read: false,
-    timestamp: new Date(Date.now() - 5 * 60 * 1000)
-  },
-  {
-    id: 2,
-    title: 'API Warning',
-    message: 'High latency detected on API endpoint',
-    type: 'warning',
-    read: false,
-    timestamp: new Date(Date.now() - 30 * 60 * 1000)
-  }
-])
-
-const unreadNotifications = computed(() => {
-  return notifications.value.filter(n => !n.read).length
-})
-
-// User initials
+// User
 const user = computed(() => authStore.user)
-const userInitials = computed(() => {
-  if (!user.value?.username) return 'G'
-  const parts = user.value.username.split(' ')
-  if (parts.length > 1) {
-    return (parts[0][0] + parts[1][0]).toUpperCase()
-  }
-  return user.value.username.substring(0, 2).toUpperCase()
-})
 
 // Breadcrumb generation
 const breadcrumbs = computed(() => {
   const paths = route.path.split('/').filter(Boolean)
   const crumbs = []
   
-  // Skip dashboard from breadcrumb if it's the only path
   if (paths.length <= 1 && paths[0] === 'dashboard') {
     return []
   }
@@ -297,10 +275,8 @@ const breadcrumbs = computed(() => {
   paths.forEach((path, index) => {
     currentPath += `/${path}`
     
-    // Skip dashboard from breadcrumb
     if (path === 'dashboard') return
     
-    // Generate label from path
     const label = path
       .split('-')
       .map(word => word.charAt(0).toUpperCase() + word.slice(1))
@@ -314,6 +290,23 @@ const breadcrumbs = computed(() => {
   
   return crumbs
 })
+
+// Search handlers
+const closeSearch = () => {
+  searchExpanded.value = false
+  searchQuery.value = ''
+}
+
+const handleSearchBlur = (e) => {
+  // Don't close if clicking inside dropdown
+  if (!e.relatedTarget || !e.relatedTarget.closest('.notifications-dropdown, .user-dropdown')) {
+    setTimeout(() => {
+      if (!searchQuery.value) {
+        closeSearch()
+      }
+    }, 200)
+  }
+}
 
 // Toggle functions
 const toggleNotifications = () => {
@@ -340,17 +333,15 @@ const closeUserMenu = () => {
 
 // Click outside handler
 const handleClickOutside = (event) => {
-  // Check if click is outside notifications dropdown
   if (showNotifications.value && notificationsDropdown.value) {
-    const button = event.target.closest('button[aria-label="Notifications"]')
+    const button = event.target.closest('.icon-button')
     if (!notificationsDropdown.value.contains(event.target) && !button) {
       closeNotifications()
     }
   }
   
-  // Check if click is outside user menu dropdown
   if (showUserMenu.value && userMenuDropdown.value) {
-    const button = event.target.closest('button[aria-label="User menu"]')
+    const button = event.target.closest('.icon-button')
     if (!userMenuDropdown.value.contains(event.target) && !button) {
       closeUserMenu()
     }
@@ -358,18 +349,34 @@ const handleClickOutside = (event) => {
 }
 
 // Notification handlers
-const handleNotificationClick = (notification) => {
-  // Mark as read
-  notification.read = true
-  // Navigate if needed
-  // router.push(notification.link)
+const handleNotificationClick = async (notification) => {
+  if (!notification.is_read) {
+    await notificationsStore.markAsRead(notification.id)
+  }
 }
 
-const markAllAsRead = () => {
-  notifications.value.forEach(n => n.read = true)
+const markAllAsRead = async () => {
+  await notificationsStore.markAllAsRead()
 }
 
-const formatTime = (date) => {
+// Get icon component for notification type
+const getNotificationIcon = (type) => {
+  switch (type) {
+    case 'error':
+      return ExclamationCircleIcon
+    case 'success':
+      return CheckCircleIcon
+    case 'warning':
+      return ExclamationTriangleIcon
+    case 'info':
+    default:
+      return InformationCircleIcon
+  }
+}
+
+const formatTime = (dateString) => {
+  if (!dateString) return 'Just now'
+  const date = new Date(dateString)
   const now = new Date()
   const diff = now - date
   const minutes = Math.floor(diff / 60000)
@@ -383,43 +390,709 @@ const formatTime = (date) => {
   return date.toLocaleDateString()
 }
 
-// API Status check
-const checkApiStatus = async () => {
-  try {
-    const response = await fetch('/api/health', { 
-      method: 'GET',
-      signal: AbortSignal.timeout(3000)
-    })
-    apiStatus.value = response.ok ? 'connected' : 'disconnected'
-  } catch (error) {
-    apiStatus.value = 'disconnected'
+// Watch for new notifications and trigger bell shake
+let previousUnreadCount = 0
+watch(unreadNotifications, (newCount) => {
+  if (newCount > previousUnreadCount && previousUnreadCount > 0) {
+    // New notification arrived
+    bellShake.value = true
+    setTimeout(() => {
+      bellShake.value = false
+    }, 600)
   }
-}
+  previousUnreadCount = newCount
+})
 
 const handleLogout = () => {
   authStore.logout()
   router.push('/')
 }
 
-let apiCheckInterval = null
+// Focus search input when expanded
+watch(searchExpanded, async (expanded) => {
+  if (expanded) {
+    await nextTick()
+    searchInput.value?.focus()
+  }
+})
 
 onMounted(() => {
-  checkApiStatus()
-  apiCheckInterval = setInterval(checkApiStatus, 30000) // Check every 30 seconds
   document.addEventListener('click', handleClickOutside)
+  
+  // Start polling for notifications if user is authenticated
+  if (authStore.isAuthenticated) {
+    notificationsStore.startPolling(60000) // Poll every 60 seconds
+    previousUnreadCount = unreadNotifications.value
+  }
 })
 
 onUnmounted(() => {
-  if (apiCheckInterval) {
-    clearInterval(apiCheckInterval)
-  }
   document.removeEventListener('click', handleClickOutside)
+  notificationsStore.stopPolling()
 })
 </script>
 
 <style scoped>
-/* Sticky navbar */
-nav {
-  backdrop-filter: blur(8px);
+.sleek-navbar {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: var(--card-bg); /* Frosted glass with 80% opacity */
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: none; /* No borders - Aether uses soft shadows */
+  box-shadow: var(--shadow-soft); /* Soft shadow instead of border */
+  transition: all 0.4s ease;
+}
+
+.dark .sleek-navbar {
+  background: transparent;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: none;
+}
+
+.navbar-container {
+  padding: 0 1.5rem;
+}
+
+.navbar-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 3.5rem;
+  gap: 1.5rem;
+}
+
+/* Left Section */
+.navbar-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.sidebar-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.4s ease;
+}
+
+.sidebar-toggle:hover {
+  background: rgba(0, 0, 0, 0.05);
+  color: var(--text-main);
+}
+
+.dark .sidebar-toggle {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.dark .sidebar-toggle:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+@media (min-width: 1024px) {
+  .sidebar-toggle {
+    display: none;
+  }
+}
+
+/* Breadcrumb */
+.breadcrumb-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  overflow: hidden;
+  transition: color 0.4s ease;
+}
+
+.dark .breadcrumb-nav {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.breadcrumb-item {
+  color: var(--text-muted);
+  text-decoration: none;
+  transition: color 0.4s ease;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dark .breadcrumb-item {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.breadcrumb-item:hover {
+  color: var(--text-main);
+}
+
+.dark .breadcrumb-item:hover {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.breadcrumb-link {
+  cursor: pointer;
+}
+
+.breadcrumb-current {
+  color: var(--text-main);
+  font-weight: 500;
+}
+
+.dark .breadcrumb-current {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.breadcrumb-separator {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  user-select: none;
+  opacity: 0.5;
+}
+
+.dark .breadcrumb-separator {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+/* Center: Ghost Search */
+.navbar-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+}
+
+.ghost-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.search-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.4s ease;
+}
+
+.search-trigger:hover {
+  color: var(--accent-color);
+  background: rgba(9, 132, 227, 0.1);
+}
+
+.dark .search-trigger {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.dark .search-trigger:hover {
+  color: #00d2ff;
+  background: rgba(0, 210, 255, 0.1);
+}
+
+.search-input-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--card-bg); /* Frosted glass with 80% opacity */
+  border: none; /* No borders - Aether uses soft shadows */
+  border-radius: 8px;
+  min-width: 250px;
+  box-shadow: var(--shadow-soft); /* Soft shadow instead of border */
+  animation: searchExpand 0.3s ease;
+  transition: all 0.4s ease;
+}
+
+.dark .search-input-wrapper {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: none;
+}
+
+@keyframes searchExpand {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.search-icon {
+  color: var(--text-muted);
+  flex-shrink: 0;
+  transition: color 0.4s ease;
+}
+
+.dark .search-icon {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.search-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text-main);
+  font-size: 0.875rem;
+  min-width: 0;
+  transition: color 0.4s ease;
+}
+
+.dark .search-input {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.search-input::placeholder {
+  color: var(--text-muted);
+}
+
+.dark .search-input::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.search-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  flex-shrink: 0;
+}
+
+.search-close:hover {
+  color: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* Right Section */
+.navbar-right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 0 0 auto;
+}
+
+.icon-button-wrapper {
+  position: relative;
+}
+
+.icon-button {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.4s ease;
+}
+
+.icon-button:hover {
+  color: var(--accent-color);
+  background: rgba(9, 132, 227, 0.1);
+}
+
+.dark .icon-button {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.dark .icon-button:hover {
+  color: #00d2ff;
+  background: rgba(0, 210, 255, 0.1);
+}
+
+.icon-thin {
+  stroke-width: 1.5;
+}
+
+.notification-dot {
+  position: absolute;
+  top: 0.375rem;
+  right: 0.375rem;
+  width: 0.5rem;
+  height: 0.5rem;
+  background: var(--accent-color);
+  border-radius: 50%;
+  box-shadow: 0 0 4px rgba(9, 132, 227, 0.4);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.dark .notification-dot {
+  background: #00d2ff;
+  box-shadow: 0 0 8px rgba(0, 210, 255, 0.8);
+}
+
+.notification-dot-neon {
+  background: #ef4444;
+  box-shadow: 0 0 6px rgba(239, 68, 68, 0.5);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.dark .notification-dot-neon {
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.9), 0 0 20px rgba(239, 68, 68, 0.6);
+  animation: neonPulse 2s ease-in-out infinite;
+}
+
+@keyframes neonPulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.9), 0 0 20px rgba(239, 68, 68, 0.6);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.2);
+    box-shadow: 0 0 15px rgba(239, 68, 68, 1), 0 0 30px rgba(239, 68, 68, 0.8);
+  }
+}
+
+.bell-shake {
+  animation: bellShake 0.6s ease-in-out;
+}
+
+@keyframes bellShake {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  10%, 30%, 50%, 70%, 90% {
+    transform: rotate(-10deg);
+  }
+  20%, 40%, 60%, 80% {
+    transform: rotate(10deg);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.1);
+  }
+}
+
+/* Dropdowns */
+.notifications-dropdown,
+.user-dropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 0.5rem);
+  width: 20rem;
+  background: var(--card-bg); /* Frosted glass with 80% opacity */
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: none; /* No borders - Aether uses soft shadows */
+  border-radius: 12px;
+  box-shadow: var(--shadow-medium); /* Soft shadow instead of border */
+  z-index: 50;
+  transition: all 0.4s ease;
+}
+
+.dark .notifications-dropdown,
+.dark .user-dropdown {
+  background: rgba(10, 10, 26, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.space-dropdown {
+  background: var(--card-bg); /* Frosted glass with 80% opacity */
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: none; /* No borders - Aether uses soft shadows */
+  box-shadow: var(--shadow-soft); /* Soft shadow instead of border */
+}
+
+.dark .space-dropdown {
+  background: rgba(10, 10, 26, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(0, 210, 255, 0.1);
+}
+
+/* Slide down animation */
+.slide-down-enter-active {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.slide-down-leave-active {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.slide-down-enter-from {
+  opacity: 0;
+  transform: translateY(-10px) scale(0.95);
+}
+
+.slide-down-leave-to {
+  opacity: 0;
+  transform: translateY(-5px) scale(0.98);
+}
+
+.dropdown-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.dropdown-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.dropdown-action {
+  font-size: 0.75rem;
+  color: #00d2ff;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.dropdown-action:hover {
+  color: #00b8e6;
+}
+
+.space-action {
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  transition: all 0.3s ease;
+}
+
+.space-action:hover {
+  background: rgba(0, 210, 255, 0.1);
+  color: #00d2ff;
+  box-shadow: 0 0 10px rgba(0, 210, 255, 0.2);
+}
+
+.user-name {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+  margin-bottom: 0.25rem;
+}
+
+.user-email {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.dropdown-content {
+  max-height: 24rem;
+  overflow-y: auto;
+}
+
+.dropdown-empty {
+  padding: 2rem;
+  text-align: center;
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.space-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 2.5rem 1.5rem;
+}
+
+.empty-icon {
+  color: rgba(255, 255, 255, 0.3);
+  opacity: 0.6;
+}
+
+.notification-item {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.notification-item:last-child {
+  border-bottom: none;
+}
+
+.notification-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.space-notification-item {
+  position: relative;
+  overflow: hidden;
+}
+
+.space-notification-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: transparent;
+  transition: all 0.3s ease;
+}
+
+.space-notification-item:hover::before {
+  background: rgba(0, 210, 255, 0.5);
+  box-shadow: 0 0 10px rgba(0, 210, 255, 0.3);
+}
+
+.notification-unread {
+  background: rgba(0, 210, 255, 0.05);
+}
+
+.notification-unread::before {
+  background: rgba(0, 210, 255, 0.3);
+}
+
+.notification-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+  flex-shrink: 0;
+  margin-top: 0.125rem;
+}
+
+.notification-icon.icon-error {
+  color: #ef4444;
+  filter: drop-shadow(0 0 4px rgba(239, 68, 68, 0.6));
+}
+
+.notification-icon.icon-success {
+  color: #10b981;
+  filter: drop-shadow(0 0 4px rgba(16, 185, 129, 0.6));
+}
+
+.notification-icon.icon-warning {
+  color: #f59e0b;
+  filter: drop-shadow(0 0 4px rgba(245, 158, 11, 0.6));
+}
+
+.notification-icon.icon-info {
+  color: #00d2ff;
+  filter: drop-shadow(0 0 4px rgba(0, 210, 255, 0.6));
+}
+
+.notification-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.notification-title {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.9);
+  margin-bottom: 0.25rem;
+}
+
+.notification-message {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.6);
+  margin-bottom: 0.25rem;
+  line-height: 1.4;
+}
+
+.notification-time {
+  font-size: 0.625rem;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.dropdown-menu {
+  padding: 0.5rem 0;
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.625rem 1rem;
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.7);
+  text-decoration: none;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-align: left;
+}
+
+.dropdown-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.dropdown-item svg {
+  width: 1rem;
+  height: 1rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.dropdown-item-danger {
+  color: rgba(239, 68, 68, 0.8);
+}
+
+.dropdown-item-danger:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+
+.dropdown-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.1);
+  margin: 0.5rem 0;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .navbar-center {
+    display: none;
+  }
+  
+  .breadcrumb-nav {
+    font-size: 0.75rem;
+  }
 }
 </style>

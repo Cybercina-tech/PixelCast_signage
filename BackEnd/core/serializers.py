@@ -2,7 +2,7 @@
 Serializers for core models.
 """
 from rest_framework import serializers
-from core.models import AuditLog, SystemBackup
+from core.models import AuditLog, SystemBackup, Notification
 
 
 class AuditLogSerializer(serializers.ModelSerializer):
@@ -94,3 +94,21 @@ class SystemBackupSerializer(serializers.ModelSerializer):
         if obj.file_size:
             return round(obj.file_size / (1024 * 1024), 2)
         return None
+
+
+class NotificationSerializer(serializers.ModelSerializer):
+    """Serializer for Notification model."""
+    type_display = serializers.CharField(source='get_type_display', read_only=True)
+    
+    class Meta:
+        model = Notification
+        fields = [
+            'id',
+            'title',
+            'message',
+            'type',
+            'type_display',
+            'is_read',
+            'created_at',
+        ]
+        read_only_fields = ['id', 'created_at']

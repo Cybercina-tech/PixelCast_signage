@@ -77,30 +77,37 @@ const sortedContents = computed(() => {
 
 // Content container style
 const contentStyle = computed(() => {
+  // Get background color from widget style or use black as default
+  const widgetStyle = props.widget.content_json || {}
+  const backgroundColor = widgetStyle.backgroundColor || '#000000'
+  
   return {
     width: '100%',
     height: '100%',
     position: 'absolute',
     top: 0,
-    left: 0
+    left: 0,
+    overflow: 'hidden', // Prevent bleed-out with contain mode
+    backgroundColor: backgroundColor // Fill gaps with background color
   }
 })
 
 /**
  * Video style with responsive object-fit
- * Applies same logic as images: width/height 100% with object-fit contain/cover based on preference
+ * CRITICAL: Use 'contain' to ensure full content visibility without cropping
  */
 const videoStyle = computed(() => {
   const contentJson = props.widget.content_json || {}
-  // Default to 'contain' to fit without cropping, user can override to 'cover' via content_json.objectFit
-  const objectFit = contentJson.objectFit || 'contain'
+  // CRITICAL: Default to 'contain' to ensure full content visibility
+  // Force contain mode to prevent cropping
+  const objectFit = 'contain'
   
   return {
     width: '100%',
     height: '100%',
     objectFit: objectFit,
     display: 'block',
-    // Center the video (important for both contain and cover modes)
+    // Center the video (important for contain mode - centers video within container)
     objectPosition: 'center center'
   }
 })
@@ -194,9 +201,10 @@ const onVideoError = (event) => {
   width: 100%;
   height: 100%;
   position: relative;
-  /* CRITICAL FIX: Transparent background instead of black
-     With object-fit: cover, videos fill widget completely, so background shouldn't show */
-  background-color: transparent;
+  /* CRITICAL: Use black background to fill gaps when object-fit: contain creates letterboxing
+     This ensures no transparent gaps are visible when aspect ratios don't match */
+  background-color: #000000;
+  overflow: hidden; /* Prevent any content from bleeding outside widget bounds */
 }
 
 .content-item {
@@ -205,17 +213,20 @@ const onVideoError = (event) => {
   position: absolute;
   top: 0;
   left: 0;
-  /* CRITICAL FIX: Transparent background
-     With object-fit: cover, videos fill completely, so no black spaces */
-  background-color: transparent;
+  /* CRITICAL: Use black background to fill gaps when object-fit: contain creates letterboxing
+     Background color can be overridden via widget.content_json.backgroundColor */
+  background-color: #000000;
+  overflow: hidden; /* Prevent video from bleeding outside container with contain mode */
 }
 
 .content-video {
   width: 100%;
   height: 100%;
-  /* Responsive scaling: object-fit is set via inline style (contain/cover based on preference) */
+  /* CRITICAL: Use 'contain' to ensure full content visibility without cropping
+     Force with !important to override any inline styles */
+  object-fit: contain !important;
   display: block;
-  /* Center the video - important for both contain and cover modes */
+  /* Center the video - important for contain mode - centers video within container */
   object-position: center center;
   /* Hardware acceleration for smooth playback */
   backface-visibility: hidden;
@@ -231,9 +242,9 @@ const onVideoError = (event) => {
   /* Video rendering optimization */
   image-rendering: auto;
   -webkit-image-rendering: auto;
-  /* Prevent layout shifts but allow content overflow */
+  /* Prevent layout shifts */
   contain: layout style;
-  /* Ensure video fills widget completely */
+  /* Ensure video fits within widget bounds */
   max-width: 100%;
   max-height: 100%;
   /* Ensure video controls are hidden for digital signage */

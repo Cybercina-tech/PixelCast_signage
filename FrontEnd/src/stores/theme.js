@@ -7,6 +7,15 @@ export const useThemeStore = defineStore('theme', {
     theme: 'dark', // 'dark' | 'light'
   }),
 
+  getters: {
+    /**
+     * Check if dark mode is active
+     */
+    isDarkMode() {
+      return this.theme === 'dark'
+    },
+  },
+
   actions: {
     /**
      * Initialize theme on app startup

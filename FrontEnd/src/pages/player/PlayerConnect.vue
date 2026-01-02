@@ -1,104 +1,153 @@
 <template>
-  <div class="player-connect bg-gradient-to-br from-slate-50 via-slate-100 to-slate-200 dark:from-slate-950 dark:via-slate-900 dark:to-slate-800 min-h-screen flex items-center justify-center p-4">
-    <div class="connect-container w-full max-w-4xl">
-      <!-- Loading state -->
-      <Card v-if="status === 'loading'" class="text-center">
-        <div class="flex flex-col items-center justify-center py-12">
-          <div class="spinner mb-6"></div>
-          <p class="text-lg font-semibold text-primary">Generating pairing code...</p>
+  <div class="activation-page">
+    <!-- Deep Space Background -->
+    <div class="starfield-background"></div>
+    
+    <!-- Radial Glow Effect -->
+    <div class="radial-glow"></div>
+
+    <!-- Main Content Container -->
+    <div class="activation-container">
+      <!-- Loading State -->
+      <div v-if="status === 'loading'" class="loading-state">
+        <div class="loading-spinner"></div>
+        <h2 class="loading-text">Generating Activation Code...</h2>
+        <div class="loading-dots">
+          <span></span>
+          <span></span>
+          <span></span>
         </div>
-      </Card>
-
-      <!-- Pairing state -->
-      <div v-else-if="status === 'pairing'" class="space-y-6">
-        <Card class="text-center">
-          <h1 class="text-3xl md:text-4xl font-bold text-primary mb-12">Pair Your Screen</h1>
-          
-          <!-- 6-digit code section -->
-          <div class="code-display mb-12">
-            <div class="code-digits bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-700 dark:to-slate-800 border-2 border-emerald-500/30 dark:border-emerald-400/30 rounded-2xl p-8 shadow-2xl inline-block">
-              <div class="text-6xl md:text-7xl font-bold text-emerald-600 dark:text-emerald-400 font-mono tracking-wider">
-                {{ pairingCode }}
-              </div>
-            </div>
-            <p class="text-secondary mt-6 text-lg font-medium">Enter this code in your dashboard</p>
-          </div>
-
-          <!-- QR Code section -->
-          <div class="qr-container">
-            <div v-if="qrCodeDataUrl" class="qr-code-wrapper bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-700 dark:to-slate-800 border-2 border-emerald-500/30 dark:border-emerald-400/30 rounded-2xl p-6 shadow-2xl inline-block">
-              <img :src="qrCodeDataUrl" alt="QR Code" class="qr-code-image rounded-lg" />
-            </div>
-            <div v-else class="qr-placeholder bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-700 dark:to-slate-800 border-2 border-emerald-500/30 dark:border-emerald-400/30 rounded-2xl p-12 flex items-center justify-center">
-              <p class="text-secondary">Generating QR code...</p>
-            </div>
-            <p class="text-secondary mt-6 text-lg font-medium">Or scan this QR code</p>
-          </div>
-
-          <!-- Countdown timer -->
-          <div class="countdown-container mt-12">
-            <div class="bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-700 dark:to-slate-800 border-2 border-emerald-500/30 dark:border-emerald-400/30 rounded-xl p-4 inline-block shadow-lg">
-              <p class="text-secondary text-lg">
-                Expires in <span class="countdown-value text-emerald-600 dark:text-emerald-400 font-bold font-mono text-xl">{{ formattedCountdown }}</span>
-              </p>
-            </div>
-          </div>
-
-          <!-- Status message -->
-          <div v-if="statusMessage" class="status-message mt-6" :class="statusMessageClass">
-            {{ statusMessage }}
-          </div>
-        </Card>
       </div>
 
-      <!-- Error state -->
-      <Card v-else-if="status === 'error'" class="text-center">
-        <div class="error-content py-8">
-          <div class="error-icon mb-6">
-            <svg
-              class="w-16 h-16 text-error mx-auto"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+      <!-- Pairing State -->
+      <div v-else-if="status === 'pairing'" class="pairing-state">
+        <!-- Title -->
+        <h1 class="main-title">Activate Your Screen</h1>
+        
+        <!-- 6-Digit Code Display -->
+        <div class="code-section">
+          <div class="code-label">Activation Code</div>
+          <div class="code-container">
+            <div 
+              v-for="(digit, index) in codeDigits" 
+              :key="index"
+              class="digit-card"
             >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-              />
-            </svg>
-          </div>
-          <h2 class="text-2xl md:text-3xl font-bold text-primary mb-4">Connection Error</h2>
-          <p class="text-secondary text-lg mb-6">{{ errorMessage }}</p>
-          <button @click="retry" class="btn-primary px-6 py-3 rounded-xl">Retry</button>
-        </div>
-      </Card>
-
-      <!-- Success state (redirecting) -->
-      <Card v-else-if="status === 'success'" class="text-center">
-        <div class="success-content py-12">
-          <div class="success-icon mb-6">
-            <div class="w-20 h-20 bg-success rounded-full flex items-center justify-center mx-auto">
-              <svg
-                class="w-12 h-12 text-white"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="3"
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
+              <span class="digit-text">{{ digit }}</span>
             </div>
           </div>
-          <h2 class="text-2xl md:text-3xl font-bold text-primary mb-4">Screen Paired Successfully!</h2>
-          <p class="text-secondary text-lg">Redirecting to player...</p>
         </div>
-      </Card>
+
+        <!-- QR Code Section -->
+        <div class="qr-section">
+          <div class="qr-wrapper">
+            <div class="qr-ring"></div>
+            <div class="qr-inner">
+              <img 
+                v-if="qrCodeDataUrl" 
+                :src="qrCodeDataUrl" 
+                alt="QR Code" 
+                class="qr-image"
+              />
+              <div v-else class="qr-placeholder">
+                <div class="qr-spinner"></div>
+              </div>
+            </div>
+          </div>
+          <p class="qr-label">Scan with your device</p>
+        </div>
+
+        <!-- Step-by-Step Instructions -->
+        <div class="instructions-section">
+          <div class="instruction-card">
+            <div class="instruction-icon step-1">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+              </svg>
+            </div>
+            <div class="instruction-content">
+              <h3 class="instruction-title">Step 1</h3>
+              <p class="instruction-text">Scan the QR code or visit our URL</p>
+            </div>
+          </div>
+
+          <div class="instruction-card">
+            <div class="instruction-icon step-2">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+            </div>
+            <div class="instruction-content">
+              <h3 class="instruction-title">Step 2</h3>
+              <p class="instruction-text">Enter the code shown above</p>
+            </div>
+          </div>
+
+          <div class="instruction-card">
+            <div class="instruction-icon step-3">
+              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div class="instruction-content">
+              <h3 class="instruction-title">Step 3</h3>
+              <p class="instruction-text">Enjoy your smart screen!</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Countdown Timer -->
+        <div class="countdown-section">
+          <div class="countdown-card">
+            <span class="countdown-label">Code expires in</span>
+            <span class="countdown-value">{{ formattedCountdown }}</span>
+          </div>
+        </div>
+
+        <!-- Status Indicator -->
+        <div class="status-section">
+          <div class="status-indicator">
+            <span class="status-text">Waiting for connection</span>
+            <div class="status-dots">
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Status Message -->
+        <div v-if="statusMessage" class="status-message" :class="statusMessageClass">
+          {{ statusMessage }}
+        </div>
+      </div>
+
+      <!-- Error State -->
+      <div v-else-if="status === 'error'" class="error-state">
+        <div class="error-icon">
+          <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+        </div>
+        <h2 class="error-title">Connection Error</h2>
+        <p class="error-message">{{ errorMessage }}</p>
+        <button @click="retry" class="retry-button">Retry</button>
+      </div>
+
+      <!-- Success State with Welcome Animation -->
+      <div v-else-if="status === 'success'" class="success-state">
+        <div class="welcome-animation">
+          <div class="welcome-circle"></div>
+          <div class="welcome-check">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <h2 class="welcome-title">Welcome!</h2>
+          <p class="welcome-subtitle">Screen activated successfully</p>
+          <p class="welcome-message">Redirecting to your content...</p>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -108,7 +157,6 @@ import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { pairingAPI } from '@/services/api'
 import * as QRCode from 'qrcode'
-import Card from '@/components/common/Card.vue'
 
 const router = useRouter()
 
@@ -123,14 +171,24 @@ const statusMessage = ref('')
 const statusMessageType = ref('') // 'info' | 'error' | 'success'
 const errorMessage = ref('')
 
-// Computed for status message class
+// Computed
+const codeDigits = computed(() => {
+  return pairingCode.value.padStart(6, '0').split('')
+})
+
+const formattedCountdown = computed(() => {
+  const minutes = Math.floor(countdown.value / 60)
+  const seconds = countdown.value % 60
+  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
+})
+
 const statusMessageClass = computed(() => {
   if (statusMessageType.value === 'error') {
-    return 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-300 rounded-xl p-4'
+    return 'status-message-error'
   } else if (statusMessageType.value === 'success') {
-    return 'bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 rounded-xl p-4'
+    return 'status-message-success'
   } else {
-    return 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-300 rounded-xl p-4'
+    return 'status-message-info'
   }
 })
 
@@ -138,13 +196,6 @@ const statusMessageClass = computed(() => {
 let countdownTimer = null
 let statusPollTimer = null
 let themeObserver = null
-
-// Computed
-const formattedCountdown = computed(() => {
-  const minutes = Math.floor(countdown.value / 60)
-  const seconds = countdown.value % 60
-  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
-})
 
 // Methods
 async function generatePairingSession() {
@@ -197,8 +248,8 @@ async function generateQRCode(url) {
       width: 400,
       margin: 2,
       color: {
-        dark: isDark ? '#FFFFFF' : '#000000',
-        light: isDark ? '#1e293b' : '#FFFFFF' // slate-800 for dark mode, white for light
+        dark: '#FFFFFF',
+        light: '#000000'
       },
       errorCorrectionLevel: 'M'
     })
@@ -257,11 +308,8 @@ function startStatusPolling() {
         // Save only screen_id to localStorage (credentials removed for security)
         try {
           localStorage.setItem('player_screen_id', screen_id)
-          // Store timestamp to track when paired
           localStorage.setItem('player_paired_at', new Date().toISOString())
-          // Mark as paired
           localStorage.setItem('player_is_paired', 'true')
-          // Remove old credentials if they exist
           localStorage.removeItem('player_auth_token')
           localStorage.removeItem('player_secret_key')
           console.log('Screen ID saved to localStorage, credentials removed')
@@ -269,12 +317,12 @@ function startStatusPolling() {
           console.error('Failed to save screen_id to localStorage:', error)
         }
         
-        // Redirect to player (credentials will be loaded from localStorage)
+        // Redirect to player after welcome animation
         setTimeout(() => {
           router.push({
             path: '/player'
           })
-        }, 2000)
+        }, 3000) // Give time for welcome animation
       } else if (response.data.status === 'expired') {
         // Expired - regenerate
         clearInterval(statusPollTimer)
@@ -306,7 +354,6 @@ function watchThemeChanges() {
   themeObserver = new MutationObserver(() => {
     if (pairingToken.value && qrCodeDataUrl.value) {
       // Regenerate QR code with new theme colors
-      // Use the same URL pattern as when generating
       const baseUrl = window.location.origin
       const qrUrl = `${baseUrl}/screens/add?token=${pairingToken.value}`
       generateQRCode(qrUrl)
@@ -350,180 +397,698 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-/* Loading spinner */
-.spinner {
-  width: 60px;
-  height: 60px;
-  border: 4px solid;
-  border-color: rgba(16, 185, 129, 0.2);
-  border-top-color: rgb(16, 185, 129);
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
+.activation-page {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 25%, #0f172a 50%, #1e293b 75%, #0a0e27 100%);
+  background-size: 400% 400%;
+  animation: gradientShift 20s ease infinite;
 }
 
-.dark .spinner {
-  border-color: rgba(16, 185, 129, 0.3);
-  border-top-color: rgb(16, 185, 129);
+@keyframes gradientShift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+/* Starfield Background */
+.starfield-background {
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(ellipse at bottom, #1b2735 0%, #090a0f 100%);
+  overflow: hidden;
+  z-index: 0;
+}
+
+.starfield-background::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: 
+    radial-gradient(2px 2px at 20% 30%, white, transparent),
+    radial-gradient(2px 2px at 60% 70%, white, transparent),
+    radial-gradient(1px 1px at 50% 50%, white, transparent),
+    radial-gradient(1px 1px at 80% 10%, white, transparent),
+    radial-gradient(2px 2px at 30% 80%, white, transparent),
+    radial-gradient(1px 1px at 90% 40%, white, transparent);
+  background-repeat: repeat;
+  background-size: 200% 200%;
+  animation: starfield 20s linear infinite;
+  opacity: 0.6;
+}
+
+@keyframes starfield {
+  from { transform: translateY(0); }
+  to { transform: translateY(-2000px); }
+}
+
+/* Radial Glow */
+.radial-glow {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 80vw;
+  height: 80vh;
+  background: radial-gradient(circle, rgba(6, 182, 212, 0.15) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 1;
+  animation: pulseGlow 4s ease-in-out infinite;
+}
+
+@keyframes pulseGlow {
+  0%, 100% { opacity: 0.5; transform: translate(-50%, -50%) scale(1); }
+  50% { opacity: 0.8; transform: translate(-50%, -50%) scale(1.1); }
+}
+
+/* Main Container */
+.activation-container {
+  position: relative;
+  z-index: 10;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  color: white;
+}
+
+/* Loading State */
+.loading-state {
+  text-align: center;
+}
+
+.loading-spinner {
+  width: 80px;
+  height: 80px;
+  border: 4px solid rgba(6, 182, 212, 0.2);
+  border-top-color: #06b6d4;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 2rem;
 }
 
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
 
-/* Code display */
-.code-display {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+.loading-text {
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  background: linear-gradient(135deg, #06b6d4, #8b5cf6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
-.code-digits {
-  transition: all 0.3s ease;
+.loading-dots {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+}
+
+.loading-dots span {
+  width: 12px;
+  height: 12px;
+  background: #06b6d4;
+  border-radius: 50%;
+  animation: dotPulse 1.4s ease-in-out infinite;
+}
+
+.loading-dots span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.loading-dots span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes dotPulse {
+  0%, 100% { opacity: 0.3; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
+
+/* Main Title */
+.main-title {
+  font-size: 4rem;
+  font-weight: 800;
+  text-align: center;
+  margin-bottom: 3rem;
+  background: linear-gradient(135deg, #06b6d4, #8b5cf6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-shadow: 0 0 30px rgba(6, 182, 212, 0.5);
+  letter-spacing: -0.02em;
+}
+
+/* Code Section */
+.code-section {
+  margin-bottom: 4rem;
+  text-align: center;
+}
+
+.code-label {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+  color: rgba(255, 255, 255, 0.7);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.code-container {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.digit-card {
+  width: 120px;
+  height: 160px;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 2px solid rgba(6, 182, 212, 0.3);
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   position: relative;
   overflow: hidden;
+  animation: digitBreath 3s ease-in-out infinite;
+  box-shadow: 0 8px 32px rgba(6, 182, 212, 0.2), 
+              0 0 0 1px rgba(6, 182, 212, 0.1),
+              inset 0 0 20px rgba(6, 182, 212, 0.1);
 }
 
-.code-digits::before {
+.digit-card::before {
   content: '';
   position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(16, 185, 129, 0.1), transparent);
-  transition: left 0.5s;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(6, 182, 212, 0.1), rgba(139, 92, 246, 0.1));
+  opacity: 0;
+  transition: opacity 0.3s;
 }
 
-.code-digits:hover::before {
-  left: 100%;
+.digit-card:hover::before {
+  opacity: 1;
 }
 
-.code-digits:hover {
-  transform: scale(1.02);
-  box-shadow: 0 20px 40px rgba(16, 185, 129, 0.2), 0 0 20px rgba(16, 185, 129, 0.1);
-  border-color: rgba(16, 185, 129, 0.5);
+.digit-card:nth-child(1) { animation-delay: 0s; }
+.digit-card:nth-child(2) { animation-delay: 0.2s; }
+.digit-card:nth-child(3) { animation-delay: 0.4s; }
+.digit-card:nth-child(4) { animation-delay: 0.6s; }
+.digit-card:nth-child(5) { animation-delay: 0.8s; }
+.digit-card:nth-child(6) { animation-delay: 1s; }
+
+@keyframes digitBreath {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 8px 32px rgba(6, 182, 212, 0.2), 
+                0 0 0 1px rgba(6, 182, 212, 0.1),
+                inset 0 0 20px rgba(6, 182, 212, 0.1);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 12px 48px rgba(6, 182, 212, 0.4), 
+                0 0 0 2px rgba(6, 182, 212, 0.3),
+                inset 0 0 30px rgba(6, 182, 212, 0.2);
+  }
 }
 
-.dark .code-digits:hover {
-  box-shadow: 0 20px 40px rgba(16, 185, 129, 0.3), 0 0 30px rgba(16, 185, 129, 0.2);
-  border-color: rgba(16, 185, 129, 0.6);
-}
-
-/* QR Code */
-.qr-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.qr-code-wrapper {
-  transition: all 0.3s ease;
+.digit-text {
+  font-size: 5rem;
+  font-weight: 700;
+  font-family: 'Courier New', 'Monaco', monospace;
+  color: #06b6d4;
+  text-shadow: 
+    0 0 20px rgba(6, 182, 212, 0.8),
+    0 0 40px rgba(6, 182, 212, 0.5),
+    0 0 60px rgba(139, 92, 246, 0.3);
   position: relative;
-  overflow: hidden;
-}
-
-.qr-code-wrapper::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(16, 185, 129, 0.1), transparent);
-  transition: left 0.5s;
   z-index: 1;
-  pointer-events: none;
 }
 
-.qr-code-wrapper:hover::before {
-  left: 100%;
+/* QR Code Section */
+.qr-section {
+  margin-bottom: 4rem;
+  text-align: center;
 }
 
-.qr-code-wrapper:hover {
-  transform: scale(1.02);
-  box-shadow: 0 20px 40px rgba(16, 185, 129, 0.2), 0 0 20px rgba(16, 185, 129, 0.1);
-  border-color: rgba(16, 185, 129, 0.5);
-}
-
-.dark .qr-code-wrapper:hover {
-  box-shadow: 0 20px 40px rgba(16, 185, 129, 0.3), 0 0 30px rgba(16, 185, 129, 0.2);
-  border-color: rgba(16, 185, 129, 0.6);
-}
-
-.qr-code-image {
-  width: 100%;
-  max-width: 300px;
-  height: auto;
-  display: block;
+.qr-wrapper {
   position: relative;
+  display: inline-block;
+  margin-bottom: 1rem;
+}
+
+.qr-ring {
+  position: absolute;
+  inset: -20px;
+  border: 3px solid transparent;
+  border-top-color: #06b6d4;
+  border-right-color: #8b5cf6;
+  border-radius: 50%;
+  animation: spinRing 3s linear infinite;
   z-index: 0;
+}
+
+@keyframes spinRing {
+  to { transform: rotate(360deg); }
+}
+
+.qr-inner {
+  position: relative;
+  z-index: 1;
+  background: white;
+  padding: 1rem;
+  border-radius: 20px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.qr-image {
+  width: 300px;
+  height: 300px;
+  display: block;
+  border-radius: 12px;
 }
 
 .qr-placeholder {
   width: 300px;
   height: 300px;
-  min-height: 300px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-/* Countdown */
+.qr-spinner {
+  width: 60px;
+  height: 60px;
+  border: 4px solid rgba(6, 182, 212, 0.2);
+  border-top-color: #06b6d4;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.qr-label {
+  font-size: 1.25rem;
+  color: rgba(255, 255, 255, 0.7);
+  font-weight: 500;
+}
+
+/* Instructions Section */
+.instructions-section {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 2rem;
+  margin-bottom: 4rem;
+  max-width: 1200px;
+  width: 100%;
+}
+
+.instruction-card {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.instruction-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 20px 40px rgba(6, 182, 212, 0.2);
+}
+
+.instruction-icon {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid;
+}
+
+.instruction-icon svg {
+  width: 40px;
+  height: 40px;
+}
+
+.instruction-icon.step-1 {
+  border-color: #06b6d4;
+  color: #06b6d4;
+  box-shadow: 0 0 30px rgba(6, 182, 212, 0.5);
+}
+
+.instruction-icon.step-2 {
+  border-color: #8b5cf6;
+  color: #8b5cf6;
+  box-shadow: 0 0 30px rgba(139, 92, 246, 0.5);
+}
+
+.instruction-icon.step-3 {
+  border-color: #10b981;
+  color: #10b981;
+  box-shadow: 0 0 30px rgba(16, 185, 129, 0.5);
+}
+
+.instruction-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  color: white;
+}
+
+.instruction-text {
+  font-size: 1.125rem;
+  color: rgba(255, 255, 255, 0.7);
+  line-height: 1.6;
+}
+
+/* Countdown Section */
+.countdown-section {
+  margin-bottom: 2rem;
+}
+
+.countdown-card {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(6, 182, 212, 0.3);
+  border-radius: 16px;
+  padding: 1rem 2rem;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.countdown-label {
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.6);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
 .countdown-value {
+  font-size: 2rem;
+  font-weight: 700;
   font-family: 'Courier New', monospace;
-  text-shadow: 0 0 10px rgba(16, 185, 129, 0.3);
+  color: #06b6d4;
+  text-shadow: 0 0 20px rgba(6, 182, 212, 0.8);
 }
 
-.dark .countdown-value {
-  text-shadow: 0 0 15px rgba(16, 185, 129, 0.5);
+/* Status Section */
+.status-section {
+  margin-bottom: 2rem;
 }
 
-/* Error icon */
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  justify-content: center;
+}
+
+.status-text {
+  font-size: 1.25rem;
+  color: rgba(255, 255, 255, 0.8);
+  font-weight: 500;
+}
+
+.status-dots {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.status-dots span {
+  width: 10px;
+  height: 10px;
+  background: #06b6d4;
+  border-radius: 50%;
+  animation: dotPulse 1.4s ease-in-out infinite;
+}
+
+.status-dots span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.status-dots span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+/* Status Message */
+.status-message {
+  padding: 1rem 2rem;
+  border-radius: 12px;
+  font-size: 1.125rem;
+  text-align: center;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.status-message-info {
+  background: rgba(6, 182, 212, 0.2);
+  border: 1px solid rgba(6, 182, 212, 0.5);
+  color: #06b6d4;
+}
+
+.status-message-success {
+  background: rgba(16, 185, 129, 0.2);
+  border: 1px solid rgba(16, 185, 129, 0.5);
+  color: #10b981;
+}
+
+.status-message-error {
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid rgba(239, 68, 68, 0.5);
+  color: #ef4444;
+}
+
+/* Error State */
+.error-state {
+  text-align: center;
+}
+
 .error-icon {
-  animation: pulse 2s infinite;
+  width: 120px;
+  height: 120px;
+  margin: 0 auto 2rem;
+  color: #ef4444;
+  animation: pulse 2s ease-in-out infinite;
 }
 
-@keyframes pulse {
-  0%, 100% {
+.error-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.error-title {
+  font-size: 3rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  color: white;
+}
+
+.error-message {
+  font-size: 1.5rem;
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 2rem;
+}
+
+.retry-button {
+  background: linear-gradient(135deg, #06b6d4, #8b5cf6);
+  color: white;
+  border: none;
+  padding: 1rem 3rem;
+  font-size: 1.25rem;
+  font-weight: 600;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: transform 0.3s, box-shadow 0.3s;
+  box-shadow: 0 10px 30px rgba(6, 182, 212, 0.3);
+}
+
+.retry-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 15px 40px rgba(6, 182, 212, 0.5);
+}
+
+/* Success State with Welcome Animation */
+.success-state {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.welcome-animation {
+  text-align: center;
+  position: relative;
+}
+
+.welcome-circle {
+  width: 200px;
+  height: 200px;
+  border: 4px solid #10b981;
+  border-radius: 50%;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  animation: circleExpand 1s ease-out forwards;
+}
+
+@keyframes circleExpand {
+  0% {
+    width: 0;
+    height: 0;
     opacity: 1;
   }
-  50% {
-    opacity: 0.7;
+  100% {
+    width: 400px;
+    height: 400px;
+    opacity: 0;
   }
 }
 
-/* Success icon */
-.success-icon {
-  animation: scaleIn 0.5s ease-out;
+.welcome-check {
+  width: 120px;
+  height: 120px;
+  background: #10b981;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 2rem;
+  color: white;
+  animation: checkPop 0.6s ease-out 0.3s both;
+  box-shadow: 0 20px 60px rgba(16, 185, 129, 0.5);
 }
 
-@keyframes scaleIn {
-  from {
+.welcome-check svg {
+  width: 60px;
+  height: 60px;
+}
+
+@keyframes checkPop {
+  0% {
     transform: scale(0);
     opacity: 0;
   }
-  to {
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
     transform: scale(1);
     opacity: 1;
   }
 }
 
-/* Responsive adjustments */
-@media (max-width: 768px) {
-  .code-digits {
-    padding: 1.5rem !important;
+.welcome-title {
+  font-size: 4rem;
+  font-weight: 800;
+  margin-bottom: 1rem;
+  background: linear-gradient(135deg, #10b981, #06b6d4);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: fadeInUp 0.6s ease-out 0.5s both;
+}
+
+.welcome-subtitle {
+  font-size: 2rem;
+  color: rgba(255, 255, 255, 0.8);
+  margin-bottom: 1rem;
+  animation: fadeInUp 0.6s ease-out 0.7s both;
+}
+
+.welcome-message {
+  font-size: 1.5rem;
+  color: rgba(255, 255, 255, 0.6);
+  animation: fadeInUp 0.6s ease-out 0.9s both;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Responsive Design for TV/Large Displays */
+@media (min-width: 1920px) {
+  .main-title {
+    font-size: 5rem;
   }
   
-  .code-digits .text-6xl {
+  .digit-card {
+    width: 150px;
+    height: 200px;
+  }
+  
+  .digit-text {
+    font-size: 6rem;
+  }
+  
+  .qr-image {
+    width: 400px;
+    height: 400px;
+  }
+  
+  .instruction-title {
+    font-size: 2rem;
+  }
+  
+  .instruction-text {
+    font-size: 1.5rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .main-title {
+    font-size: 2.5rem;
+  }
+  
+  .digit-card {
+    width: 80px;
+    height: 120px;
+  }
+  
+  .digit-text {
     font-size: 3rem;
   }
   
-  .qr-code-image {
-    max-width: 250px;
-  }
-  
-  .qr-placeholder {
+  .qr-image {
     width: 250px;
     height: 250px;
-    min-height: 250px;
+  }
+  
+  .instructions-section {
+    grid-template-columns: 1fr;
+  }
+  
+  .code-container {
+    gap: 0.5rem;
   }
 }
 </style>
-

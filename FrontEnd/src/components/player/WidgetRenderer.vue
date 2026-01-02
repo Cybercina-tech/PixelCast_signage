@@ -138,7 +138,14 @@ const widgetStyle = computed(() => {
   backface-visibility: hidden;
   /* CRITICAL: Ensure overflow is visible to prevent image/video clipping */
   /* Do not set overflow: hidden here - it will clip high-resolution content */
-  overflow: visible !important;
+  overflow: hidden !important; /* Prevent content bleed-out with object-fit: contain */
+}
+
+/* Global styles to force object-fit: contain on all images and videos in player */
+.widget img,
+.widget video {
+  object-fit: contain !important;
+  object-position: center center !important;
 }
 </style>
 

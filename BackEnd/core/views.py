@@ -9,9 +9,9 @@ from django.utils import timezone
 from django.db.models import Q
 from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter, OpenApiExample
 from drf_spectacular.types import OpenApiTypes
-from core.models import AuditLog, SystemBackup
+from core.models import AuditLog, SystemBackup, Notification
 from core.backup import backup_manager
-from core.serializers import AuditLogSerializer, SystemBackupSerializer
+from core.serializers import AuditLogSerializer, SystemBackupSerializer, NotificationSerializer
 from core.audit import AuditLogger
 import logging
 
@@ -489,3 +489,151 @@ class SystemBackupViewSet(viewsets.ModelViewSet):
             'deleted_count': deleted_count,
             'message': f'Cleaned up {deleted_count} expired backups'
         })
+
+
+class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    ViewSet for managing user notifications.
+    
+    Permissions:
+    - Users can only view their own notifications
+    """
+    serializer_class = NotificationSerializer
+    permission_classes = [IsAuthenticated]
+    
+    def get_queryset(self):
+        """Return notifications for the current user."""
+        try:
+            return Notification.objects.filter(user=self.request.user).order_by('-created_at')
+        except Exception as e:
+            logger.error(f"Error in NotificationViewSet.get_queryset: {str(e)}")
+            import traceback
+            logger.error(traceback.format_exc())
+            print(f"ERROR in NotificationViewSet.get_queryset: {str(e)}")
+            print(traceback.format_exc())
+            # Return empty queryset on error
+            return Notification.objects.none()
+    
+    @extend_schema(
+        summary='List notifications',
+        description='Get the latest 10 notifications for the current user.',
+        tags=['Notifications'],
+        parameters=[
+            OpenApiParameter(
+                name='limit',
+                type=OpenApiTypes.INT,
+                location=OpenApiParameter.QUERY,
+                description='Number of notifications to return (default: 10)',
+                required=False,
+            ),
+            OpenApiParameter(
+                name='unread_only',
+                type=OpenApiTypes.BOOL,
+                location=OpenApiParameter.QUERY,
+                description='Return only unread notifications',
+                required=False,
+            ),
+        ],
+    )
+    def list(self, request):
+        """Get notifications for the current user."""
+        try:
+            queryset = self.get_queryset()
+            
+            # Filter by unread if requested
+            unread_only = request.query_params.get('unread_only', 'false').lower() == 'true'
+            if unread_only:
+                queryset = queryset.filter(is_read=False)
+            
+            # Limit results
+            try:
+                limit = int(request.query_params.get('limit', 10))
+                if limit < 1:
+                    limit = 10
+            except (ValueError, TypeError):
+                limit = 10
+            
+            queryset = queryset[:limit]
+            
+            serializer = self.get_serializer(queryset, many=True)
+            return Response({
+                'status': 'success',
+                'notifications': serializer.data,
+                'count': len(serializer.data)
+            })
+        except Exception as e:
+            import traceback
+            logger.error(f"Error in NotificationViewSet.list: {str(e)}")
+            logger.error(traceback.format_exc())
+            print(f"ERROR in NotificationViewSet.list: {str(e)}")
+            print(traceback.format_exc())
+            return Response({
+                'status': 'error',
+                'error': 'An error occurred while fetching notifications',
+                'notifications': [],
+                'count': 0
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    @extend_schema(
+        summary='Mark notification as read',
+        description='Mark a specific notification as read.',
+        tags=['Notifications'],
+    )
+    @action(detail=True, methods=['post'])
+    def mark_as_read(self, request, pk=None):
+        """Mark a notification as read."""
+        try:
+            notification = self.get_object()
+            
+            # Ensure user owns this notification
+            if notification.user != request.user:
+                return Response(
+                    {'error': 'Permission denied'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            
+            notification.is_read = True
+            notification.save(update_fields=['is_read'])
+            
+            serializer = self.get_serializer(notification)
+            return Response(serializer.data)
+        except Exception as e:
+            import traceback
+            logger.error(f"Error in NotificationViewSet.mark_as_read: {str(e)}")
+            logger.error(traceback.format_exc())
+            print(f"ERROR in NotificationViewSet.mark_as_read: {str(e)}")
+            print(traceback.format_exc())
+            return Response(
+                {'error': 'An error occurred while marking notification as read'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @extend_schema(
+        summary='Mark all notifications as read',
+        description='Mark all unread notifications for the current user as read.',
+        tags=['Notifications'],
+    )
+    @action(detail=False, methods=['post'])
+    def mark_all_as_read(self, request):
+        """Mark all notifications as read for the current user."""
+        try:
+            updated_count = Notification.objects.filter(
+                user=request.user,
+                is_read=False
+            ).update(is_read=True)
+            
+            return Response({
+                'status': 'success',
+                'message': f'Marked {updated_count} notification(s) as read',
+                'updated_count': updated_count
+            })
+        except Exception as e:
+            import traceback
+            logger.error(f"Error in NotificationViewSet.mark_all_as_read: {str(e)}")
+            logger.error(traceback.format_exc())
+            print(f"ERROR in NotificationViewSet.mark_all_as_read: {str(e)}")
+            print(traceback.format_exc())
+            return Response(
+                {'error': 'An error occurred while marking all notifications as read'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )

@@ -115,10 +115,10 @@ class TemplateViewSet(viewsets.ModelViewSet):
     
     def perform_create(self, serializer):
         """Set created_by to current user"""
-        serializer.save(created_by=self.request.user)
+        template = serializer.save(created_by=self.request.user)
         
-        # Sync widgets from config_json to database
-        template = serializer.instance
+        # CRITICAL: Sync widgets from config_json to database AFTER save
+        # This ensures widgets exist as database records for the Player to render
         self._sync_widgets_from_config(template, self.request.user)
     
     def perform_update(self, serializer):
@@ -138,10 +138,17 @@ class TemplateViewSet(viewsets.ModelViewSet):
             'is_active': template.is_active,
         }
         
+        # Refresh template from database to get latest config_json
+        template.refresh_from_db()
+        
+        # Save the template update
         serializer.save()
         
-        # Sync widgets from config_json to database
-        # This ensures widgets exist as database records for content creation
+        # CRITICAL: Refresh again to get saved config_json
+        template.refresh_from_db()
+        
+        # Sync widgets from config_json to database AFTER save
+        # This ensures widgets exist as database records for the Player to render
         self._sync_widgets_from_config(template, user)
         
         # Log audit event
@@ -167,31 +174,58 @@ class TemplateViewSet(viewsets.ModelViewSet):
         """
         Sync widgets from config_json to database Widget records.
         This ensures widgets exist as database records for content creation.
+        CRITICAL: This function must run on every template save to sync config_json to database.
         """
+        import logging
+        logger = logging.getLogger(__name__)
+        
         if not template.config_json or not isinstance(template.config_json, dict):
+            logger.info(f"[SYNC] Template {template.id} has no config_json, skipping widget sync")
             return
         
         widgets_data = template.config_json.get('widgets', [])
         if not widgets_data or not isinstance(widgets_data, list):
+            logger.info(f"[SYNC] Template {template.id} has no widgets in config_json, skipping widget sync")
             return
         
+        logger.info(f"[SYNC] Syncing {len(widgets_data)} widgets for Template {template.id} ({template.name})")
+        
         # Get or create a default layer for this template
-        from .models import Layer, Widget
-        default_layer, _ = Layer.objects.get_or_create(
+        from .models import Layer, Widget, Content
+        default_layer, layer_created = Layer.objects.get_or_create(
             template=template,
             defaults={
                 'name': 'Default Layer',
                 'description': 'Default layer for template widgets',
+                'x': 0,
+                'y': 0,
+                'width': template.width or 1920,
+                'height': template.height or 1080,
                 'z_index': 0,
+                'is_active': True,
             }
         )
         
+        if layer_created:
+            logger.info(f"[SYNC] Created default layer {default_layer.id} for template {template.id}")
+        else:
+            # Update layer dimensions to match template if needed
+            if default_layer.width != template.width or default_layer.height != template.height:
+                default_layer.width = template.width or 1920
+                default_layer.height = template.height or 1080
+                default_layer.save(update_fields=['width', 'height'])
+                logger.info(f"[SYNC] Updated default layer dimensions to {default_layer.width}x{default_layer.height}")
+        
         # Check permissions for the layer
         if not RolePermissions.can_edit_resource(user, template):
-            logger.warning(f"User {user.id} cannot edit template {template.id}, skipping widget sync")
+            logger.warning(f"[SYNC] User {user.id} cannot edit template {template.id}, skipping widget sync")
             return
         
         # Process each widget from config_json
+        synced_count = 0
+        updated_count = 0
+        created_count = 0
+        
         for widget_data in widgets_data:
             widget_id_str = widget_data.get('id')
             if not widget_id_str:
@@ -205,6 +239,12 @@ class TemplateViewSet(viewsets.ModelViewSet):
                 # Not a valid UUID - generate a new one
                 widget_uuid = uuid.uuid4()
             
+            # Parse position values (handle percentage strings)
+            widget_x = self._parse_position(widget_data.get('x', '0'), template.width)
+            widget_y = self._parse_position(widget_data.get('y', '0'), template.height)
+            widget_width = self._parse_position(widget_data.get('width', '100'), template.width)
+            widget_height = self._parse_position(widget_data.get('height', '100'), template.height)
+            
             # Check if widget already exists
             widget, created = Widget.objects.get_or_create(
                 id=widget_uuid,
@@ -212,10 +252,10 @@ class TemplateViewSet(viewsets.ModelViewSet):
                     'name': widget_data.get('name', f"{widget_data.get('type', 'widget')} Widget"),
                     'type': widget_data.get('type', 'text'),
                     'layer': default_layer,
-                    'x': self._parse_position(widget_data.get('x', '0'), template.width),
-                    'y': self._parse_position(widget_data.get('y', '0'), template.height),
-                    'width': self._parse_position(widget_data.get('width', '100'), template.width),
-                    'height': self._parse_position(widget_data.get('height', '100'), template.height),
+                    'x': widget_x,
+                    'y': widget_y,
+                    'width': widget_width,
+                    'height': widget_height,
                     'z_index': widget_data.get('zIndex', widget_data.get('z_index', 0)),
                     'is_active': widget_data.get('visible', True) if 'visible' in widget_data else True,
                     'content_url': widget_data.get('content', '') or None,
@@ -227,19 +267,79 @@ class TemplateViewSet(viewsets.ModelViewSet):
             if not created:
                 widget.name = widget_data.get('name', widget.name)
                 widget.type = widget_data.get('type', widget.type)
-                widget.x = self._parse_position(widget_data.get('x', str(widget.x)), template.width)
-                widget.y = self._parse_position(widget_data.get('y', str(widget.y)), template.height)
-                widget.width = self._parse_position(widget_data.get('width', str(widget.width)), template.width)
-                widget.height = self._parse_position(widget_data.get('height', str(widget.height)), template.height)
+                widget.x = widget_x
+                widget.y = widget_y
+                widget.width = widget_width
+                widget.height = widget_height
                 widget.z_index = widget_data.get('zIndex', widget_data.get('z_index', widget.z_index))
                 widget.is_active = widget_data.get('visible', widget.is_active) if 'visible' in widget_data else widget.is_active
                 widget.content_url = widget_data.get('content', '') or widget.content_url
                 if 'style' in widget_data:
                     widget.content_json = widget_data.get('style', {})
+                # Ensure widget is assigned to default layer if not already assigned
+                if not widget.layer or widget.layer.template != template:
+                    widget.layer = default_layer
                 widget.save()
+                updated_count += 1
+                logger.debug(f"[SYNC] Updated widget {widget.id} ({widget.name})")
+            else:
+                created_count += 1
+                logger.debug(f"[SYNC] Created widget {widget.id} ({widget.name})")
+            
+            # Link Content to Widget if content_id is provided
+            content_id = widget_data.get('content_id')
+            if content_id:
+                try:
+                    import uuid
+                    content_uuid = uuid.UUID(content_id) if isinstance(content_id, str) else content_id
+                    content = Content.objects.filter(id=content_uuid).first()
+                    if content:
+                        # Link content to widget
+                        content.widget = widget
+                        content.save(update_fields=['widget'])
+                        logger.debug(f"[SYNC] Linked content {content.id} to widget {widget.id}")
+                    else:
+                        logger.warning(f"[SYNC] Content {content_id} not found, cannot link to widget {widget.id}")
+                except (ValueError, TypeError) as e:
+                    logger.warning(f"[SYNC] Invalid content_id {content_id} for widget {widget.id}: {e}")
+            
+            # CRITICAL: If widget has content_url but no Content record, create one
+            # This ensures widgets with direct URLs (from config_json.content) have Content records
+            widget_content_url = widget_data.get('content', '') or widget.content_url
+            if widget_content_url and widget.contents.count() == 0:
+                # Check if content already exists for this URL
+                existing_content = Content.objects.filter(
+                    widget=widget,
+                    file_url=widget_content_url
+                ).first()
+                
+                if not existing_content:
+                    # Create Content record from widget's content_url
+                    widget_type = widget_data.get('type', widget.type)
+                    content_type_map = {
+                        'image': 'image',
+                        'video': 'video',
+                        'text': 'text',
+                    }
+                    content_type = content_type_map.get(widget_type, 'image')
+                    
+                    new_content = Content.objects.create(
+                        name=f"{widget.name} - Content",
+                        type=content_type,
+                        file_url=widget_content_url,
+                        widget=widget,
+                        order=0,
+                        is_active=True,
+                    )
+                    logger.info(f"[SYNC] Created Content {new_content.id} from widget {widget.id} content_url")
+                else:
+                    logger.debug(f"[SYNC] Content already exists for widget {widget.id} with URL {widget_content_url}")
             
             # Update config_json with the actual widget UUID
             widget_data['id'] = str(widget.id)
+            synced_count += 1
+        
+        logger.info(f"[SYNC] Completed sync for Template {template.id}: {synced_count} widgets synced ({created_count} created, {updated_count} updated)")
         
         # Save updated config_json back to template with backend widget IDs
         template.config_json['widgets'] = widgets_data
@@ -330,6 +430,16 @@ class TemplateViewSet(viewsets.ModelViewSet):
             # CRITICAL: Refresh screen from database to ensure active_template is committed
             # This ensures the player_template_endpoint will see the updated active_template
             screen.refresh_from_db()
+            
+            # CRITICAL: Clear any template cache for this screen
+            # This ensures the player fetches the latest template data
+            try:
+                from django.core.cache import cache
+                cache_key = f"screen_template_{screen.id}"
+                cache.delete(cache_key)
+                print(f"DEBUG [activate_on_screen]: Cleared template cache for screen {screen.id}")
+            except Exception as cache_error:
+                print(f"WARNING [activate_on_screen]: Failed to clear cache: {cache_error}")
             
             # DEBUG: Log after refresh
             print(f"DEBUG [activate_on_screen]: Screen active_template AFTER refresh_from_db: {screen.active_template}")

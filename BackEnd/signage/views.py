@@ -471,6 +471,14 @@ def iot_command_pull_endpoint(request):
             'created_at'
         )[:limit]
         
+        # [PUSH DEBUG] Log command pull for debugging
+        if commands.exists():
+            command_types = [cmd.type for cmd in commands]
+            logger.info(f"[PUSH DEBUG] Screen {screen.id} ({screen.name}) is pulling {len(commands)} command(s): {', '.join(command_types)}")
+            print(f"[PUSH DEBUG] Screen {screen.id} ({screen.name}) is pulling {len(commands)} command(s): {', '.join(command_types)}")
+        else:
+            logger.debug(f"[PUSH DEBUG] Screen {screen.id} ({screen.name}) pulled 0 commands (no pending commands)")
+        
         # Mark commands as being processed (executing)
         now = timezone.now()
         command_list = []
@@ -1004,10 +1012,14 @@ def player_template_endpoint(request):
         return response
     
     # Look up screen in PostgreSQL database
-    # CRITICAL: Use select_related to ensure active_template is loaded in same query
-    # This prevents N+1 queries and ensures we get the latest active_template value
+    # CRITICAL: Use select_related and prefetch_related to efficiently load template, layers, and widgets
+    # This prevents N+1 queries and ensures we get the latest active_template value with all related data
     try:
-        screen = Screen.objects.select_related('active_template').filter(id=screen_id).first()
+        screen = Screen.objects.select_related(
+            'active_template'
+        ).prefetch_related(
+            'active_template__layers__widgets__contents'
+        ).filter(id=screen_id).first()
         
         if not screen:
             logger.warning(f'Player template request with invalid screen_id: {screen_id}')

@@ -99,7 +99,7 @@
       <!-- Progress Bar (if auto-dismiss) -->
       <div
         v-if="duration > 0 && showProgress"
-        class="h-1 bg-slate-200 dark:bg-slate-700"
+        class="h-1 bg-slate-200/50 dark:bg-slate-700"
       >
         <div
           :class="[
@@ -163,44 +163,44 @@ const startTime = ref(Date.now())
 const typeClasses = computed(() => {
   const classes = {
     success: {
-      background: 'bg-white dark:bg-slate-800',
-      border: 'border-emerald-500 dark:border-emerald-400',
-      icon: 'text-emerald-500 dark:text-emerald-400',
-      title: 'text-emerald-800 dark:text-emerald-200',
-      message: 'text-slate-900 dark:text-slate-50',
-      action: 'text-emerald-600 dark:text-emerald-400',
-      actionFocus: 'focus:ring-emerald-500 dark:focus:ring-emerald-400',
-      progress: 'bg-emerald-500 dark:bg-emerald-400',
+      background: 'bg-green-50 dark:bg-slate-800',
+      border: 'border-green-300 dark:border-emerald-400',
+      icon: 'text-green-500 dark:text-emerald-400',
+      title: 'text-green-700 dark:text-emerald-200',
+      message: 'text-slate-700 dark:text-slate-50',
+      action: 'text-green-600 dark:text-emerald-400',
+      actionFocus: 'focus:ring-green-400 dark:focus:ring-emerald-400',
+      progress: 'bg-green-400 dark:bg-emerald-400',
     },
     error: {
-      background: 'bg-white dark:bg-slate-800',
-      border: 'border-red-500 dark:border-red-400',
-      icon: 'text-red-500 dark:text-red-400',
-      title: 'text-red-800 dark:text-red-200',
-      message: 'text-slate-900 dark:text-slate-50',
-      action: 'text-red-600 dark:text-red-400',
-      actionFocus: 'focus:ring-red-500 dark:focus:ring-red-400',
-      progress: 'bg-red-500 dark:bg-red-400',
+      background: 'bg-red-50 dark:bg-slate-800',
+      border: 'border-red-200 dark:border-red-400',
+      icon: 'text-red-400 dark:text-red-400',
+      title: 'text-red-600 dark:text-red-200',
+      message: 'text-slate-700 dark:text-slate-50',
+      action: 'text-red-500 dark:text-red-400',
+      actionFocus: 'focus:ring-red-300 dark:focus:ring-red-400',
+      progress: 'bg-red-400 dark:bg-red-400',
     },
     warning: {
-      background: 'bg-white dark:bg-slate-800',
-      border: 'border-amber-500 dark:border-amber-400',
+      background: 'bg-amber-50 dark:bg-slate-800',
+      border: 'border-amber-200 dark:border-amber-400',
       icon: 'text-amber-500 dark:text-amber-400',
-      title: 'text-amber-800 dark:text-amber-200',
-      message: 'text-slate-900 dark:text-slate-50',
+      title: 'text-amber-700 dark:text-amber-200',
+      message: 'text-slate-700 dark:text-slate-50',
       action: 'text-amber-600 dark:text-amber-400',
-      actionFocus: 'focus:ring-amber-500 dark:focus:ring-amber-400',
-      progress: 'bg-amber-500 dark:bg-amber-400',
+      actionFocus: 'focus:ring-amber-300 dark:focus:ring-amber-400',
+      progress: 'bg-amber-400 dark:bg-amber-400',
     },
     info: {
-      background: 'bg-white dark:bg-slate-800',
-      border: 'border-blue-500 dark:border-blue-400',
-      icon: 'text-blue-500 dark:text-blue-400',
-      title: 'text-blue-800 dark:text-blue-200',
-      message: 'text-slate-900 dark:text-slate-50',
-      action: 'text-blue-600 dark:text-blue-400',
-      actionFocus: 'focus:ring-blue-500 dark:focus:ring-blue-400',
-      progress: 'bg-blue-500 dark:bg-blue-400',
+      background: 'bg-blue-50 dark:bg-slate-800',
+      border: 'border-blue-200 dark:border-blue-400',
+      icon: 'text-blue-400 dark:text-blue-400',
+      title: 'text-blue-600 dark:text-blue-200',
+      message: 'text-slate-700 dark:text-slate-50',
+      action: 'text-blue-500 dark:text-blue-400',
+      actionFocus: 'focus:ring-blue-300 dark:focus:ring-blue-400',
+      progress: 'bg-blue-400 dark:bg-blue-400',
     },
   }
   return classes[props.type] || classes.info

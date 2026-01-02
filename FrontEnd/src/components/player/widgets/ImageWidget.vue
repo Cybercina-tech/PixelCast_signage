@@ -70,6 +70,10 @@ const sortedContents = computed(() => {
 
 // Content container style
 const contentStyle = computed(() => {
+  // Get background color from widget style or use black as default
+  const widgetStyle = props.widget.content_json || {}
+  const backgroundColor = widgetStyle.backgroundColor || '#000000'
+  
   return {
     width: '100%',
     height: '100%',
@@ -79,28 +83,27 @@ const contentStyle = computed(() => {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    overflow: 'visible'
+    overflow: 'hidden', // Prevent bleed-out with contain mode
+    backgroundColor: backgroundColor // Fill gaps with background color
   }
 })
 
 /**
  * Image style with responsive object-fit
- * CRITICAL FIX: Changed default from 'contain' to 'cover'
- * 'contain' creates empty black spaces when aspect ratios don't match
- * 'cover' fills entire widget area, cropping edges if needed (no black bars)
+ * CRITICAL: Use 'contain' to ensure full content visibility without cropping
+ * 'contain' ensures the entire image is visible, with background color filling any gaps
  */
 const imageStyle = computed(() => {
-  const contentJson = props.widget.content_json || {}
-  // CRITICAL: Default to 'cover' instead of 'contain' to prevent black spaces
-  // User can still override via content_json.objectFit if needed
-  const objectFit = contentJson.objectFit || 'cover'
+  // CRITICAL: Force 'contain' mode to ensure full content visibility
+  // This prevents any cropping of images
+  const objectFit = 'contain'
   
   return {
     width: '100%',
     height: '100%',
     objectFit: objectFit,
     display: 'block',
-    // Center the image (important for cover mode - centers the crop area)
+    // Center the image (important for contain mode - centers the image within container)
     objectPosition: 'center center',
     // Prevent image distortion
     imageRendering: 'auto',
@@ -161,10 +164,10 @@ const onImageError = (event) => {
   width: 100%;
   height: 100%;
   position: relative;
-  /* CRITICAL FIX: Transparent background instead of black
-     With object-fit: cover, images fill widget completely, so background shouldn't show
-     But if it does show (e.g., during loading), transparent is better than black */
-  background-color: transparent;
+  /* CRITICAL: Use black background to fill gaps when object-fit: contain creates letterboxing
+     This ensures no transparent gaps are visible when aspect ratios don't match */
+  background-color: #000000;
+  overflow: hidden; /* Prevent any content from bleeding outside widget bounds */
 }
 
 .content-item {
@@ -177,23 +180,22 @@ const onImageError = (event) => {
   display: flex;
   align-items: center;
   justify-content: center;
-  /* CRITICAL FIX: Transparent background
-     With object-fit: cover, images fill completely, so no black spaces
-     Transparent ensures no visible background if image doesn't cover perfectly */
-  background-color: transparent;
-  overflow: visible;
+  /* CRITICAL: Use black background to fill gaps when object-fit: contain creates letterboxing
+     Background color can be overridden via widget.content_json.backgroundColor */
+  background-color: #000000;
+  overflow: hidden; /* Prevent image from bleeding outside container with contain mode */
 }
 
 .content-image {
   width: 100%;
   height: 100%;
-  /* CRITICAL FIX: Changed from 'contain' to 'cover'
-     'contain' creates empty black spaces when aspect ratios don't match widget
-     'cover' fills entire widget, cropping edges if needed (eliminates black spaces) */
-  object-fit: cover;
+  /* CRITICAL: Use 'contain' to ensure full content visibility without cropping
+     This ensures the entire image is visible, with background color filling any gaps
+     Force with !important to override any inline styles */
+  object-fit: contain !important;
   display: block;
   /* CRITICAL: Center the image both horizontally and vertically
-     object-position centers the crop area in cover mode
+     object-position centers the image in contain mode
      This ensures image is perfectly centered in widget container */
   object-position: center center;
   /* Hardware acceleration for smooth scaling */
@@ -211,9 +213,9 @@ const onImageError = (event) => {
   /* Image rendering optimization */
   image-rendering: auto;
   -webkit-image-rendering: auto;
-  /* Prevent layout shifts but allow content overflow */
+  /* Prevent layout shifts */
   contain: layout style;
-  /* Ensure image fills widget completely */
+  /* Ensure image fits within widget bounds */
   max-width: 100%;
   max-height: 100%;
 }

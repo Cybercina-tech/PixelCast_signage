@@ -2,6 +2,79 @@
 @tailwind components;
 @tailwind utilities;
 
+/* CSS Variables for Theme System - Aether Identity */
+:root {
+  /* Light Mode - Aether: High-Tech Laboratory in the Clouds */
+  --bg-primary: #FEFCF8; /* Warm-white background to reduce blue light strain */
+  --bg-secondary: #FAF8F4; /* Slightly warmer for sidebar/containers */
+  --bg-color: linear-gradient(to bottom, #FEFCF8, #FAF8F4);
+  --bg-color-solid: #FEFCF8;
+  --card-bg: rgba(255, 255, 255, 0.8); /* Frosted glass with 80% opacity */
+  --card-bg-backdrop: blur(16px);
+  --glass-bg: rgba(255, 255, 255, 0.8);
+  --border-color: transparent; /* No borders - use shadows instead */
+  --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.06); /* Soft shadow instead of border */
+  --shadow-medium: 0 4px 16px rgba(0, 0, 0, 0.06), 0 2px 6px rgba(0, 0, 0, 0.08);
+  --shadow-strong: 0 8px 24px rgba(0, 0, 0, 0.08), 0 4px 12px rgba(0, 0, 0, 0.1);
+  --text-main: #2D3436; /* Deep charcoal, easier on eyes than pure black */
+  --text-heading: #2D3436;
+  --text-body: #2D3436;
+  --text-muted: #636E72; /* For labels and secondary info */
+  --sidebar-bg: rgba(250, 248, 244, 0.8); /* Frosted glass sidebar */
+  --icon-color: #2D3436;
+  --accent-color: #0984E3; /* Professional blue that works on light backgrounds */
+  --button-primary: #0984E3;
+  --button-text: #FFFFFF;
+  --button-shadow: 0 2px 8px rgba(9, 132, 227, 0.2), 0 1px 3px rgba(9, 132, 227, 0.15);
+  --button-shadow-hover: 0 4px 12px rgba(9, 132, 227, 0.3), 0 2px 6px rgba(9, 132, 227, 0.2);
+  --grid-color: #E8E6E2; /* Warm grey for grid */
+  --notification-error-bg: rgba(255, 235, 235, 0.8); /* Pastel red with 80% opacity */
+  --notification-success-bg: rgba(235, 255, 235, 0.8); /* Pastel green with 80% opacity */
+  --notification-warning-bg: rgba(255, 248, 235, 0.8); /* Pastel yellow with 80% opacity */
+  --notification-info-bg: rgba(235, 245, 255, 0.8); /* Pastel blue with 80% opacity */
+  --warm-tint: rgba(255, 250, 245, 0.4); /* Enhanced warm tint for blue light reduction */
+  --forest-green: #166534; /* Forest Green for online indicators */
+  --dusty-red: #B91C1C; /* Muted Dusty Red for offline screens */
+  --cream-bg: #FEFCF8; /* Warm-white for cards */
+  --zebra-stripe: #FAF8F4; /* Warm-white variant for zebra striping */
+}
+
+.dark {
+  /* Dark Mode - Cosmic Theme */
+  --bg-primary: #0a0a1a;
+  --bg-secondary: #12122b;
+  --bg-color: linear-gradient(to bottom right, #0f172a, #1e293b, #1e1b4b);
+  --bg-color-solid: #09090b;
+  --card-bg: rgba(30, 41, 59, 0.95);
+  --card-bg-backdrop: blur(20px);
+  --glass-bg: rgba(10, 10, 26, 0.6);
+  --border-color: rgba(255, 255, 255, 0.1);
+  --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-medium: 0 4px 16px rgba(0, 0, 0, 0.4);
+  --shadow-strong: 0 8px 24px rgba(0, 0, 0, 0.5);
+  --text-main: #e0e0e0;
+  --text-heading: #fafafa;
+  --text-body: #e2e8f0;
+  --text-muted: #a0a0a0;
+  --sidebar-bg: rgba(10, 10, 26, 0.6);
+  --icon-color: #06b6d4;
+  --accent-color: #00d2ff;
+  --button-primary: #06b6d4;
+  --button-text: #ffffff;
+  --button-shadow: 0 0 20px rgba(6, 182, 212, 0.3);
+  --button-shadow-hover: 0 0 30px rgba(6, 182, 212, 0.5);
+  --grid-color: rgba(255, 255, 255, 0.1);
+  --notification-error-bg: rgba(30, 41, 59, 0.95);
+  --notification-success-bg: rgba(30, 41, 59, 0.95);
+  --notification-warning-bg: rgba(30, 41, 59, 0.95);
+  --notification-info-bg: rgba(30, 41, 59, 0.95);
+  --warm-tint: transparent;
+  --forest-green: #10b981;
+  --dusty-red: #ef4444;
+  --cream-bg: rgba(31, 41, 55, 0.8);
+  --zebra-stripe: rgba(31, 41, 55, 0.5);
+}
+
 @layer base {
   html {
     scroll-behavior: smooth;
@@ -15,15 +88,36 @@
     font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     font-weight: 400;
     line-height: 1.5;
-    background-color: #F9FAFB;
-    color: #111827;
-    transition: background-color 0.3s ease, color 0.3s ease;
+    background: var(--bg-color);
+    background-color: var(--bg-color-solid);
+    color: var(--text-body);
+    transition: background-color 0.4s ease, color 0.4s ease, background 0.4s ease, filter 0.4s ease;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     margin: 0;
     padding: 0;
     overflow: hidden;
     height: 100%;
+    position: relative;
+  }
+
+  /* Warm tint overlay for eye-care (light mode only) */
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--warm-tint);
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+  }
+
+  body:not(.dark)::before {
+    opacity: 1;
   }
   
   #app {
@@ -36,6 +130,8 @@
     font-weight: 600;
     line-height: 1.25;
     letter-spacing: -0.025em;
+    color: var(--text-heading);
+    transition: color 0.4s ease;
   }
   
   h1 {
@@ -51,12 +147,6 @@
   h3 {
     font-size: 1.5rem;
     font-weight: 600;
-  }
-  
-  /* Dark mode overrides */
-  .dark body {
-    background-color: #09090b; /* zinc-950 */
-    color: #fafafa; /* zinc-50 */
   }
   
   @media (prefers-reduced-motion: reduce) {
@@ -147,91 +237,123 @@
   animation: slide-in-right 0.4s ease-out;
 }
 
-/* Starry Background Pattern */
+/* Background Pattern - Paper Texture for Light Mode, Starfield for Dark Mode */
 .starry-background {
   position: relative;
-  background: linear-gradient(to bottom right, #f8fafc, #e0e7ff, #e0e2ff);
+  background: var(--bg-color);
+  background-color: var(--bg-color-solid);
+  transition: background 0.4s ease, background-color 0.4s ease;
 }
 
 .dark .starry-background {
   background: linear-gradient(to bottom right, #0f172a, #1e293b, #1e1b4b);
 }
 
+/* Paper texture for light mode (replaces starfield) */
 .starry-background::before {
   content: '';
   position: absolute;
   inset: 0;
-  background-image: radial-gradient(circle at 2px 2px, rgba(255, 255, 255, 0.15) 1px, transparent 0);
-  background-size: 40px 40px;
-  opacity: 0.5;
+  background-image: 
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0, 0, 0, 0.02) 2px,
+      rgba(0, 0, 0, 0.02) 4px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 2px,
+      rgba(0, 0, 0, 0.02) 2px,
+      rgba(0, 0, 0, 0.02) 4px
+    );
+  background-size: 20px 20px;
+  opacity: 0.4;
   pointer-events: none;
+  transition: opacity 0.4s ease;
 }
 
+/* Starfield for dark mode */
 .dark .starry-background::before {
   background-image: radial-gradient(circle at 2px 2px, rgba(255, 255, 255, 0.1) 1px, transparent 0);
+  background-size: 40px 40px;
+  opacity: 0.5;
 }
 
-/* Animated Blob Background Elements */
-.starry-blobs {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  pointer-events: none;
-  z-index: 0;
-}
+  /* Animated Blob Background Elements - Hidden in Light Mode for Eye-Care */
+  .starry-blobs {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+  }
 
-.starry-blob {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(80px);
-  mix-blend-mode: multiply;
-  opacity: 0.3;
-}
+  .dark .starry-blobs {
+    opacity: 1;
+  }
 
-.starry-blob-1 {
-  width: 320px;
-  height: 320px;
-  background: #bfdbfe; /* blue-200 */
-  top: -160px;
-  right: -160px;
-  animation: blob 7s infinite;
-}
+  .starry-blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    mix-blend-mode: multiply;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+  }
 
-.starry-blob-2 {
-  width: 320px;
-  height: 320px;
-  background: #c7d2fe; /* indigo-200 */
-  bottom: -160px;
-  left: -160px;
-  animation: blob 7s infinite;
-  animation-delay: 2s;
-}
+  .dark .starry-blob {
+    opacity: 0.3;
+  }
 
-.starry-blob-3 {
-  width: 320px;
-  height: 320px;
-  background: #e9d5ff; /* purple-200 */
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  animation: blob 7s infinite;
-  animation-delay: 4s;
-}
+  .starry-blob-1 {
+    width: 320px;
+    height: 320px;
+    background: #bfdbfe; /* blue-200 */
+    top: -160px;
+    right: -160px;
+    animation: blob 7s infinite;
+  }
 
-.dark .starry-blob-1 {
-  background: #1e3a8a; /* blue-900 */
-  opacity: 0.2;
-}
+  .starry-blob-2 {
+    width: 320px;
+    height: 320px;
+    background: #c7d2fe; /* indigo-200 */
+    bottom: -160px;
+    left: -160px;
+    animation: blob 7s infinite;
+    animation-delay: 2s;
+  }
 
-.dark .starry-blob-2 {
-  background: #312e81; /* indigo-900 */
-  opacity: 0.2;
-}
+  .starry-blob-3 {
+    width: 320px;
+    height: 320px;
+    background: #e9d5ff; /* purple-200 */
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    animation: blob 7s infinite;
+    animation-delay: 4s;
+  }
 
-.dark .starry-blob-3 {
-  background: #581c87; /* purple-900 */
-  opacity: 0.2;
-}
+  .dark .starry-blob-1 {
+    background: #1e3a8a; /* blue-900 */
+    opacity: 0.2;
+  }
+
+  .dark .starry-blob-2 {
+    background: #312e81; /* indigo-900 */
+    opacity: 0.2;
+  }
+
+  .dark .starry-blob-3 {
+    background: #581c87; /* purple-900 */
+    opacity: 0.2;
+  }
 
 @layer utilities {
   .text-balance {
@@ -275,33 +397,43 @@
 @layer components {
   /* Backgrounds */
   .bg-base {
-    @apply bg-slate-50 dark:bg-slate-950;
+    background: var(--bg-color);
+    background-color: var(--bg-color-solid);
   }
   
   .bg-secondary {
-    @apply bg-white dark:bg-slate-900;
+    background: var(--card-bg);
+    backdrop-filter: var(--card-bg-backdrop);
+    -webkit-backdrop-filter: var(--card-bg-backdrop);
   }
   
   .bg-card {
-    @apply bg-white dark:bg-slate-800/95;
+    background: var(--card-bg);
+    backdrop-filter: var(--card-bg-backdrop);
+    -webkit-backdrop-filter: var(--card-bg-backdrop);
   }
   
-  /* Text colors - Improved contrast for dark mode */
+  /* Text colors - Premium Theme */
   .text-primary {
-    @apply text-slate-900 dark:text-slate-50;
+    color: var(--text-heading);
   }
   
   .text-secondary {
-    @apply text-slate-700 dark:text-slate-300;
+    color: var(--text-body);
   }
   
   .text-muted {
-    @apply text-slate-500 dark:text-slate-400;
+    color: var(--text-muted);
+    transition: color 0.4s ease;
+  }
+
+  .dark .text-muted {
+    @apply text-slate-400;
   }
   
   /* Border colors */
   .border-border-color {
-    @apply border-slate-200 dark:border-slate-700;
+    border-color: var(--border-color);
   }
   
   /* Primary colors - Brand colors (emerald/green) */
@@ -363,16 +495,48 @@
     @apply text-blue-600 dark:text-blue-400;
   }
   
-  /* Form Inputs - Theme-aware */
+  /* Form Inputs - Aether: Soft shadows instead of borders */
   .input-base {
-    @apply bg-white dark:bg-slate-800;
-    @apply border-2 border-slate-200 dark:border-slate-700;
-    @apply text-slate-900 dark:text-slate-50;
-    @apply placeholder:text-slate-400 dark:placeholder:text-slate-500;
-    @apply focus:border-emerald-500 dark:focus:border-emerald-400;
-    @apply focus:ring-2 focus:ring-emerald-500/20 dark:focus:ring-emerald-400/30;
-    @apply hover:border-slate-300 dark:hover:border-slate-600;
-    @apply transition-all duration-200;
+    background: var(--card-bg); /* Frosted glass with 80% opacity */
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: none; /* No borders - Aether uses soft shadows */
+    color: var(--text-main);
+    border-radius: 8px;
+    box-shadow: var(--shadow-soft); /* Soft shadow instead of border */
+    transition: all 0.4s ease;
+  }
+
+  .input-base::placeholder {
+    color: var(--text-muted);
+  }
+
+  .input-base:hover {
+    box-shadow: var(--shadow-medium); /* Enhanced shadow on hover */
+  }
+
+  .input-base:focus {
+    outline: none;
+    box-shadow: 
+      var(--shadow-medium),
+      0 0 0 3px rgba(9, 132, 227, 0.1); /* Soft focus glow */
+  }
+
+  .dark .input-base {
+    @apply bg-slate-800;
+    @apply border-2 border-slate-700;
+    @apply text-slate-50;
+    @apply placeholder:text-slate-500;
+    box-shadow: none;
+  }
+
+  .dark .input-base:hover {
+    @apply border-slate-600;
+  }
+
+  .dark .input-base:focus {
+    @apply border-emerald-400;
+    @apply ring-2 ring-emerald-400/30;
   }
   
   .input-error {
@@ -387,16 +551,57 @@
     @apply cursor-pointer;
   }
   
+  /* Select - Aether: Soft shadows instead of borders */
+  .select-base {
+    background: var(--card-bg); /* Frosted glass with 80% opacity */
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: none; /* No borders - Aether uses soft shadows */
+    box-shadow: var(--shadow-soft);
+    color: var(--text-main);
+    border-radius: 8px;
+    transition: all 0.4s ease;
+  }
+
+  .select-base:hover {
+    box-shadow: var(--shadow-medium);
+  }
+
+  .select-base:focus {
+    outline: none;
+    box-shadow: 
+      var(--shadow-medium),
+      0 0 0 3px rgba(9, 132, 227, 0.1);
+  }
+
   /* Select options - Dark mode support */
   .select-base option {
     @apply bg-white dark:bg-slate-800;
     @apply text-slate-900 dark:text-slate-100;
   }
   
-  /* Textareas */
+  /* Textareas - Aether: Soft shadows instead of borders */
   .textarea-base {
-    @apply input-base;
+    background: var(--card-bg); /* Frosted glass with 80% opacity */
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: none; /* No borders - Aether uses soft shadows */
+    box-shadow: var(--shadow-soft);
+    color: var(--text-main);
+    border-radius: 8px;
+    transition: all 0.4s ease;
     @apply resize-y;
+  }
+
+  .textarea-base:hover {
+    box-shadow: var(--shadow-medium);
+  }
+
+  .textarea-base:focus {
+    outline: none;
+    box-shadow: 
+      var(--shadow-medium),
+      0 0 0 3px rgba(9, 132, 227, 0.1);
   }
   
   /* Checkboxes - Theme-aware */
@@ -412,29 +617,83 @@
     @apply transition-colors duration-200;
   }
   
-  /* Buttons - Brand colors, no gray in dark mode */
+  /* Buttons - Neumorphism-lite for Light Mode */
   .btn-primary {
-    @apply bg-gradient-to-r from-slate-900 via-emerald-700 to-emerald-600;
-    @apply dark:from-emerald-600 dark:via-emerald-500 dark:to-emerald-400;
-    @apply text-white dark:text-slate-900;
-    @apply font-semibold;
-    @apply hover:from-slate-800 hover:via-emerald-600 hover:to-emerald-500;
-    @apply dark:hover:from-emerald-500 dark:hover:via-emerald-400 dark:hover:to-emerald-300;
-    @apply focus:ring-2 focus:ring-emerald-500/50 dark:focus:ring-emerald-400/50;
-    @apply active:scale-[0.98];
-    @apply transition-all duration-200;
-    @apply shadow-lg hover:shadow-xl;
+    background: var(--button-primary);
+    color: var(--button-text);
+    font-weight: 600;
+    border: none;
+    box-shadow: var(--button-shadow);
+    transition: all 0.4s ease;
+    border-radius: 8px;
+  }
+
+  .btn-primary:hover {
+    background: #0a7bc7;
+    box-shadow: var(--button-shadow-hover);
+    transform: translateY(-1px);
+  }
+
+  .btn-primary:active {
+    transform: translateY(0);
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+  }
+
+  .dark .btn-primary {
+    background: linear-gradient(to right, #06b6d4, #8b5cf6);
+    box-shadow: 0 0 20px rgba(6, 182, 212, 0.3);
+  }
+
+  .dark .btn-primary:hover {
+    background: linear-gradient(to right, #0891b2, #7c3aed);
+    box-shadow: 0 0 30px rgba(6, 182, 212, 0.5);
+  }
+
+  .btn-primary:focus {
+    outline: none;
+    box-shadow: var(--button-shadow), 0 0 0 3px rgba(9, 132, 227, 0.3);
+  }
+
+  .dark .btn-primary:focus {
+    box-shadow: 0 0 20px rgba(6, 182, 212, 0.3), 0 0 0 3px rgba(6, 182, 212, 0.3);
   }
   
   .btn-secondary {
-    @apply bg-blue-600 dark:bg-blue-500;
-    @apply text-white dark:text-slate-900;
-    @apply font-semibold;
-    @apply hover:bg-blue-700 dark:hover:bg-blue-400;
-    @apply focus:ring-2 focus:ring-blue-500/50 dark:focus:ring-blue-400/50;
-    @apply active:scale-[0.98];
-    @apply transition-all duration-200;
-    @apply shadow-lg hover:shadow-xl;
+    background: var(--button-primary);
+    color: var(--button-text);
+    font-weight: 600;
+    box-shadow: var(--button-shadow);
+    transition: all 0.3s ease;
+  }
+
+  .btn-secondary:hover {
+    filter: brightness(1.1);
+    box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.3), 0 4px 6px -2px rgba(37, 99, 235, 0.2);
+    transform: translateY(-1px);
+  }
+
+  .dark .btn-secondary {
+    background: #3b82f6;
+    box-shadow: 0 0 15px rgba(59, 130, 246, 0.3);
+  }
+
+  .dark .btn-secondary:hover {
+    background: #2563eb;
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
+  }
+
+  .btn-secondary:active {
+    transform: scale(0.98);
+  }
+
+  .btn-secondary:focus {
+    outline: none;
+    ring: 2px;
+    ring-color: rgba(37, 99, 235, 0.5);
+  }
+
+  .dark .btn-secondary:focus {
+    ring-color: rgba(59, 130, 246, 0.5);
   }
   
   .btn-success {
@@ -536,18 +795,30 @@
     @apply text-sm text-slate-600 dark:text-slate-400;
   }
   
-  /* Cards - Starry Theme */
+  /* Cards - Aether Identity: Frosted Glass with Soft Shadows */
   .card-base {
-    @apply bg-white dark:bg-slate-800/95;
-    @apply border border-slate-200 dark:border-slate-700;
-    @apply shadow-lg dark:shadow-xl;
-    @apply backdrop-blur-sm;
-    @apply transition-all duration-300;
+    background: var(--card-bg); /* 80% opacity frosted glass */
+    backdrop-filter: var(--card-bg-backdrop);
+    -webkit-backdrop-filter: var(--card-bg-backdrop);
+    border: none; /* No borders - Aether uses soft shadows */
+    border-radius: 1rem;
+    box-shadow: var(--shadow-soft); /* Soft shadow instead of border */
+    transition: all 0.4s ease;
+  }
+
+  .dark .card-base {
+    border: 1px solid var(--border-color);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
   }
 
   .card-base:hover {
-    @apply shadow-xl dark:shadow-2xl;
-    @apply transform scale-[1.01];
+    box-shadow: var(--shadow-medium); /* Enhanced shadow on hover */
+    transform: translateY(-2px);
+  }
+
+  .dark .card-base:hover {
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    transform: scale(1.01);
   }
 
   /* Starry Gradient Header */
@@ -566,27 +837,61 @@
     opacity: 0.5;
   }
 
-  /* Enhanced Button Hover Effects */
-  .btn-primary:hover {
-    @apply transform scale-[1.02] shadow-xl;
+  /* Icon utilities for premium light mode */
+  .icon-light {
+    color: var(--icon-color);
+    stroke-width: 2.5;
+    transition: color 0.4s ease;
   }
 
-  .btn-primary:active {
-    @apply transform scale-[0.98];
+  .dark .icon-light {
+    color: #06b6d4;
   }
 
-  /* Smooth Transitions for All Interactive Elements */
+  /* Third-party library overrides for light mode */
+  /* Moveable.js - Selection and guides */
+  .moveable-control-box {
+    border-color: var(--accent-color) !important;
+  }
+
+  .dark .moveable-control-box {
+    border-color: #3b82f6 !important;
+  }
+
+  .moveable-line {
+    background-color: var(--accent-color) !important;
+    opacity: 0.6;
+  }
+
+  .dark .moveable-line {
+    background-color: #3b82f6 !important;
+  }
+
+  .moveable-control {
+    background-color: var(--accent-color) !important;
+    border-color: var(--accent-color) !important;
+  }
+
+  .dark .moveable-control {
+    background-color: #3b82f6 !important;
+    border-color: #3b82f6 !important;
+  }
+
+  /* Prevent theme flashing - ensure smooth transitions */
+  html {
+    transition: background-color 0.4s ease;
+  }
+
+  body {
+    transition: background-color 0.4s ease, color 0.4s ease;
+  }
+
+  /* Smooth Transitions for All Interactive Elements - Eye-Care Optimized */
   * {
-    @apply transition-colors duration-200;
+    transition: color 0.4s ease, background-color 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease;
   }
 
-  /* Focus States with Starry Theme */
-  .input-base:focus,
-  .select-base:focus,
-  .textarea-base:focus {
-    @apply ring-2 ring-emerald-500/20 dark:ring-emerald-400/30;
-    @apply border-emerald-500 dark:border-emerald-400;
-  }
+  /* Focus States - Already handled in input-base above */
   
   /* File Upload / Drag & Drop Zones */
   .upload-zone {
@@ -695,6 +1000,57 @@
     @apply text-green-600 dark:text-green-400;
     @apply hover:bg-green-50 dark:hover:bg-green-900/20;
     @apply hover:text-green-700 dark:hover:text-green-300;
+  }
+
+  /* Zebra striping for tables */
+  .bg-zebra-stripe {
+    background: var(--zebra-stripe);
+    transition: background-color 0.4s ease;
+  }
+
+  .dark .bg-zebra-stripe {
+    background: rgba(31, 41, 55, 0.5);
+  }
+
+  /* Forest Green and Dusty Red utility classes */
+  .bg-forest-green {
+    background-color: var(--forest-green);
+  }
+
+  .text-forest-green {
+    color: var(--forest-green);
+  }
+
+  .bg-dusty-red {
+    background-color: var(--dusty-red);
+  }
+
+  .text-dusty-red {
+    color: var(--dusty-red);
+  }
+
+  /* Professional Action Buttons for Tables */
+  .action-btn-edit {
+    @apply rounded-lg transition-all;
+    transition-duration: 0.4s;
+    color: var(--accent-color);
+  }
+
+  .action-btn-edit:hover {
+    background: rgba(9, 132, 227, 0.1);
+  }
+
+  .action-btn-view {
+    @apply text-amber-600 hover:bg-amber-50 rounded-lg transition-all;
+    transition-duration: 0.4s;
+  }
+
+  .dark .action-btn-edit {
+    @apply text-blue-400 hover:bg-blue-900/20;
+  }
+
+  .dark .action-btn-view {
+    @apply text-yellow-400 hover:bg-yellow-900/20;
   }
 }
 

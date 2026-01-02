@@ -277,7 +277,9 @@ class Screen(models.Model):
         """Mark screen as offline and create status log entry"""
         from django.utils import timezone
         from log.models import ScreenStatusLog
+        from core.models import Notification
         
+        was_online = self.is_online
         self.is_online = False
         self.save(update_fields=['is_online'])
         
@@ -286,6 +288,21 @@ class Screen(models.Model):
             screen=self,
             status='offline'
         )
+        
+        # Create notification for screen owner if screen was previously online
+        if was_online and self.owner:
+            try:
+                Notification.create_notification(
+                    user=self.owner,
+                    title='Screen Offline',
+                    message=f'Screen "{self.name}" has gone offline.',
+                    type='error',
+                    related_object=self
+                )
+            except Exception as e:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"Failed to create notification for screen offline: {e}")
     
     def authenticate(self, auth_token, secret_key):
         """
@@ -369,6 +386,22 @@ class Screen(models.Model):
             self.save(update_fields=['active_template'])
             self.refresh_from_db()
             print(f"DEBUG [activate_template]: Forced update complete. active_template: {self.active_template.id if self.active_template else None}")
+        
+        # Create notification for screen owner when template is successfully pushed
+        if self.owner:
+            try:
+                from core.models import Notification
+                Notification.create_notification(
+                    user=self.owner,
+                    title='Template Pushed Successfully',
+                    message=f'Template "{template.name}" has been successfully pushed to screen "{self.name}".',
+                    type='success',
+                    related_object=self
+                )
+            except Exception as e:
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.error(f"Failed to create notification for template push: {e}")
         
         return True
     

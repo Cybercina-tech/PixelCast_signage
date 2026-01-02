@@ -363,3 +363,107 @@ class SystemBackup(models.Model):
         if self.expires_at:
             return timezone.now() > self.expires_at
         return False
+
+
+class Notification(models.Model):
+    """
+    In-app notification model for user notifications.
+    
+    Simple notification system for displaying alerts and messages to users
+    in the application interface.
+    """
+    
+    TYPE_CHOICES = [
+        ('info', 'Info'),
+        ('success', 'Success'),
+        ('warning', 'Warning'),
+        ('error', 'Error'),
+    ]
+    
+    id = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False,
+        help_text="Unique identifier for the notification"
+    )
+    
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='notifications',
+        help_text="User who should receive this notification"
+    )
+    
+    title = models.CharField(
+        max_length=255,
+        help_text="Notification title"
+    )
+    
+    message = models.TextField(
+        help_text="Notification message"
+    )
+    
+    type = models.CharField(
+        max_length=20,
+        choices=TYPE_CHOICES,
+        default='info',
+        db_index=True,
+        help_text="Notification type"
+    )
+    
+    is_read = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text="Whether the notification has been read"
+    )
+    
+    created_at = models.DateTimeField(
+        default=timezone.now,
+        db_index=True,
+        help_text="When the notification was created"
+    )
+    
+    # Optional: Link to related object
+    content_type = models.ForeignKey(
+        ContentType,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        help_text="Content type of related object"
+    )
+    object_id = models.CharField(
+        max_length=255,
+        null=True,
+        blank=True,
+        help_text="ID of related object"
+    )
+    related_object = GenericForeignKey('content_type', 'object_id')
+    
+    class Meta:
+        db_table = 'core_notification'
+        verbose_name = 'Notification'
+        verbose_name_plural = 'Notifications'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', 'is_read', 'created_at']),
+            models.Index(fields=['user', 'created_at']),
+            models.Index(fields=['type', 'created_at']),
+        ]
+    
+    def __str__(self):
+        return f"{self.title} - {self.user.username} ({'read' if self.is_read else 'unread'})"
+    
+    @classmethod
+    def create_notification(cls, user, title, message, type='info', related_object=None):
+        """Helper method to create a notification."""
+        notification = cls(
+            user=user,
+            title=title,
+            message=message,
+            type=type
+        )
+        if related_object:
+            notification.content_type = ContentType.objects.get_for_model(related_object)
+            notification.object_id = str(related_object.id)
+        notification.save()
+        return notification

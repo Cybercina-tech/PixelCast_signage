@@ -1,63 +1,33 @@
 <template>
-  <footer class="bg-secondary border-t border-border-color px-6 py-3 mt-auto">
-    <div class="flex flex-col sm:flex-row items-center justify-between gap-2 text-xs">
-      <!-- Left: System Info -->
-      <div class="flex flex-wrap items-center gap-3 text-slate-900 dark:text-slate-50">
-        <span class="font-medium text-slate-900 dark:text-slate-50">ScreenGram</span>
-        <span class="text-slate-600 dark:text-slate-400">·</span>
-        <span class="font-mono text-xs text-slate-900 dark:text-slate-50">v{{ appVersion }}</span>
-        
-        <!-- Environment Badge (optional) -->
-          <span v-if="environment && environment !== 'production'" class="text-slate-600 dark:text-slate-400">·</span>
-        <span 
-          v-if="environment && environment !== 'production'" 
-          :class="[
-            'px-2 py-0.5 rounded text-xs font-medium',
-            environment === 'staging' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-200' : 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200'
-          ]"
-        >
-          {{ environment }}
-        </span>
-        
-        <!-- API Status -->
-        <span class="text-slate-600 dark:text-slate-400">·</span>
-        <div class="flex items-center gap-1.5">
-          <span 
-            :class="[
-              'w-1.5 h-1.5 rounded-full',
-              apiStatus === 'connected' ? 'bg-green-500' : 'bg-red-500'
-            ]"
-          ></span>
-          <span class="text-slate-900 dark:text-slate-50">API {{ apiStatus === 'connected' ? 'Connected' : 'Disconnected' }}</span>
-        </div>
-        
-        <!-- WebSocket Status -->
-        <span v-if="wsStatus" class="text-slate-600 dark:text-slate-400">·</span>
-        <div v-if="wsStatus" class="flex items-center gap-1.5">
-          <span 
-            :class="[
-              'w-1.5 h-1.5 rounded-full',
-              wsStatus === 'online' ? 'bg-green-500' : 'bg-red-500'
-            ]"
-          ></span>
-          <span class="text-slate-900 dark:text-slate-50">WebSocket {{ wsStatus === 'online' ? 'Online' : 'Offline' }}</span>
-        </div>
+  <footer class="system-status-bar">
+    <div class="status-bar-container">
+      <!-- Left: System Status -->
+      <div class="status-section status-left">
+        <span class="status-dot status-operational"></span>
+        <span class="status-text">System Ready</span>
       </div>
-      
-      <!-- Right: Legal Links -->
-      <div class="flex items-center gap-4 text-slate-900 dark:text-slate-50">
-        <router-link 
-          to="/privacy"
-          class="text-slate-900 dark:text-slate-50 hover:text-slate-700 dark:hover:text-slate-300 transition-colors"
-        >
-          Privacy
-        </router-link>
-        <router-link 
-          to="/terms"
-          class="text-slate-900 dark:text-slate-50 hover:text-slate-700 dark:hover:text-slate-300 transition-colors"
-        >
-          Terms
-        </router-link>
+
+      <!-- Center: Copyright & Version -->
+      <div class="status-section status-center">
+        <span class="status-meta">
+          © {{ new Date().getFullYear() }} ScreenGram
+        </span>
+        <span class="status-separator">·</span>
+        <span class="status-meta status-version">
+          v{{ appVersion }}
+        </span>
+      </div>
+
+      <!-- Right: Clock & Latency -->
+      <div class="status-section status-right">
+        <div class="status-time">
+          <ClockIcon class="w-3 h-3" />
+          <span class="time-text">{{ currentTime }}</span>
+        </div>
+        <div class="status-latency">
+          <span class="latency-label">Latency</span>
+          <span class="latency-value">{{ serverLatency }}ms</span>
+        </div>
       </div>
     </div>
   </footer>
@@ -65,91 +35,251 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
-import { useAuthStore } from '@/stores/auth'
+import { ClockIcon } from '@heroicons/vue/24/outline'
 
-const authStore = useAuthStore()
+// App version
+const appVersion = ref(typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '2.1.0')
 
-// App version from Git (set at build time)
-// Format: commit hash (e.g., "e994370")
-const appVersion = ref(typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'dev')
+// Current time
+const currentTime = ref('')
+const timeInterval = ref(null)
 
-// Environment - can be from env variable
-const environment = ref(null) // 'production', 'staging', 'development', or null
+// Server latency (mock - replace with real API call)
+const serverLatency = ref(24)
+const latencyInterval = ref(null)
 
-// API Status
-const apiStatus = ref('connected')
+// Update time
+const updateTime = () => {
+  const now = new Date()
+  currentTime.value = now.toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  })
+}
 
-// WebSocket Status
-const wsStatus = ref(null) // 'online', 'offline', or null
-
-let wsCheckInterval = null
-let apiCheckInterval = null
-
-// Check API status
-const checkApiStatus = async () => {
+// Check server latency
+const checkLatency = async () => {
   try {
-    // Simple health check - you can use your actual API endpoint
-    const response = await fetch('/api/health', { 
+    const start = performance.now()
+    await fetch('/api/health', {
       method: 'GET',
-      signal: AbortSignal.timeout(3000) // 3 second timeout
+      signal: AbortSignal.timeout(2000)
     })
-    apiStatus.value = response.ok ? 'connected' : 'disconnected'
+    const end = performance.now()
+    serverLatency.value = Math.round(end - start)
   } catch (error) {
-    apiStatus.value = 'disconnected'
+    serverLatency.value = 0
   }
 }
-
-// Check WebSocket status (if WebSocket is used)
-const checkWebSocketStatus = () => {
-  // Check if WebSocket connection exists
-  // This is a placeholder - adjust based on your WebSocket implementation
-  if (window.WebSocket && authStore.isAuthenticated) {
-    // You can check your actual WebSocket connection here
-    // For now, we'll assume it's online if user is authenticated
-    wsStatus.value = 'online'
-  } else {
-    wsStatus.value = 'offline'
-  }
-}
-
 
 onMounted(() => {
-  // Initial checks
-  checkApiStatus()
-  checkWebSocketStatus()
+  updateTime()
+  timeInterval.value = setInterval(updateTime, 1000)
   
-  // Check API status every 30 seconds
-  apiCheckInterval = setInterval(checkApiStatus, 30000)
-  
-  // Check WebSocket status every 10 seconds
-  wsCheckInterval = setInterval(checkWebSocketStatus, 10000)
-  
-  // Set environment from env or config
-  // environment.value = import.meta.env.VITE_APP_ENV || null
+  checkLatency()
+  latencyInterval.value = setInterval(checkLatency, 30000) // Check every 30 seconds
 })
 
 onUnmounted(() => {
-  if (apiCheckInterval) {
-    clearInterval(apiCheckInterval)
+  if (timeInterval.value) {
+    clearInterval(timeInterval.value)
   }
-  if (wsCheckInterval) {
-    clearInterval(wsCheckInterval)
+  if (latencyInterval.value) {
+    clearInterval(latencyInterval.value)
   }
 })
 </script>
 
 <style scoped>
-/* Minimal styling - footer should be subtle */
-footer {
-  min-height: 40px;
-  max-height: 56px;
+.system-status-bar {
+  position: relative;
+  width: 100%;
+  z-index: 20;
+  background: rgba(10, 10, 26, 0.4);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 0.375rem 1.5rem;
+  height: 30px;
+  max-height: 30px;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
 }
 
-/* Hide on mobile if needed */
+.status-bar-container {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.status-section {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.status-left {
+  flex: 0 0 auto;
+}
+
+.status-center {
+  flex: 1;
+  justify-content: center;
+}
+
+.status-right {
+  flex: 0 0 auto;
+  gap: 1rem;
+}
+
+/* System Status Indicator */
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: #10b981;
+  box-shadow: 0 0 6px rgba(16, 185, 129, 0.5);
+  animation: statusPulse 2s ease-in-out infinite;
+}
+
+@keyframes statusPulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.1);
+  }
+}
+
+.status-text {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.5);
+  font-weight: 400;
+  white-space: nowrap;
+  letter-spacing: 0.05em;
+}
+
+/* Copyright & Version */
+.status-meta {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.35);
+  font-weight: 400;
+  letter-spacing: 0.03em;
+}
+
+.status-version {
+  font-family: 'Courier New', 'Consolas', monospace;
+  letter-spacing: 0.08em;
+}
+
+.status-separator {
+  color: rgba(255, 255, 255, 0.15);
+  font-size: 9px;
+  user-select: none;
+  margin: 0 0.25rem;
+}
+
+/* Clock & Latency */
+.status-time {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.status-time svg {
+  color: rgba(255, 255, 255, 0.35);
+  width: 12px;
+  height: 12px;
+}
+
+.time-text {
+  font-size: 10px;
+  font-family: 'Courier New', 'Consolas', monospace;
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: 500;
+  letter-spacing: 0.05em;
+}
+
+.status-latency {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.latency-label {
+  font-size: 9px;
+  color: rgba(255, 255, 255, 0.35);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.latency-value {
+  font-size: 10px;
+  font-family: 'Courier New', 'Consolas', monospace;
+  color: #00d2ff;
+  font-weight: 600;
+  text-shadow: 0 0 6px rgba(0, 210, 255, 0.4);
+  letter-spacing: 0.05em;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .system-status-bar {
+    padding: 0.375rem 1rem;
+    height: auto;
+    min-height: 30px;
+  }
+
+  .status-bar-container {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .status-center {
+    order: 3;
+    width: 100%;
+    justify-content: center;
+    padding-top: 0.25rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.03);
+  }
+
+  .status-right {
+    gap: 0.75rem;
+  }
+
+  .status-text {
+    font-size: 9px;
+  }
+
+  .status-meta {
+    font-size: 9px;
+  }
+
+  .time-text {
+    font-size: 9px;
+  }
+
+  .latency-value {
+    font-size: 9px;
+  }
+}
+
 @media (max-width: 640px) {
-  footer {
-    /* Optional: can be hidden on mobile */
-    /* display: none; */
+  .status-latency {
+    display: none;
+  }
+
+  .status-time {
+    gap: 0.25rem;
   }
 }
 </style>
