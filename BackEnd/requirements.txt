@@ -23,7 +23,7 @@ channels-redis>=4.2.0,<5.0  # Optional: for production Redis backend
 # File Storage (S3 and Local)
 boto3>=1.28.0,<2.0  # AWS S3 SDK
 django-storages[boto3]>=1.14.0,<2.0  # Django storage backends for S3
-python-magic-bin>=0.4.14  # For MIME type detection (Windows-compatible package)
+# python-magic-bin>=0.4.14  # For MIME type detection (Windows-compatible package)
 
 # Date/Time Utilities (for accurate recurrence calculation)
 python-dateutil>=2.8.0,<3.0  # Reliable date/time recurrence rules

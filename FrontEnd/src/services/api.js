@@ -581,7 +581,7 @@ export const setupAPI = {
   testDb: (data) => api.post('/setup/db-check/', data),
   runMigrations: () => api.post('/setup/run-migrations/'),
   createAdmin: (data) => api.post('/setup/create-admin/', data),
-  finalize: () => api.post('/setup/finalize/'),
+  finalize: (data = {}) => api.post('/setup/finalize/', data),
 }
 
 // WebSocket URL helper

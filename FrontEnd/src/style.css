@@ -1054,11 +1054,159 @@
   }
 }
 
-/* Custom Scrollbar Styles - Thin and Elegant */
+/* Auth Pages - Premium SaaS (Login/Signup) */
+.auth-page {
+  --auth-bg-light: #FDF8F3;
+  --auth-bg-dark: #1A1F2C;
+  --auth-primary: #6366F1;
+  --auth-primary-glow: rgba(99, 102, 241, 0.3);
+  --auth-accent: #FF6B6B;
+  --auth-glass: rgba(255, 255, 255, 0.12);
+  --auth-glass-border: rgba(255, 255, 255, 0.18);
+  --auth-text-light: #1A1F2C;
+  --auth-text-muted-light: #64748B;
+  --auth-text-dark: #F1F5F9;
+  --auth-text-muted-dark: #94A3B8;
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+}
+
+.auth-page-light {
+  background: linear-gradient(135deg, #FDF8F3 0%, #F5EDE4 50%, #EDE4D9 100%);
+  color: var(--auth-text-light);
+}
+
+.auth-page-dark {
+  background: var(--auth-bg-dark);
+  color: var(--auth-text-dark);
+}
+
+.auth-glass-card {
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+}
+
+.auth-page-dark .auth-glass-card {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.auth-mesh-bg {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.auth-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  opacity: 0.4;
+  animation: auth-blob-float 12s ease-in-out infinite;
+}
+
+.auth-blob-1 { width: 400px; height: 400px; top: -100px; right: -100px; background: #6366F1; animation-delay: 0s; }
+.auth-blob-2 { width: 350px; height: 350px; bottom: -80px; left: -80px; background: #FF6B6B; animation-delay: -4s; }
+.auth-blob-3 { width: 300px; height: 300px; top: 50%; left: 50%; background: #8B5CF6; animation-delay: -8s; }
+
+@keyframes auth-blob-float {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(30px, -40px) scale(1.05); }
+  66% { transform: translate(-20px, 30px) scale(0.95); }
+}
+
+.auth-input-glow:focus {
+  border-color: var(--auth-primary) !important;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2), 0 0 20px var(--auth-primary-glow) !important;
+  transition: all 0.3s ease-in-out;
+}
+
+.auth-btn-primary {
+  background: var(--auth-primary) !important;
+  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4) !important;
+  transition: all 0.3s ease !important;
+}
+
+.auth-btn-primary:hover:not(:disabled) {
+  box-shadow: 0 6px 24px rgba(99, 102, 241, 0.5) !important;
+  transform: translateY(-2px);
+}
+
+.auth-btn-bounce:hover:not(:disabled) {
+  animation: auth-btn-bounce 0.4s ease;
+}
+
+@keyframes auth-btn-bounce {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.02); }
+}
+
+.auth-btn-outline {
+  border: 2px solid var(--auth-primary);
+  color: var(--auth-primary);
+  background: transparent;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.auth-btn-outline:hover {
+  background: rgba(99, 102, 241, 0.1);
+  box-shadow: 0 0 20px rgba(99, 102, 241, 0.2);
+}
+
+.auth-heading {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  letter-spacing: -0.02em;
+  font-weight: 700;
+}
+
+.auth-floating-label {
+  transition: all 0.2s ease;
+}
+
+.auth-floating-label.active {
+  transform: translateY(-1.5rem) scale(0.85);
+  color: var(--auth-primary);
+}
+
+/* ==========================================================================
+   Space Cockpit — Global Energy Rail Scrollbar (whole application)
+   ========================================================================== */
+/* Firefox: thin rail + Electric Indigo thumb, subtle track */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #6366F1 rgba(255, 255, 255, 0.02);
+}
+
+/* WebKit (Chrome, Safari, Edge): 6px rail, gradient thumb, neon hover */
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+*::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+*::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #6366F1 0%, #A855F7 100%);
+  border-radius: 3px;
+  transition: box-shadow 0.2s ease;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  box-shadow: 0 0 8px #6366F1;
+}
+
+/* Custom Scrollbar Styles - Thin and Elegant (legacy class, inherits global) */
 @layer utilities {
   .custom-scrollbar {
     scrollbar-width: thin;
-    scrollbar-color: rgba(148, 163, 184, 0.5) transparent;
+    scrollbar-color: #6366F1 rgba(255, 255, 255, 0.02);
     overscroll-behavior-y: contain;
   }
   
@@ -1068,29 +1216,17 @@
   }
   
   .custom-scrollbar::-webkit-scrollbar-track {
-    background: transparent;
+    background: rgba(255, 255, 255, 0.02);
   }
   
   .custom-scrollbar::-webkit-scrollbar-thumb {
-    background-color: rgba(148, 163, 184, 0.5);
+    background: linear-gradient(180deg, #6366F1 0%, #A855F7 100%);
     border-radius: 3px;
-    transition: background-color 0.2s;
+    transition: box-shadow 0.2s ease;
   }
   
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background-color: rgba(148, 163, 184, 0.7);
-  }
-  
-  .dark .custom-scrollbar {
-    scrollbar-color: rgba(100, 116, 139, 0.5) transparent;
-  }
-  
-  .dark .custom-scrollbar::-webkit-scrollbar-thumb {
-    background-color: rgba(100, 116, 139, 0.5);
-  }
-  
-  .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background-color: rgba(100, 116, 139, 0.7);
+    box-shadow: 0 0 8px #6366F1;
   }
   
   /* Prevent scroll chaining */

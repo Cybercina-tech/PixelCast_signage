@@ -4,6 +4,9 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
+# Install git - Vite needs it for version extraction during build
+RUN apk add --no-cache git
+
 # Copy package files
 COPY package*.json ./
 

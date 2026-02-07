@@ -1,0 +1,21 @@
+{
+  "name": "screengram",
+  "version": "1.0.0",
+  "description": "**What this system is:** ScreenGram is a centralized web-based platform for managing multiple digital signage displays. It consists of a Django REST API backend and a Vue.js frontend dashboard. Screens connect via a web player (HTML/JavaScript) that renders templates in fullscreen mode.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Cybercina-tech/ScreenGram.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Cybercina-tech/ScreenGram/issues"
+  },
+  "homepage": "https://github.com/Cybercina-tech/ScreenGram#readme"
+}

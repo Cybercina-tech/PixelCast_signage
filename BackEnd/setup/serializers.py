@@ -8,7 +8,7 @@ User = get_user_model()
 
 
 class DBCredentialsSerializer(serializers.Serializer):
-    """Serializer for database credentials."""
+    """Serializer for database credentials. Password is optional; if empty, username is used as password."""
     name = serializers.CharField(
         max_length=255,
         help_text="Database name"
@@ -19,7 +19,10 @@ class DBCredentialsSerializer(serializers.Serializer):
     )
     password = serializers.CharField(
         write_only=True,
-        help_text="Database password"
+        required=False,
+        allow_blank=True,
+        default='',
+        help_text="Database password (leave blank to use username as password)"
     )
     host = serializers.CharField(
         max_length=255,
@@ -51,7 +54,7 @@ class RunMigrationsSerializer(serializers.Serializer):
 
 
 class CreateAdminSerializer(serializers.Serializer):
-    """Serializer for creating admin user."""
+    """Serializer for creating or updating admin user (upsert)."""
     username = serializers.CharField(
         max_length=150,
         help_text="Username for the admin account"
@@ -62,8 +65,9 @@ class CreateAdminSerializer(serializers.Serializer):
     )
     password = serializers.CharField(
         write_only=True,
-        min_length=8,
-        help_text="Password for the admin account (minimum 8 characters)"
+        required=False,
+        allow_blank=True,
+        help_text="Password (leave blank to use username as password)"
     )
     first_name = serializers.CharField(
         max_length=150,
@@ -77,26 +81,12 @@ class CreateAdminSerializer(serializers.Serializer):
         allow_blank=True,
         help_text="Last name of the admin"
     )
-    
-    def validate_username(self, value):
-        """Validate username is unique."""
-        try:
-            if User.objects.filter(username=value).exists():
-                raise serializers.ValidationError("A user with this username already exists.")
-        except Exception:
-            # Database might not be set up yet, allow it
-            pass
-        return value
-    
-    def validate_email(self, value):
-        """Validate email is unique if provided."""
-        try:
-            if value and User.objects.filter(email=value).exists():
-                raise serializers.ValidationError("A user with this email already exists.")
-        except Exception:
-            # Database might not be set up yet, allow it
-            pass
-        return value
+
+    def validate_password(self, value):
+        """Require min 8 characters only when password is provided."""
+        if value and len(value) < 8:
+            raise serializers.ValidationError("Password must be at least 8 characters.")
+        return value or ""
 
 
 class FinalizeSerializer(serializers.Serializer):

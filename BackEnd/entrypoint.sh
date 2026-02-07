@@ -1,5 +1,6 @@
 #!/bin/bash
-set -e
+set -e  # Exit on error (but we catch critical sections with || true)
+set -x  # Debug mode: print every command for troubleshooting
 
 # Colors for output
 RED='\033[0;31m'
@@ -130,13 +131,44 @@ collect_static() {
     fi
 }
 
+# Get installation lock path (must match Django settings INSTALLATION_STATE_DIR)
+INSTALLATION_STATE_DIR="${INSTALLATION_STATE_DIR:-/app/installation_state}"
+INSTALLED_LOCK_PATH="${INSTALLATION_STATE_DIR}/installed.lock"
+
+# Ensure installation state directory exists with proper permissions
+ensure_installation_state_dir() {
+    log_info "Ensuring installation state directory exists: $INSTALLATION_STATE_DIR"
+    
+    # Create directory if it doesn't exist
+    mkdir -p "$INSTALLATION_STATE_DIR" || {
+        log_error "Failed to create $INSTALLATION_STATE_DIR"
+        return 1
+    }
+    
+    # Set permissions (777 for Docker volume compatibility - app creates lock file)
+    chmod 777 "$INSTALLATION_STATE_DIR" 2>/dev/null || {
+        log_warning "Could not chmod 777 $INSTALLATION_STATE_DIR (may be OK if already writable)"
+    }
+    
+    # Verify directory is writable
+    if [ -w "$INSTALLATION_STATE_DIR" ]; then
+        log_success "Installation state directory is writable"
+        return 0
+    else
+        log_error "Installation state directory is NOT writable: $INSTALLATION_STATE_DIR"
+        log_error "Check Docker volume permissions"
+        return 1
+    fi
+}
+
 # Function to verify installation lock file
 check_installation() {
-    if [ -f "/app/installed.lock" ]; then
+    if [ -f "$INSTALLED_LOCK_PATH" ]; then
         log_info "Installation lock file found. Application is installed."
         return 0
     else
         log_warning "Installation lock file not found. Installation wizard will be required."
+        log_info "Lock path: $INSTALLED_LOCK_PATH"
         return 1
     fi
 }
@@ -146,11 +178,18 @@ main() {
     log_info "=========================================="
     log_info "ScreenGram Backend Container Starting..."
     log_info "=========================================="
+    log_info "Container: $(hostname)"
+    log_info "User: $(whoami)"
+    log_info "Python: $(python --version)"
     
-    # Check installation status
-    check_installation
+    # 0. Ensure installation state directory exists with proper permissions
+    ensure_installation_state_dir || {
+        log_error "CRITICAL: Cannot create/access installation state directory"
+        log_error "The installation wizard will not be able to create the lock file"
+        log_warning "Continuing anyway - app will start but installation may fail"
+    }
     
-    # Wait for PostgreSQL (non-blocking - won't fail container if DB is down)
+    # 1. Wait for PostgreSQL FIRST (required before migrations/installation)
     if wait_for_postgres; then
         log_success "PostgreSQL is ready"
         
@@ -161,13 +200,19 @@ main() {
         log_warning "The container will start, but database features will not work."
     fi
     
-    # Collect static files (always run, doesn't require database)
+    # 2. Check installation status (informational only - NEVER exit; app must stay alive for wizard)
+    check_installation || true
+    
+    # 3. Collect static files (always run, doesn't require database)
     collect_static || log_warning "Static file collection had issues, but continuing..."
     
-    # Start Gunicorn with Uvicorn workers for ASGI support
+    # 4. Start Gunicorn with Uvicorn workers for ASGI support
     log_info "=========================================="
     log_info "Starting Gunicorn server..."
     log_info "=========================================="
+    
+    # Disable set -x for cleaner Gunicorn output
+    set +x
     
     exec gunicorn Screengram.asgi:application \
         --bind 0.0.0.0:8000 \

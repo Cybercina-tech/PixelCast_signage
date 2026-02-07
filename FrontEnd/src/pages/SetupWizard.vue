@@ -1,227 +1,227 @@
 <template>
-  <div class="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 flex items-center justify-center px-4 py-12 relative overflow-hidden">
-    <!-- Animated Background Elements -->
-    <div class="absolute inset-0 overflow-hidden pointer-events-none">
-      <div class="absolute -top-40 -right-40 w-80 h-80 bg-blue-200 dark:bg-blue-900/20 rounded-full mix-blend-multiply filter blur-xl opacity-30 animate-blob"></div>
-      <div class="absolute -bottom-40 -left-40 w-80 h-80 bg-indigo-200 dark:bg-indigo-900/20 rounded-full mix-blend-multiply filter blur-xl opacity-30 animate-blob animation-delay-2000"></div>
-      <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-purple-200 dark:bg-purple-900/20 rounded-full mix-blend-multiply filter blur-xl opacity-30 animate-blob animation-delay-4000"></div>
+  <div class="wizard-page cosmic-wizard min-h-screen w-full flex items-center justify-center px-4 py-4 relative">
+    <!-- Deep space gradient -->
+    <div class="cosmic-bg" aria-hidden="true" />
+    <!-- Animated starfield -->
+    <div class="cosmic-starfield" aria-hidden="true" />
+    <!-- Nebula accents (reduced opacity so they don't create a cut-off shadow at card bottom) -->
+    <div class="nebula nebula--indigo" aria-hidden="true" />
+    <div class="nebula nebula--purple" aria-hidden="true" />
+
+    <!-- Return to Base: cosmic exit button (top-left, above starfield) -->
+    <div class="exit-btn-wrapper fixed top-6 left-6 z-50 group">
+      <router-link
+        to="/"
+        class="exit-btn cosmic-exit inline-flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl bg-white/5 border border-white/10 backdrop-blur-md text-slate-300 hover:bg-white/10 hover:border-indigo-500/60 hover:text-indigo-200 transition-all duration-300 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:ring-offset-2 focus:ring-offset-[#0B0E14]"
+        title="All installation progress will be lost."
+        aria-label="Back to landing page. All installation progress will be lost."
+      >
+        <ArrowLeftIcon class="w-5 h-5 flex-shrink-0 cosmic-icon" aria-hidden="true" />
+        <span class="hidden sm:inline text-sm font-medium tracking-wide">Back to Base</span>
+      </router-link>
+      <div
+        class="exit-tooltip absolute left-0 top-full mt-2 px-3 py-2 rounded-lg bg-slate-900/95 border border-white/10 backdrop-blur-sm text-xs text-slate-300 whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-200 shadow-xl z-50"
+        role="tooltip"
+      >
+        All installation progress will be lost.
+      </div>
     </div>
 
-    <div class="w-full max-w-4xl relative z-10">
-      <!-- Frosted Glass Card -->
-      <div 
+    <div class="w-full max-w-2xl relative z-10 flex flex-col max-h-[90vh] min-h-0">
+      <!-- Command Center glass card: max 90vh, scroll inside card only; scrollbar-gutter prevents horizontal shift -->
+      <div
         v-motion
         :initial="{ opacity: 0, y: 20 }"
         :enter="{ opacity: 1, y: 0 }"
         :transition="{ duration: 500 }"
-        class="bg-card backdrop-blur-xl rounded-3xl shadow-2xl border border-border-color overflow-hidden"
-        style="background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(20px); box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);"
+        class="command-center command-center-scroll rounded-3xl overflow-hidden flex flex-col max-h-[90vh] min-h-0 w-full"
       >
-        <!-- Header with Logo -->
-        <div class="bg-gradient-to-r from-slate-900 via-emerald-700 to-emerald-600 dark:from-emerald-600 dark:via-emerald-500 dark:to-emerald-400 px-8 py-10 text-center relative overflow-hidden">
-          <div class="absolute inset-0 opacity-10">
-            <div class="absolute inset-0" style="background-image: radial-gradient(circle at 2px 2px, white 1px, transparent 0); background-size: 40px 40px;"></div>
+        <!-- Header: compact -->
+        <div class="px-4 sm:px-5 py-2 sm:py-3 text-center border-b border-white/10 relative flex-shrink-0">
+          <div class="cosmic-icon-wrap inline-flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-white/5 border border-white/10 mb-1">
+            <svg class="w-5 h-5 sm:w-6 sm:h-6 text-indigo-400 cosmic-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+            </svg>
           </div>
-          
-          <div class="relative z-10">
-            <div class="inline-flex items-center justify-center w-20 h-20 bg-white/10 rounded-full mb-4 backdrop-blur-sm border border-white/20">
-              <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-              </svg>
-            </div>
-            <h1 class="text-4xl font-bold text-white mb-2 tracking-tight">ScreenGram</h1>
-            <p class="text-emerald-100 dark:text-emerald-900 text-base font-medium">Installation Wizard</p>
-          </div>
+          <h1 class="cosmic-title text-lg sm:text-xl font-bold text-white mb-0 tracking-wide">PixelCast Signage</h1>
+          <p class="text-slate-400 text-[11px] font-medium">Installation Wizard</p>
         </div>
 
-        <!-- Stepper Navigation -->
-        <div class="px-8 pt-8 pb-4 border-b border-border-color">
-          <div class="flex items-center justify-between">
+        <!-- Flight Path: compact step indicator -->
+        <div class="flight-path px-4 sm:px-5 pt-2 pb-1.5 border-b border-white/10 flex-shrink-0">
+          <div class="flex items-center justify-between w-full mx-auto gap-0.5">
             <div
               v-for="(step, index) in steps"
               :key="index"
-              class="flex items-center flex-1"
+              class="flex items-center flex-1 min-w-0"
             >
-              <!-- Step Circle -->
-              <div class="flex flex-col items-center flex-1">
+              <div class="flex flex-col items-center flex-1 min-w-0">
                 <div
-                  class="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300"
+                  class="flight-node w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center transition-all duration-300 flex-shrink-0"
                   :class="getStepClass(index)"
                 >
                   <component
                     :is="step.icon"
-                    v-if="currentStep > index"
-                    class="w-6 h-6"
+                    v-if="currentStep > index + 1"
+                    class="w-3.5 h-3.5 sm:w-4 sm:h-4 cosmic-icon text-indigo-300"
                   />
-                  <span v-else class="text-sm font-semibold">{{ index + 1 }}</span>
+                  <span v-else class="text-[10px] sm:text-xs font-semibold">{{ index + 1 }}</span>
                 </div>
                 <span
-                  class="mt-2 text-xs font-medium transition-colors duration-300"
-                  :class="currentStep >= index ? 'text-primary' : 'text-secondary'"
+                  class="mt-0.5 text-[9px] sm:text-[10px] font-medium transition-colors duration-300 truncate max-w-full"
+                  :class="currentStep >= index + 1 ? 'text-slate-300' : 'text-slate-500'"
                 >
                   {{ step.label }}
                 </span>
               </div>
-
-              <!-- Connector Line -->
               <div
                 v-if="index < steps.length - 1"
-                class="flex-1 h-0.5 mx-2 transition-all duration-300"
-                :class="currentStep > index ? 'bg-emerald-500' : 'bg-slate-200 dark:bg-slate-700'"
-              ></div>
+                class="flex-1 h-0.5 mx-0.5 min-w-[8px] transition-all duration-300 rounded-full"
+                :class="currentStep > index + 1 ? 'bg-indigo-500/80 flight-path-line--active' : 'bg-white/10'"
+              />
             </div>
           </div>
         </div>
 
-        <!-- Step Content -->
-        <div class="px-8 py-8 min-h-[400px]">
+        <!-- Step Content: scrollable body; scrollbar-gutter: stable prevents horizontal shift when scrollbar appears -->
+        <div class="wizard-card-body px-4 sm:px-5 py-2 sm:py-3 min-h-0 overflow-y-auto flex-1">
           <transition
-            name="step"
+            name="fade-slide"
             mode="out-in"
           >
-            <!-- Step 1: Welcome -->
+            <!-- Step 1: Welcome — Mission Initialization (compact for 1080p) -->
             <div
               v-if="currentStep === 1"
               key="step-1"
-              class="space-y-6"
+              class="space-y-2"
             >
               <div class="text-center">
-                <div class="inline-flex items-center justify-center w-16 h-16 bg-emerald-100 dark:bg-emerald-900/30 rounded-full mb-4">
-                  <RocketLaunchIcon class="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
+                <div class="cosmic-icon-wrap inline-flex items-center justify-center w-10 h-10 sm:w-11 sm:h-11 rounded-lg bg-indigo-500/10 border border-indigo-500/30 mb-1">
+                  <RocketLaunchIcon class="w-5 h-5 sm:w-6 sm:h-6 text-indigo-400 cosmic-icon" />
                 </div>
-                <h2 class="text-3xl font-bold text-primary mb-3">Welcome to ScreenGram</h2>
-                <p class="text-secondary text-lg max-w-2xl mx-auto">
-                  Let's get your digital signage system up and running. This wizard will guide you through the installation process.
+                <h2 class="cosmic-heading text-base sm:text-lg font-bold text-white mb-0.5">Mission Initialization</h2>
+                <p class="text-slate-400 text-[11px] max-w-xl mx-auto leading-snug">
+                  Configure your command center. This wizard will guide you through database, admin account, and system setup.
                 </p>
               </div>
 
-              <div class="mt-8 space-y-4">
-                <div class="flex items-start gap-3 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
-                  <CheckCircleIcon class="w-6 h-6 text-emerald-600 dark:text-emerald-400 flex-shrink-0 mt-0.5" />
+              <div class="mt-2 space-y-1 max-w-xl mx-auto">
+                <div class="flex items-start gap-2 p-2 rounded-lg bg-white/5 border border-white/10">
+                  <ServerIcon class="w-4 h-4 sm:w-5 sm:h-5 text-indigo-400 cosmic-icon flex-shrink-0 mt-0.5" />
                   <div>
-                    <h3 class="font-semibold text-primary mb-1">Database Configuration</h3>
-                    <p class="text-sm text-secondary">Connect to your PostgreSQL database</p>
+                    <h3 class="font-semibold text-slate-200 text-xs sm:text-sm mb-0">Database Configuration</h3>
+                    <p class="text-[11px] sm:text-xs text-slate-500">Connect to your PostgreSQL database</p>
                   </div>
                 </div>
-                <div class="flex items-start gap-3 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
-                  <CheckCircleIcon class="w-6 h-6 text-emerald-600 dark:text-emerald-400 flex-shrink-0 mt-0.5" />
+                <div class="flex items-start gap-2 p-2 rounded-lg bg-white/5 border border-white/10">
+                  <ShieldCheckIcon class="w-4 h-4 sm:w-5 sm:h-5 text-indigo-400 cosmic-icon flex-shrink-0 mt-0.5" />
                   <div>
-                    <h3 class="font-semibold text-primary mb-1">Admin Account</h3>
-                    <p class="text-sm text-secondary">Create your master administrator account</p>
+                    <h3 class="font-semibold text-slate-200 text-xs sm:text-sm mb-0">Admin Account</h3>
+                    <p class="text-[11px] sm:text-xs text-slate-500">Create your master administrator account</p>
                   </div>
                 </div>
-                <div class="flex items-start gap-3 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl">
-                  <CheckCircleIcon class="w-6 h-6 text-emerald-600 dark:text-emerald-400 flex-shrink-0 mt-0.5" />
+                <div class="flex items-start gap-2 p-2 rounded-lg bg-white/5 border border-white/10">
+                  <Cog6ToothIcon class="w-4 h-4 sm:w-5 sm:h-5 text-indigo-400 cosmic-icon flex-shrink-0 mt-0.5" />
                   <div>
-                    <h3 class="font-semibold text-primary mb-1">System Setup</h3>
-                    <p class="text-sm text-secondary">Finalize installation and configure system</p>
+                    <h3 class="font-semibold text-slate-200 text-xs sm:text-sm mb-0">System Setup</h3>
+                    <p class="text-[11px] sm:text-xs text-slate-500">Finalize installation and boot sequence</p>
                   </div>
                 </div>
               </div>
 
-              <div class="flex justify-center pt-4">
+              <div class="flex justify-center pt-2">
                 <button
                   @click="nextStep"
-                  class="btn-primary px-8 py-3.5 rounded-xl text-lg font-semibold flex items-center gap-2"
+                  type="button"
+                  class="cosmic-btn-launch px-6 py-3 rounded-xl text-sm font-semibold text-white flex items-center gap-2 border-0"
                 >
                   Start Installation
-                  <ArrowRightIcon class="w-5 h-5" />
+                  <ArrowRightIcon class="w-4 h-4" />
                 </button>
               </div>
             </div>
 
-            <!-- Step 2: Database -->
+            <!-- Step 2: Database — compact -->
             <div
               v-else-if="currentStep === 2"
               key="step-2"
-              class="space-y-6"
+              class="space-y-2"
             >
-              <div class="text-center mb-6">
-                <div class="inline-flex items-center justify-center w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full mb-4">
-                  <ServerIcon class="w-8 h-8 text-blue-600 dark:text-blue-400" />
+              <div class="text-center mb-2">
+                <div class="cosmic-icon-wrap inline-flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-indigo-500/10 border border-indigo-500/30 mb-1">
+                  <ServerIcon class="w-5 h-5 sm:w-6 sm:h-6 text-indigo-400 cosmic-icon" />
                 </div>
-                <h2 class="text-3xl font-bold text-primary mb-2">Database Configuration</h2>
-                <p class="text-secondary">Enter your PostgreSQL database credentials</p>
+                <h2 class="cosmic-heading text-base sm:text-lg font-bold text-white mb-0.5">Database Configuration</h2>
+                <p class="text-slate-400 text-[11px]">Enter your PostgreSQL database credentials</p>
               </div>
 
-              <form @submit.prevent="testDatabaseConnection" class="space-y-5 max-w-2xl mx-auto">
-                <div class="grid grid-cols-2 gap-4">
+              <form @submit.prevent="testDatabaseConnection" class="space-y-2 max-w-2xl mx-auto">
+                <div class="grid grid-cols-2 gap-3">
                   <div>
-                    <label for="db-host" class="label-base block text-sm mb-2">
-                      Host <span class="text-red-500">*</span>
-                    </label>
+                    <label for="db-host" class="block text-sm font-medium text-slate-400 mb-1.5">Host <span class="text-red-400">*</span></label>
                     <input
                       id="db-host"
                       v-model="setupData.db.host"
                       type="text"
                       required
-                      class="input-base w-full px-4 py-3 rounded-xl"
+                      class="cosmic-input w-full px-4 py-3 rounded-xl bg-black/40 border border-white/10 text-white placeholder-slate-500 focus:outline-none transition-all duration-300"
                       placeholder="localhost"
                     />
                   </div>
                   <div>
-                    <label for="db-port" class="label-base block text-sm mb-2">
-                      Port <span class="text-red-500">*</span>
-                    </label>
+                    <label for="db-port" class="block text-sm font-medium text-slate-400 mb-1.5">Port <span class="text-red-400">*</span></label>
                     <input
                       id="db-port"
                       v-model.number="setupData.db.port"
                       type="number"
                       required
-                      class="input-base w-full px-4 py-3 rounded-xl"
+                      class="cosmic-input w-full px-4 py-3 rounded-xl bg-black/40 border border-white/10 text-white placeholder-slate-500 focus:outline-none transition-all duration-300"
                       placeholder="5432"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label for="db-name" class="label-base block text-sm mb-2">
-                    Database Name <span class="text-red-500">*</span>
-                  </label>
+                  <label for="db-name" class="block text-sm font-medium text-slate-400 mb-1.5">Database Name <span class="text-red-400">*</span></label>
                   <input
                     id="db-name"
                     v-model="setupData.db.name"
                     type="text"
                     required
-                    class="input-base w-full px-4 py-3 rounded-xl"
+                    class="cosmic-input w-full px-4 py-3 rounded-xl bg-black/40 border border-white/10 text-white placeholder-slate-500 focus:outline-none transition-all duration-300"
                     placeholder="screengram_db"
                   />
                 </div>
 
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-2 gap-3">
                   <div>
-                    <label for="db-user" class="label-base block text-sm mb-2">
-                      Username <span class="text-red-500">*</span>
-                    </label>
+                    <label for="db-user" class="block text-sm font-medium text-slate-400 mb-1.5">Username <span class="text-red-400">*</span></label>
                     <input
                       id="db-user"
                       v-model="setupData.db.user"
                       type="text"
                       required
-                      class="input-base w-full px-4 py-3 rounded-xl"
+                      class="cosmic-input w-full px-4 py-3 rounded-xl bg-black/40 border border-white/10 text-white placeholder-slate-500 focus:outline-none transition-all duration-300"
                       placeholder="screengram_user"
                     />
                   </div>
                   <div>
-                    <label for="db-password" class="label-base block text-sm mb-2">
-                      Password <span class="text-red-500">*</span>
-                    </label>
+                    <label for="db-password" class="block text-sm font-medium text-slate-400 mb-1.5">Password</label>
                     <div class="relative">
                       <input
                         id="db-password"
                         v-model="setupData.db.password"
                         :type="showDbPassword ? 'text' : 'password'"
-                        required
-                        class="input-base w-full px-4 py-3 rounded-xl pr-12"
-                        placeholder="Enter password"
+                        class="cosmic-input w-full px-4 py-3 rounded-xl pr-12 bg-black/40 border border-white/10 text-white placeholder-slate-500 focus:outline-none transition-all duration-300"
+                        placeholder="Optional: leave blank to use username as password"
                       />
                       <button
                         type="button"
                         @click="showDbPassword = !showDbPassword"
-                        class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400"
+                        class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-500 hover:text-indigo-400 transition-colors"
                       >
-                        <EyeIcon v-if="!showDbPassword" class="w-5 h-5" />
-                        <EyeSlashIcon v-else class="w-5 h-5" />
+                        <EyeIcon v-if="!showDbPassword" class="w-5 h-5 cosmic-icon" />
+                        <EyeSlashIcon v-else class="w-5 h-5 cosmic-icon" />
                       </button>
                     </div>
                   </div>
@@ -231,271 +231,319 @@
                 <transition name="fade">
                   <div
                     v-if="dbStatus.message"
-                    class="p-4 rounded-xl"
-                    :class="dbStatus.success ? 'bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800' : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800'"
+                    class="p-4 rounded-xl border"
+                    :class="dbStatus.success ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-red-500/10 border-red-500/30'"
                   >
                     <div class="flex items-start gap-2">
-                      <CheckCircleIcon v-if="dbStatus.success" class="w-5 h-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0 mt-0.5" />
-                      <XCircleIcon v-else class="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
-                      <p :class="dbStatus.success ? 'text-emerald-700 dark:text-emerald-300' : 'text-red-700 dark:text-red-300'">
+                      <CheckCircleIcon v-if="dbStatus.success" class="w-5 h-5 text-emerald-400 cosmic-icon flex-shrink-0 mt-0.5" />
+                      <XCircleIcon v-else class="w-5 h-5 text-red-400 cosmic-icon flex-shrink-0 mt-0.5" />
+                      <p :class="dbStatus.success ? 'text-emerald-300' : 'text-red-300'" class="text-sm">
                         {{ dbStatus.message }}
                       </p>
                     </div>
                   </div>
                 </transition>
 
-                <div class="flex gap-3 pt-2">
+                <div class="flex justify-between items-center gap-4 pt-1.5">
                   <button
                     type="button"
                     @click="prevStep"
-                    class="btn-secondary flex-1 py-3 px-4 rounded-xl"
+                    class="cosmic-btn-prev inline-flex items-center gap-2 py-2.5 px-4 rounded-xl border border-white/10 bg-transparent text-white/60 hover:text-white hover:border-indigo-500/60 transition-all duration-300 active:scale-95 text-sm font-medium"
+                    aria-label="Return to previous step"
                   >
+                    <ArrowLeftIcon class="w-4 h-4 flex-shrink-0" aria-hidden="true" />
                     Back
                   </button>
-                  <button
-                    type="button"
-                    @click="testDatabaseConnection"
-                    :disabled="dbStatus.loading"
-                    class="btn-secondary flex-1 py-3 px-4 rounded-xl disabled:opacity-50 flex items-center justify-center gap-2"
-                  >
-                    <svg
-                      v-if="dbStatus.loading"
-                      class="animate-spin h-5 w-5"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
+                  <div class="flex items-center gap-2 flex-1 justify-end min-w-0">
+                    <button
+                      type="button"
+                      @click="testDatabaseConnection"
+                      :disabled="dbStatus.loading"
+                      class="cosmic-input-btn flex-1 sm:flex-none py-2.5 px-4 rounded-xl disabled:opacity-50 flex items-center justify-center gap-2 border border-white/20 text-slate-300 hover:bg-white/5 hover:border-indigo-500/50 transition-all text-sm"
                     >
-                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    <span>{{ dbStatus.loading ? 'Testing...' : 'Test Connection' }}</span>
-                  </button>
-                  <button
-                    v-if="dbStatus.success"
-                    type="button"
-                    @click="nextStep"
-                    class="btn-primary flex-1 py-3.5 px-4 rounded-xl"
-                  >
-                    Continue
-                    <ArrowRightIcon class="w-5 h-5 inline-block ml-2" />
-                  </button>
+                      <svg
+                        v-if="dbStatus.loading"
+                        class="animate-spin h-5 w-5 text-indigo-400"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      <span>{{ dbStatus.loading ? 'Scanning...' : 'Test Connection' }}</span>
+                    </button>
+                    <button
+                      v-if="dbStatus.success"
+                      type="button"
+                      @click="nextStep"
+                      class="cosmic-btn py-2.5 px-4 rounded-xl text-white font-medium flex items-center justify-center gap-2 text-sm"
+                    >
+                      Continue
+                      <ArrowRightIcon class="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               </form>
             </div>
 
-            <!-- Step 3: Admin -->
+            <!-- Step 3: Admin — compact -->
             <div
               v-else-if="currentStep === 3"
               key="step-3"
-              class="space-y-6"
+              class="space-y-2"
             >
-              <div class="text-center mb-6">
-                <div class="inline-flex items-center justify-center w-16 h-16 bg-purple-100 dark:bg-purple-900/30 rounded-full mb-4">
-                  <ShieldCheckIcon class="w-8 h-8 text-purple-600 dark:text-purple-400" />
+              <div class="text-center mb-2">
+                <div class="cosmic-icon-wrap inline-flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-indigo-500/10 border border-indigo-500/30 mb-1">
+                  <ShieldCheckIcon class="w-5 h-5 sm:w-6 sm:h-6 text-indigo-400 cosmic-icon" />
                 </div>
-                <h2 class="text-3xl font-bold text-primary mb-2">Create Administrator Account</h2>
-                <p class="text-secondary">Set up your master administrator account</p>
+                <h2 class="cosmic-heading text-base sm:text-lg font-bold text-white mb-0.5">Create Administrator Account</h2>
+                <p class="text-slate-400 text-[11px]">Set up your master administrator identity</p>
               </div>
 
-              <form @submit.prevent="createAdmin" class="space-y-5 max-w-2xl mx-auto">
-                <div>
-                  <label for="admin-username" class="label-base block text-sm mb-2">
-                    Username <span class="text-red-500">*</span>
-                  </label>
-                  <input
-                    id="admin-username"
-                    v-model="setupData.admin.username"
-                    type="text"
-                    required
-                    class="input-base w-full px-4 py-3 rounded-xl"
-                    placeholder="admin"
-                  />
-                  <p v-if="errors.username" class="text-red-500 text-sm mt-1">{{ errors.username[0] }}</p>
+              <form @submit.prevent="createAdmin" class="space-y-2 max-w-2xl mx-auto">
+                <!-- Username: floating label -->
+                <div class="input-wrap">
+                  <div class="input-group relative group">
+                    <input
+                      id="admin-username"
+                      v-model="setupData.admin.username"
+                      type="text"
+                      required
+                      class="cosmic-input w-full px-4 py-3 rounded-xl bg-black/40 border border-white/10 text-white placeholder-transparent focus:outline-none transition-all duration-300"
+                      placeholder=" "
+                      @focus="focusAdminUsername = true"
+                      @blur="focusAdminUsername = false"
+                    />
+                    <label
+                      for="admin-username"
+                      class="floating-label cosmic-floating-label"
+                      :class="{ 'floating-label--active': setupData.admin.username || focusAdminUsername }"
+                    >
+                      Username <span class="text-red-400">*</span>
+                    </label>
+                  </div>
+                  <p v-if="errors.username" class="text-red-400 text-sm mt-1">{{ errors.username[0] }}</p>
                 </div>
 
-                <div>
-                  <label for="admin-email" class="label-base block text-sm mb-2">
-                    Email <span class="text-red-500">*</span>
-                  </label>
-                  <input
-                    id="admin-email"
-                    v-model="setupData.admin.email"
-                    type="email"
-                    required
-                    class="input-base w-full px-4 py-3 rounded-xl"
-                    placeholder="admin@example.com"
-                  />
-                  <p v-if="errors.email" class="text-red-500 text-sm mt-1">{{ errors.email[0] }}</p>
+                <!-- Email: floating label -->
+                <div class="input-wrap">
+                  <div class="input-group relative group">
+                    <input
+                      id="admin-email"
+                      v-model="setupData.admin.email"
+                      type="email"
+                      required
+                      class="cosmic-input w-full px-4 py-3 rounded-xl bg-black/40 border border-white/10 text-white placeholder-transparent focus:outline-none transition-all duration-300"
+                      placeholder=" "
+                      @focus="focusAdminEmail = true"
+                      @blur="focusAdminEmail = false"
+                    />
+                    <label
+                      for="admin-email"
+                      class="floating-label cosmic-floating-label"
+                      :class="{ 'floating-label--active': setupData.admin.email || focusAdminEmail }"
+                    >
+                      Email <span class="text-red-400">*</span>
+                    </label>
+                  </div>
+                  <p v-if="errors.email" class="text-red-400 text-sm mt-1">{{ errors.email[0] }}</p>
                 </div>
 
-                <div>
-                  <label for="admin-password" class="label-base block text-sm mb-2">
-                    Password <span class="text-red-500">*</span>
-                  </label>
-                  <div class="relative">
+                <!-- Password: floating label -->
+                <div class="input-wrap">
+                  <div class="input-group relative group">
                     <input
                       id="admin-password"
                       v-model="setupData.admin.password"
                       :type="showAdminPassword ? 'text' : 'password'"
-                      required
                       minlength="8"
-                      class="input-base w-full px-4 py-3 rounded-xl pr-12"
-                      placeholder="Minimum 8 characters"
+                      class="cosmic-input w-full px-4 py-3 rounded-xl pr-12 bg-black/40 border border-white/10 text-white placeholder-transparent focus:outline-none transition-all duration-300"
+                      placeholder=" "
+                      @focus="focusAdminPassword = true"
+                      @blur="focusAdminPassword = false"
                     />
+                    <label
+                      for="admin-password"
+                      class="floating-label cosmic-floating-label"
+                      :class="{ 'floating-label--active': setupData.admin.password || focusAdminPassword }"
+                    >
+                      Password <span class="text-red-400">*</span> (min 8 characters)
+                    </label>
                     <button
                       type="button"
                       @click="showAdminPassword = !showAdminPassword"
-                      class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400"
+                      class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-500 hover:text-indigo-400 transition-colors"
                     >
-                      <EyeIcon v-if="!showAdminPassword" class="w-5 h-5" />
-                      <EyeSlashIcon v-else class="w-5 h-5" />
+                      <EyeIcon v-if="!showAdminPassword" class="w-5 h-5 cosmic-icon" />
+                      <EyeSlashIcon v-else class="w-5 h-5 cosmic-icon" />
                     </button>
                   </div>
-                  <p v-if="errors.password" class="text-red-500 text-sm mt-1">{{ errors.password[0] }}</p>
+                  <p v-if="errors.password" class="text-red-400 text-sm mt-1">{{ errors.password[0] }}</p>
                 </div>
 
-                <div class="grid grid-cols-2 gap-4">
-                  <div>
-                    <label for="admin-first-name" class="label-base block text-sm mb-2">
-                      First Name
-                    </label>
-                    <input
-                      id="admin-first-name"
-                      v-model="setupData.admin.first_name"
-                      type="text"
-                      class="input-base w-full px-4 py-3 rounded-xl"
-                      placeholder="First name"
-                    />
+                <div class="grid grid-cols-2 gap-3">
+                  <!-- First name: floating label -->
+                  <div class="input-wrap">
+                    <div class="input-group relative group">
+                      <input
+                        id="admin-first-name"
+                        v-model="setupData.admin.first_name"
+                        type="text"
+                        class="cosmic-input w-full px-4 py-3 rounded-xl bg-black/40 border border-white/10 text-white placeholder-transparent focus:outline-none transition-all duration-300"
+                        placeholder=" "
+                        @focus="focusAdminFirstName = true"
+                        @blur="focusAdminFirstName = false"
+                      />
+                      <label
+                        for="admin-first-name"
+                        class="floating-label cosmic-floating-label"
+                        :class="{ 'floating-label--active': setupData.admin.first_name || focusAdminFirstName }"
+                      >
+                        First Name
+                      </label>
+                    </div>
                   </div>
-                  <div>
-                    <label for="admin-last-name" class="label-base block text-sm mb-2">
-                      Last Name
-                    </label>
-                    <input
-                      id="admin-last-name"
-                      v-model="setupData.admin.last_name"
-                      type="text"
-                      class="input-base w-full px-4 py-3 rounded-xl"
-                      placeholder="Last name"
-                    />
+                  <!-- Last name: floating label -->
+                  <div class="input-wrap">
+                    <div class="input-group relative group">
+                      <input
+                        id="admin-last-name"
+                        v-model="setupData.admin.last_name"
+                        type="text"
+                        class="cosmic-input w-full px-4 py-3 rounded-xl bg-black/40 border border-white/10 text-white placeholder-transparent focus:outline-none transition-all duration-300"
+                        placeholder=" "
+                        @focus="focusAdminLastName = true"
+                        @blur="focusAdminLastName = false"
+                      />
+                      <label
+                        for="admin-last-name"
+                        class="floating-label cosmic-floating-label"
+                        :class="{ 'floating-label--active': setupData.admin.last_name || focusAdminLastName }"
+                      >
+                        Last Name
+                      </label>
+                    </div>
                   </div>
                 </div>
 
                 <transition name="fade">
                   <div
                     v-if="adminStatus.message"
-                    class="p-4 rounded-xl"
-                    :class="adminStatus.success ? 'bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800' : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800'"
+                    class="p-4 rounded-xl border"
+                    :class="adminStatus.success ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-red-500/10 border-red-500/30'"
                   >
-                    <p :class="adminStatus.success ? 'text-emerald-700 dark:text-emerald-300' : 'text-red-700 dark:text-red-300'">
+                    <p :class="adminStatus.success ? 'text-emerald-300' : 'text-red-300'" class="text-sm">
                       {{ adminStatus.message }}
                     </p>
                   </div>
                 </transition>
 
-                <div class="flex gap-3 pt-2">
+                <div class="flex justify-between items-center gap-4 pt-1.5">
                   <button
                     type="button"
                     @click="prevStep"
-                    class="btn-secondary flex-1 py-3 px-4 rounded-xl"
+                    class="cosmic-btn-prev inline-flex items-center gap-2 py-2.5 px-4 rounded-xl border border-white/10 bg-transparent text-white/60 hover:text-white hover:border-indigo-500/60 transition-all duration-300 active:scale-95 text-sm font-medium"
+                    aria-label="Return to previous step"
                   >
+                    <ArrowLeftIcon class="w-4 h-4 flex-shrink-0" aria-hidden="true" />
                     Back
                   </button>
-                  <button
-                    type="submit"
-                    :disabled="adminStatus.loading || adminStatus.success"
-                    class="btn-primary flex-1 py-3.5 px-4 rounded-xl disabled:opacity-50 flex items-center justify-center gap-2"
-                  >
-                    <svg
-                      v-if="adminStatus.loading"
-                      class="animate-spin h-5 w-5"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
+                  <div class="flex items-center gap-2 flex-1 justify-end min-w-0">
+                    <button
+                      type="submit"
+                      :disabled="adminStatus.loading || adminStatus.success"
+                      class="cosmic-btn-confirm flex-1 sm:flex-none py-2.5 px-4 rounded-xl text-white font-semibold disabled:opacity-50 flex items-center justify-center gap-2 border-0 text-sm"
                     >
-                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    <span>{{ adminStatus.loading ? 'Creating...' : adminStatus.success ? 'Created' : 'Create Admin' }}</span>
-                  </button>
-                  <button
-                    v-if="adminStatus.success"
-                    type="button"
-                    @click="nextStep"
-                    class="btn-primary flex-1 py-3.5 px-4 rounded-xl"
-                  >
-                    Continue
-                    <ArrowRightIcon class="w-5 h-5 inline-block ml-2" />
-                  </button>
+                      <svg
+                        v-if="adminStatus.loading"
+                        class="animate-spin h-5 w-5"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      <span>{{ adminStatus.loading ? 'Verifying...' : adminStatus.success ? 'Identity Confirmed' : 'Confirm Identity' }}</span>
+                    </button>
+                    <button
+                      v-if="adminStatus.success"
+                      type="button"
+                      @click="nextStep"
+                      class="cosmic-btn py-2.5 px-4 rounded-xl text-white font-medium flex items-center justify-center gap-2 text-sm"
+                    >
+                      Continue
+                      <ArrowRightIcon class="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               </form>
             </div>
 
-            <!-- Step 4: Progress -->
+            <!-- Step 4: System Boot Sequence — compact -->
             <div
               v-else-if="currentStep === 4"
               key="step-4"
-              class="space-y-6"
+              class="space-y-2"
             >
-              <div class="text-center mb-6">
-                <div class="inline-flex items-center justify-center w-16 h-16 bg-indigo-100 dark:bg-indigo-900/30 rounded-full mb-4">
-                  <Cog6ToothIcon class="w-8 h-8 text-indigo-600 dark:text-indigo-400 animate-spin" />
+              <div class="text-center mb-2">
+                <div class="cosmic-icon-wrap inline-flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-indigo-500/10 border border-indigo-500/30 mb-1">
+                  <Cog6ToothIcon class="w-5 h-5 sm:w-6 sm:h-6 text-indigo-400 cosmic-icon animate-spin" />
                 </div>
-                <h2 class="text-3xl font-bold text-primary mb-2">Finalizing Installation</h2>
-                <p class="text-secondary">Setting up your system...</p>
+                <h2 class="cosmic-heading text-base sm:text-lg font-bold text-white mb-0.5">System Boot Sequence</h2>
+                <p class="text-slate-400 text-[11px] boot-glow">Initializing command center...</p>
               </div>
 
-              <!-- Progress Steps -->
-              <div class="space-y-4 max-w-2xl mx-auto">
+              <!-- Boot sequence steps with glowing text -->
+              <div class="space-y-1.5 max-w-2xl mx-auto">
                 <div
                   v-for="(progressStep, index) in progressSteps"
                   :key="index"
-                  class="flex items-center gap-4 p-4 rounded-xl transition-all duration-300"
+                  class="flex items-center gap-3 p-3 rounded-xl transition-all duration-300"
                   :class="getProgressStepClass(progressStep.status)"
                 >
                   <div class="flex-shrink-0">
                     <div
                       v-if="progressStep.status === 'completed'"
-                      class="w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center"
+                      class="w-10 h-10 rounded-full bg-emerald-500/80 flex items-center justify-center shadow-[0_0_12px_rgba(34,197,94,0.4)]"
                     >
-                      <CheckCircleIcon class="w-6 h-6 text-white" />
+                      <CheckCircleIcon class="w-6 h-6 text-white cosmic-icon" />
                     </div>
                     <div
                       v-else-if="progressStep.status === 'loading'"
-                      class="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center"
+                      class="w-10 h-10 rounded-full bg-indigo-500/80 flex items-center justify-center shadow-[0_0_12px_rgba(99,102,241,0.4)]"
                     >
                       <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                       </svg>
                     </div>
                     <div
                       v-else
-                      class="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center"
+                      class="w-10 h-10 rounded-full bg-white/5 border border-white/10 flex items-center justify-center"
                     >
-                      <span class="text-slate-500 dark:text-slate-400 text-sm font-semibold">{{ index + 1 }}</span>
+                      <span class="text-slate-500 text-sm font-semibold">{{ index + 1 }}</span>
                     </div>
                   </div>
                   <div class="flex-1">
-                    <h3 class="font-semibold text-primary">{{ progressStep.label }}</h3>
-                    <p class="text-sm text-secondary">{{ progressStep.description }}</p>
+                    <h3 class="font-semibold text-slate-200 boot-step-label">{{ progressStep.label }}</h3>
+                    <p class="text-sm boot-glow text-slate-400">{{ progressStep.description }}</p>
                   </div>
                 </div>
               </div>
 
-              <!-- Overall Progress Bar -->
-              <div class="max-w-2xl mx-auto pt-6">
+              <!-- System Boot Progress Bar -->
+              <div class="max-w-2xl mx-auto pt-4">
                 <div class="flex items-center justify-between mb-2">
-                  <span class="text-sm font-medium text-secondary">Overall Progress</span>
-                  <span class="text-sm font-medium text-primary">{{ overallProgress }}%</span>
+                  <span class="text-sm font-medium text-slate-400">Boot Progress</span>
+                  <span class="text-sm font-semibold text-indigo-300 boot-glow">{{ overallProgress }}%</span>
                 </div>
-                <div class="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-3 overflow-hidden">
+                <div class="w-full h-2 bg-black/40 rounded-full overflow-hidden border border-white/10">
                   <div
-                    class="bg-gradient-to-r from-emerald-500 via-blue-500 to-indigo-500 h-3 rounded-full transition-all duration-500 ease-out relative"
+                    class="boot-progress-bar h-2 rounded-full transition-all duration-500 ease-out relative"
                     :style="{ width: `${overallProgress}%` }"
-                  >
-                    <div class="absolute inset-0 bg-white/30 animate-pulse"></div>
-                  </div>
+                  />
                 </div>
               </div>
 
@@ -505,14 +553,14 @@
                   v-if="installationComplete"
                   class="text-center pt-6"
                 >
-                  <div class="inline-flex items-center justify-center w-20 h-20 bg-emerald-100 dark:bg-emerald-900/30 rounded-full mb-4">
-                    <CheckCircleIcon class="w-10 h-10 text-emerald-600 dark:text-emerald-400" />
+                  <div class="cosmic-icon-wrap inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 mb-4 shadow-[0_0_24px_rgba(34,197,94,0.2)]">
+                    <CheckCircleIcon class="w-10 h-10 text-emerald-400 cosmic-icon" />
                   </div>
-                  <h3 class="text-2xl font-bold text-primary mb-2">Installation Complete!</h3>
-                  <p class="text-secondary mb-6">Your ScreenGram system is ready to use.</p>
+                  <h3 class="cosmic-heading text-2xl font-bold text-white mb-2">Installation Complete!</h3>
+                  <p class="text-slate-400 mb-6">Your PixelCast command center is ready.</p>
                   <router-link
                     to="/login"
-                    class="btn-primary inline-flex items-center px-8 py-3.5 rounded-xl text-lg font-semibold"
+                    class="cosmic-btn inline-flex items-center px-8 py-3.5 rounded-xl text-base font-semibold text-white"
                   >
                     Go to Login
                     <ArrowRightIcon class="w-5 h-5 ml-2" />
@@ -538,6 +586,7 @@ import {
   CheckCircleIcon,
   XCircleIcon,
   ArrowRightIcon,
+  ArrowLeftIcon,
   EyeIcon,
   EyeSlashIcon,
 } from '@heroicons/vue/24/outline'
@@ -557,6 +606,11 @@ const currentStep = ref(1)
 const showDbPassword = ref(false)
 const showAdminPassword = ref(false)
 const installationComplete = ref(false)
+const focusAdminUsername = ref(false)
+const focusAdminEmail = ref(false)
+const focusAdminPassword = ref(false)
+const focusAdminFirstName = ref(false)
+const focusAdminLastName = ref(false)
 
 // Setup data
 const setupData = reactive({
@@ -591,15 +645,15 @@ const adminStatus = reactive({
 
 const errors = ref({})
 
-// Progress steps
+// Progress steps — System Boot Sequence copy
 const progressSteps = reactive([
   {
-    label: 'Running Database Migrations',
+    label: 'Initializing Core Modules',
     description: 'Applying schema changes to your database...',
     status: 'pending', // pending, loading, completed, error
   },
   {
-    label: 'Setting up System Assets',
+    label: 'Syncing Galactic Assets',
     description: 'Initializing default configurations...',
     status: 'pending',
   },
@@ -616,27 +670,28 @@ const overallProgress = computed(() => {
   return Math.round((completed / progressSteps.length) * 100)
 })
 
-// Methods
+// Methods — Flight Path node classes
 const getStepClass = (index) => {
-  if (currentStep.value > index) {
-    return 'bg-emerald-500 text-white'
-  } else if (currentStep.value === index) {
-    return 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 border-2 border-emerald-500'
-  } else {
-    return 'bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400'
+  const stepNum = index + 1
+  if (currentStep.value > stepNum) {
+    return 'bg-indigo-500/80 text-white shadow-[0_0_12px_rgba(99,102,241,0.5)]'
   }
+  if (currentStep.value === stepNum) {
+    return 'bg-indigo-500/20 text-indigo-300 border-2 border-indigo-500/60 shadow-[0_0_16px_rgba(99,102,241,0.3)]'
+  }
+  return 'bg-white/5 text-slate-500 border border-white/10'
 }
 
 const getProgressStepClass = (status) => {
   switch (status) {
     case 'completed':
-      return 'bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800'
+      return 'bg-emerald-500/10 border border-emerald-500/30 boot-step--completed'
     case 'loading':
-      return 'bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800'
+      return 'bg-indigo-500/10 border border-indigo-500/30 boot-step--loading'
     case 'error':
-      return 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800'
+      return 'bg-red-500/10 border border-red-500/30'
     default:
-      return 'bg-slate-50 dark:bg-slate-800/50'
+      return 'bg-white/5 border border-white/10'
   }
 }
 
@@ -732,10 +787,16 @@ const startInstallation = async () => {
   progressSteps[1].status = 'completed'
   progressSteps[1].description = 'System assets configured'
   
-  // Step 3: Finalize
+  // Step 3: Finalize (send db credentials so .env gets DB_PASSWORD / POSTGRES_PASSWORD; empty password => username used as password)
   progressSteps[2].status = 'loading'
   try {
-    await setupAPI.finalize()
+    await setupAPI.finalize({
+      db_name: setupData.db.name,
+      db_user: setupData.db.user,
+      db_password: setupData.db.password || undefined,
+      db_host: setupData.db.host,
+      db_port: setupData.db.port,
+    })
     progressSteps[2].status = 'completed'
     progressSteps[2].description = 'Installation finalized successfully'
     installationComplete.value = true
@@ -759,23 +820,154 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-/* Step Transitions */
-.step-enter-active,
-.step-leave-active {
-  transition: all 0.3s ease;
+/* Page: Deep Space — full viewport, scrollable when content is tall */
+.cosmic-wizard {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  position: relative;
+  min-height: 100vh;
+  min-height: 100dvh; /* dynamic viewport height on mobile */
 }
 
-.step-enter-from {
+/* Background: gradient from spec */
+.cosmic-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background: linear-gradient(to bottom right, #0B0E14, #151921, #080A0F);
+  pointer-events: none;
+}
+
+/* Starfield */
+.cosmic-starfield {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0.6;
+  animation: cosmicTwinkle 6s ease-in-out infinite;
+}
+
+.cosmic-starfield::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(1.5px 1.5px at 15% 25%, rgba(255,255,255,0.9), transparent),
+    radial-gradient(1px 1px at 25% 15%, rgba(255,255,255,0.7), transparent),
+    radial-gradient(1.5px 1.5px at 75% 30%, rgba(255,255,255,0.8), transparent),
+    radial-gradient(1px 1px at 85% 20%, rgba(255,255,255,0.6), transparent),
+    radial-gradient(1.5px 1.5px at 10% 60%, rgba(255,255,255,0.7), transparent),
+    radial-gradient(1px 1px at 30% 70%, rgba(255,255,255,0.8), transparent),
+    radial-gradient(1.5px 1.5px at 60% 80%, rgba(255,255,255,0.6), transparent),
+    radial-gradient(1px 1px at 80% 55%, rgba(255,255,255,0.9), transparent),
+    radial-gradient(1.5px 1.5px at 45% 35%, rgba(255,255,255,0.5), transparent),
+    radial-gradient(1px 1px at 55% 45%, rgba(255,255,255,0.7), transparent),
+    radial-gradient(1.5px 1.5px at 20% 85%, rgba(255,255,255,0.6), transparent),
+    radial-gradient(1px 1px at 90% 75%, rgba(255,255,255,0.5), transparent),
+    radial-gradient(1.5px 1.5px at 5% 40%, rgba(255,255,255,0.8), transparent),
+    radial-gradient(1px 1px at 95% 50%, rgba(255,255,255,0.6), transparent),
+    radial-gradient(1.5px 1.5px at 40% 10%, rgba(255,255,255,0.7), transparent),
+    radial-gradient(1px 1px at 70% 65%, rgba(255,255,255,0.8), transparent);
+  background-size: 100% 100%;
+  background-repeat: repeat;
+}
+
+@keyframes cosmicTwinkle {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 0.9; }
+}
+
+/* Nebula accents — reduced opacity so they don’t create a dark cut-off at card bottom */
+.nebula {
+  position: fixed;
+  border-radius: 50%;
+  filter: blur(100px);
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.12;
+}
+.nebula--indigo {
+  width: 380px;
+  height: 380px;
+  background: rgba(99, 102, 241, 0.28);
+  top: -120px;
+  right: -120px;
+}
+.nebula--purple {
+  width: 320px;
+  height: 320px;
+  background: rgba(139, 92, 246, 0.22);
+  bottom: -100px;
+  left: -100px;
+}
+
+/* Command Center card — glassmorphic, max 90vh so scroll is inside card */
+.command-center {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow:
+    0 25px 50px -12px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+/* Card scroll area: stable gutter prevents horizontal shift when scrollbar appears (global Energy Rail applies) */
+.wizard-card-body {
+  scrollbar-gutter: stable;
+}
+
+/* Return to Base: cosmic exit button */
+.exit-btn-wrapper {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+}
+.exit-btn .cosmic-icon {
+  transition: filter 0.3s ease;
+}
+.exit-btn:hover .cosmic-icon {
+  filter: drop-shadow(0 0 8px rgba(99, 102, 241, 0.6));
+}
+.exit-tooltip {
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+/* Typography */
+.cosmic-title,
+.cosmic-heading {
+  letter-spacing: 0.05em;
+  text-shadow: 0 0 30px rgba(99, 102, 241, 0.2);
+}
+
+.cosmic-icon {
+  filter: drop-shadow(0 0 6px rgba(99, 102, 241, 0.4));
+}
+
+.cosmic-icon-wrap {
+  box-shadow: 0 0 20px rgba(99, 102, 241, 0.15);
+}
+
+/* Flight path line glow when active */
+.flight-path-line--active {
+  box-shadow: 0 0 8px rgba(99, 102, 241, 0.4);
+}
+
+/* Step transition: fade-slide (spaceship monitor) */
+.fade-slide-enter-active,
+.fade-slide-leave-active {
+  transition: all 0.35s ease;
+}
+
+.fade-slide-enter-from {
   opacity: 0;
-  transform: translateX(20px);
+  transform: translateX(24px);
 }
 
-.step-leave-to {
+.fade-slide-leave-to {
   opacity: 0;
-  transform: translateX(-20px);
+  transform: translateX(-24px);
 }
 
-/* Fade Transitions */
+/* Fade */
 .fade-enter-active,
 .fade-leave-active {
   transition: opacity 0.3s ease;
@@ -786,43 +978,117 @@ onMounted(async () => {
   opacity: 0;
 }
 
-/* Blob Animation */
-.animate-blob {
-  animation: blob 7s infinite;
+/* Input: Electric Indigo focus glow */
+.cosmic-input {
+  border-color: rgba(255, 255, 255, 0.1);
 }
 
-.animation-delay-2000 {
-  animation-delay: 2s;
+.cosmic-input:focus {
+  border-color: #6366F1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25), 0 0 20px rgba(99, 102, 241, 0.15);
 }
 
-.animation-delay-4000 {
-  animation-delay: 4s;
+/* Start Installation button — pulse glow */
+.cosmic-btn-launch {
+  background: linear-gradient(135deg, #6366F1 0%, #4F46E5 100%);
+  box-shadow: 0 4px 24px rgba(99, 102, 241, 0.5);
+  animation: cosmic-pulse 2s ease-in-out infinite;
 }
 
-@keyframes blob {
-  0% {
-    transform: translate(0px, 0px) scale(1);
-  }
-  33% {
-    transform: translate(30px, -50px) scale(1.1);
-  }
-  66% {
-    transform: translate(-20px, 20px) scale(0.9);
-  }
-  100% {
-    transform: translate(0px, 0px) scale(1);
-  }
+.cosmic-btn-launch:hover {
+  box-shadow: 0 8px 32px rgba(99, 102, 241, 0.6), 0 0 40px rgba(99, 102, 241, 0.2);
 }
 
-/* Frosted Glass Effect */
-.bg-card {
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+@keyframes cosmic-pulse {
+  0%, 100% { box-shadow: 0 4px 24px rgba(99, 102, 241, 0.5); }
+  50% { box-shadow: 0 6px 28px rgba(99, 102, 241, 0.6), 0 0 30px rgba(99, 102, 241, 0.15); }
 }
 
-.dark .bg-card {
-  background: rgba(30, 41, 59, 0.85);
+/* Ghost / secondary buttons */
+.cosmic-btn-ghost:hover {
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+/* Return to Previous: cosmic Back button (Step 2 & 3) — ghost + indigo hover + tactile */
+.cosmic-btn-prev:hover {
+  box-shadow: 0 0 12px rgba(99, 102, 241, 0.25);
+}
+
+/* Primary action button */
+.cosmic-btn {
+  background: linear-gradient(135deg, #6366F1 0%, #4F46E5 100%);
+  box-shadow: 0 4px 20px rgba(99, 102, 241, 0.35);
+}
+
+.cosmic-btn:hover {
+  box-shadow: 0 8px 30px rgba(99, 102, 241, 0.45);
+}
+
+/* Confirm Identity — high-stakes style */
+.cosmic-btn-confirm {
+  background: linear-gradient(135deg, #6366F1 0%, #4F46E5 100%);
+  box-shadow: 0 4px 24px rgba(99, 102, 241, 0.4), 0 0 20px rgba(99, 102, 241, 0.2);
+}
+
+.cosmic-btn-confirm:hover:not(:disabled) {
+  box-shadow: 0 6px 28px rgba(99, 102, 241, 0.5), 0 0 30px rgba(99, 102, 241, 0.25);
+}
+
+/* Floating labels (Step 3) */
+.input-wrap {
+  position: relative;
+}
+
+.input-wrap .input-group {
+  margin-top: 0;
+}
+
+.floating-label {
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 1rem;
+  pointer-events: none;
+  transition: transform 0.2s ease, font-size 0.2s ease, color 0.2s ease, top 0.2s ease;
+}
+
+.cosmic-floating-label {
+  color: rgb(148 163 184);
+}
+
+.floating-label--active {
+  top: -0.75rem;
+  transform: translateY(0);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.floating-label--active.cosmic-floating-label {
+  color: rgb(148 163 184);
+}
+
+/* System Boot: glowing text */
+.boot-glow {
+  text-shadow: 0 0 12px rgba(99, 102, 241, 0.3);
+}
+
+.boot-step-label {
+  text-shadow: 0 0 8px rgba(99, 102, 241, 0.2);
+}
+
+.boot-step--loading .boot-step-label {
+  text-shadow: 0 0 10px rgba(99, 102, 241, 0.4);
+}
+
+.boot-step--completed .boot-step-label {
+  text-shadow: 0 0 8px rgba(34, 197, 94, 0.3);
+}
+
+/* Boot progress bar */
+.boot-progress-bar {
+  background: linear-gradient(90deg, #6366F1, #818CF8);
+  box-shadow: 0 0 16px rgba(99, 102, 241, 0.5);
 }
 </style>
 

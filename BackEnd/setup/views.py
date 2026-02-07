@@ -6,6 +6,7 @@ Security: These endpoints are ONLY accessible if installed.lock does NOT exist.
 import logging
 import os
 from django.db import connection
+from django.db.models import Q
 from django.db.utils import OperationalError, DatabaseError
 from django.contrib.auth import get_user_model
 from django.core.management import call_command
@@ -116,10 +117,10 @@ def db_check(request):
         }, status=status.HTTP_400_BAD_REQUEST)
     
     try:
-        # Get validated credentials
+        # Get validated credentials (empty password => use username as password)
         db_name = serializer.validated_data['name']
         db_user = serializer.validated_data['user']
-        db_password = serializer.validated_data['password']
+        db_password = (serializer.validated_data.get('password') or '').strip() or db_user
         db_host = serializer.validated_data.get('host', 'localhost')
         db_port = serializer.validated_data.get('port', 5432)
         
@@ -127,24 +128,26 @@ def db_check(request):
         import psycopg2
         from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
         
-        try:
-            # Create test connection
-            conn = psycopg2.connect(
+        def try_connect(password):
+            return psycopg2.connect(
                 dbname=db_name,
                 user=db_user,
-                password=db_password,
+                password=password,
                 host=db_host,
                 port=db_port,
                 connect_timeout=10
             )
-            
+        
+        try:
+            # Create test connection (with optional retry using username-as-password)
+            conn = try_connect(db_password)
             try:
                 with conn.cursor() as cursor:
                     cursor.execute("SELECT version()")
                     version = cursor.fetchone()[0]
                     cursor.execute("SELECT current_database()")
                     current_db = cursor.fetchone()[0]
-                
+
                 db_info = {
                     'vendor': 'postgresql',
                     'version': version.split(',')[0] if version else 'unknown',
@@ -152,17 +155,49 @@ def db_check(request):
                     'host': db_host,
                     'port': db_port,
                 }
-                
+
                 serializer = DBCheckSerializer({
                     'status': 'success',
                     'message': 'Database connection successful',
                     'details': db_info
                 })
-                
+
                 return Response(serializer.data, status=status.HTTP_200_OK)
             finally:
                 conn.close()
-            
+        except psycopg2.OperationalError as e:
+            # If auth failed and we haven't already tried username-as-password, retry once
+            err_msg = str(e).lower()
+            if ('password authentication failed' in err_msg or 'authentication failed' in err_msg) and db_password != db_user:
+                try:
+                    conn = try_connect(db_user)
+                    try:
+                        with conn.cursor() as cursor:
+                            cursor.execute("SELECT version()")
+                            version = cursor.fetchone()[0]
+                            cursor.execute("SELECT current_database()")
+                            current_db = cursor.fetchone()[0]
+                        db_info = {
+                            'vendor': 'postgresql',
+                            'version': version.split(',')[0] if version else 'unknown',
+                            'database': current_db,
+                            'host': db_host,
+                            'port': db_port,
+                        }
+                        serializer = DBCheckSerializer({
+                            'status': 'success',
+                            'message': 'Database connection successful (using username as password)',
+                            'details': db_info
+                        })
+                        return Response(serializer.data, status=status.HTTP_200_OK)
+                    finally:
+                        conn.close()
+                except Exception:
+                    pass
+            raise  # Re-raise to be caught by outer handler
+        except Exception:
+            raise  # Re-raise to be caught by outer handler
+
     except OperationalError as e:
         logger.error(f"Database connection failed: {str(e)}", exc_info=True)
         serializer = DBCheckSerializer({
@@ -234,8 +269,8 @@ def run_migrations(request):
 @permission_classes([AllowAny])
 def create_admin(request):
     """
-    Create the initial admin (superuser) account.
-    
+    Create or update the admin (superuser) account (upsert).
+    If a user with the given username or email exists, update their password and profile.
     Security: Only accessible if installation is not completed.
     """
     # Security check
@@ -254,43 +289,56 @@ def create_admin(request):
     
     try:
         username = serializer.validated_data['username']
-        password = serializer.validated_data['password']
+        raw_password = (serializer.validated_data.get('password') or '').strip()
+        password = raw_password or username  # Fallback: use username as password if empty
         email = serializer.validated_data['email']
         first_name = serializer.validated_data.get('first_name', '')
         last_name = serializer.validated_data.get('last_name', '')
         
-        # Check if admin already exists
-        if User.objects.filter(is_superuser=True).exists():
-            return Response({
-                'error': 'admin_exists',
-                'message': 'An admin user already exists. Please log in with existing credentials.'
-            }, status=status.HTTP_400_BAD_REQUEST)
+        # Upsert: find existing user by username or email
+        existing = User.objects.filter(
+            Q(username=username) | Q(email=email)
+        ).first()
         
-        # Create superuser
-        user = User.objects.create_superuser(
-            username=username,
-            email=email,
-            password=password,
-            first_name=first_name,
-            last_name=last_name,
-        )
-        
-        logger.info(f"Admin user created: {username}")
+        if existing:
+            # Update existing user so submitted credentials become the active ones
+            existing.email = email
+            existing.first_name = first_name
+            existing.last_name = last_name
+            existing.is_superuser = True
+            existing.is_staff = True
+            existing.set_password(password)
+            existing.save()  # full save so hashed password is persisted
+            user = existing
+            created = False
+            logger.info(f"Admin user updated: {username}")
+        else:
+            # Create new superuser
+            user = User.objects.create_superuser(
+                username=username,
+                email=email,
+                password=password,
+                first_name=first_name,
+                last_name=last_name,
+            )
+            created = True
+            logger.info(f"Admin user created: {username}")
         
         return Response({
             'status': 'success',
-            'message': f'Admin user "{username}" created successfully',
+            'message': f'Admin user "{username}" updated successfully' if not created else f'Admin user "{username}" created successfully',
+            'created': created,
             'user': {
                 'id': user.id,
                 'username': user.username,
                 'email': user.email,
             }
-        }, status=status.HTTP_201_CREATED)
+        }, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
     except Exception as e:
-        logger.error(f"Error creating admin user: {str(e)}", exc_info=True)
+        logger.error(f"Error creating/updating admin user: {str(e)}", exc_info=True)
         return Response({
             'error': 'creation_failed',
-            'message': f'Failed to create admin user: {str(e)}'
+            'message': f'Failed to create or update admin user: {str(e)}'
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
@@ -320,11 +368,15 @@ def finalize(request):
             env_data['DB_NAME'] = serializer.validated_data['db_name']
         if serializer.validated_data.get('db_user'):
             env_data['DB_USER'] = serializer.validated_data['db_user']
-        if serializer.validated_data.get('db_password'):
-            env_data['DB_PASSWORD'] = serializer.validated_data['db_password']
+        # DB_PASSWORD: use submitted password, or fall back to username (auto-fix)
+        raw_password = (serializer.validated_data.get('db_password') or '').strip()
+        if serializer.validated_data.get('db_user'):
+            env_data['DB_PASSWORD'] = raw_password or serializer.validated_data['db_user']
+        elif raw_password:
+            env_data['DB_PASSWORD'] = raw_password
         if serializer.validated_data.get('db_host'):
             env_data['DB_HOST'] = serializer.validated_data['db_host']
-        if serializer.validated_data.get('db_port'):
+        if serializer.validated_data.get('db_port') is not None:
             env_data['DB_PORT'] = str(serializer.validated_data['db_port'])
         if serializer.validated_data.get('secret_key'):
             env_data['SECRET_KEY'] = serializer.validated_data['secret_key']
@@ -340,10 +392,15 @@ def finalize(request):
         env_data['DB_NAME'] = settings.DATABASES['default'].get('NAME', 'screengram_db')
     if not env_data.get('DB_USER'):
         env_data['DB_USER'] = settings.DATABASES['default'].get('USER', 'screengram_user')
+    if not env_data.get('DB_PASSWORD') or not str(env_data.get('DB_PASSWORD', '')).strip():
+        # Auto-fix: use DB_USER as DB_PASSWORD when password is missing/empty
+        env_data['DB_PASSWORD'] = env_data.get('DB_USER', 'screengram_user')
     if not env_data.get('DB_HOST'):
         env_data['DB_HOST'] = settings.DATABASES['default'].get('HOST', 'db')
     if not env_data.get('DB_PORT'):
         env_data['DB_PORT'] = str(settings.DATABASES['default'].get('PORT', '5432'))
+    # Docker Postgres: same password for POSTGRES_PASSWORD
+    env_data['POSTGRES_PASSWORD'] = env_data['DB_PASSWORD']
     
     # Get SECRET_KEY from settings if not provided
     if not env_data.get('SECRET_KEY'):

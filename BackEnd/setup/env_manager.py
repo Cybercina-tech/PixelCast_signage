@@ -118,6 +118,7 @@ def read_template_file(template_path: Path) -> Dict[str, str]:
 def validate_env_data(data_dict: Dict[str, str]) -> tuple[bool, Optional[str]]:
     """
     Validate environment data before writing.
+    Auto-fix: if DB_PASSWORD is missing or empty and DB_USER is provided, use DB_USER as DB_PASSWORD.
     
     Args:
         data_dict: Dictionary of environment variables to validate
@@ -127,6 +128,11 @@ def validate_env_data(data_dict: Dict[str, str]) -> tuple[bool, Optional[str]]:
     """
     if not data_dict:
         return False, "No environment data provided"
+    
+    # Normalize: use DB_USER as DB_PASSWORD when password is missing/empty (username-as-password)
+    data_dict = dict(data_dict)
+    if (not data_dict.get('DB_PASSWORD') or not str(data_dict.get('DB_PASSWORD', '')).strip()) and data_dict.get('DB_USER'):
+        data_dict['DB_PASSWORD'] = data_dict['DB_USER']
     
     # Required fields for basic functionality
     required_fields = ['DB_NAME', 'DB_USER', 'DB_PASSWORD', 'DB_HOST']
@@ -220,6 +226,11 @@ def update_env_file(
         if not has_permission:
             return False, error_msg
         
+        # Auto-fix: use DB_USER as DB_PASSWORD when password is missing/empty (before merge)
+        data_dict = dict(data_dict)
+        if (not data_dict.get('DB_PASSWORD') or not str(data_dict.get('DB_PASSWORD', '')).strip()) and data_dict.get('DB_USER'):
+            data_dict['DB_PASSWORD'] = data_dict['DB_USER']
+        
         # Read existing .env file (if exists)
         existing_vars = {}
         if env_file_path.exists() and preserve_existing:
@@ -237,6 +248,9 @@ def update_env_file(
         if preserve_existing:
             merged_vars.update(existing_vars)
         merged_vars.update(data_dict)
+        # Ensure POSTGRES_PASSWORD for Docker (same as DB_PASSWORD)
+        if 'DB_PASSWORD' in merged_vars and 'POSTGRES_PASSWORD' not in merged_vars:
+            merged_vars['POSTGRES_PASSWORD'] = merged_vars['DB_PASSWORD']
         
         # Write merged variables to .env file
         try:
@@ -246,10 +260,10 @@ def update_env_file(
                 f.write("# Generated/Updated by Installation Wizard\n")
                 f.write("# DO NOT EDIT MANUALLY - Use the installation wizard or update via env_manager.py\n\n")
                 
-                # Group variables by category
+                # Group variables by category (POSTGRES_PASSWORD = DB_PASSWORD for Docker)
                 categories = {
                     'Django Settings': ['SECRET_KEY', 'DEBUG', 'ALLOWED_HOSTS'],
-                    'Database Configuration': ['DB_NAME', 'DB_USER', 'DB_PASSWORD', 'DB_HOST', 'DB_PORT', 'USE_SQLITE'],
+                    'Database Configuration': ['DB_NAME', 'DB_USER', 'DB_PASSWORD', 'POSTGRES_PASSWORD', 'DB_HOST', 'DB_PORT', 'USE_SQLITE'],
                     'Application URLs': ['BASE_URL'],
                     'Redis Configuration': ['REDIS_HOST', 'REDIS_PORT', 'USE_REDIS_CACHE', 'REDIS_CACHE_URL', 'REDIS_PASSWORD'],
                     'Celery Configuration': ['CELERY_BROKER_URL', 'CELERY_RESULT_BACKEND'],
@@ -282,6 +296,13 @@ def update_env_file(
             logger.info(f"Successfully wrote {len(merged_vars)} variables to {env_file_path}")
             return True, None
         
+        except OSError as e:
+            errno = getattr(e, 'errno', None)
+            logger.error(
+                f"Failed to write .env file: {type(e).__name__} errno={errno} path={env_file_path} detail={e!s}",
+                exc_info=True
+            )
+            return False, f"Failed to write .env file: {e!s} (errno={errno})"
         except Exception as e:
             error_msg = f"Failed to write .env file: {str(e)}"
             logger.error(error_msg, exc_info=True)

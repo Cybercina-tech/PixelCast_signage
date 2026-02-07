@@ -20,6 +20,37 @@ const gitVersion = getGitVersion()
 
 export default defineConfig({
   plugins: [vue()],
+  server: {
+    host: true,
+    port: 5173,
+    strictPort: true,
+    watch: {
+      usePolling: true,
+    },
+    hmr: {
+      clientPort: 5173,
+      path: '/vite-hmr',
+    },
+    proxy: {
+      '/api': {
+        target: 'http://backend:8000',
+        changeOrigin: true,
+      },
+      '/admin': {
+        target: 'http://backend:8000',
+        changeOrigin: true,
+      },
+      '/media': {
+        target: 'http://backend:8000',
+        changeOrigin: true,
+      },
+      '/ws': {
+        target: 'http://backend:8000',
+        changeOrigin: true,
+        ws: true,
+      },
+    },
+  },
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url))

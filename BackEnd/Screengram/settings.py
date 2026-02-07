@@ -18,6 +18,10 @@ from typing import Any, Optional, Union
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Installation state: directory for installed.lock (Docker mounts volume here)
+# In Docker: /app/installation_state (volume); locally: BASE_DIR
+INSTALLATION_STATE_DIR = Path(os.environ.get('INSTALLATION_STATE_DIR', str(BASE_DIR)))
+
 # Load environment variables from .env file in project root (one level up from BackEnd)
 # BASE_DIR is BackEnd, so .env is in BASE_DIR.parent
 PROJECT_ROOT = BASE_DIR.parent
