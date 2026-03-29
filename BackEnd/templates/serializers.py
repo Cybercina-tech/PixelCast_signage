@@ -47,23 +47,27 @@ class ContentSerializer(serializers.ModelSerializer):
             actual_request = getattr(request, '_request', request)
             if hasattr(actual_request, 'build_absolute_uri'):
                 try:
-                    return actual_request.build_absolute_uri(obj.file_url)
+                    # file_url is stored like /media/... — build_absolute_uri handles it
+                    if obj.file_url.startswith('/'):
+                        return actual_request.build_absolute_uri(obj.file_url)
                 except Exception:
                     pass
         
-        # Fallback: construct absolute URL from settings
+        # Fallback: construct absolute URL from settings (no duplicate /media/)
         from django.conf import settings
         base_url = getattr(settings, 'BASE_URL', 'http://localhost:8000')
         media_url = getattr(settings, 'MEDIA_URL', '/media/')
-        
-        # Clean up the URL
-        clean_url = obj.file_url.lstrip('/')
-        
-        # If URL already starts with MEDIA_URL, use it as is
-        if obj.file_url.startswith(media_url):
-            clean_url = obj.file_url[len(media_url):].lstrip('/')
-        
-        # Construct full absolute URL
+        media_prefix = media_url.rstrip('/').lstrip('/')  # "media"
+
+        raw = obj.file_url.strip()
+        if raw.startswith('/'):
+            return f"{base_url.rstrip('/')}{raw}"
+
+        clean_url = raw.lstrip('/')
+        # Already "media/users/..." or full relative path under site root
+        if clean_url.startswith(f'{media_prefix}/'):
+            return f"{base_url.rstrip('/')}/{clean_url}"
+
         return f"{base_url.rstrip('/')}{media_url.rstrip('/')}/{clean_url}"
     
     def get_secure_url(self, obj):

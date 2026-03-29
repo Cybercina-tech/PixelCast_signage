@@ -443,9 +443,10 @@ class ContentStorageManager:
                 
                 # Construct file_url: /media/path/to/file
                 file_url = media_url_clean + clean_path
-                
-                # Ensure no double slashes (except after http:// or https://)
-                file_url = file_url.replace('//', '/')
+                # Collapse accidental duplicate slashes in path only (never strip "//" from https://)
+                if not (file_url.startswith('http://') or file_url.startswith('https://')):
+                    while '//' in file_url:
+                        file_url = file_url.replace('//', '/')
                 if not file_url.startswith('http') and not file_url.startswith('/'):
                     file_url = '/' + file_url
                 
@@ -604,9 +605,9 @@ class ContentStorageManager:
             clean_path = clean_path.lstrip('/')
         
         result_url = f"{media_url_clean}/{clean_path}"
-        
-        # Ensure no double slashes (except after http:// or https://)
-        result_url = result_url.replace('//', '/')
+        if not (result_url.startswith('http://') or result_url.startswith('https://')):
+            while '//' in result_url:
+                result_url = result_url.replace('//', '/')
         if not result_url.startswith('http') and not result_url.startswith('/'):
             result_url = '/' + result_url
         

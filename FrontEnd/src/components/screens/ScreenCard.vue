@@ -7,7 +7,7 @@
     }"
   >
     <!-- Status Indicator -->
-    <div class="absolute top-4 right-4 z-10">
+    <div class="absolute top-4 right-4 z-10 pointer-events-none">
       <StatusIndicator :status="status" />
     </div>
 
@@ -66,30 +66,35 @@
       </div>
     </div>
 
-    <!-- Hover Overlay with Actions -->
-    <div class="absolute inset-0 bg-base/95 dark:bg-black/80 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-400 flex items-center justify-center gap-3 z-20">
+    <!-- Hover overlay: wrap + padding so buttons never overlap or clip -->
+    <div
+      class="absolute inset-0 z-20 flex flex-wrap items-center justify-center content-center gap-2 sm:gap-3 px-4 py-5 sm:px-5 bg-base/95 dark:bg-black/80 backdrop-blur-sm opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity duration-400 overflow-y-auto"
+    >
       <button
+        type="button"
         @click="$emit('refresh', screen)"
-        class="btn-primary px-4 py-2 rounded-lg font-medium flex items-center gap-2"
+        class="btn-primary px-4 sm:px-5 py-2 rounded-lg font-medium inline-flex items-center justify-center gap-2 shrink-0 whitespace-nowrap"
         title="Refresh Screen"
       >
-        <ArrowPathIcon class="w-4 h-4" />
+        <ArrowPathIcon class="w-4 h-4 shrink-0" />
         Refresh
       </button>
       <button
+        type="button"
         @click="$emit('identify', screen)"
-        class="btn-secondary px-4 py-2 rounded-lg font-medium flex items-center gap-2"
+        class="btn-secondary px-4 sm:px-5 py-2 rounded-lg font-medium inline-flex items-center justify-center gap-2 shrink-0 whitespace-nowrap"
         title="Identify Screen"
       >
-        <FingerPrintIcon class="w-4 h-4" />
+        <FingerPrintIcon class="w-4 h-4 shrink-0" />
         Identify
       </button>
       <button
+        type="button"
         @click="$emit('edit', screen)"
-        class="btn-success px-4 py-2 rounded-lg font-medium flex items-center gap-2"
+        class="btn-success px-4 sm:px-5 py-2 rounded-lg font-medium inline-flex items-center justify-center gap-2 shrink-0 whitespace-nowrap"
         title="Edit Screen"
       >
-        <PencilIcon class="w-4 h-4" />
+        <PencilIcon class="w-4 h-4 shrink-0" />
         Edit
       </button>
     </div>

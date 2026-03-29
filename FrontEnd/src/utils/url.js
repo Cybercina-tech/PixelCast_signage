@@ -1,64 +1,36 @@
 /**
- * URL utility functions for handling media URLs
+ * URL helpers for media and API-relative resolution.
  */
+import { resolveMediaFileUrl, getBackendOrigin } from './mediaUrl'
 
-// Backend media base URL - for serving media files
-const MEDIA_BASE_URL = import.meta.env.VITE_MEDIA_BASE_URL || 'http://localhost:8000'
+export { getBackendOrigin }
+
+/** Site origin for media (matches Vite proxy / direct API host). */
+export const MEDIA_BASE_URL = import.meta.env.VITE_MEDIA_BASE_URL || getBackendOrigin()
 
 /**
- * Ensure URL is absolute (starts with http:// or https://)
- * If relative, prepend the backend media base URL
- * 
- * @param {string} url - The URL to make absolute
- * @returns {string|null} - Absolute URL or null if url is empty
+ * Ensure URL is absolute for <img> / <video> (same rules as resolveMediaFileUrl).
+ * @deprecated Prefer importing resolveMediaFileUrl from '@/utils/mediaUrl' directly.
  */
 export function ensureAbsoluteUrl(url) {
-  if (!url) {
-    return null
-  }
-  
-  // If already absolute, return as is
-  if (url.startsWith('http://') || url.startsWith('https://')) {
-    return url
-  }
-  
-  // If starts with /, it's a root-relative URL
-  if (url.startsWith('/')) {
-    return `${MEDIA_BASE_URL}${url}`
-  }
-  
-  // Otherwise, it's a relative URL - prepend media base URL with /
-  return `${MEDIA_BASE_URL}/${url}`
+  return resolveMediaFileUrl(url)
 }
 
 /**
- * Get content file URL - prefers absolute_file_url, falls back to file_url
- * 
- * @param {object} content - Content object with file_url and/or absolute_file_url
- * @returns {string|null} - Absolute URL or null
+ * Prefer serializer fields in order suitable for API content objects.
  */
 export function getContentFileUrl(content) {
   if (!content) {
     return null
   }
-  
-  // Prefer absolute_file_url if available
   if (content.absolute_file_url) {
-    return ensureAbsoluteUrl(content.absolute_file_url)
+    return resolveMediaFileUrl(content.absolute_file_url)
   }
-  
-  // Fallback to file_url
-  if (content.file_url) {
-    return ensureAbsoluteUrl(content.file_url)
-  }
-  
-  // Fallback to secure_url (for player context)
   if (content.secure_url) {
-    return ensureAbsoluteUrl(content.secure_url)
+    return resolveMediaFileUrl(content.secure_url)
   }
-  
+  if (content.file_url) {
+    return resolveMediaFileUrl(content.file_url)
+  }
   return null
 }
-
-export { MEDIA_BASE_URL }
-

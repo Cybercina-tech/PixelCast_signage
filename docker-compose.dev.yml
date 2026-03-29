@@ -25,3 +25,8 @@ services:
     volumes:
       - ./FrontEnd:/app
       - /app/node_modules
+    environment:
+      # Full block so merge does not drop base vars (CHOKIDAR, VITE_API_BASE_URL)
+      CHOKIDAR_USEPOLLING: "true"
+      VITE_API_BASE_URL: /api
+      VITE_PROXY_TARGET: http://backend:8000

@@ -133,6 +133,7 @@
 
 <script setup>
 import { ref, computed, watch } from 'vue'
+import { resolveMediaFileUrl } from '@/utils/mediaUrl'
 
 const props = defineProps({
   show: {
@@ -198,34 +199,7 @@ const fileExtension = computed(() => {
 const resolvedUrl = computed(() => {
   if (!props.fileUrl) return null
   if (error.value) return null
-  
-  const url = props.fileUrl.trim()
-  
-  // If already absolute URL, return as is
-  if (url.startsWith('http://') || url.startsWith('https://')) {
-    return url
-  }
-  
-  // If relative URL, prepend API base URL
-  const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api'
-  const baseUrl = apiBaseUrl.replace('/api', '')
-  
-  // Handle different URL formats
-  // If URL starts with /media/ or /static/, use as is
-  if (url.startsWith('/media/') || url.startsWith('/static/')) {
-    return `${baseUrl}${url}`
-  }
-  
-  // If URL starts with /, remove it and prepend base
-  const cleanUrl = url.startsWith('/') ? url.slice(1) : url
-  
-  // If URL already contains media path, use it directly
-  if (cleanUrl.includes('media/') || cleanUrl.includes('static/')) {
-    return `${baseUrl}/${cleanUrl}`
-  }
-  
-  // Default: prepend media path
-  return `${baseUrl}/media/${cleanUrl}`
+  return resolveMediaFileUrl(props.fileUrl)
 })
 
 // Methods

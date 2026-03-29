@@ -2,6 +2,27 @@ import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { fileURLToPath, URL } from 'node:url'
 import { execSync } from 'child_process'
+import fs from 'node:fs'
+
+/**
+ * Vite proxy must reach Django. Inside Docker, 127.0.0.1:8000 is wrong (backend is another container).
+ * Prefer VITE_PROXY_TARGET; else if /.dockerenv exists use service hostname; else local dev on host.
+ */
+function getBackendProxyTarget() {
+  if (process.env.VITE_PROXY_TARGET) {
+    return process.env.VITE_PROXY_TARGET
+  }
+  try {
+    if (fs.existsSync('/.dockerenv')) {
+      return 'http://backend:8000'
+    }
+  } catch {
+    /* non-blocking */
+  }
+  return 'http://127.0.0.1:8000'
+}
+
+const backendProxyTarget = getBackendProxyTarget()
 
 // Get Git info at build time
 function getGitVersion() {
@@ -33,19 +54,19 @@ export default defineConfig({
     },
     proxy: {
       '/api': {
-        target: 'http://backend:8000',
+        target: backendProxyTarget,
         changeOrigin: true,
       },
       '/admin': {
-        target: 'http://backend:8000',
+        target: backendProxyTarget,
         changeOrigin: true,
       },
       '/media': {
-        target: 'http://backend:8000',
+        target: backendProxyTarget,
         changeOrigin: true,
       },
       '/ws': {
-        target: 'http://backend:8000',
+        target: backendProxyTarget,
         changeOrigin: true,
         ws: true,
       },

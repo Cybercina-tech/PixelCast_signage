@@ -15,9 +15,10 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import path, include, re_path
 from django.conf import settings
 from django.conf.urls.static import static
+from django.views.static import serve
 from rest_framework.routers import DefaultRouter
 from log.views import ErrorLogViewSet
 
@@ -51,6 +52,24 @@ urlpatterns = [
     path('', include('api_docs.urls')),  # API documentation (Swagger/OpenAPI)
 ]
 
-# Serve media files during development
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+# Uploaded media: django.conf.urls.static.static() only registers routes when DEBUG=True.
+# With DEBUG=False (common in Docker/.env), that helper adds nothing, but nginx still
+# proxies /media/ to Django — without an explicit route, all media URLs return 404.
+_serve_local_disk_media = (
+    bool(getattr(settings, 'MEDIA_ROOT', None))
+    and bool(getattr(settings, 'MEDIA_URL', None))
+    and not getattr(settings, 'USE_S3_STORAGE', False)
+)
+
+if _serve_local_disk_media:
+    if settings.DEBUG:
+        urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    else:
+        media_prefix = settings.MEDIA_URL.lstrip('/')
+        urlpatterns += [
+            re_path(
+                rf'^{media_prefix}(?P<path>.*)$',
+                serve,
+                {'document_root': settings.MEDIA_ROOT},
+            ),
+        ]

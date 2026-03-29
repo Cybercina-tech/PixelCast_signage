@@ -146,16 +146,18 @@
                   </button>
                 </div>
 
-                <!-- Media Grid with Sidebar -->
-                <div v-else class="flex gap-6">
+                <!-- Media Grid with Sidebar: items-start prevents the gallery column stretching to sidebar height -->
+                <div v-else class="flex gap-6 items-start">
                   <!-- Media Grid -->
-                  <div class="flex-1 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 max-h-[60vh] overflow-y-auto">
+                  <div
+                    class="flex-1 min-h-0 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 max-h-[60vh] overflow-y-auto content-start items-start auto-rows-auto"
+                  >
                     <div
                       v-for="content in filteredContents"
                       :key="content.id"
                       @click="selectContent(content)"
                       :class="[
-                        'relative group cursor-pointer rounded-lg overflow-hidden transition-all duration-400 media-thumbnail',
+                        'relative group cursor-pointer rounded-lg overflow-hidden transition-all duration-400 media-thumbnail h-fit max-w-full self-start',
                         selectedContentId === content.id
                           ? 'media-thumbnail-selected'
                           : 'media-thumbnail-default'
@@ -178,7 +180,7 @@
                         <!-- Selection Indicator - Navy Blue -->
                         <div
                           v-if="selectedContentId === content.id"
-                          class="absolute inset-0 flex items-center justify-center"
+                          class="absolute inset-0 z-30 flex items-center justify-center pointer-events-none"
                           :style="{ background: 'rgba(9, 132, 227, 0.15)' }"
                         >
                           <div class="w-8 h-8 rounded-full flex items-center justify-center" style="background: var(--accent-color);">
@@ -189,7 +191,7 @@
                         </div>
 
                         <!-- Type Badge -->
-                        <div class="absolute top-2 right-2">
+                        <div class="absolute top-2 right-2 z-10">
                           <span
                             :class="[
                               'px-2 py-1 rounded text-xs font-medium backdrop-blur-sm',
@@ -200,19 +202,25 @@
                           </span>
                         </div>
 
-                        <!-- Delete Button (on hover) -->
-                        <button
-                          @click.stop="handleDeleteContent(content)"
-                          class="absolute top-2 left-2 w-7 h-7 bg-red-500/80 hover:bg-red-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-400 backdrop-blur-sm"
-                          title="Delete"
+                        <!-- Hover overlay: padded, wrap-safe (match ScreenCard / Contents list) -->
+                        <div
+                          class="absolute inset-0 z-20 flex flex-wrap items-center justify-center content-center gap-2 px-3 py-4 sm:px-4 bg-black/50 backdrop-blur-sm opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transition-opacity duration-400 overflow-y-auto"
                         >
-                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                          </svg>
-                        </button>
+                          <button
+                            type="button"
+                            @click.stop="handleDeleteContent(content)"
+                            class="px-4 sm:px-5 py-2 bg-red-600/90 hover:bg-red-600 text-white rounded-lg text-sm font-medium inline-flex items-center justify-center gap-2 shrink-0 whitespace-nowrap transition-colors duration-200"
+                            title="Delete"
+                          >
+                            <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                            Delete
+                          </button>
+                        </div>
 
                         <!-- Frosted Glass File Name Overlay -->
-                        <div class="absolute bottom-0 left-0 right-0 p-2 media-name-overlay">
+                        <div class="absolute bottom-0 left-0 right-0 z-10 p-2 media-name-overlay pointer-events-none">
                           <p class="text-xs text-primary font-medium truncate" :title="content.name">
                             {{ content.name || 'Untitled' }}
                           </p>
