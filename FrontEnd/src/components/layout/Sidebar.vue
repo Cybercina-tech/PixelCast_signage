@@ -172,6 +172,7 @@ import {
 } from '@heroicons/vue/24/outline'
 import { useAuthStore } from '@/stores/auth'
 import { useSidebarStore } from '@/stores/sidebar'
+import { isDeveloperOrSuperuser } from '@/utils/permissions'
 import ErrorDashboard from '@/components/admin/ErrorDashboard.vue'
 
 defineProps({
@@ -213,10 +214,7 @@ const getIconComponent = (iconName) => {
   return iconMap[iconName] || HomeIcon
 }
 
-const isDeveloper = computed(() => {
-  if (!authStore.user) return false
-  return authStore.user.role === 'Developer'
-})
+const isDeveloper = computed(() => isDeveloperOrSuperuser(authStore.user))
 
 
 const isActive = (path) => {

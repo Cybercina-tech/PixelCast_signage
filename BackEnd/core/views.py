@@ -32,7 +32,11 @@ class RoleBasedPermission(BasePermission):
             return True
         
         user_role = getattr(request.user, 'role', None)
-        return user_role in self.required_roles
+        if user_role in self.required_roles:
+            return True
+        if 'Developer' in self.required_roles and getattr(request.user, 'is_superuser', False):
+            return True
+        return False
     
     def has_object_permission(self, request, view, obj):
         # For object-level permissions, check user role
@@ -43,7 +47,11 @@ class RoleBasedPermission(BasePermission):
             return True
         
         user_role = getattr(request.user, 'role', None)
-        return user_role in self.required_roles
+        if user_role in self.required_roles:
+            return True
+        if 'Developer' in self.required_roles and getattr(request.user, 'is_superuser', False):
+            return True
+        return False
 
 
 @extend_schema_view(
@@ -128,8 +136,7 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
         user = self.request.user
         queryset = AuditLog.objects.all()
 
-        user_role = getattr(user, 'role', None)
-        if user_role == 'Developer':
+        if user.is_developer():
             pass
         else:
             queryset = queryset.filter(user=user)
@@ -459,8 +466,7 @@ class SystemBackupViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['post'])
     def cleanup(self, request):
         """Cleanup expired backups."""
-        user_role = getattr(request.user, 'role', None)
-        if user_role != 'Developer':
+        if not request.user.is_developer():
             return Response(
                 {'error': 'Permission denied'},
                 status=status.HTTP_403_FORBIDDEN

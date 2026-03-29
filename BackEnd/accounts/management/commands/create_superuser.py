@@ -1,7 +1,8 @@
 """
-Management command to create a superuser.
+Interactive convenience wrapper (same outcome as ``python manage.py createsuperuser``).
 
-This is a convenience command that creates a Developer (superuser) account.
+``User.objects.create_superuser`` always sets role=Developer, is_staff, and is_superuser.
+Use either ``createsuperuser`` or this command — both align with ScreenGram RBAC.
 
 Usage:
     python manage.py create_superuser
@@ -12,7 +13,7 @@ from accounts.management.commands.create_user import Command as CreateUserComman
 
 
 class Command(BaseCommand):
-    help = 'Create a Developer superuser (convenience wrapper for create_user)'
+    help = 'Create a Developer superuser (alias-style wrapper; prefer createsuperuser)'
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -69,21 +70,17 @@ class Command(BaseCommand):
             self.stdout.write(self.style.ERROR(f'Password validation failed: {"; ".join(e.messages)}'))
             return
         
-        # Create user
+        # Create user (UserManager.create_superuser sets Developer + staff + superuser)
         try:
-            user = User.objects.create_user(
+            User.objects.create_superuser(
                 username=username,
                 email=email,
                 password=password,
-                role='Developer',
-                is_active=True,
-                is_staff=True,
-                is_superuser=True
             )
-            
+
             self.stdout.write(
                 self.style.SUCCESS(
-                    f'Successfully created Developer user "{username}"'
+                    f'Successfully created Developer superuser "{username}"'
                 )
             )
         except Exception as e:

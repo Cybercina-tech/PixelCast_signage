@@ -1,5 +1,5 @@
 from django.db import models
-from django.contrib.auth.models import AbstractUser, Group, Permission
+from django.contrib.auth.models import AbstractUser, Group, Permission, UserManager as DjangoUserManager
 from django.core.validators import RegexValidator, EmailValidator
 from django.core.exceptions import ValidationError
 from django.utils import timezone
@@ -18,6 +18,18 @@ phone_validator = RegexValidator(
 )
 
 email_validator = EmailValidator()
+
+
+class UserManager(DjangoUserManager):
+    """Ensures Django superusers always get Developer role (matches RBAC hierarchy)."""
+
+    use_in_migrations = True
+
+    def create_superuser(self, username, email=None, password=None, **extra_fields):
+        extra_fields['is_staff'] = True
+        extra_fields['is_superuser'] = True
+        extra_fields['role'] = 'Developer'
+        return super().create_superuser(username, email, password, **extra_fields)
 
 
 class User(AbstractUser):
@@ -111,6 +123,8 @@ class User(AbstractUser):
         default=timezone.now,
         help_text="Date and time when user account was created"
     )
+
+    objects = UserManager()
     
     class Meta:
         db_table = 'accounts_user'
@@ -131,7 +145,7 @@ class User(AbstractUser):
     # Role Helper Methods
     def is_developer(self):
         """Top tier: full system access (god mode)."""
-        return self.role == 'Developer'
+        return self.role == 'Developer' or self.is_superuser
 
     def is_superadmin(self):
         """Alias for is_developer() — backward compatible name."""
@@ -143,6 +157,8 @@ class User(AbstractUser):
 
     def is_employee(self):
         """Operational tier: screens, schedules, media only."""
+        if self.is_superuser:
+            return False
         return self.role == 'Employee'
 
     def is_admin(self):
@@ -286,6 +302,13 @@ class User(AbstractUser):
     
     # Override save to ensure email is unique and lowercase
     def save(self, *args, **kwargs):
+        update_fields = kwargs.get('update_fields')
+        if self.is_superuser and (self.role != 'Developer' or not self.is_staff):
+            self.role = 'Developer'
+            self.is_staff = True
+            if update_fields is not None:
+                kwargs['update_fields'] = list(set(update_fields) | {'role', 'is_staff'})
+
         # Run clean validation
         self.full_clean()
         

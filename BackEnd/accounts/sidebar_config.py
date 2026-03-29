@@ -116,10 +116,10 @@ def get_user_permissions(user):
         return set()
     
     role = user.role
-    permissions = set(ROLE_PERMISSIONS.get(role, []))
-
-    if role == 'Developer':
+    if user.is_superuser or role == 'Developer':
         permissions = set(PERMISSIONS.values())
+    else:
+        permissions = set(ROLE_PERMISSIONS.get(role, []))
 
     return permissions
 

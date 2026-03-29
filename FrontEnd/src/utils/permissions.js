@@ -19,6 +19,16 @@ const ROUTE_PERMISSIONS = {
   '/settings': ['view_settings'],
 }
 
+/**
+ * Django superusers should match Developer in the UI; aligns with backend User.is_developer().
+ * @param {Object|null|undefined} user
+ * @returns {boolean}
+ */
+export function isDeveloperOrSuperuser(user) {
+  if (!user) return false
+  return user.role === 'Developer' || user.is_superuser === true
+}
+
 const ROLE_PERMISSIONS = {
   Developer: [
     'view_dashboard',
@@ -57,7 +67,13 @@ const ROLE_PERMISSIONS = {
  * @returns {Set<string>}
  */
 export function getUserPermissions(user) {
-  if (!user || !user.role) {
+  if (!user) {
+    return new Set()
+  }
+  if (isDeveloperOrSuperuser(user)) {
+    return new Set(ROLE_PERMISSIONS.Developer)
+  }
+  if (!user.role) {
     return new Set()
   }
 
@@ -68,7 +84,13 @@ export function getUserPermissions(user) {
 }
 
 export function hasPermission(user, permission) {
-  if (!user || !user.role) {
+  if (!user) {
+    return false
+  }
+  if (isDeveloperOrSuperuser(user)) {
+    return ROLE_PERMISSIONS.Developer.includes(permission)
+  }
+  if (!user.role) {
     return false
   }
   return getUserPermissions(user).has(permission)
@@ -78,12 +100,15 @@ export function hasPermission(user, permission) {
  * Match longest registered route prefix (supports nested paths like /screens/:id).
  */
 export function canAccessRoute(user, routePath) {
-  if (!user || !user.role) {
+  if (!user) {
     return false
   }
 
-  if (user.role === 'Developer') {
+  if (isDeveloperOrSuperuser(user)) {
     return true
+  }
+  if (!user.role) {
+    return false
   }
 
   const path = routePath.split('?')[0]
@@ -101,7 +126,13 @@ export function canAccessRoute(user, routePath) {
 }
 
 export function hasAnyPermission(user, permissions) {
-  if (!user || !user.role || !permissions || permissions.length === 0) {
+  if (!user || !permissions || permissions.length === 0) {
+    return false
+  }
+  if (isDeveloperOrSuperuser(user)) {
+    return permissions.some((perm) => ROLE_PERMISSIONS.Developer.includes(perm))
+  }
+  if (!user.role) {
     return false
   }
 
@@ -110,7 +141,13 @@ export function hasAnyPermission(user, permissions) {
 }
 
 export function hasAllPermissions(user, permissions) {
-  if (!user || !user.role || !permissions || permissions.length === 0) {
+  if (!user || !permissions || permissions.length === 0) {
+    return false
+  }
+  if (isDeveloperOrSuperuser(user)) {
+    return permissions.every((perm) => ROLE_PERMISSIONS.Developer.includes(perm))
+  }
+  if (!user.role) {
     return false
   }
 

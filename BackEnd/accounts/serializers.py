@@ -1,9 +1,13 @@
 from rest_framework import serializers
 from django.contrib.auth.password_validation import validate_password
-from django.contrib.auth import authenticate
+from django.contrib.auth import authenticate, get_user_model
 from django.core.exceptions import ValidationError
+from rest_framework.exceptions import AuthenticationFailed
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer, TokenRefreshSerializer
+from rest_framework_simplejwt.settings import api_settings as jwt_api_settings
 import logging
 from .models import User
+from .tokens import ScreenGramRefreshToken
 
 logger = logging.getLogger(__name__)
 
@@ -373,3 +377,45 @@ class ChangePasswordSerializer(serializers.Serializer):
             raise serializers.ValidationError("Old password is incorrect.")
         
         return value
+
+
+class ScreenGramTokenObtainPairSerializer(TokenObtainPairSerializer):
+    token_class = ScreenGramRefreshToken
+
+
+class ScreenGramTokenRefreshSerializer(TokenRefreshSerializer):
+    token_class = ScreenGramRefreshToken
+
+    def validate(self, attrs):
+        refresh = self.token_class(attrs["refresh"])
+
+        user_id = refresh.payload.get(jwt_api_settings.USER_ID_CLAIM, None)
+        if user_id and (
+            user := get_user_model().objects.get(
+                **{jwt_api_settings.USER_ID_FIELD: user_id}
+            )
+        ):
+            if not jwt_api_settings.USER_AUTHENTICATION_RULE(user):
+                raise AuthenticationFailed(
+                    self.error_messages["no_active_account"],
+                    "no_active_account",
+                )
+            refresh["role"] = user.role
+
+        data = {"access": str(refresh.access_token)}
+
+        if jwt_api_settings.ROTATE_REFRESH_TOKENS:
+            if jwt_api_settings.BLACKLIST_AFTER_ROTATION:
+                try:
+                    refresh.blacklist()
+                except AttributeError:
+                    pass
+
+            refresh.set_jti()
+            refresh.set_exp()
+            refresh.set_iat()
+            refresh.outstand()
+
+            data["refresh"] = str(refresh)
+
+        return data

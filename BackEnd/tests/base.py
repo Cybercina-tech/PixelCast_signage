@@ -174,9 +174,9 @@ class BaseAPITestCase(APITestCase):
     
     def get_jwt_token(self, username='testuser', password='testpass123'):
         """Get JWT token for a user."""
-        from rest_framework_simplejwt.tokens import RefreshToken
+        from accounts.tokens import ScreenGramRefreshToken
         user = User.objects.get(username=username)
-        refresh = RefreshToken.for_user(user)
+        refresh = ScreenGramRefreshToken.for_user(user)
         return str(refresh.access_token)
     
     def authenticate_with_token(self, token):

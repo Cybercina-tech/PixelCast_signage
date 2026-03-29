@@ -1,6 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { canAccessRoute } from '@/utils/permissions'
+import { canAccessRoute, isDeveloperOrSuperuser } from '@/utils/permissions'
 
 // Public pages
 import Landing from '../pages/Landing.vue'
@@ -345,7 +345,10 @@ router.beforeEach(async (to, from, next) => {
           // UI-only role check for route guard (backend API will also enforce)
             if (to.meta.requiresRole) {
               const userRole = authStore.user?.role
-              if (userRole !== 'Developer' && !to.meta.requiresRole.includes(userRole)) {
+              if (
+                !isDeveloperOrSuperuser(authStore.user) &&
+                !to.meta.requiresRole.includes(userRole)
+              ) {
                 next({ name: 'forbidden' })
                 return
               }
@@ -372,7 +375,10 @@ router.beforeEach(async (to, from, next) => {
   // Backend API will enforce actual permissions
   if (to.meta.requiresRole && authStore.isAuthenticated && authStore.user) {
     const userRole = authStore.user?.role
-    if (userRole !== 'Developer' && !to.meta.requiresRole.includes(userRole)) {
+    if (
+      !isDeveloperOrSuperuser(authStore.user) &&
+      !to.meta.requiresRole.includes(userRole)
+    ) {
       next({ name: 'forbidden' })
       return
     }
@@ -390,6 +396,7 @@ router.beforeEach(async (to, from, next) => {
   if (
     authStore.isAuthenticated &&
     authStore.user?.role === 'Employee' &&
+    !authStore.user?.is_superuser &&
     to.name === 'dashboard'
   ) {
     next({ name: 'screens' })

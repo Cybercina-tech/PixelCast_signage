@@ -353,16 +353,17 @@ def create_admin(request):
             created = False
             logger.info(f"Admin user updated: {username}")
         else:
-            # Create new superuser (first-install Developer)
-            user = User.objects.create_superuser(
+            # Single create: Developer + staff + superuser (avoid default Employee then patch)
+            user = User.objects.create_user(
                 username=username,
                 email=email,
                 password=password,
                 first_name=first_name,
                 last_name=last_name,
+                role='Developer',
+                is_staff=True,
+                is_superuser=True,
             )
-            user.role = 'Developer'
-            user.save(update_fields=['role'])
             created = True
             logger.info(f"Admin user created: {username}")
         

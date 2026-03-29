@@ -4,7 +4,7 @@ from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.views import APIView
-from rest_framework_simplejwt.tokens import RefreshToken
+from .tokens import ScreenGramRefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from django.contrib.auth import logout
 from django.core.exceptions import PermissionDenied, ValidationError
@@ -517,8 +517,8 @@ def login_view(request):
         # Update last_seen
         user.update_last_seen()
         
-        # Generate JWT tokens
-        refresh = RefreshToken.for_user(user)
+        # Generate JWT tokens (access + refresh include role claim)
+        refresh = ScreenGramRefreshToken.for_user(user)
         
         # Log successful login
         try:
@@ -540,6 +540,8 @@ def login_view(request):
                 'full_name': user.full_name,
                 'role': user.role,
                 'role_display': user.get_role_display(),
+                'is_staff': user.is_staff,
+                'is_superuser': user.is_superuser,
             },
             'tokens': {
                 'refresh': str(refresh),
@@ -659,7 +661,7 @@ def signup_view(request):
             logger.error(f'Failed to log signup audit: {e}')
         
         # Generate JWT tokens for auto-login
-        refresh = RefreshToken.for_user(user)
+        refresh = ScreenGramRefreshToken.for_user(user)
         
         return Response({
             'status': 'success',
@@ -671,6 +673,8 @@ def signup_view(request):
                 'full_name': user.full_name,
                 'role': user.role,
                 'role_display': user.get_role_display(),
+                'is_staff': user.is_staff,
+                'is_superuser': user.is_superuser,
             },
             'tokens': {
                 'refresh': str(refresh),
@@ -694,7 +698,7 @@ def logout_view(request):
     try:
         refresh_token = request.data.get('refresh_token')
         if refresh_token:
-            token = RefreshToken(refresh_token)
+            token = ScreenGramRefreshToken(refresh_token)
             token.blacklist()
         
         # Log logout action

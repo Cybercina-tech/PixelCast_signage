@@ -38,6 +38,34 @@
             Go back
           </button>
         </div>
+
+        <p class="text-xs text-slate-500 mt-4 mb-2 leading-relaxed">
+          Wrong account? Sign out and log in with a user that has access (e.g. a Developer).
+        </p>
+        <button
+          type="button"
+          :disabled="loggingOut"
+          class="cosmic-logout-btn w-full sm:w-auto sm:min-w-[200px] mx-auto inline-flex items-center justify-center gap-2 py-3 px-6 rounded-xl font-semibold text-slate-200 border border-white/15 bg-white/[0.03] backdrop-blur-sm transition-all duration-300 min-h-[48px] disabled:opacity-50 disabled:cursor-not-allowed"
+          @click="handleLogout"
+        >
+          <template v-if="loggingOut">
+            <svg
+              class="animate-spin h-5 w-5 text-slate-300"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+            </svg>
+            <span>Signing out…</span>
+          </template>
+          <template v-else>
+            <ArrowRightOnRectangleIcon class="w-5 h-5" />
+            <span>Log out</span>
+          </template>
+        </button>
       </div>
 
       <router-link
@@ -52,17 +80,39 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
-import { useRoute } from 'vue-router'
-import { ShieldExclamationIcon, HomeIcon, ArrowLeftIcon } from '@heroicons/vue/24/outline'
+import { computed, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
+import { useNotification } from '@/composables/useNotification'
+import { ShieldExclamationIcon, HomeIcon, ArrowLeftIcon, ArrowRightOnRectangleIcon } from '@heroicons/vue/24/outline'
 
 const route = useRoute()
+const router = useRouter()
+const authStore = useAuthStore()
+const notify = useNotification()
+
+const loggingOut = ref(false)
 
 const message = computed(() => {
   const q = route.query.reason
   if (typeof q === 'string' && q.trim()) return q
   return 'This area is restricted by your role. If you need access, ask a Developer on your team.'
 })
+
+async function handleLogout() {
+  loggingOut.value = true
+  try {
+    await authStore.logout()
+    notify.success('Logged out successfully', { duration: 3200 })
+    await router.replace({ name: 'login' })
+  } catch (e) {
+    console.error(e)
+    await authStore.logout()
+    await router.replace({ name: 'login' })
+  } finally {
+    loggingOut.value = false
+  }
+}
 </script>
 
 <style scoped>
@@ -166,5 +216,20 @@ const message = computed(() => {
 }
 .cosmic-btn:hover {
   box-shadow: 0 8px 30px rgba(99, 102, 241, 0.45), 0 0 40px rgba(34, 211, 238, 0.15);
+}
+
+.cosmic-logout-btn:hover:not(:disabled) {
+  border-color: rgba(34, 211, 238, 0.45);
+  color: rgb(207 250 254);
+  box-shadow:
+    0 0 0 1px rgba(34, 211, 238, 0.2),
+    0 8px 32px -8px rgba(34, 211, 238, 0.25),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+.cosmic-logout-btn:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px rgba(99, 102, 241, 0.45),
+    0 8px 32px -8px rgba(34, 211, 238, 0.2);
 }
 </style>

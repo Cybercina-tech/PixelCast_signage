@@ -145,16 +145,17 @@ import AppLayout from '@/components/layout/AppLayout.vue'
 import Card from '@/components/common/Card.vue'
 import Table from '@/components/common/Table.vue'
 import Modal from '@/components/common/Modal.vue'
+import { isDeveloperOrSuperuser } from '@/utils/permissions'
 
 const router = useRouter()
 const authStore = useAuthStore()
 const usersStore = useUsersStore()
 const notify = useNotification()
 
-const isDeveloper = computed(() => authStore.user?.role === 'Developer')
+const isDeveloper = computed(() => isDeveloperOrSuperuser(authStore.user))
 
 const roleOptions = computed(() => {
-  if (authStore.user?.role === 'Developer') {
+  if (isDeveloperOrSuperuser(authStore.user)) {
     return [
       { value: 'Developer', label: 'Developer' },
       { value: 'Manager', label: 'Manager' },
