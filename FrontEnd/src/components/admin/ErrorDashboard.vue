@@ -1,7 +1,7 @@
 <template>
   <div
     :class="[
-      'fixed right-0 top-0 h-full bg-secondary/95 dark:bg-slate-900/95 backdrop-blur-lg border-l border-border-color transition-transform duration-300 z-50',
+      'fixed right-0 top-0 h-full bg-card/95 dark:bg-slate-900/95 backdrop-blur-lg border-l border-border-color transition-transform duration-300 z-50',
       isOpen ? 'translate-x-0' : 'translate-x-full',
     ]"
     class="w-96 max-w-[90vw] flex flex-col"

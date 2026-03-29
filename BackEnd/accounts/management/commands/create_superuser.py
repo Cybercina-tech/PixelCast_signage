@@ -2,7 +2,7 @@
 Interactive convenience wrapper (same outcome as ``python manage.py createsuperuser``).
 
 ``User.objects.create_superuser`` always sets role=Developer, is_staff, and is_superuser.
-Use either ``createsuperuser`` or this command — both align with ScreenGram RBAC.
+Use either ``createsuperuser`` or this command — both align with PixelCast Signage RBAC.
 
 Usage:
     python manage.py create_superuser

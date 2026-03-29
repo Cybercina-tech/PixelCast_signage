@@ -15,7 +15,7 @@
                 <h3 class="text-xl font-semibold text-primary">Media Library</h3>
                 <button
                   @click="$emit('close')"
-                  class="text-muted hover:text-primary transition-colors duration-400 p-2 rounded-lg hover:bg-secondary"
+                  class="text-muted hover:text-primary transition-colors duration-400 p-2 rounded-lg hover:bg-card"
                 >
                   <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -131,7 +131,7 @@
 
                 <!-- Empty State -->
                 <div v-else-if="filteredContents.length === 0" class="text-center py-12">
-                  <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-secondary mb-4">
+                  <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-card mb-4">
                     <svg class="w-8 h-8 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
@@ -162,7 +162,7 @@
                       ]"
                     >
                       <!-- Thumbnail/Preview -->
-                      <div class="aspect-square bg-secondary relative overflow-hidden">
+                      <div class="aspect-square bg-card relative overflow-hidden">
                         <!-- Smart Media Preview -->
                         <SmartMediaPreview
                           :file-url="content.secure_url || content.absolute_file_url || content.file_url"
@@ -241,7 +241,7 @@
                       
                       <div v-if="selectedContent" class="space-y-4">
                         <!-- Preview -->
-                        <div class="aspect-video bg-secondary rounded-lg overflow-hidden mb-4">
+                        <div class="aspect-video bg-card rounded-lg overflow-hidden mb-4">
                           <SmartMediaPreview
                             :file-url="selectedContent.secure_url || selectedContent.absolute_file_url || selectedContent.file_url"
                             :file-type="selectedContent.type"
@@ -335,13 +335,13 @@
                     <div
                       v-for="file in uploadingFiles"
                       :key="file.id"
-                      class="bg-secondary rounded-lg p-4"
+                      class="bg-card rounded-lg p-4"
                     >
                       <div class="flex items-center justify-between mb-2">
                         <span class="text-sm text-primary font-medium truncate flex-1">{{ file.name }}</span>
                         <span class="text-xs text-muted ml-2">{{ Math.round(file.progress) }}%</span>
                       </div>
-                      <div class="w-full bg-secondary rounded-full h-2" style="background: rgba(0, 0, 0, 0.1);">
+                      <div class="w-full bg-card rounded-full h-2" style="background: rgba(0, 0, 0, 0.1);">
                         <div
                           class="h-2 rounded-full transition-all duration-300"
                           :style="{ width: `${file.progress}%`, background: 'var(--accent-color)' }"
@@ -1085,7 +1085,7 @@ onMounted(() => {
 /* Upload Zone - Dashed Border with Warm Grey */
 .upload-zone-default {
   border: 2px dashed var(--border-color);
-  background: var(--bg-secondary);
+  background: var(--card-bg);
   transition: all 0.4s ease;
 }
 

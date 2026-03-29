@@ -70,7 +70,7 @@
             </div>
             
             <!-- Footer Actions -->
-            <div class="bg-secondary px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse border-t border-border-color">
+            <div class="bg-card px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse border-t border-border-color">
               <button
                 type="button"
                 @click="onConfirm"

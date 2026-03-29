@@ -59,14 +59,14 @@
       <div class="flex-1 flex overflow-hidden">
         <!-- Left Sidebar: Widget Library -->
         <div class="hidden lg:block w-64 bg-card border-r border-border-color overflow-y-auto custom-scrollbar scroll-container">
-          <div class="bg-secondary border-b border-border-color px-4 py-3 sticky top-0 z-10 backdrop-blur-sm">
+          <div class="bg-card border-b border-border-color px-4 py-3 sticky top-0 z-10 backdrop-blur-sm">
             <h2 class="text-lg font-semibold text-primary">Widget Library</h2>
           </div>
           <div class="p-4">
             <div class="space-y-2">
               <button
                 @click="addWidget('text')"
-                class="w-full px-4 py-3 bg-secondary hover:bg-secondary active:scale-95 rounded-lg text-left text-primary transition-all duration-400 flex items-center gap-2 font-medium border border-border-color hover:border-accent-color/50"
+                class="w-full px-4 py-3 bg-card hover:bg-card active:scale-95 rounded-lg text-left text-primary transition-all duration-400 flex items-center gap-2 font-medium border border-border-color hover:border-accent-color/50"
                 style="--accent-color: var(--accent-color);"
               >
                 <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -137,7 +137,7 @@
                     'px-3 py-2.5 rounded-lg cursor-pointer transition-all duration-200 text-sm border',
                     selectedWidgetId === widget.id
                       ? 'bg-accent-color text-white border-accent-color shadow-lg'
-                      : 'bg-secondary hover:bg-secondary border-border-color text-primary',
+                      : 'bg-card hover:bg-card border-border-color text-primary',
                     'dark:bg-gray-700/50 dark:hover:bg-gray-700 dark:border-gray-600 dark:text-gray-300',
                     draggingWidgetId === widget.id ? 'opacity-50' : '',
                     dragOverWidgetId === widget.id ? 'ring-2 ring-blue-400' : ''
@@ -309,7 +309,7 @@
 
         <!-- Right Sidebar: Properties Panel -->
         <div class="hidden lg:block w-80 bg-card border-l border-border-color overflow-y-auto custom-scrollbar scroll-container">
-          <div class="bg-secondary border-b border-border-color px-4 py-3 sticky top-0 z-10 backdrop-blur-sm">
+          <div class="bg-card border-b border-border-color px-4 py-3 sticky top-0 z-10 backdrop-blur-sm">
             <h2 class="text-lg font-semibold text-primary">Properties</h2>
           </div>
           <div class="p-4">

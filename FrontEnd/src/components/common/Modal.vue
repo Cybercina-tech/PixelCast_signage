@@ -17,7 +17,7 @@
                 <h3 class="text-lg font-semibold text-primary">{{ title }}</h3>
                 <button
                   @click="$emit('close')"
-                  class="text-muted hover:text-primary transition-colors duration-200 p-1 rounded-lg hover:bg-secondary"
+                  class="text-muted hover:text-primary transition-colors duration-200 p-1 rounded-lg hover:bg-card"
                 >
                   <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -26,7 +26,7 @@
               </div>
               <slot></slot>
             </div>
-            <div v-if="showFooter" class="bg-secondary px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse border-t border-border-color">
+            <div v-if="showFooter" class="bg-card px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse border-t border-border-color">
               <slot name="footer">
                 <Button
                   variant="primary"

@@ -37,19 +37,19 @@
         <div v-if="loading && !hasData" class="space-y-6 md:space-y-8">
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <div v-for="i in 4" :key="i" class="card-base rounded-2xl p-6 animate-pulse">
-              <div class="h-4 bg-secondary rounded w-24 mb-4"></div>
-              <div class="h-8 bg-secondary rounded w-16"></div>
+              <div class="h-4 bg-card rounded w-24 mb-4"></div>
+              <div class="h-8 bg-card rounded w-16"></div>
             </div>
           </div>
           <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div class="card-base rounded-2xl p-6 animate-pulse">
-              <div class="h-6 bg-secondary rounded w-32 mb-6"></div>
-              <div class="h-48 bg-secondary rounded"></div>
+              <div class="h-6 bg-card rounded w-32 mb-6"></div>
+              <div class="h-48 bg-card rounded"></div>
             </div>
             <div class="card-base rounded-2xl p-6 animate-pulse">
-              <div class="h-6 bg-secondary rounded w-32 mb-6"></div>
+              <div class="h-6 bg-card rounded w-32 mb-6"></div>
               <div class="space-y-4">
-                <div v-for="i in 5" :key="i" class="h-16 bg-secondary rounded"></div>
+                <div v-for="i in 5" :key="i" class="h-16 bg-card rounded"></div>
               </div>
             </div>
           </div>
@@ -69,7 +69,7 @@
                       {{ stats.totalScreens }}
                     </p>
                   </div>
-                  <div class="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center transition-colors">
+                  <div class="w-12 h-12 rounded-xl bg-card flex items-center justify-center transition-colors">
                     <TvIcon class="w-6 h-6 text-accent-color" style="color: var(--accent-color);" />
                   </div>
                 </div>
@@ -100,7 +100,7 @@
                       {{ stats.onlineScreens }}
                     </p>
                   </div>
-                  <div class="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center transition-colors">
+                  <div class="w-12 h-12 rounded-xl bg-card flex items-center justify-center transition-colors">
                     <div class="w-3 h-3 rounded-full bg-forest-green animate-pulse"></div>
                   </div>
                 </div>
@@ -131,7 +131,7 @@
                       {{ storageUsedFormatted }}
                     </p>
                     <!-- Glass-morphic Progress Bar -->
-                    <div class="w-full h-3 bg-secondary rounded-full overflow-hidden backdrop-blur-sm" style="background: rgba(0, 0, 0, 0.05);">
+                    <div class="w-full h-3 bg-card rounded-full overflow-hidden backdrop-blur-sm" style="background: rgba(0, 0, 0, 0.05);">
                       <div
                         class="h-full rounded-full transition-all duration-1000 ease-out glass-progress-bar"
                         :style="{ width: `${storagePercentage}%` }"
@@ -139,7 +139,7 @@
                     </div>
                     <p class="text-xs text-muted mt-1">{{ storageUsedMB }} MB / {{ storageLimitMB }} MB</p>
                   </div>
-                  <div class="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center transition-colors ml-4">
+                  <div class="w-12 h-12 rounded-xl bg-card flex items-center justify-center transition-colors ml-4">
                     <ServerIcon class="w-6 h-6 text-accent-color" style="color: var(--accent-color);" />
                   </div>
                 </div>
@@ -156,7 +156,7 @@
                       {{ stats.activeTemplates }}
                     </p>
                   </div>
-                  <div class="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center transition-colors">
+                  <div class="w-12 h-12 rounded-xl bg-card flex items-center justify-center transition-colors">
                     <DocumentTextIcon class="w-6 h-6 text-accent-color" style="color: var(--accent-color);" />
                   </div>
                 </div>
@@ -261,7 +261,7 @@
                 <div
                   v-for="activity in activities"
                   :key="activity.id"
-                  class="flex items-start space-x-3 p-3 bg-secondary rounded-xl hover:bg-secondary transition-all duration-400"
+                  class="flex items-start space-x-3 p-3 bg-surface-inset rounded-xl border border-border-color/60 hover:border-border-color transition-all duration-400"
                 >
                   <div class="flex-shrink-0 mt-1">
                     <div
@@ -291,10 +291,10 @@
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
               <router-link
                 to="/templates?action=create"
-                class="group flex items-center space-x-4 p-4 bg-secondary hover:bg-secondary border border-border-color hover:border-accent-color/50 rounded-xl transition-all duration-400"
+                class="group flex items-center space-x-4 p-4 bg-surface-inset hover:bg-surface-inset border border-border-color hover:border-accent-color/50 rounded-xl transition-all duration-400"
                 style="--accent-color: var(--accent-color);"
               >
-                <div class="w-12 h-12 rounded-xl bg-secondary group-hover:bg-secondary flex items-center justify-center transition-colors">
+                <div class="w-12 h-12 rounded-xl bg-surface-inset group-hover:bg-surface-inset flex items-center justify-center transition-colors border border-border-color/50">
                   <PlusIcon class="w-6 h-6 text-accent-color" style="color: var(--accent-color);" />
                 </div>
                 <div>
@@ -305,10 +305,10 @@
 
               <router-link
                 to="/screens/add"
-                class="group flex items-center space-x-4 p-4 bg-secondary hover:bg-secondary border border-border-color hover:border-accent-color/50 rounded-xl transition-all duration-400"
+                class="group flex items-center space-x-4 p-4 bg-surface-inset hover:bg-surface-inset border border-border-color hover:border-accent-color/50 rounded-xl transition-all duration-400"
                 style="--accent-color: var(--accent-color);"
               >
-                <div class="w-12 h-12 rounded-xl bg-secondary group-hover:bg-secondary flex items-center justify-center transition-colors">
+                <div class="w-12 h-12 rounded-xl bg-surface-inset group-hover:bg-surface-inset flex items-center justify-center transition-colors border border-border-color/50">
                   <TvIcon class="w-6 h-6 text-accent-color" style="color: var(--accent-color);" />
                 </div>
                 <div>
@@ -319,9 +319,9 @@
 
               <button
                 @click="showEmergencyAlert = true"
-                class="group flex items-center space-x-4 p-4 bg-secondary hover:bg-secondary border border-border-color hover:border-dusty-red/50 rounded-xl transition-all duration-400 text-left w-full"
+                class="group flex items-center space-x-4 p-4 bg-surface-inset hover:bg-surface-inset border border-border-color hover:border-dusty-red/50 rounded-xl transition-all duration-400 text-left w-full"
               >
-                <div class="w-12 h-12 rounded-xl bg-secondary group-hover:bg-secondary flex items-center justify-center transition-colors">
+                <div class="w-12 h-12 rounded-xl bg-surface-inset group-hover:bg-surface-inset flex items-center justify-center transition-colors border border-border-color/50">
                   <ExclamationTriangleIcon class="w-6 h-6 text-dusty-red" />
                 </div>
                 <div>
@@ -356,7 +356,7 @@
               >
                 <div class="w-64 card-base rounded-xl overflow-hidden hover:shadow-xl transition-all duration-400">
                   <!-- Template Preview (16:9 aspect ratio) -->
-                  <div class="aspect-video bg-secondary flex items-center justify-center relative overflow-hidden">
+                  <div class="aspect-video bg-card flex items-center justify-center relative overflow-hidden">
                     <div class="relative z-10 text-center p-4">
                       <DocumentTextIcon class="w-12 h-12 text-accent-color mx-auto mb-2" style="color: var(--accent-color);" />
                       <p class="text-xs text-primary font-medium">{{ template.name }}</p>
@@ -365,7 +365,7 @@
                       <span
                         :class="[
                           'px-2 py-1 rounded text-xs font-medium',
-                          template.is_active ? 'bg-forest-green/20 text-forest-green' : 'bg-secondary text-muted'
+                          template.is_active ? 'bg-forest-green/20 text-forest-green' : 'bg-card text-muted'
                         ]"
                       >
                         {{ template.is_active ? 'Active' : 'Draft' }}

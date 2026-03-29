@@ -19,6 +19,32 @@
               Connect your TV or display device to your account. You can either scan the QR code
               displayed on the screen or enter the 6-digit pairing code manually.
             </p>
+
+            <!-- Same URL the TV browser should use (PlayerConnect) -->
+            <div class="rounded-xl border border-border-color bg-surface-inset p-4 space-y-3 mb-6">
+              <p class="text-sm font-semibold text-primary">Open this page on your TV</p>
+              <p class="text-sm text-muted">
+                The display must show the pairing code from the
+                <span class="text-primary font-medium">TV pairing</span> page. Use the link below on the TV’s browser,
+                or open it here in a new tab to test.
+              </p>
+              <div class="flex flex-col sm:flex-row sm:items-stretch gap-3">
+                <a
+                  :href="playerConnectAbsoluteUrl"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="btn-outline inline-flex items-center justify-center px-4 py-2.5 rounded-lg text-sm font-medium whitespace-nowrap shrink-0"
+                >
+                  Open TV pairing page
+                </a>
+                <div
+                  class="flex-1 min-w-0 rounded-lg border border-border-color bg-card px-3 py-2 font-mono text-xs text-primary break-all"
+                  :title="playerConnectAbsoluteUrl"
+                >
+                  {{ playerConnectAbsoluteUrl }}
+                </div>
+              </div>
+            </div>
           </div>
 
           <!-- Tabs for QR scan vs manual entry -->
@@ -29,7 +55,7 @@
                 :class="[
                   'py-4 px-1 border-b-2 font-medium text-sm transition-colors',
                   activeTab === 'qr'
-                    ? 'border-primary text-primary'
+                    ? 'border-brand text-brand'
                     : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
                 ]"
               >
@@ -40,7 +66,7 @@
                 :class="[
                   'py-4 px-1 border-b-2 font-medium text-sm transition-colors',
                   activeTab === 'manual'
-                    ? 'border-primary text-primary'
+                    ? 'border-brand text-brand'
                     : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600'
                 ]"
               >
@@ -177,6 +203,12 @@ import Card from '@/components/common/Card.vue'
 
 const router = useRouter()
 const screensStore = useScreensStore()
+
+/** Full URL to /player/connect — same page the TV should load in its browser */
+const playerConnectAbsoluteUrl = computed(() => {
+  const r = router.resolve({ name: 'player-connect' })
+  return new URL(r.href, window.location.origin).href
+})
 
 // State
 const activeTab = ref('qr') // 'qr' | 'manual'

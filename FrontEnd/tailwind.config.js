@@ -6,46 +6,51 @@ export default {
     "./src/**/*.{vue,js,ts,jsx,tsx}",
   ],
   theme: {
+    // Keep all custom tokens under `extend` — do not set `theme.colors` at the top level
+    // or Tailwind's default palette (white, black, slate, …) will be replaced.
     extend: {
       fontFamily: {
         sans: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
       },
       colors: {
-        // Theme-aware semantic colors
-        // These will be overridden in dark mode using Tailwind's dark: variant
+        // Surfaces — must stay in sync with style.css :root / .dark (single source: CSS variables)
         base: {
-          DEFAULT: '#F9FAFB', // Light: bg-base
-        },
-        secondary: {
-          DEFAULT: '#FFFFFF', // Light: bg-secondary
+          DEFAULT: 'var(--bg-color-solid)',
         },
         card: {
-          DEFAULT: '#FFFFFF', // Light: bg-card
+          DEFAULT: 'var(--card-bg)',
+        },
+        // Elevation (levels 1–3 + nested inset). bg-card remains the main panel utility.
+        surface: {
+          1: 'var(--surface-1)',
+          2: 'var(--surface-2)',
+          3: 'var(--surface-3)',
+          inset: 'var(--surface-inset)',
         },
         'border-color': {
-          DEFAULT: '#E5E7EB', // Light: border-color
+          DEFAULT: 'var(--border-color)',
         },
-        primary: {
-          DEFAULT: '#059669', // Light: primary
-          hover: '#10B981', // Light: primary-hover
-          active: '#047857', // Light: primary-active
-        },
-        text: {
-          primary: '#111827', // Light: text-primary
-          secondary: '#374151', // Light: text-secondary
-          muted: '#6B7280', // Light: text-muted
+        // Semantic text — required for @apply in Vue SFC styles (maps to CSS variables on html)
+        primary: 'var(--text-heading)',
+        secondary: 'var(--text-main)',
+        muted: 'var(--text-muted)',
+        // Brand (emerald) — use `brand` so `text-primary` can remain semantic (custom CSS) for headings
+        brand: {
+          DEFAULT: 'var(--brand-primary)',
+          hover: 'var(--brand-primary-hover)',
+          active: 'var(--brand-primary-active)',
         },
         success: {
-          DEFAULT: '#16A34A', // Light: success
+          DEFAULT: '#16A34A',
         },
         warning: {
-          DEFAULT: '#D97706', // Light: warning
+          DEFAULT: '#D97706',
         },
         error: {
-          DEFAULT: '#DC2626', // Light: error
+          DEFAULT: '#DC2626',
         },
         info: {
-          DEFAULT: '#2563EB', // Light: info
+          DEFAULT: '#2563EB',
         },
         // Legacy colors (kept for backward compatibility)
         orange: {

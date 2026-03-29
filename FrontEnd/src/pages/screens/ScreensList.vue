@@ -9,7 +9,7 @@
               <p class="text-sm text-muted mb-1">Total Screens</p>
               <p class="text-2xl font-bold text-primary">{{ stats.total }}</p>
             </div>
-            <div class="w-12 h-12 rounded-lg bg-secondary flex items-center justify-center">
+            <div class="w-12 h-12 rounded-lg bg-card flex items-center justify-center">
               <TvIcon class="w-6 h-6 text-accent-color" style="color: var(--accent-color);" />
             </div>
           </div>
@@ -21,7 +21,7 @@
               <p class="text-sm text-muted mb-1">Online</p>
               <p class="text-2xl font-bold" style="color: var(--forest-green);">{{ stats.online }}</p>
             </div>
-            <div class="w-12 h-12 rounded-lg bg-secondary flex items-center justify-center">
+            <div class="w-12 h-12 rounded-lg bg-card flex items-center justify-center">
               <div class="w-3 h-3 rounded-full bg-forest-green animate-pulse"></div>
             </div>
           </div>
@@ -33,7 +33,7 @@
               <p class="text-sm text-muted mb-1">Offline</p>
               <p class="text-2xl font-bold text-dusty-red">{{ stats.offline }}</p>
             </div>
-            <div class="w-12 h-12 rounded-lg bg-secondary flex items-center justify-center">
+            <div class="w-12 h-12 rounded-lg bg-card flex items-center justify-center">
               <div class="w-3 h-3 rounded-full bg-dusty-red"></div>
             </div>
           </div>
@@ -45,7 +45,7 @@
               <p class="text-sm text-muted mb-1">Syncing</p>
               <p class="text-2xl font-bold" style="color: #D97706;">{{ stats.syncing }}</p>
             </div>
-            <div class="w-12 h-12 rounded-lg bg-secondary flex items-center justify-center">
+            <div class="w-12 h-12 rounded-lg bg-card flex items-center justify-center">
               <ArrowPathIcon class="w-6 h-6 animate-spin" style="color: #D97706;" />
             </div>
           </div>
@@ -57,7 +57,7 @@
         <h1 class="text-2xl font-bold text-primary">Screens</h1>
         <div class="flex items-center space-x-3">
           <!-- View Toggle -->
-          <div class="flex items-center bg-secondary border border-border-color rounded-lg p-1">
+          <div class="flex items-center bg-card border border-border-color rounded-lg p-1">
             <button
               @click="viewMode = 'grid'"
               :class="[
@@ -148,7 +148,7 @@
       <!-- Empty State -->
       <div v-else-if="filteredScreens.length === 0" class="text-center py-16">
         <div class="max-w-md mx-auto">
-          <div class="w-24 h-24 mx-auto mb-6 rounded-full bg-secondary border border-border-color flex items-center justify-center">
+          <div class="w-24 h-24 mx-auto mb-6 rounded-full bg-card border border-border-color flex items-center justify-center">
             <TvIcon class="w-12 h-12 text-muted" />
           </div>
           <h3 class="text-xl font-semibold text-primary mb-2">No Screens Found</h3>
@@ -184,7 +184,7 @@
       <div v-else class="card-base rounded-xl overflow-hidden">
         <div class="overflow-x-auto">
           <table class="w-full">
-            <thead class="bg-secondary border-b border-border-color">
+            <thead class="bg-card border-b border-border-color">
               <tr>
                 <th class="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">Status</th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">Name</th>
@@ -202,7 +202,7 @@
                 :class="[
                   'transition-colors duration-400',
                   index % 2 === 0 ? 'bg-card' : 'bg-zebra-stripe',
-                  'hover:bg-secondary'
+                  'hover:bg-card'
                 ]"
               >
                 <td class="px-6 py-4 whitespace-nowrap">

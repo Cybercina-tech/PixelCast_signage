@@ -2,7 +2,7 @@
   <button
     @click="toggleTheme"
     :aria-label="`Switch to ${themeStore.theme === 'dark' ? 'light' : 'dark'} mode`"
-    class="relative p-2 rounded-xl bg-card border border-border-color hover:bg-secondary transition-all duration-300 group focus:outline-none focus:ring-2 focus:ring-blue-500/50 dark:focus:ring-emerald-400/50"
+    class="relative p-2 rounded-xl bg-card border border-border-color hover:bg-card transition-all duration-300 group focus:outline-none focus:ring-2 focus:ring-blue-500/50 dark:focus:ring-emerald-400/50"
     style="backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);"
   >
     <Transition

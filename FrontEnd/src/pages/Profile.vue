@@ -8,7 +8,7 @@
 
       <!-- Loading State -->
       <div v-if="loading" class="flex items-center justify-center py-12">
-        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-brand"></div>
       </div>
 
       <!-- Error State -->
@@ -85,7 +85,7 @@
                 <button
                   @click="sendVerificationCode"
                   :disabled="loadingSend"
-                  class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  class="px-4 py-2 bg-brand text-white rounded-lg hover:bg-brand-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
                   <span v-if="loadingSend" class="flex items-center gap-2">
                     <svg class="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -131,7 +131,7 @@
                   <button
                     @click="sendVerificationCode"
                     :disabled="loadingSend || canResend === false"
-                    class="text-sm text-primary hover:text-primary-hover hover:underline disabled:opacity-50 disabled:cursor-not-allowed disabled:no-underline"
+                    class="text-sm text-primary hover:text-brand-hover hover:underline disabled:opacity-50 disabled:cursor-not-allowed disabled:no-underline"
                   >
                     {{ canResend === false ? `Resend code in ${resendCountdown}s` : 'Resend Code' }}
                   </button>
@@ -148,7 +148,7 @@
                 v-model="profileForm.organization_name"
                 type="text"
                 disabled
-                class="w-full px-3 py-2 border border-border-color rounded-lg bg-secondary text-muted cursor-not-allowed"
+                class="w-full px-3 py-2 border border-border-color rounded-lg bg-card text-muted cursor-not-allowed"
               />
               <p class="mt-1 text-xs text-muted">Organization cannot be changed</p>
             </div>
@@ -159,7 +159,7 @@
                 :value="profileForm.role_display || profileForm.role"
                 type="text"
                 disabled
-                class="w-full px-3 py-2 border border-border-color rounded-lg bg-secondary text-muted cursor-not-allowed"
+                class="w-full px-3 py-2 border border-border-color rounded-lg bg-card text-muted cursor-not-allowed"
               />
               <p class="mt-1 text-xs text-muted">Role cannot be changed</p>
             </div>
@@ -168,14 +168,14 @@
               <button
                 type="button"
                 @click="resetProfileForm"
-                class="px-4 py-2 border border-border-color rounded-lg text-secondary hover:bg-secondary transition-colors"
+                class="px-4 py-2 border border-border-color rounded-lg text-secondary hover:bg-card transition-colors"
                 :disabled="saving"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors"
+                class="px-4 py-2 bg-brand text-white rounded-lg hover:bg-brand-hover transition-colors"
                 :disabled="saving"
               >
                 <span v-if="saving">Saving...</span>
@@ -230,7 +230,7 @@
         <!-- Activity Logs -->
         <Card title="Recent Activity">
           <div v-if="loadingLogs" class="flex items-center justify-center py-8">
-            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-brand"></div>
           </div>
           <div v-else-if="logsError" class="bg-error/10 border border-error/20 rounded-lg p-4">
             <p class="text-error text-sm whitespace-pre-line break-words">{{ logsError }}</p>

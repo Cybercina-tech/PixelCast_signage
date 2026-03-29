@@ -343,7 +343,7 @@ The system uses a Django REST API backend to manage screens, templates, content,
 - Celery workers need to be started separately for async tasks
 - Redis required for production WebSocket and caching
 
-### Upgrading from ScreenGram-branded installs
+### Upgrading from legacy ScreenGram-branded installs
 - Default PostgreSQL database and user names are now `pixelcast_signage_db` / `pixelcast_signage_user` (see `env.example`). Point `DB_NAME` / `DB_USER` at your existing database if you are not creating a fresh instance.
 - Docker Compose **named volumes** were renamed (e.g. `pixelcast-signage_postgres_data`). To keep existing data, either copy data into the new volumes or temporarily map volume `name:` values in `docker-compose.yml` back to your previous volume names.
 - Legacy environment variables `SCREENGRAM_ENV_FILE` and `SCREENGRAM_INSTALLED` are still honored alongside `PIXELCAST_SIGNAGE_ENV_FILE` and `PIXELCAST_SIGNAGE_INSTALLED`.

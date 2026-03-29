@@ -51,7 +51,7 @@
           <div class="flex justify-end pt-4">
             <button
               type="submit"
-              class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors"
+              class="px-4 py-2 bg-brand text-white rounded-lg hover:bg-brand-hover transition-colors"
               :disabled="changingPassword || passwordForm.new_password !== passwordForm.new_password_confirm"
             >
               <span v-if="changingPassword">Changing...</span>
@@ -64,7 +64,7 @@
       <!-- Active Sessions Section -->
       <Card title="Active Sessions">
         <div v-if="loadingSessions" class="flex items-center justify-center py-8">
-          <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-brand"></div>
         </div>
         <div v-else-if="sessionsError" class="bg-error/10 border border-error/20 rounded-lg p-4">
           <p class="text-error text-sm break-words">{{ sessionsError }}</p>
@@ -81,7 +81,7 @@
             <div class="flex-1">
               <div class="flex items-center gap-2 mb-1">
                 <p class="font-medium text-primary">{{ session.device || 'Unknown Device' }}</p>
-                <span v-if="session.current" class="px-2 py-0.5 bg-primary/20 text-primary text-xs rounded">Current</span>
+                <span v-if="session.current" class="px-2 py-0.5 bg-brand/20 text-brand text-xs rounded">Current</span>
               </div>
               <p class="text-sm text-secondary">IP: {{ session.ip_address }}</p>
               <p class="text-xs text-muted mt-1">Last activity: {{ formatDate(session.last_activity) }}</p>

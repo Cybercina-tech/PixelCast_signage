@@ -145,7 +145,7 @@
             <div
               v-for="screen in schedule.screens"
               :key="screen.id"
-              class="p-2 bg-secondary rounded"
+              class="p-2 bg-card rounded"
             >
               {{ screen.name }} ({{ screen.device_id }})
             </div>
@@ -355,7 +355,8 @@ onMounted(async () => {
 }
 
 .timeline-hour-label {
-  @apply text-xs text-muted;
+  font-size: 0.75rem; /* text-xs equivalent */
+  color: var(--text-muted);
   flex: 1;
   text-align: center;
 }

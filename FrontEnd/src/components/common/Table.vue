@@ -63,7 +63,7 @@
       No data available
     </div>
     <div v-if="loading" class="text-center py-8">
-      <div class="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+      <div class="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-brand"></div>
       <p class="mt-2 text-sm text-secondary">Loading...</p>
     </div>
   </div>
