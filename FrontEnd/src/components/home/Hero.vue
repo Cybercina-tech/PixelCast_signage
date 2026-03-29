@@ -29,7 +29,7 @@
           :delay="100"
           class="text-5xl md:text-7xl font-bold text-slate-900 mb-6 leading-tight"
         >
-          ScreenGram
+          PixelCast Signage
         </h1>
 
         <!-- Subheading -->

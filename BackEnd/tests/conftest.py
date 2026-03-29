@@ -26,25 +26,29 @@ def authenticated_client(api_client, user):
 
 @pytest.fixture
 def superadmin_user(db):
-    """Create a superadmin user."""
+    """Create a Developer (full access) user."""
     return User.objects.create_user(
         username='superadmin',
         email='superadmin@test.com',
         password='testpass123',
-        role='SuperAdmin',
-        is_active=True
+        role='Developer',
+        is_active=True,
+        is_superuser=True,
+        is_staff=True,
     )
 
 
 @pytest.fixture
 def admin_user(db):
-    """Create an admin user."""
+    """Alias: second Developer-style account for tests expecting 'admin' name."""
     return User.objects.create_user(
         username='admin',
         email='admin@test.com',
         password='testpass123',
-        role='Admin',
-        is_active=True
+        role='Developer',
+        is_active=True,
+        is_superuser=True,
+        is_staff=True,
     )
 
 
@@ -63,12 +67,12 @@ def manager_user(db):
 
 @pytest.fixture
 def operator_user(db):
-    """Create an operator user."""
+    """Create an employee user (legacy fixture name)."""
     return User.objects.create_user(
         username='operator',
         email='operator@test.com',
         password='testpass123',
-        role='Operator',
+        role='Employee',
         organization_name='TestOrg',
         is_active=True
     )
@@ -76,12 +80,12 @@ def operator_user(db):
 
 @pytest.fixture
 def viewer_user(db):
-    """Create a viewer user."""
+    """Create an employee user (legacy fixture name)."""
     return User.objects.create_user(
         username='viewer',
         email='viewer@test.com',
         password='testpass123',
-        role='Viewer',
+        role='Employee',
         organization_name='TestOrg',
         is_active=True
     )

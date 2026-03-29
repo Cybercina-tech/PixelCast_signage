@@ -174,7 +174,7 @@ class EmailAdapter(BaseAdapter):
             'info': '[INFO]'
         }.get(severity, '[INFO]')
         
-        return f"{severity_prefix} ScreenGram Alert: {event.event_key}"
+        return f"{severity_prefix} PixelCast Signage Alert: {event.event_key}"
     
     def _build_message(self, event: NotificationEvent, payload: Dict[str, Any], severity: str) -> str:
         """Build email message body"""
@@ -378,7 +378,7 @@ class WebhookAdapter(BaseAdapter):
                 json=signed_payload,
                 headers={
                     'Content-Type': 'application/json',
-                    'User-Agent': 'ScreenGram-Notifications/1.0'
+                    'User-Agent': 'PixelCastSignage-Notifications/1.0'
                 },
                 timeout=self.TIMEOUT_SECONDS,
                 allow_redirects=False

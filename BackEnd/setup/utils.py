@@ -9,6 +9,18 @@ from django.conf import settings
 logger = logging.getLogger(__name__)
 
 
+def _env_declares_installed():
+    """
+    True if PIXELCAST_SIGNAGE_INSTALLED (or legacy SCREENGRAM_INSTALLED) is set in .env.
+    Truthy strings match settings.env(..., cast=bool): true, 1, yes, on.
+    """
+    raw = (
+        os.environ.get('PIXELCAST_SIGNAGE_INSTALLED', '').strip()
+        or os.environ.get('SCREENGRAM_INSTALLED', '').strip()
+    ).lower()
+    return raw in ('true', '1', 'yes', 'on')
+
+
 def get_installed_lock_path():
     """Get the path to the installation lock file.
     
@@ -20,11 +32,11 @@ def get_installed_lock_path():
 
 def is_installed():
     """
-    Check if installation has been completed by checking for installed.lock file.
-    
-    Returns:
-        bool: True if installed.lock exists and is a file, False otherwise
+    Installation is complete if PIXELCAST_SIGNAGE_INSTALLED (or legacy SCREENGRAM_INSTALLED) is set in the environment (.env)
+    or installed.lock exists under INSTALLATION_STATE_DIR.
     """
+    if _env_declares_installed():
+        return True
     lock_path = get_installed_lock_path()
     return lock_path.is_file()
 

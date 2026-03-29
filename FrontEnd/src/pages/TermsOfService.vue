@@ -39,10 +39,10 @@
             </div>
             <div class="flex-1">
               <p class="text-gray-700 leading-relaxed mb-4 text-lg">
-                These Terms of Service ("Terms") govern your access to and use of ScreenGram's digital signage management platform and related services (collectively, the "Service"). By accessing or using our Service, you agree to be bound by these Terms.
+                These Terms of Service ("Terms") govern your access to and use of PixelCast Signage's digital signage management platform and related services (collectively, the "Service"). By accessing or using our Service, you agree to be bound by these Terms.
               </p>
               <p class="text-gray-700 leading-relaxed text-lg">
-                If you do not agree to these Terms, you may not access or use the Service. These Terms constitute a legally binding agreement between you and ScreenGram.
+                If you do not agree to these Terms, you may not access or use the Service. These Terms constitute a legally binding agreement between you and PixelCast Signage.
               </p>
             </div>
           </div>
@@ -55,7 +55,7 @@
             <h2 class="text-3xl font-bold text-gray-900">1. Service Description</h2>
           </div>
           <p class="text-gray-700 leading-relaxed mb-6 text-lg">
-            ScreenGram provides a cloud-based digital signage management platform that enables users to:
+            PixelCast Signage provides a cloud-based digital signage management platform that enables users to:
           </p>
           <div class="grid md:grid-cols-2 gap-4">
             <div v-for="(feature, index) in serviceFeatures" :key="index" 
@@ -184,11 +184,11 @@
             <div class="space-y-3">
               <p class="flex items-center gap-3">
                 <EnvelopeIcon class="w-5 h-5" />
-                <strong>Email:</strong> <a href="mailto:legal@screengram.com" class="hover:text-blue-300 transition-colors">legal@screengram.com</a>
+                <strong>Email:</strong> <a href="mailto:legal@pixelcastsignage.com" class="hover:text-blue-300 transition-colors">legal@pixelcastsignage.com</a>
               </p>
               <p class="flex items-center gap-3">
                 <EnvelopeIcon class="w-5 h-5" />
-                <strong>Support:</strong> <a href="mailto:support@screengram.com" class="hover:text-blue-300 transition-colors">support@screengram.com</a>
+                <strong>Support:</strong> <a href="mailto:support@pixelcastsignage.com" class="hover:text-blue-300 transition-colors">support@pixelcastsignage.com</a>
               </p>
             </div>
           </div>
@@ -200,7 +200,7 @@
     <footer class="bg-white border-t border-slate-200 mt-20">
       <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div class="flex flex-col sm:flex-row justify-between items-center gap-4 text-sm text-gray-600">
-          <p>© {{ currentYear }} ScreenGram. All rights reserved.</p>
+          <p>© {{ currentYear }} PixelCast Signage. All rights reserved.</p>
           <div class="flex items-center gap-4">
             <router-link to="/privacy" class="hover:text-slate-900 transition-colors font-medium">Privacy Policy</router-link>
             <span class="text-slate-300">•</span>
@@ -283,15 +283,15 @@ const prohibitedUsage = ref([
 ])
 
 onMounted(() => {
-  document.title = 'Terms of Service - ScreenGram'
+  document.title = 'Terms of Service - PixelCast Signage'
   
   const metaDescription = document.querySelector('meta[name="description"]')
   if (metaDescription) {
-    metaDescription.setAttribute('content', 'ScreenGram Terms of Service - Read our terms and conditions for using our digital signage management platform.')
+    metaDescription.setAttribute('content', 'PixelCast Signage Terms of Service - Read our terms and conditions for using our digital signage management platform.')
   } else {
     const meta = document.createElement('meta')
     meta.name = 'description'
-    meta.content = 'ScreenGram Terms of Service - Read our terms and conditions for using our digital signage management platform.'
+    meta.content = 'PixelCast Signage Terms of Service - Read our terms and conditions for using our digital signage management platform.'
     document.head.appendChild(meta)
   }
 })

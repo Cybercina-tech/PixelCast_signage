@@ -1,11 +1,11 @@
 #!/bin/bash
 
-# ScreenGram - Fix & Setup Script (macOS, Linux)
+# PixelCast Signage - Fix & Setup Script (macOS, Linux)
 # Run from project root: ./setup.sh
 
 set -e
 
-echo "🚀 Starting ScreenGram Fix & Setup..."
+echo "🚀 Starting PixelCast Signage Fix & Setup..."
 
 # 1. Check for .env file
 if [ ! -f .env ]; then
@@ -20,8 +20,8 @@ if [ ! -f .env ]; then
     echo "   Creating minimal .env..."
     echo "DB_PASSWORD=change-me-please" > .env
     echo "SECRET_KEY=$(openssl rand -hex 32)" >> .env
-    echo "DB_NAME=screengram_db" >> .env
-    echo "DB_USER=screengram_user" >> .env
+    echo "DB_NAME=pixelcast_signage_db" >> .env
+    echo "DB_USER=pixelcast_signage_user" >> .env
     echo "⚠️  Please edit .env and set a secure DB_PASSWORD before running again."
     exit 1
   fi
@@ -58,7 +58,7 @@ echo "🏗️  Building containers..."
 docker compose build --no-cache
 
 # 6. Start services
-echo "🆙 Starting ScreenGram..."
+echo "🆙 Starting PixelCast Signage..."
 docker compose up -d
 
 echo "✅ Done! Use 'docker compose logs -f' to see the logs."

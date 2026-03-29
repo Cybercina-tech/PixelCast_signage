@@ -4,9 +4,9 @@ Management command to create users.
 This command allows batch creation of users with different roles.
 
 Usage:
-    python manage.py create_user --username admin --email admin@example.com --role SuperAdmin
+    python manage.py create_user --username admin --email admin@example.com --role Developer --is-superuser --is-staff
     python manage.py create_user --username user1 --email user1@example.com --role Manager --organization "Acme Corp"
-    python manage.py create_user --username user2 --email user2@example.com --role Viewer --no-password
+    python manage.py create_user --username user2 --email user2@example.com --role Employee --no-password
 """
 
 from django.core.management.base import BaseCommand, CommandError
@@ -54,9 +54,9 @@ class Command(BaseCommand):
         parser.add_argument(
             '--role',
             type=str,
-            choices=['SuperAdmin', 'Admin', 'Operator', 'Manager', 'Viewer'],
-            default='Viewer',
-            help='Role for the new user (default: Viewer)'
+            choices=['Developer', 'Manager', 'Employee'],
+            default='Employee',
+            help='Role for the new user (default: Employee)'
         )
         parser.add_argument(
             '--organization',

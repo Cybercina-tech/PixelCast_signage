@@ -173,7 +173,7 @@ class ScreenAnalyticsTests(AnalyticsAPITestCase):
         """Test screen statistics with viewer role (insufficient permissions)."""
         viewer_user = self.create_user(
             username='viewer',
-            role='Viewer',
+            role='Employee',
             organization_name='TestOrg'
         )
         viewer_client = APIClient()
@@ -346,7 +346,7 @@ class AnalyticsSecurityTests(AnalyticsAPITestCase):
         malicious_inputs = [
             "'; DROP TABLE screens; --",
             "1' OR '1'='1",
-            "'; UPDATE users SET role='Admin' WHERE '1'='1'; --",
+            "'; UPDATE users SET role='Developer' WHERE '1'='1'; --",
         ]
         
         for malicious in malicious_inputs:

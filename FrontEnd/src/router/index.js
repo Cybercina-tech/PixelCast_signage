@@ -225,19 +225,19 @@ const routes = [
     path: '/analytics',
     name: 'analytics',
     component: AnalyticsDashboard,
-    meta: { requiresAuth: true, requiresRole: ['Manager', 'Admin', 'SuperAdmin'] },
+    meta: { requiresAuth: true, requiresRole: ['Developer', 'Manager'] },
   },
   {
     path: '/core/audit-logs',
     name: 'audit-logs',
     component: AuditLogs,
-    meta: { requiresAuth: true, requiresRole: ['Manager', 'Admin', 'SuperAdmin'] },
+    meta: { requiresAuth: true, requiresRole: ['Developer'] },
   },
   {
     path: '/core/backups',
     name: 'backups',
     component: Backups,
-    meta: { requiresAuth: true, requiresRole: ['Manager', 'Admin', 'SuperAdmin'] },
+    meta: { requiresAuth: true, requiresRole: ['Developer'] },
   },
   {
     path: '/settings',
@@ -274,7 +274,7 @@ const routes = [
     path: '/403',
     name: 'forbidden',
     component: Forbidden,
-    meta: { requiresAuth: true },
+    meta: { public: true },
   },
   {
     path: '/500',
@@ -343,15 +343,13 @@ router.beforeEach(async (to, from, next) => {
         // Backend validated token successfully
         if (authStore.isAuthenticated && authStore.user) {
           // UI-only role check for route guard (backend API will also enforce)
-          // SuperAdmin always bypasses role checks
-          if (to.meta.requiresRole) {
-            const userRole = authStore.user?.role // Role from backend
-            // SuperAdmin always has access regardless of requiresRole
-            if (userRole !== 'SuperAdmin' && !to.meta.requiresRole.includes(userRole)) {
-              next({ name: 'forbidden' })
-              return
+            if (to.meta.requiresRole) {
+              const userRole = authStore.user?.role
+              if (userRole !== 'Developer' && !to.meta.requiresRole.includes(userRole)) {
+                next({ name: 'forbidden' })
+                return
+              }
             }
-          }
           next()
           return
         }
@@ -372,11 +370,9 @@ router.beforeEach(async (to, from, next) => {
 
   // Check role requirements for authenticated users (UI-only check)
   // Backend API will enforce actual permissions
-  // SuperAdmin always bypasses role checks
   if (to.meta.requiresRole && authStore.isAuthenticated && authStore.user) {
-    const userRole = authStore.user?.role // Role from backend API
-    // SuperAdmin always has access regardless of requiresRole
-    if (userRole !== 'SuperAdmin' && !to.meta.requiresRole.includes(userRole)) {
+    const userRole = authStore.user?.role
+    if (userRole !== 'Developer' && !to.meta.requiresRole.includes(userRole)) {
       next({ name: 'forbidden' })
       return
     }
@@ -385,14 +381,21 @@ router.beforeEach(async (to, from, next) => {
   // Check permissions for authenticated users (UI-only check)
   // Backend API will enforce actual permissions
   if (to.meta.requiresAuth && authStore.isAuthenticated && authStore.user) {
-    // Check if user has permission to access this route
     if (!canAccessRoute(authStore.user, to.path)) {
-      // User doesn't have permission - redirect to forbidden page
       next({ name: 'forbidden' })
       return
     }
   }
-  
+
+  if (
+    authStore.isAuthenticated &&
+    authStore.user?.role === 'Employee' &&
+    to.name === 'dashboard'
+  ) {
+    next({ name: 'screens' })
+    return
+  }
+
   next()
 })
 

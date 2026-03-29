@@ -1,9 +1,9 @@
-# ScreenGram - Fix & Setup Script (Windows PowerShell)
+# PixelCast Signage - Fix & Setup Script (Windows PowerShell)
 # Run from project root: .\setup.ps1
 
 $ErrorActionPreference = "Stop"
 
-Write-Host "Starting ScreenGram Fix & Setup..." -ForegroundColor Cyan
+Write-Host "Starting PixelCast Signage Fix & Setup..." -ForegroundColor Cyan
 
 # 1. Check for .env file
 if (-not (Test-Path ".env")) {
@@ -19,8 +19,8 @@ if (-not (Test-Path ".env")) {
         @"
 DB_PASSWORD=change-me-please
 SECRET_KEY=$secretKey
-DB_NAME=screengram_db
-DB_USER=screengram_user
+DB_NAME=pixelcast_signage_db
+DB_USER=pixelcast_signage_user
 "@ | Out-File -FilePath ".env" -Encoding utf8
         Write-Host "Please edit .env and set a secure DB_PASSWORD before running again." -ForegroundColor Yellow
         exit 1
@@ -54,7 +54,7 @@ Write-Host "Building containers..." -ForegroundColor Yellow
 docker compose build --no-cache
 
 # 6. Start
-Write-Host "Starting ScreenGram..." -ForegroundColor Yellow
+Write-Host "Starting PixelCast Signage..." -ForegroundColor Yellow
 docker compose up -d
 
 Write-Host "Done! Use 'docker compose logs -f' to see the logs." -ForegroundColor Green

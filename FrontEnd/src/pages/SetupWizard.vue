@@ -165,7 +165,7 @@
                       type="text"
                       required
                       class="cosmic-input w-full px-4 py-3 rounded-xl bg-black/40 border border-white/10 text-white placeholder-slate-500 focus:outline-none transition-all duration-300"
-                      placeholder="localhost"
+                      placeholder="db"
                     />
                   </div>
                   <div>
@@ -189,7 +189,7 @@
                     type="text"
                     required
                     class="cosmic-input w-full px-4 py-3 rounded-xl bg-black/40 border border-white/10 text-white placeholder-slate-500 focus:outline-none transition-all duration-300"
-                    placeholder="screengram_db"
+                    placeholder="pixelcast_signage_db"
                   />
                 </div>
 
@@ -202,7 +202,7 @@
                       type="text"
                       required
                       class="cosmic-input w-full px-4 py-3 rounded-xl bg-black/40 border border-white/10 text-white placeholder-slate-500 focus:outline-none transition-all duration-300"
-                      placeholder="screengram_user"
+                      placeholder="pixelcast_signage_user"
                     />
                   </div>
                   <div>
@@ -297,7 +297,7 @@
                 <div class="cosmic-icon-wrap inline-flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-indigo-500/10 border border-indigo-500/30 mb-1">
                   <ShieldCheckIcon class="w-5 h-5 sm:w-6 sm:h-6 text-indigo-400 cosmic-icon" />
                 </div>
-                <h2 class="cosmic-heading text-base sm:text-lg font-bold text-white mb-0.5">Create Administrator Account</h2>
+                <h2 class="cosmic-heading text-base sm:text-lg font-bold text-white mb-0.5">Create Developer Account</h2>
                 <p class="text-slate-400 text-[11px]">Set up your master administrator identity</p>
               </div>
 
@@ -598,7 +598,7 @@ const router = useRouter()
 const steps = [
   { label: 'Welcome', icon: RocketLaunchIcon },
   { label: 'Database', icon: ServerIcon },
-  { label: 'Admin', icon: ShieldCheckIcon },
+  { label: 'Developer', icon: ShieldCheckIcon },
   { label: 'System', icon: Cog6ToothIcon },
 ]
 
@@ -615,10 +615,10 @@ const focusAdminLastName = ref(false)
 // Setup data
 const setupData = reactive({
   db: {
-    host: 'localhost',
+    host: 'db',
     port: 5432,
-    name: 'screengram_db',
-    user: 'screengram_user',
+    name: 'pixelcast_signage_db',
+    user: 'pixelcast_signage_user',
     password: '',
   },
   admin: {
@@ -781,11 +781,17 @@ const startInstallation = async () => {
     return
   }
   
-  // Step 2: Setup assets (simulated)
+  // Step 2: Seed default notification events and related assets
   progressSteps[1].status = 'loading'
-  await new Promise(resolve => setTimeout(resolve, 1500))
-  progressSteps[1].status = 'completed'
-  progressSteps[1].description = 'System assets configured'
+  try {
+    const seedRes = await setupAPI.seedAssets()
+    progressSteps[1].status = 'completed'
+    progressSteps[1].description = seedRes.data?.message || 'System assets configured'
+  } catch (error) {
+    progressSteps[1].status = 'error'
+    progressSteps[1].description = error.response?.data?.message || 'Asset seeding failed'
+    return
+  }
   
   // Step 3: Finalize (send db credentials so .env gets DB_PASSWORD / POSTGRES_PASSWORD; empty password => username used as password)
   progressSteps[2].status = 'loading'
@@ -889,14 +895,14 @@ onMounted(async () => {
 .nebula--indigo {
   width: 380px;
   height: 380px;
-  background: rgba(99, 102, 241, 0.28);
+  background: color-mix(in srgb, var(--cosmic-primary) 28%, transparent);
   top: -120px;
   right: -120px;
 }
 .nebula--purple {
   width: 320px;
   height: 320px;
-  background: rgba(139, 92, 246, 0.22);
+  background: color-mix(in srgb, var(--cosmic-secondary) 22%, transparent);
   bottom: -100px;
   left: -100px;
 }
@@ -925,7 +931,7 @@ onMounted(async () => {
   transition: filter 0.3s ease;
 }
 .exit-btn:hover .cosmic-icon {
-  filter: drop-shadow(0 0 8px rgba(99, 102, 241, 0.6));
+  filter: drop-shadow(0 0 8px color-mix(in srgb, var(--cosmic-primary) 60%, transparent));
 }
 .exit-tooltip {
   box-shadow: 0 0 20px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.05);
@@ -935,20 +941,20 @@ onMounted(async () => {
 .cosmic-title,
 .cosmic-heading {
   letter-spacing: 0.05em;
-  text-shadow: 0 0 30px rgba(99, 102, 241, 0.2);
+  text-shadow: 0 0 30px color-mix(in srgb, var(--cosmic-primary) 20%, transparent);
 }
 
 .cosmic-icon {
-  filter: drop-shadow(0 0 6px rgba(99, 102, 241, 0.4));
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--cosmic-primary) 40%, transparent));
 }
 
 .cosmic-icon-wrap {
-  box-shadow: 0 0 20px rgba(99, 102, 241, 0.15);
+  box-shadow: 0 0 20px color-mix(in srgb, var(--cosmic-primary) 15%, transparent);
 }
 
 /* Flight path line glow when active */
 .flight-path-line--active {
-  box-shadow: 0 0 8px rgba(99, 102, 241, 0.4);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--cosmic-primary) 40%, transparent);
 }
 
 /* Step transition: fade-slide (spaceship monitor) */
@@ -984,24 +990,36 @@ onMounted(async () => {
 }
 
 .cosmic-input:focus {
-  border-color: #6366F1;
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25), 0 0 20px rgba(99, 102, 241, 0.15);
+  border-color: var(--cosmic-primary);
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--cosmic-primary) 25%, transparent),
+    0 0 20px color-mix(in srgb, var(--cosmic-primary) 15%, transparent);
 }
 
 /* Start Installation button — pulse glow */
 .cosmic-btn-launch {
-  background: linear-gradient(135deg, #6366F1 0%, #4F46E5 100%);
-  box-shadow: 0 4px 24px rgba(99, 102, 241, 0.5);
+  background: linear-gradient(
+    135deg,
+    var(--cosmic-primary) 0%,
+    color-mix(in srgb, var(--cosmic-primary), black 15%) 100%
+  );
+  box-shadow: 0 4px 24px color-mix(in srgb, var(--cosmic-primary) 50%, transparent);
   animation: cosmic-pulse 2s ease-in-out infinite;
 }
 
 .cosmic-btn-launch:hover {
-  box-shadow: 0 8px 32px rgba(99, 102, 241, 0.6), 0 0 40px rgba(99, 102, 241, 0.2);
+  box-shadow:
+    0 8px 32px color-mix(in srgb, var(--cosmic-primary) 60%, transparent),
+    0 0 40px color-mix(in srgb, var(--cosmic-primary) 20%, transparent);
 }
 
 @keyframes cosmic-pulse {
-  0%, 100% { box-shadow: 0 4px 24px rgba(99, 102, 241, 0.5); }
-  50% { box-shadow: 0 6px 28px rgba(99, 102, 241, 0.6), 0 0 30px rgba(99, 102, 241, 0.15); }
+  0%, 100% { box-shadow: 0 4px 24px color-mix(in srgb, var(--cosmic-primary) 50%, transparent); }
+  50% {
+    box-shadow:
+      0 6px 28px color-mix(in srgb, var(--cosmic-primary) 60%, transparent),
+      0 0 30px color-mix(in srgb, var(--cosmic-primary) 15%, transparent);
+  }
 }
 
 /* Ghost / secondary buttons */
@@ -1011,27 +1029,39 @@ onMounted(async () => {
 
 /* Return to Previous: cosmic Back button (Step 2 & 3) — ghost + indigo hover + tactile */
 .cosmic-btn-prev:hover {
-  box-shadow: 0 0 12px rgba(99, 102, 241, 0.25);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--cosmic-primary) 25%, transparent);
 }
 
 /* Primary action button */
 .cosmic-btn {
-  background: linear-gradient(135deg, #6366F1 0%, #4F46E5 100%);
-  box-shadow: 0 4px 20px rgba(99, 102, 241, 0.35);
+  background: linear-gradient(
+    135deg,
+    var(--cosmic-primary) 0%,
+    color-mix(in srgb, var(--cosmic-primary), black 15%) 100%
+  );
+  box-shadow: 0 4px 20px color-mix(in srgb, var(--cosmic-primary) 35%, transparent);
 }
 
 .cosmic-btn:hover {
-  box-shadow: 0 8px 30px rgba(99, 102, 241, 0.45);
+  box-shadow: 0 8px 30px color-mix(in srgb, var(--cosmic-primary) 45%, transparent);
 }
 
 /* Confirm Identity — high-stakes style */
 .cosmic-btn-confirm {
-  background: linear-gradient(135deg, #6366F1 0%, #4F46E5 100%);
-  box-shadow: 0 4px 24px rgba(99, 102, 241, 0.4), 0 0 20px rgba(99, 102, 241, 0.2);
+  background: linear-gradient(
+    135deg,
+    var(--cosmic-primary) 0%,
+    color-mix(in srgb, var(--cosmic-primary), black 15%) 100%
+  );
+  box-shadow:
+    0 4px 24px color-mix(in srgb, var(--cosmic-primary) 40%, transparent),
+    0 0 20px color-mix(in srgb, var(--cosmic-primary) 20%, transparent);
 }
 
 .cosmic-btn-confirm:hover:not(:disabled) {
-  box-shadow: 0 6px 28px rgba(99, 102, 241, 0.5), 0 0 30px rgba(99, 102, 241, 0.25);
+  box-shadow:
+    0 6px 28px color-mix(in srgb, var(--cosmic-primary) 50%, transparent),
+    0 0 30px color-mix(in srgb, var(--cosmic-primary) 25%, transparent);
 }
 
 /* Floating labels (Step 3) */
@@ -1070,15 +1100,15 @@ onMounted(async () => {
 
 /* System Boot: glowing text */
 .boot-glow {
-  text-shadow: 0 0 12px rgba(99, 102, 241, 0.3);
+  text-shadow: 0 0 12px color-mix(in srgb, var(--cosmic-primary) 30%, transparent);
 }
 
 .boot-step-label {
-  text-shadow: 0 0 8px rgba(99, 102, 241, 0.2);
+  text-shadow: 0 0 8px color-mix(in srgb, var(--cosmic-primary) 20%, transparent);
 }
 
 .boot-step--loading .boot-step-label {
-  text-shadow: 0 0 10px rgba(99, 102, 241, 0.4);
+  text-shadow: 0 0 10px color-mix(in srgb, var(--cosmic-primary) 40%, transparent);
 }
 
 .boot-step--completed .boot-step-label {
@@ -1087,8 +1117,12 @@ onMounted(async () => {
 
 /* Boot progress bar */
 .boot-progress-bar {
-  background: linear-gradient(90deg, #6366F1, #818CF8);
-  box-shadow: 0 0 16px rgba(99, 102, 241, 0.5);
+  background: linear-gradient(
+    90deg,
+    var(--cosmic-primary),
+    color-mix(in srgb, var(--cosmic-primary), white 28%)
+  );
+  box-shadow: 0 0 16px color-mix(in srgb, var(--cosmic-primary) 50%, transparent);
 }
 </style>
 

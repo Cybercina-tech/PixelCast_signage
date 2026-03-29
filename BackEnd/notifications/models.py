@@ -1,5 +1,5 @@
 """
-Notification System Domain Models for ScreenGram Digital Signage System.
+Notification System Domain Models for PixelCast Signage Digital Signage System.
 
 Provides secure, extensible notification infrastructure with:
 - Event-driven architecture

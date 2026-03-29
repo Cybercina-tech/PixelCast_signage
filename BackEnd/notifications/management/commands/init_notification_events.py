@@ -1,7 +1,7 @@
 """
 Management command to initialize default notification events.
 
-Creates predefined notification events for the ScreenGram system.
+Creates predefined notification events for the PixelCast Signage system.
 """
 
 from django.core.management.base import BaseCommand

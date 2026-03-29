@@ -1,7 +1,7 @@
 """
 Management command to create a superuser.
 
-This is a convenience command that creates a SuperAdmin user.
+This is a convenience command that creates a Developer (superuser) account.
 
 Usage:
     python manage.py create_superuser
@@ -12,7 +12,7 @@ from accounts.management.commands.create_user import Command as CreateUserComman
 
 
 class Command(BaseCommand):
-    help = 'Create a SuperAdmin user (convenience wrapper for create_user)'
+    help = 'Create a Developer superuser (convenience wrapper for create_user)'
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -75,7 +75,7 @@ class Command(BaseCommand):
                 username=username,
                 email=email,
                 password=password,
-                role='SuperAdmin',
+                role='Developer',
                 is_active=True,
                 is_staff=True,
                 is_superuser=True
@@ -83,7 +83,7 @@ class Command(BaseCommand):
             
             self.stdout.write(
                 self.style.SUCCESS(
-                    f'Successfully created SuperAdmin user "{username}"'
+                    f'Successfully created Developer user "{username}"'
                 )
             )
         except Exception as e:

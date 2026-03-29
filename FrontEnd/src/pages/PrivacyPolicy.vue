@@ -39,7 +39,7 @@
             </div>
             <div class="flex-1">
               <p class="text-gray-700 leading-relaxed mb-4 text-lg">
-                ScreenGram ("we", "our", or "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our digital signage management platform and services (collectively, the "Service").
+                PixelCast Signage ("we", "our", or "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our digital signage management platform and services (collectively, the "Service").
               </p>
               <p class="text-gray-700 leading-relaxed text-lg">
                 By using our Service, you agree to the collection and use of information in accordance with this policy. If you do not agree with our policies and practices, please do not use our Service.
@@ -245,11 +245,11 @@
             <div class="space-y-3">
               <p class="flex items-center gap-3">
                 <EnvelopeIcon class="w-5 h-5" />
-                <strong>Email:</strong> <a href="mailto:privacy@screengram.com" class="hover:text-blue-300 transition-colors">privacy@screengram.com</a>
+                <strong>Email:</strong> <a href="mailto:privacy@pixelcastsignage.com" class="hover:text-blue-300 transition-colors">privacy@pixelcastsignage.com</a>
               </p>
               <p class="flex items-center gap-3">
                 <EnvelopeIcon class="w-5 h-5" />
-                <strong>Support:</strong> <a href="mailto:support@screengram.com" class="hover:text-blue-300 transition-colors">support@screengram.com</a>
+                <strong>Support:</strong> <a href="mailto:support@pixelcastsignage.com" class="hover:text-blue-300 transition-colors">support@pixelcastsignage.com</a>
               </p>
             </div>
           </div>
@@ -261,7 +261,7 @@
     <footer class="bg-white border-t border-slate-200 mt-20">
       <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div class="flex flex-col sm:flex-row justify-between items-center gap-4 text-sm text-gray-600">
-          <p>© {{ currentYear }} ScreenGram. All rights reserved.</p>
+          <p>© {{ currentYear }} PixelCast Signage. All rights reserved.</p>
           <div class="flex items-center gap-4">
             <router-link to="/privacy" class="hover:text-slate-900 transition-colors font-medium">Privacy Policy</router-link>
             <span class="text-slate-300">•</span>
@@ -326,15 +326,15 @@ const securityMeasures = ref([
 ])
 
 onMounted(() => {
-  document.title = 'Privacy Policy - ScreenGram'
+  document.title = 'Privacy Policy - PixelCast Signage'
   
   const metaDescription = document.querySelector('meta[name="description"]')
   if (metaDescription) {
-    metaDescription.setAttribute('content', 'ScreenGram Privacy Policy - Learn how we collect, use, and protect your personal information when using our digital signage management platform.')
+    metaDescription.setAttribute('content', 'PixelCast Signage Privacy Policy - Learn how we collect, use, and protect your personal information when using our digital signage management platform.')
   } else {
     const meta = document.createElement('meta')
     meta.name = 'description'
-    meta.content = 'ScreenGram Privacy Policy - Learn how we collect, use, and protect your personal information when using our digital signage management platform.'
+    meta.content = 'PixelCast Signage Privacy Policy - Learn how we collect, use, and protect your personal information when using our digital signage management platform.'
     document.head.appendChild(meta)
   }
 })

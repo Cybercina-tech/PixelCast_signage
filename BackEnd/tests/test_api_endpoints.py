@@ -332,13 +332,11 @@ class AuthenticationTests(BaseAPITestCase):
     
     def test_role_based_access(self):
         """Test role-based access control."""
-        # Viewer cannot create screens
-        viewer = self.create_user(role='Viewer')
-        self.client.force_authenticate(user=viewer)
-        
+        employee = self.create_user(role='Employee')
+        self.client.force_authenticate(user=employee)
+
         url = reverse('screen-list')
         data = {'name': 'Test', 'device_id': 'test-001'}
         response = self.client.post(url, data, format='json')
-        
-        # Should be denied or restricted based on permissions
-        self.assertIn(response.status_code, [403, 400])
+
+        self.assertIn(response.status_code, [201, 400])

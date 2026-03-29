@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 
-const THEME_STORAGE_KEY = 'screengram_theme'
+const THEME_STORAGE_KEY = 'pixelcast-signage_theme'
 
 export const useThemeStore = defineStore('theme', {
   state: () => ({

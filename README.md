@@ -1,9 +1,9 @@
-# ScreenGram - Digital Signage Management System
+# PixelCast Signage - Digital Signage Management System
 
 ## 1. Project Overview
 
 **What this system is:**
-ScreenGram is a centralized web-based platform for managing multiple digital signage displays. It consists of a Django REST API backend and a Vue.js frontend dashboard. Screens connect via a web player (HTML/JavaScript) that renders templates in fullscreen mode.
+PixelCast Signage is a centralized web-based platform for managing multiple digital signage displays. It consists of a Django REST API backend and a Vue.js frontend dashboard. Screens connect via a web player (HTML/JavaScript) that renders templates in fullscreen mode.
 
 **What problem it solves:**
 - Centralized management of multiple digital signage displays
@@ -246,6 +246,14 @@ The system uses a Django REST API backend to manage screens, templates, content,
    - Fallback to cached template if available
    - Redirect to pairing page if unpaired
 
+### Docker development (hot reload)
+
+- **Command:** `docker compose -f docker-compose.yml -f docker-compose.dev.yml up db redis backend frontend-dev`
+- **App (Vite HMR):** http://localhost:5173 — proxies `/api` to the backend container
+- **Django (auto-reload):** http://localhost:8000 — `./BackEnd` is bind-mounted to `/app`
+- **Environment file:** host `./.env` is mounted at **`/config/.env`** in the backend container (isolated from the code mount); `PIXELCAST_SIGNAGE_ENV_FILE=/config/.env`
+- **Skip wizard:** set `PIXELCAST_SIGNAGE_INSTALLED=true` in `.env`, or rely on `installed.lock` after installation
+
 ## 4. Known Issues & Limitations
 
 ### Upload Issues (400 Errors)
@@ -334,6 +342,11 @@ The system uses a Django REST API backend to manage screens, templates, content,
 - Environment variables documented in env.example
 - Celery workers need to be started separately for async tasks
 - Redis required for production WebSocket and caching
+
+### Upgrading from ScreenGram-branded installs
+- Default PostgreSQL database and user names are now `pixelcast_signage_db` / `pixelcast_signage_user` (see `env.example`). Point `DB_NAME` / `DB_USER` at your existing database if you are not creating a fresh instance.
+- Docker Compose **named volumes** were renamed (e.g. `pixelcast-signage_postgres_data`). To keep existing data, either copy data into the new volumes or temporarily map volume `name:` values in `docker-compose.yml` back to your previous volume names.
+- Legacy environment variables `SCREENGRAM_ENV_FILE` and `SCREENGRAM_INSTALLED` are still honored alongside `PIXELCAST_SIGNAGE_ENV_FILE` and `PIXELCAST_SIGNAGE_INSTALLED`.
 
 ---
 

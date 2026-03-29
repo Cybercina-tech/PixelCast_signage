@@ -21,31 +21,21 @@ class UserModelTests(BaseTestCase):
     
     def test_user_role_helpers(self):
         """Test user role helper methods."""
-        # SuperAdmin
-        user = self.create_user(role='SuperAdmin')
+        user = self.create_user(role='Developer', is_superuser=True, is_staff=True)
+        self.assertTrue(user.is_developer())
         self.assertTrue(user.is_superadmin())
         self.assertTrue(user.has_full_access())
         self.assertTrue(user.can_execute_commands())
-        
-        # Admin
-        user = self.create_user(role='Admin')
-        self.assertTrue(user.is_admin())
-        self.assertTrue(user.has_full_access())
-        
-        # Manager
-        user = self.create_user(role='Manager')
+
+        user = self.create_user(role='Manager', is_staff=True)
         self.assertTrue(user.is_manager())
         self.assertTrue(user.can_manage_own_resources())
-        
-        # Operator
-        user = self.create_user(role='Operator')
-        self.assertTrue(user.is_operator())
         self.assertTrue(user.can_execute_commands())
-        
-        # Viewer
-        user = self.create_user(role='Viewer')
-        self.assertTrue(user.is_viewer())
-        self.assertTrue(user.has_read_only_access())
+
+        user = self.create_user(role='Employee')
+        self.assertTrue(user.is_employee())
+        self.assertFalse(user.has_full_access())
+        self.assertFalse(user.can_execute_commands())
     
     def test_user_email_lowercase(self):
         """Test email is stored in lowercase."""
@@ -64,9 +54,8 @@ class UserModelTests(BaseTestCase):
         # Different organization
         self.assertFalse(user1.can_access_user_resource(user3))
         
-        # Admin can access all
-        admin = self.create_user(role='Admin')
-        self.assertTrue(admin.can_access_user_resource(user1))
+        dev = self.create_user(role='Developer', is_superuser=True, is_staff=True)
+        self.assertTrue(dev.can_access_user_resource(user1))
 
 
 class ScreenModelTests(BaseTestCase):

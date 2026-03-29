@@ -29,7 +29,7 @@ class PasswordSecurityTests(TestCase):
             username='testuser',
             email='test@example.com',
             password='testpass123',
-            role='Viewer'
+            role='Employee'
         )
     
     def test_password_hashing(self):
@@ -38,7 +38,7 @@ class PasswordSecurityTests(TestCase):
             username='newuser',
             email='new@example.com',
             password='plaintext123',
-            role='Viewer'
+            role='Employee'
         )
         
         # Password should be hashed, not stored in plaintext
@@ -131,7 +131,7 @@ class AuthenticationTests(TestCase):
             username='testuser',
             email='test@example.com',
             password='testpass123',
-            role='Viewer',
+            role='Employee',
             is_active=True
         )
         cache.clear()
@@ -223,14 +223,14 @@ class UserManagementTests(TestCase):
             username='admin',
             email='admin@example.com',
             password='admin123',
-            role='Admin',
+            role='Developer',
             is_active=True
         )
         self.viewer = User.objects.create_user(
             username='viewer',
             email='viewer@example.com',
             password='viewer123',
-            role='Viewer',
+            role='Employee',
             is_active=True
         )
     
@@ -244,7 +244,7 @@ class UserManagementTests(TestCase):
             'email': 'new@example.com',
             'password': 'newpass123',
             'password_confirm': 'newpass123',
-            'role': 'Viewer'
+            'role': 'Employee'
         })
         
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
@@ -259,7 +259,7 @@ class UserManagementTests(TestCase):
             'email': 'new@example.com',
             'password': 'StrongP@ss123',
             'password_confirm': 'StrongP@ss123',
-            'role': 'Viewer',
+            'role': 'Employee',
             'full_name': 'New User'
         })
         
@@ -300,7 +300,7 @@ class UserManagementTests(TestCase):
             username='todelete',
             email='delete@example.com',
             password='pass123',
-            role='Viewer'
+            role='Employee'
         )
         
         self.client.force_authenticate(user=self.admin)
@@ -330,13 +330,13 @@ class AuditLoggingTests(TestCase):
             username='admin',
             email='admin@example.com',
             password='admin123',
-            role='Admin'
+            role='Developer'
         )
         self.user = User.objects.create_user(
             username='testuser',
             email='test@example.com',
             password='test123',
-            role='Viewer'
+            role='Employee'
         )
     
     def test_login_audit_log(self):
@@ -365,7 +365,7 @@ class AuditLoggingTests(TestCase):
             'email': 'new@example.com',
             'password': 'StrongP@ss123',
             'password_confirm': 'StrongP@ss123',
-            'role': 'Viewer'
+            'role': 'Employee'
         })
         
         # Check audit log
@@ -448,13 +448,13 @@ class PermissionTests(TestCase):
             username='superadmin',
             email='superadmin@example.com',
             password='pass123',
-            role='SuperAdmin'
+            role='Developer'
         )
         self.admin = User.objects.create_user(
             username='admin',
             email='admin@example.com',
             password='pass123',
-            role='Admin'
+            role='Developer'
         )
         self.manager = User.objects.create_user(
             username='manager',
@@ -466,7 +466,7 @@ class PermissionTests(TestCase):
             username='viewer',
             email='viewer@example.com',
             password='pass123',
-            role='Viewer'
+            role='Employee'
         )
     
     def test_permission_methods(self):
@@ -476,14 +476,14 @@ class PermissionTests(TestCase):
         self.assertFalse(self.manager.has_full_access())
         
         self.assertTrue(self.manager.can_manage_own_resources())
-        self.assertFalse(self.viewer.can_manage_own_resources())
-    
+        self.assertTrue(self.viewer.can_manage_own_resources())
+
     def test_role_checks(self):
         """Test role checking methods."""
-        self.assertTrue(self.superadmin.is_superadmin())
-        self.assertTrue(self.admin.is_admin())
+        self.assertTrue(self.superadmin.is_developer())
+        self.assertTrue(self.admin.is_developer())
         self.assertTrue(self.manager.is_manager())
-        self.assertTrue(self.viewer.is_viewer())
+        self.assertTrue(self.viewer.is_employee())
 
 
 class SecurityEdgeCasesTests(TestCase):
@@ -495,7 +495,7 @@ class SecurityEdgeCasesTests(TestCase):
             username='admin',
             email='admin@example.com',
             password='admin123',
-            role='Admin'
+            role='Developer'
         )
     
     def test_xss_prevention(self):
@@ -509,7 +509,7 @@ class SecurityEdgeCasesTests(TestCase):
             'email': '<script>alert("xss")</script>@example.com',
             'password': 'StrongP@ss123',
             'password_confirm': 'StrongP@ss123',
-            'role': 'Viewer'
+            'role': 'Employee'
         })
         
         # Should sanitize or reject
@@ -529,12 +529,12 @@ class SecurityEdgeCasesTests(TestCase):
             'email': 'test@example.com',
             'password': 'StrongP@ss123',
             'password_confirm': 'StrongP@ss123',
-            'role': 'Viewer'
+            'role': 'Employee'
         })
         
         # Should handle safely (either reject or sanitize)
         # Most importantly, users table should still exist
-        self.assertTrue(User.objects.filter(role='Admin').exists())
+        self.assertTrue(User.objects.filter(role='Developer').exists())
 
 
 # Integration tests
@@ -547,7 +547,7 @@ class UserManagementIntegrationTests(TestCase):
             username='admin',
             email='admin@example.com',
             password='admin123',
-            role='Admin'
+            role='Developer'
         )
         cache.clear()
     
@@ -562,7 +562,7 @@ class UserManagementIntegrationTests(TestCase):
             'email': 'new@example.com',
             'password': 'StrongP@ss123',
             'password_confirm': 'StrongP@ss123',
-            'role': 'Viewer'
+            'role': 'Employee'
         })
         self.assertEqual(create_response.status_code, status.HTTP_201_CREATED)
         user_id = create_response.data['id']

@@ -1,5 +1,5 @@
 """
-Content Storage Manager for ScreenGram Digital Signage System.
+Content Storage Manager for PixelCast Signage Digital Signage System.
 
 Provides secure, production-ready file storage for Content objects.
 Supports both Local File System and Amazon S3 with automatic fallback.

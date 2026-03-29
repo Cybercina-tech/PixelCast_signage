@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Automated Deployment Script for ScreenGram
+Automated Deployment Script for PixelCast Signage
 
 This script handles automated deployments from GitHub:
 1. Pulls latest code from main branch
@@ -193,7 +193,7 @@ def docker_compose_up(docker_compose_cmd, build=True):
 
 def main():
     """Main deployment function."""
-    parser = argparse.ArgumentParser(description='Automated deployment script for ScreenGram')
+    parser = argparse.ArgumentParser(description='Automated deployment script for PixelCast Signage')
     parser.add_argument('--branch', default='main', help='Git branch to pull from (default: main)')
     parser.add_argument('--no-build', action='store_true', help='Skip Docker image rebuild')
     parser.add_argument('--force', action='store_true', help='Force deployment even if no new commits')
@@ -201,7 +201,7 @@ def main():
     args = parser.parse_args()
     
     logger.info("=" * 60)
-    logger.info("ScreenGram Automated Deployment Started")
+    logger.info("PixelCast Signage Automated Deployment Started")
     logger.info(f"Timestamp: {datetime.now().strftime(DATE_FORMAT)}")
     logger.info(f"Branch: {args.branch}")
     logger.info(f"Build: {not args.no_build}")

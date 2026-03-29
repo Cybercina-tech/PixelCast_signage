@@ -120,7 +120,7 @@ class UserCreateSerializer(serializers.ModelSerializer):
     """Serializer for creating new users"""
     password = serializers.CharField(write_only=True, required=True, validators=[validate_password])
     password_confirm = serializers.CharField(write_only=True, required=True)
-    
+
     class Meta:
         model = User
         fields = [
@@ -130,6 +130,7 @@ class UserCreateSerializer(serializers.ModelSerializer):
         extra_kwargs = {
             'email': {'required': True},
             'username': {'required': True},
+            'role': {'default': 'Employee'},
         }
     
     def validate_password(self, value):
@@ -152,14 +153,25 @@ class UserCreateSerializer(serializers.ModelSerializer):
         """Validate password confirmation and strength"""
         password = attrs.get('password')
         password_confirm = attrs.get('password_confirm')
-        
+
         if password != password_confirm:
             raise serializers.ValidationError({"password_confirm": "Password fields didn't match."})
-        
+
+        role = attrs.get('role', 'Employee')
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            if request.user.is_employee():
+                raise serializers.ValidationError('You do not have permission to create users.')
+            if request.user.is_manager() and not request.user.is_developer():
+                if role != 'Employee':
+                    raise serializers.ValidationError({
+                        'role': 'Managers can only create Employee accounts.'
+                    })
+
         # Check password strength
         from .security import PasswordStrengthChecker
         strength = PasswordStrengthChecker.check_password_strength(password)
-        
+
         if strength['score'] < 2:
             # Create user-friendly password validation message
             feedback_messages = []
@@ -296,24 +308,20 @@ class LoginSerializer(serializers.Serializer):
 class RoleSerializer(serializers.Serializer):
     """Serializer for role management"""
     ROLE_CHOICES = [
-        ('SuperAdmin', 'Super Admin'),
-        ('Admin', 'Admin'),
-        ('Operator', 'Operator'),
+        ('Developer', 'Developer'),
         ('Manager', 'Manager'),
-        ('Viewer', 'Viewer'),
+        ('Employee', 'Employee'),
     ]
-    
+
     role = serializers.ChoiceField(choices=ROLE_CHOICES)
     description = serializers.CharField(read_only=True)
-    
+
     def get_description(self, role):
         """Get role description"""
         descriptions = {
-            'SuperAdmin': 'Full system access with all permissions',
-            'Admin': 'Administrative access to manage users and resources',
-            'Operator': 'Can execute commands and manage resources',
-            'Manager': 'Can manage own resources and view reports',
-            'Viewer': 'Read-only access to view resources',
+            'Developer': 'Full system access including settings, logs, and license management',
+            'Manager': 'Manage team (Employees), screens, and content; no system-level settings',
+            'Employee': 'Screens, playlists, and media library only',
         }
         return descriptions.get(role, '')
 

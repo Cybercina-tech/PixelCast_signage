@@ -64,13 +64,12 @@ PERMISSIONS = {
     'edit_settings': 'edit_settings',
     
     # Admin
-    'view_errors': 'view_errors',  # SuperAdmin only
+    'view_errors': 'view_errors',  # Developer only
 }
 
-# Role to permissions mapping
+# Role to permissions mapping (3-tier)
 ROLE_PERMISSIONS = {
-    'SuperAdmin': [
-        # SuperAdmin has all permissions
+    'Developer': [
         'view_dashboard',
         'view_screens', 'create_screens', 'edit_screens', 'delete_screens',
         'view_templates', 'create_templates', 'edit_templates', 'delete_templates',
@@ -85,50 +84,20 @@ ROLE_PERMISSIONS = {
         'view_settings', 'edit_settings',
         'view_errors',
     ],
-    'Admin': [
+    'Manager': [
         'view_dashboard',
         'view_screens', 'create_screens', 'edit_screens', 'delete_screens',
         'view_templates', 'create_templates', 'edit_templates', 'delete_templates',
         'view_contents', 'create_contents', 'edit_contents', 'delete_contents',
         'view_schedules', 'create_schedules', 'edit_schedules', 'delete_schedules',
         'view_commands', 'create_commands', 'execute_commands',
-        'view_users', 'create_users', 'edit_users', 'delete_users', 'manage_roles',
-        'view_logs',
+        'view_users', 'create_users', 'edit_users', 'delete_users',
         'view_analytics',
-        'view_audit_logs',
-        'view_backups', 'manage_backups',
-        'view_settings', 'edit_settings',
     ],
-    'Manager': [
-        'view_dashboard',
+    'Employee': [
         'view_screens', 'create_screens', 'edit_screens',
-        'view_templates', 'create_templates', 'edit_templates',
-        'view_contents', 'create_contents', 'edit_contents',
         'view_schedules', 'create_schedules', 'edit_schedules',
-        'view_commands', 'create_commands', 'execute_commands',
-        'view_users',
-        'view_logs',
-        'view_analytics',
-        'view_settings',
-    ],
-    'Operator': [
-        'view_dashboard',
-        'view_screens', 'create_screens', 'edit_screens',
-        'view_templates', 'create_templates', 'edit_templates',
         'view_contents', 'create_contents', 'edit_contents',
-        'view_schedules', 'create_schedules', 'edit_schedules',
-        'view_commands', 'create_commands', 'execute_commands',
-        'view_logs',
-        'view_settings',
-    ],
-    'Viewer': [
-        'view_dashboard',
-        'view_screens',
-        'view_templates',
-        'view_contents',
-        'view_schedules',
-        'view_commands',
-        'view_settings',
     ],
 }
 
@@ -148,11 +117,10 @@ def get_user_permissions(user):
     
     role = user.role
     permissions = set(ROLE_PERMISSIONS.get(role, []))
-    
-    # SuperAdmin always has all permissions
-    if role == 'SuperAdmin':
+
+    if role == 'Developer':
         permissions = set(PERMISSIONS.values())
-    
+
     return permissions
 
 
@@ -205,7 +173,7 @@ SIDEBAR_ITEMS = [
     },
     {
         'id': 'contents',
-        'title': 'Contents',
+        'title': 'Media library',
         'icon': 'FolderIcon',
         'path': '/contents',
         'required_permissions': ['view_contents'],
@@ -214,7 +182,7 @@ SIDEBAR_ITEMS = [
     },
     {
         'id': 'schedules',
-        'title': 'Schedules',
+        'title': 'Playlists',
         'icon': 'ClockIcon',
         'path': '/schedules',
         'required_permissions': ['view_schedules'],
@@ -232,7 +200,7 @@ SIDEBAR_ITEMS = [
     },
     {
         'id': 'users',
-        'title': 'Users & Roles',
+        'title': 'Team management',
         'icon': 'UsersIcon',
         'path': '/users',
         'required_permissions': ['view_users'],

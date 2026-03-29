@@ -40,11 +40,9 @@ class ScreenViewSet(viewsets.ModelViewSet):
         queryset = super().get_queryset()
         user = self.request.user
         
-        # SuperAdmin and Admin can see all screens
-        if user.has_full_access():
+        if user.is_developer() or user.is_manager():
             return queryset
-        
-        # Filter by owner for other users
+
         queryset = queryset.filter(owner=user)
         
         return queryset

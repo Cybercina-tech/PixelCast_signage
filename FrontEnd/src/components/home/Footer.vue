@@ -13,7 +13,7 @@
               <BoltIcon class="w-6 h-6 text-white" />
             </div>
             <span class="text-2xl font-black bg-gradient-to-r from-orange-500 to-orange-600 bg-clip-text text-transparent">
-              Screengram
+              PixelCast
             </span>
           </div>
           <p class="text-neutral-400 leading-relaxed mb-6 text-sm">
@@ -22,7 +22,7 @@
           <div class="flex space-x-4">
             <!-- LinkedIn -->
             <a
-              href="https://linkedin.com/company/screengram"
+              href="https://linkedin.com/company/pixelcast-signage"
               target="_blank"
               rel="noopener noreferrer"
               class="w-10 h-10 rounded-lg bg-neutral-800 hover:bg-orange-500 flex items-center justify-center transition-all duration-300 ease-out hover:scale-110 hover:rotate-3 group"
@@ -34,7 +34,7 @@
             </a>
             <!-- Twitter -->
             <a
-              href="https://twitter.com/screengram"
+              href="https://twitter.com/pixelcast-signage"
               target="_blank"
               rel="noopener noreferrer"
               class="w-10 h-10 rounded-lg bg-neutral-800 hover:bg-orange-500 flex items-center justify-center transition-all duration-300 ease-out hover:scale-110 hover:rotate-3 group"
@@ -46,7 +46,7 @@
             </a>
             <!-- GitHub -->
             <a
-              href="https://github.com/screengram"
+              href="https://github.com/pixelcast-signage"
               target="_blank"
               rel="noopener noreferrer"
               class="w-10 h-10 rounded-lg bg-neutral-800 hover:bg-orange-500 flex items-center justify-center transition-all duration-300 ease-out hover:scale-110 hover:rotate-3 group"
@@ -185,11 +185,11 @@
           <ul class="space-y-3 mb-6">
             <li>
               <a
-                href="mailto:support@screengram.com"
+                href="mailto:support@pixelcastsignage.com"
                 class="text-neutral-400 hover:text-orange-400 transition-colors duration-300 text-sm flex items-center gap-2"
               >
                 <EnvelopeIcon class="w-4 h-4" />
-                support@screengram.com
+                support@pixelcastsignage.com
               </a>
             </li>
             <li>
@@ -221,7 +221,7 @@
       <div class="border-t border-neutral-800 py-8">
         <div class="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
           <div class="flex items-center space-x-2 text-neutral-400 text-sm">
-            <span>© {{ currentYear }} Screengram. All rights reserved.</span>
+            <span>© {{ currentYear }} PixelCast Signage. All rights reserved.</span>
           </div>
           <div class="flex items-center space-x-6 text-sm">
             <router-link
@@ -267,11 +267,6 @@ const showScrollTop = ref(false)
 // App version from Git (set at build time)
 // Format: commit hash (e.g., "e994370")
 const appVersion = ref(typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'dev')
-
-// App version from Git (set at build time)
-// Format: commit hash (e.g., "e994370")
-const appVersion = ref(typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : 'dev')
-
 
 const scrollToSection = (href) => {
   const targetId = href.replace('#', '')

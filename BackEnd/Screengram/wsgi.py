@@ -1,5 +1,5 @@
 """
-WSGI config for Screengram project.
+WSGI config for PixelCast Signage (package: Screengram).
 
 It exposes the WSGI callable as a module-level variable named ``application``.
 

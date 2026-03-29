@@ -50,18 +50,16 @@ class User(AbstractUser):
         help_text="User's phone number"
     )
     
-    # Role & Permissions
+    # Role & Permissions (3-tier hierarchy)
     ROLE_CHOICES = [
-        ('SuperAdmin', 'Super Admin'),
-        ('Admin', 'Admin'),
-        ('Operator', 'Operator'),
+        ('Developer', 'Developer'),
         ('Manager', 'Manager'),
-        ('Viewer', 'Viewer'),
+        ('Employee', 'Employee'),
     ]
     role = models.CharField(
         max_length=20,
         choices=ROLE_CHOICES,
-        default='Viewer',
+        default='Employee',
         help_text="User role in the system"
     )
     
@@ -131,50 +129,62 @@ class User(AbstractUser):
         return self.full_name if self.full_name else self.username
     
     # Role Helper Methods
+    def is_developer(self):
+        """Top tier: full system access (god mode)."""
+        return self.role == 'Developer'
+
     def is_superadmin(self):
-        """Check if user has SuperAdmin role"""
-        return self.role == 'SuperAdmin'
-    
-    def is_admin(self):
-        """Check if user has Admin role"""
-        return self.role == 'Admin'
-    
-    def is_operator(self):
-        """Check if user has Operator role"""
-        return self.role == 'Operator'
-    
+        """Alias for is_developer() — backward compatible name."""
+        return self.is_developer()
+
     def is_manager(self):
-        """Check if user has Manager role"""
+        """Staff tier: manage employees, content, screens; not system settings."""
         return self.role == 'Manager'
-    
+
+    def is_employee(self):
+        """Operational tier: screens, schedules, media only."""
+        return self.role == 'Employee'
+
+    def is_admin(self):
+        """Deprecated: old Admin role; use is_developer()."""
+        return False
+
+    def is_operator(self):
+        """Deprecated: old Operator role."""
+        return False
+
     def is_viewer(self):
-        """Check if user has Viewer role"""
-        return self.role == 'Viewer'
-    
+        """Deprecated: old Viewer role."""
+        return False
+
     # Permission Helper Methods
     def has_full_access(self):
-        """Check if user has full access (SuperAdmin or Admin role)"""
-        return self.is_superadmin() or self.is_admin()
-    
+        """Full access (Developer only)."""
+        return self.is_developer()
+
     def can_manage_own_resources(self):
-        """Check if user can manage their own resources (SuperAdmin, Admin, Operator, or Manager)"""
-        return self.is_superadmin() or self.is_admin() or self.is_operator() or self.is_manager()
-    
+        """All active roles may manage permitted resources."""
+        return self.is_developer() or self.is_manager() or self.is_employee()
+
     def has_read_only_access(self):
-        """Check if user has read-only access (Viewer role)"""
-        return self.is_viewer()
-    
+        """No dedicated read-only tier in 3-role model."""
+        return False
+
     def can_execute_commands(self):
-        """Check if user can execute commands (SuperAdmin, Admin, or Operator)"""
-        return self.is_superadmin() or self.is_admin() or self.is_operator()
-    
+        """Developer and Manager may execute commands; not Employee."""
+        return self.is_developer() or self.is_manager()
+
     def can_manage_templates(self):
-        """Check if user can create/edit templates (SuperAdmin, Admin, Operator, or Manager)"""
-        return self.is_superadmin() or self.is_admin() or self.is_operator() or self.is_manager()
-    
+        """Developer and Manager may manage templates."""
+        return self.is_developer() or self.is_manager()
+
     def can_view_reports(self):
-        """Check if user can access logs and reports (SuperAdmin, Admin, Operator, or Manager)"""
-        return self.is_superadmin() or self.is_admin() or self.is_operator() or self.is_manager()
+        """Analytics/reports: Developer and Manager (not system logs for Manager — use sidebar/API)."""
+        return self.is_developer() or self.is_manager()
+
+    def can_manage_employees(self):
+        """Managers may manage Employee users only; Developers manage all."""
+        return self.is_developer() or self.is_manager()
     
     # Property Methods for Resource Counts
     @property
@@ -226,9 +236,11 @@ class User(AbstractUser):
     def can_access_user_resource(self, other_user):
         """
         Check if this user can access resources of another user.
-        Admin can access all, Manager/Viewer can access same organization.
+        Developer can access all; others may access same organization or own resources.
         """
-        if self.is_admin():
+        if self.is_developer():
+            return True
+        if self.id == other_user.id:
             return True
         if self.organization_name and other_user.organization_name:
             return self.organization_name == other_user.organization_name

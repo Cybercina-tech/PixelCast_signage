@@ -580,6 +580,7 @@ export const setupAPI = {
   status: () => api.get('/setup/status/'),
   testDb: (data) => api.post('/setup/db-check/', data),
   runMigrations: () => api.post('/setup/run-migrations/'),
+  seedAssets: () => api.post('/setup/seed-assets/'),
   createAdmin: (data) => api.post('/setup/create-admin/', data),
   finalize: (data = {}) => api.post('/setup/finalize/', data),
 }

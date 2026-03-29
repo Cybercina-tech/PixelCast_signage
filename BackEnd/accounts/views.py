@@ -50,26 +50,27 @@ class UserViewSet(viewsets.ModelViewSet):
         """Filter queryset based on user permissions"""
         queryset = super().get_queryset()
         user = self.request.user
-        
-        # SuperAdmin and Admin can see all users
-        if user.has_full_access():
+
+        if user.is_developer():
             return queryset
-        
-        # Manager, Operator, Viewer can see users in their organization
-        if user.organization_name:
-            return queryset.filter(organization_name=user.organization_name)
-        
-        # Otherwise, only see themselves
+
+        if user.is_manager():
+            q = queryset.filter(role='Employee')
+            if user.organization_name:
+                q = q.filter(organization_name=user.organization_name)
+            return q
+
         return queryset.filter(id=user.id)
     
     def perform_create(self, serializer):
         """Check permissions before creating user"""
         user = self.request.user
-        
-        # Only SuperAdmin and Admin can create users
-        if not user.has_full_access():
+
+        if user.is_employee():
             raise PermissionDenied("You do not have permission to create users.")
-        
+        if not (user.is_developer() or user.is_manager()):
+            raise PermissionDenied("You do not have permission to create users.")
+
         # Sanitize input
         validated_data = serializer.validated_data
         if 'email' in validated_data:
@@ -111,15 +112,13 @@ class UserViewSet(viewsets.ModelViewSet):
         if 'full_name' in validated_data:
             validated_data['full_name'] = sanitize_input(validated_data.get('full_name'))
         
-        # SuperAdmin and Admin can update any user
-        if user.has_full_access():
+        if user.is_developer():
             # Track role change
             if 'role' in validated_data and validated_data['role'] != old_role:
                 changes['role'] = {'before': old_role, 'after': validated_data['role']}
-            
+
             updated_user = serializer.save()
-            
-            # Log audit event
+
             try:
                 AuditLogger.log_action(
                     action_type='update',
@@ -129,8 +128,7 @@ class UserViewSet(viewsets.ModelViewSet):
                     changes=changes if changes else None,
                     request=self.request,
                 )
-                
-                # Log role change separately if occurred
+
                 if changes.get('role'):
                     AuditLogger.log_action(
                         action_type='role_change',
@@ -143,9 +141,27 @@ class UserViewSet(viewsets.ModelViewSet):
                     )
             except Exception as e:
                 logger.error(f'Failed to log user update audit: {e}')
-            
+
             return
-        
+
+        if user.is_manager() and target_user.role == 'Employee' and user.id != target_user.id:
+            if 'role' in validated_data and validated_data.get('role') != 'Employee':
+                raise PermissionDenied("Managers can only manage Employee accounts.")
+            validated_data['role'] = 'Employee'
+
+            updated_user = serializer.save()
+            try:
+                AuditLogger.log_action(
+                    action_type='update',
+                    user=user,
+                    resource=updated_user,
+                    description=f'Updated user account: {updated_user.username}',
+                    request=self.request,
+                )
+            except Exception as e:
+                logger.error(f'Failed to log user update audit: {e}')
+            return
+
         # Users can update their own profile (except role)
         if user.id == target_user.id:
             # Don't allow users to change their own role
@@ -174,15 +190,20 @@ class UserViewSet(viewsets.ModelViewSet):
     def perform_destroy(self, instance):
         """Check permissions before delete"""
         user = self.request.user
-        
-        # Only SuperAdmin and Admin can delete users
-        if not user.has_full_access():
+
+        if user.is_employee():
             raise PermissionDenied("You do not have permission to delete users.")
-        
+
+        if user.is_manager():
+            if instance.role != 'Employee':
+                raise PermissionDenied("You can only delete Employee accounts.")
+        elif not user.is_developer():
+            raise PermissionDenied("You do not have permission to delete users.")
+
         # Don't allow deleting yourself
         if user.id == instance.id:
             raise PermissionDenied("You cannot delete your own account.")
-        
+
         # Store user info before deletion for audit log
         deleted_username = instance.username
         deleted_email = instance.email
@@ -384,32 +405,22 @@ class UserViewSet(viewsets.ModelViewSet):
     def change_role(self, request, id=None):
         """
         POST /api/users/{id}/change_role/
-        Change user role (SuperAdmin/Admin only)
-        
-        Logs critical audit event for role changes.
+        Change user role (Developer only).
         """
         target_user = self.get_object()
-        
-        # Only SuperAdmin and Admin can change roles
-        if not request.user.has_full_access():
-            raise PermissionDenied("You do not have permission to change user roles.")
-        
+
+        if not request.user.is_developer():
+            raise PermissionDenied("Only a Developer can change user roles.")
+
         # Don't allow changing your own role
         if request.user.id == target_user.id:
             raise PermissionDenied("You cannot change your own role.")
-        
+
         serializer = RoleSerializer(data=request.data)
         if serializer.is_valid():
             old_role = target_user.role
             new_role = serializer.validated_data['role']
-            
-            # Don't allow changing to/from SuperAdmin unless current user is SuperAdmin
-            if new_role == 'SuperAdmin' and not request.user.is_superadmin():
-                raise PermissionDenied("Only SuperAdmin can assign SuperAdmin role.")
-            
-            if old_role == 'SuperAdmin' and not request.user.is_superadmin():
-                raise PermissionDenied("Only SuperAdmin can change SuperAdmin role.")
-            
+
             # Invalidate sidebar items cache for the user whose role changed
             cache_key = f'sidebar_items_{target_user.id}_{old_role}'
             cache.delete(cache_key)
@@ -418,6 +429,12 @@ class UserViewSet(viewsets.ModelViewSet):
             cache.delete(cache_key_new)
             
             target_user.role = new_role
+            if new_role == 'Developer':
+                target_user.is_superuser = True
+                target_user.is_staff = True
+            else:
+                target_user.is_superuser = False
+                target_user.is_staff = new_role == 'Manager'
             target_user.save()
             
             # Log critical audit event
@@ -612,31 +629,21 @@ def signup_view(request):
     POST /api/auth/signup/
     Public endpoint to create a new user account.
     
-    Allows unauthenticated users to register. New users are created with 'Viewer' role by default.
+    Allows unauthenticated users to register. New users are created with Employee role by default.
     """
     from .serializers import UserCreateSerializer
-    
+
     serializer = UserCreateSerializer(data=request.data)
-    
+
     if serializer.is_valid():
-        # Create user with Viewer role by default (can be changed by admin later)
-        user_data = serializer.validated_data.copy()
-        user_data.pop('password_confirm')
-        password = user_data.pop('password')
-        
-        # Set default role to Viewer for public signups
-        if 'role' not in user_data:
-            user_data['role'] = 'Viewer'
-        elif user_data.get('role') not in ['Viewer', 'Operator']:  # Only allow low-privilege roles
-            user_data['role'] = 'Viewer'
-        
+        serializer.validated_data['role'] = 'Employee'
+
         # Sanitize input
-        if 'email' in user_data:
-            user_data['email'] = sanitize_input(user_data['email'])
-        if 'username' in user_data:
-            user_data['username'] = sanitize_input(user_data['username'])
-        
-        # Create user
+        if 'email' in serializer.validated_data:
+            serializer.validated_data['email'] = sanitize_input(serializer.validated_data['email'])
+        if 'username' in serializer.validated_data:
+            serializer.validated_data['username'] = sanitize_input(serializer.validated_data['username'])
+
         user = serializer.save()
         
         # Log audit event (no user for unauthenticated signups)
@@ -804,43 +811,24 @@ def logout_all_view(request):
 def roles_view(request):
     """
     GET /api/roles/
-    Get available roles (SuperAdmin/Admin only)
+    Roles available for assignment in the UI (filtered by caller).
     """
-    # Only SuperAdmin and Admin can view roles
-    if not request.user.has_full_access():
+    user = request.user
+    if user.is_employee():
         raise PermissionDenied("You do not have permission to view roles.")
-    
-    roles = [
-        {
-            'value': 'SuperAdmin',
-            'label': 'Super Admin',
-            'description': 'Full system access with all permissions'
-        },
-        {
-            'value': 'Admin',
-            'label': 'Admin',
-            'description': 'Administrative access to manage users and resources'
-        },
-        {
-            'value': 'Operator',
-            'label': 'Operator',
-            'description': 'Can execute commands and manage resources'
-        },
-        {
-            'value': 'Manager',
-            'label': 'Manager',
-            'description': 'Can manage own resources and view reports'
-        },
-        {
-            'value': 'Viewer',
-            'label': 'Viewer',
-            'description': 'Read-only access to view resources'
-        },
-    ]
-    
-    return Response({
-        'roles': roles
-    }, status=status.HTTP_200_OK)
+
+    if user.is_developer():
+        roles = [
+            {'value': 'Developer', 'label': 'Developer', 'description': 'Full system access'},
+            {'value': 'Manager', 'label': 'Manager', 'description': 'Manage team and content; no system settings'},
+            {'value': 'Employee', 'label': 'Employee', 'description': 'Screens, playlists, and media only'},
+        ]
+    else:
+        roles = [
+            {'value': 'Employee', 'label': 'Employee', 'description': 'Screens, playlists, and media only'},
+        ]
+
+    return Response({'roles': roles}, status=status.HTTP_200_OK)
 
 
 @api_view(['POST'])
@@ -848,12 +836,11 @@ def roles_view(request):
 def create_role(request):
     """
     POST /api/roles/
-    Create/Manage role (SuperAdmin only)
+    Create/Manage role (Developer only)
     Note: Roles are predefined, this endpoint is for future extensibility
     """
-    # Only SuperAdmin can manage roles
-    if not request.user.is_superadmin():
-        raise PermissionDenied("Only SuperAdmin can manage roles.")
+    if not request.user.is_developer():
+        raise PermissionDenied("Only a Developer can manage roles.")
     
     return Response({
         'status': 'error',
@@ -890,7 +877,7 @@ class SendVerificationEmail(APIView):
             code = user.generate_verification_code()
             
             # Send email
-            subject = 'ScreenGram Email Verification Code'
+            subject = 'PixelCast Signage Email Verification Code'
             message = f'''
 Hello {user.full_name or user.username},
 
@@ -901,7 +888,7 @@ This code will expire in 10 minutes.
 If you did not request this code, please ignore this email.
 
 Best regards,
-ScreenGram Team
+PixelCast Signage Team
 '''
             from_email = settings.DEFAULT_FROM_EMAIL
             recipient_list = [user.email]

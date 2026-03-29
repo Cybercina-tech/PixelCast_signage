@@ -28,7 +28,7 @@ class TestCaching(TestCase):
         self.user = User.objects.create_user(
             username='testuser',
             password='testpass123',
-            role='Admin'
+            role='Developer'
         )
 
     def test_cache_set_get(self):
@@ -92,7 +92,7 @@ class TestRateLimiting(TestCase):
         self.user = User.objects.create_user(
             username='testuser',
             password='testpass123',
-            role='Admin'
+            role='Developer'
         )
         # Clear cache
         cache.clear()
@@ -139,7 +139,7 @@ class TestRateLimiting(TestCase):
         viewer = User.objects.create_user(
             username='viewer',
             password='testpass123',
-            role='Viewer'
+            role='Employee'
         )
 
         request = MagicMock()
@@ -148,7 +148,7 @@ class TestRateLimiting(TestCase):
         request.path = '/api/test/'
 
         per_role_limits = {
-            'Viewer': {
+            'Employee': {
                 'per_minute': 30,
                 'per_hour': 500,
                 'per_day': 5000
@@ -162,7 +162,7 @@ class TestRateLimiting(TestCase):
         )
 
         self.assertTrue(is_allowed)
-        # Should use Viewer limits (30 per minute)
+        # Should use Employee limits (30 per minute)
         self.assertEqual(remaining['minute'], 29)  # 1 request made, 29 remaining
 
 
@@ -175,7 +175,7 @@ class TestAuditLogging(TestCase):
         self.user = User.objects.create_user(
             username='testuser',
             password='testpass123',
-            role='Admin'
+            role='Developer'
         )
         self.screen = Screen.objects.create(
             name='Test Screen',
@@ -269,7 +269,7 @@ class TestBackupSystem(TestCase):
         self.user = User.objects.create_user(
             username='testuser',
             password='testpass123',
-            role='Admin'
+            role='Developer'
         )
 
     @patch('core.backup.subprocess.run')
@@ -360,7 +360,7 @@ class TestIntegration(TestCase):
         self.user = User.objects.create_user(
             username='testuser',
             password='testpass123',
-            role='Admin'
+            role='Developer'
         )
 
     def test_cache_invalidation_on_save(self):

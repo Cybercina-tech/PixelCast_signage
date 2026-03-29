@@ -11,35 +11,33 @@
     <!-- Starfield Background -->
     <div class="fixed inset-0 starfield-background pointer-events-none z-0"></div>
 
-    <!-- Navigation -->
-    <nav class="fixed top-0 left-0 right-0 z-40 backdrop-blur-xl bg-black/20 border-b border-white/10">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between items-center h-20">
-          <div class="flex items-center space-x-2">
-            <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-cyan-400 to-purple-600 flex items-center justify-center">
-              <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <!-- Compact top bar: logo + auth only (section jumps via side dots / scroll) -->
+    <nav class="landing-nav fixed top-0 left-0 right-0 z-40 backdrop-blur-xl bg-black/20 border-b border-white/10">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
+        <div class="flex items-center justify-between gap-3 min-h-[2.5rem]">
+          <router-link
+            to="/"
+            class="flex items-center gap-2 min-w-0 shrink"
+          >
+            <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-400 to-purple-600 flex items-center justify-center shrink-0">
+              <svg class="w-[1.125rem] h-[1.125rem] text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
               </svg>
             </div>
-            <span class="text-2xl font-bold bg-gradient-to-r from-cyan-400 to-purple-500 bg-clip-text text-transparent">
-              ScreenGram
+            <span class="text-base sm:text-lg font-bold bg-gradient-to-r from-cyan-400 to-purple-500 bg-clip-text text-transparent truncate">
+              PixelCast
             </span>
-          </div>
-          <div class="hidden md:flex items-center space-x-8">
-            <a @click="scrollToSection(1)" class="text-white/80 hover:text-white transition-colors cursor-pointer">Features</a>
-            <a @click="scrollToSection(3)" class="text-white/80 hover:text-white transition-colors cursor-pointer">Use Cases</a>
-            <a @click="scrollToSection(2)" class="text-white/80 hover:text-white transition-colors cursor-pointer">Live Pulse</a>
-          </div>
-          <div class="flex items-center space-x-4">
-            <router-link 
-              to="/login" 
-              class="px-4 py-2 text-white/80 hover:text-white transition-colors"
+          </router-link>
+          <div class="flex items-center gap-2 sm:gap-2.5 shrink-0">
+            <router-link
+              to="/login"
+              class="px-2 py-1.5 text-xs sm:text-sm text-white/80 hover:text-white transition-colors"
             >
               Login
             </router-link>
-            <router-link 
-              to="/signup" 
-              class="neon-button px-6 py-2.5 rounded-lg font-semibold text-white transition-all duration-300"
+            <router-link
+              to="/signup"
+              class="neon-button px-3.5 sm:px-5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold text-white transition-all duration-300"
             >
               Get Started
             </router-link>
@@ -73,19 +71,23 @@
       >
         <div class="section-content">
           <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
-            <div class="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center h-full">
-              <div class="text-center lg:text-left section-fade-in">
-                <h1 class="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 leading-tight">
+            <div
+              class="hero-align-grid grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-10 lg:gap-12 items-center h-full"
+            >
+              <div
+                class="text-center lg:text-left section-fade-in space-y-5 md:space-y-6 max-w-2xl mx-auto lg:mx-0 lg:max-w-none"
+              >
+                <h1 class="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight tracking-tight">
                   <span class="bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-500 bg-clip-text text-transparent">
                     Command Your Screens
                   </span>
                   <br>
                   <span class="text-white">From Deep Space</span>
                 </h1>
-                <p class="text-lg md:text-xl text-white/70 mb-8 leading-relaxed max-w-xl mx-auto lg:mx-0">
+                <p class="text-lg md:text-xl text-white/70 leading-relaxed max-w-xl mx-auto lg:mx-0">
                   The most advanced digital signage platform for professional networks.
                 </p>
-                <div class="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
+                <div class="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center lg:justify-start pt-1">
                   <router-link 
                     to="/signup" 
                     class="neon-button-large px-8 py-4 rounded-lg font-semibold text-lg text-white transition-all duration-300 text-center"
@@ -93,60 +95,77 @@
                     Start Free Trial
                   </router-link>
                   <button 
+                    type="button"
                     @click="scrollToSection(1)" 
                     class="glass-card px-8 py-4 rounded-lg font-semibold text-lg text-white border border-white/20 hover:border-white/40 transition-all duration-300 text-center"
                   >
                     Explore Features
                   </button>
                 </div>
-                <div class="mt-8 flex flex-wrap gap-4 justify-center lg:justify-start">
-                  <div class="flex items-center space-x-2 text-white/60 text-sm">
-                    <svg class="w-4 h-4 text-cyan-400" fill="currentColor" viewBox="0 0 20 20">
+                <div class="flex flex-wrap gap-x-6 gap-y-2 justify-center lg:justify-start pt-2 text-white/60 text-sm">
+                  <div class="flex items-center gap-2">
+                    <svg class="w-4 h-4 text-cyan-400 shrink-0" fill="currentColor" viewBox="0 0 20 20">
                       <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
                     </svg>
                     <span>No Credit Card</span>
                   </div>
-                  <div class="flex items-center space-x-2 text-white/60 text-sm">
-                    <svg class="w-4 h-4 text-cyan-400" fill="currentColor" viewBox="0 0 20 20">
+                  <div class="flex items-center gap-2">
+                    <svg class="w-4 h-4 text-cyan-400 shrink-0" fill="currentColor" viewBox="0 0 20 20">
                       <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
                     </svg>
                     <span>14-Day Trial</span>
                   </div>
                 </div>
               </div>
-              <div class="relative section-fade-in" style="animation-delay: 0.2s">
-                <!-- Floating 3D Mockup -->
-                <div class="relative perspective-1000">
+              <div
+                class="relative section-fade-in hero-mockup-col hidden sm:block w-full max-w-md sm:max-w-lg md:max-w-xl mx-auto lg:max-w-none lg:mx-0 max-lg:scale-[0.94] max-lg:origin-top lg:scale-100 lg:origin-center"
+                style="animation-delay: 0.2s"
+              >
+                <!-- Single floating device (one glass surface, 3/4 perspective) -->
+                <div class="relative perspective-1000 max-w-lg mx-auto lg:max-w-none">
                   <div class="floating-mockup">
-                    <!-- Dashboard Mockup -->
-                    <div class="glass-card p-4 lg:p-6 rounded-2xl shadow-2xl transform rotate-y-12">
-                      <div class="bg-gradient-to-br from-slate-800 to-slate-900 rounded-lg p-3 lg:p-4 mb-3">
-                        <div class="flex items-center justify-between mb-3">
-                          <div class="h-2 lg:h-3 w-16 lg:w-24 bg-slate-600 rounded"></div>
-                          <div class="h-2 lg:h-3 w-2 lg:w-3 bg-cyan-400 rounded-full animate-pulse"></div>
-                        </div>
-                        <div class="grid grid-cols-3 gap-1 lg:gap-2 mb-3">
-                          <div class="h-12 lg:h-16 bg-slate-700 rounded"></div>
-                          <div class="h-12 lg:h-16 bg-slate-700 rounded"></div>
-                          <div class="h-12 lg:h-16 bg-slate-700 rounded"></div>
-                        </div>
-                        <div class="h-24 lg:h-32 bg-gradient-to-br from-cyan-500/20 to-purple-500/20 rounded"></div>
-                      </div>
-                    </div>
-                    <!-- Template Editor Mockup -->
-                    <div class="glass-card p-4 lg:p-6 rounded-2xl shadow-2xl transform -rotate-y-6 absolute top-12 lg:top-20 left-12 lg:left-20">
-                      <div class="bg-gradient-to-br from-slate-800 to-slate-900 rounded-lg p-3 lg:p-4">
-                        <div class="flex items-center space-x-1 lg:space-x-2 mb-3">
-                          <div class="h-1.5 lg:h-2 w-1.5 lg:w-2 bg-cyan-400 rounded-full"></div>
-                          <div class="h-1.5 lg:h-2 w-1.5 lg:w-2 bg-yellow-400 rounded-full"></div>
-                          <div class="h-1.5 lg:h-2 w-1.5 lg:w-2 bg-red-400 rounded-full"></div>
-                        </div>
-                        <div class="space-y-1 lg:space-y-2">
-                          <div class="h-3 lg:h-4 bg-slate-700 rounded w-3/4"></div>
-                          <div class="h-16 lg:h-20 bg-gradient-to-br from-purple-500/30 to-pink-500/30 rounded border-2 border-dashed border-purple-400/50"></div>
-                          <div class="flex space-x-1 lg:space-x-2">
-                            <div class="h-6 lg:h-8 w-12 lg:w-16 bg-slate-700 rounded"></div>
-                            <div class="h-6 lg:h-8 w-12 lg:w-16 bg-slate-700 rounded"></div>
+                    <div
+                      class="hero-device glass-card rounded-2xl p-3 lg:p-4 shadow-2xl transform rotate-y-12 border border-white/15"
+                    >
+                      <div
+                        class="hero-device-display relative overflow-hidden rounded-xl border border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]"
+                      >
+                        <div
+                          class="relative aspect-[4/3] bg-gradient-to-br from-[#0c0828] via-[#1e1b4b] to-[#5b21b6] p-4 lg:p-5"
+                        >
+                          <div
+                            class="pointer-events-none absolute inset-0 bg-gradient-to-tr from-transparent via-white/[0.04] to-transparent"
+                            aria-hidden="true"
+                          ></div>
+                          <div
+                            class="pointer-events-none absolute inset-0 backdrop-blur-[1px] bg-white/[0.02]"
+                            aria-hidden="true"
+                          ></div>
+                          <div
+                            class="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-indigo-950/20"
+                            aria-hidden="true"
+                          ></div>
+                          <div class="relative z-10 flex h-full min-h-[11rem] flex-col lg:min-h-[14rem]">
+                            <div class="mb-4 flex items-center justify-between">
+                              <div class="h-2 w-20 rounded-full bg-white/25 lg:w-28"></div>
+                              <div
+                                class="h-2.5 w-2.5 animate-pulse rounded-full bg-cyan-400/90 shadow-[0_0_10px_rgba(34,211,238,0.55)]"
+                              ></div>
+                            </div>
+                            <div class="mb-4 grid flex-1 grid-cols-3 gap-2">
+                              <div
+                                class="rounded-lg border border-white/10 bg-white/[0.06] backdrop-blur-sm"
+                              ></div>
+                              <div
+                                class="rounded-lg border border-white/10 bg-white/[0.06] backdrop-blur-sm"
+                              ></div>
+                              <div
+                                class="rounded-lg border border-white/10 bg-white/[0.06] backdrop-blur-sm"
+                              ></div>
+                            </div>
+                            <div
+                              class="h-16 rounded-lg border border-cyan-400/20 bg-gradient-to-r from-cyan-500/15 via-violet-500/10 to-purple-500/20 lg:h-20"
+                            ></div>
                           </div>
                         </div>
                       </div>
@@ -269,7 +288,7 @@
                 Built for <span class="bg-gradient-to-r from-cyan-400 to-purple-500 bg-clip-text text-transparent">Every Industry</span>
               </h2>
               <p class="text-lg md:text-xl text-white/60 max-w-2xl mx-auto">
-                See how ScreenGram transforms operations across different sectors
+                See how PixelCast Signage transforms operations across different sectors
               </p>
             </div>
             <div class="glass-card rounded-2xl p-6 lg:p-8 section-fade-in" style="animation-delay: 0.2s">
@@ -630,7 +649,7 @@ onUnmounted(() => {
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  padding-top: 80px; /* Account for fixed nav */
+  padding-top: 5rem; /* Compact single-row nav */
   padding-bottom: 40px;
 }
 
@@ -640,7 +659,7 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  max-height: calc(100vh - 120px);
+  max-height: calc(100vh - 100px);
   overflow-y: auto;
   overflow-x: hidden;
 }
@@ -751,8 +770,16 @@ onUnmounted(() => {
   transform: rotateY(12deg);
 }
 
-.-rotate-y-6 {
-  transform: rotateY(-6deg);
+.hero-device {
+  background: linear-gradient(
+    145deg,
+    rgba(255, 255, 255, 0.09) 0%,
+    rgba(255, 255, 255, 0.04) 50%,
+    rgba(255, 255, 255, 0.07) 100%
+  );
+  box-shadow:
+    0 25px 50px -12px rgba(0, 0, 0, 0.45),
+    0 0 0 1px rgba(255, 255, 255, 0.06) inset;
 }
 
 /* Fade-in animations */
@@ -857,16 +884,12 @@ onUnmounted(() => {
 }
 
 @media (max-width: 768px) {
-  .floating-mockup {
-    transform: scale(0.7);
-  }
-  
   .glass-card {
     padding: 1rem;
   }
   
   .section {
-    padding-top: 70px;
+    padding-top: 4.75rem;
     padding-bottom: 20px;
   }
   

@@ -33,10 +33,10 @@ wait_for_postgres() {
     local wait_interval=2
     
     log_info "Waiting for PostgreSQL to be ready..."
-    log_info "Host: ${DB_HOST:-db}, Port: ${DB_PORT:-5432}, User: ${DB_USER:-screengram_user}"
+    log_info "Host: ${DB_HOST:-db}, Port: ${DB_PORT:-5432}, User: ${DB_USER:-pixelcast_signage_user}"
     
     while [ $attempt -le $max_attempts ]; do
-        if pg_isready -h "${DB_HOST:-db}" -p "${DB_PORT:-5432}" -U "${DB_USER:-screengram_user}" > /dev/null 2>&1; then
+        if pg_isready -h "${DB_HOST:-db}" -p "${DB_PORT:-5432}" -U "${DB_USER:-pixelcast_signage_user}" > /dev/null 2>&1; then
             log_success "PostgreSQL is ready!"
             return 0
         fi
@@ -176,7 +176,7 @@ check_installation() {
 # Main execution
 main() {
     log_info "=========================================="
-    log_info "ScreenGram Backend Container Starting..."
+    log_info "PixelCast Signage Backend Container Starting..."
     log_info "=========================================="
     log_info "Container: $(hostname)"
     log_info "User: $(whoami)"

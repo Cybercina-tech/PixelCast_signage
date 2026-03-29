@@ -10,6 +10,8 @@ from pathlib import Path
 from typing import Dict, Optional
 from django.conf import settings
 
+from setup.paths import resolve_env_file_paths
+
 logger = logging.getLogger(__name__)
 
 
@@ -202,17 +204,14 @@ def update_env_file(
         Tuple of (success, error_message)
     """
     try:
-        # Determine file paths
+        # Determine file paths (same resolution as settings.load_dotenv)
         if env_file_path is None:
-            # .env file should be in project root (one level up from BackEnd)
-            project_root = Path(settings.BASE_DIR).parent
-            env_file_path = project_root / '.env'
+            env_file_path, _ = resolve_env_file_paths(Path(settings.BASE_DIR))
         else:
             env_file_path = Path(env_file_path)
-        
+
         if template_path is None:
-            project_root = Path(settings.BASE_DIR).parent
-            template_path = project_root / '.env.template'
+            _, template_path = resolve_env_file_paths(Path(settings.BASE_DIR))
         else:
             template_path = Path(template_path)
         
@@ -256,7 +255,7 @@ def update_env_file(
         try:
             with open(env_file_path, 'w', encoding='utf-8') as f:
                 # Write header comment
-                f.write("# ScreenGram Environment Configuration\n")
+                f.write("# PixelCast Signage Environment Configuration\n")
                 f.write("# Generated/Updated by Installation Wizard\n")
                 f.write("# DO NOT EDIT MANUALLY - Use the installation wizard or update via env_manager.py\n\n")
                 

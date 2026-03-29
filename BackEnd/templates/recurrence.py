@@ -1,5 +1,5 @@
 """
-Secure Recurrence Calculation Module for ScreenGram Digital Signage System.
+Secure Recurrence Calculation Module for PixelCast Signage Digital Signage System.
 
 Provides accurate recurrence calculation for schedules using python-dateutil.rrule.
 Includes security measures to prevent injection attacks and validate inputs.

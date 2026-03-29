@@ -1,3 +1,3 @@
 """
-Comprehensive test suite for ScreenGram backend.
+Comprehensive test suite for PixelCast Signage backend.
 """

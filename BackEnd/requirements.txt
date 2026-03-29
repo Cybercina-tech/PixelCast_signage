@@ -1,4 +1,4 @@
-# ScreenGram - Digital Signage System
+# PixelCast Signage - Digital Signage System
 # Django Project Requirements
 
 # Core Framework

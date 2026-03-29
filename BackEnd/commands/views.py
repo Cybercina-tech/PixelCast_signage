@@ -38,15 +38,12 @@ class CommandViewSet(viewsets.ModelViewSet):
         queryset = super().get_queryset()
         user = self.request.user
         
-        # SuperAdmin and Admin can see all commands
-        if user.has_full_access():
+        if user.is_developer():
             return queryset
-        
-        # Operator, Manager can see commands they created or for screens they can access
+
         if user.can_execute_commands() or user.can_manage_own_resources():
-            # Get screens user can access
             from signage.models import Screen
-            if user.has_full_access():
+            if user.is_manager():
                 accessible_screens = Screen.objects.all()
             elif user.organization_name:
                 accessible_screens = Screen.objects.filter(
@@ -78,8 +75,7 @@ class CommandViewSet(viewsets.ModelViewSet):
         command = self.get_object()
         user = self.request.user
         
-        # Only SuperAdmin and Admin can update commands
-        if not user.has_full_access():
+        if not (user.is_developer() or user.is_manager()):
             raise PermissionDenied("You do not have permission to update commands.")
         
         # Don't allow updating executing or done commands
@@ -92,8 +88,7 @@ class CommandViewSet(viewsets.ModelViewSet):
         """Check permissions before delete"""
         user = self.request.user
         
-        # Only SuperAdmin and Admin can delete commands
-        if not user.has_full_access():
+        if not (user.is_developer() or user.is_manager()):
             raise PermissionDenied("You do not have permission to delete commands.")
         
         instance.delete()

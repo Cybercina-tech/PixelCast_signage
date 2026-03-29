@@ -1,5 +1,5 @@
 """
-Audit logging utilities for ScreenGram.
+Audit logging utilities for PixelCast Signage.
 
 Provides functions to log critical system actions with full context.
 """

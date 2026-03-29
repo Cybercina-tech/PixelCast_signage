@@ -98,7 +98,7 @@ class Command(BaseCommand):
             self.stdout.write("  1. Ensure PostgreSQL container is running: docker-compose ps")
             self.stdout.write("  2. Check database credentials in .env file")
             self.stdout.write("  3. Verify DB_HOST and DB_PORT are correct")
-            self.stdout.write("  4. Check if database exists: docker-compose exec db psql -U screengram_user -l")
+            self.stdout.write("  4. Check if database exists: docker-compose exec db psql -U pixelcast_signage_user -l")
             self.stdout.write(self.style.ERROR('=' * 60))
             sys.exit(1)
 

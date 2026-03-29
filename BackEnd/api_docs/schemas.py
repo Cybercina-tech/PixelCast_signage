@@ -1,5 +1,5 @@
 """
-Custom OpenAPI schemas and examples for ScreenGram API.
+Custom OpenAPI schemas and examples for PixelCast Signage API.
 
 Provides reusable schemas, examples, and security definitions.
 """

@@ -86,7 +86,7 @@ class ScreenStatusLogViewSet(viewsets.ReadOnlyModelViewSet):
         
         # Only Admin and SuperAdmin can access logs
         if not user.has_full_access():
-            raise PermissionDenied("You do not have permission to view logs. Admin or SuperAdmin role required.")
+            raise PermissionDenied("You do not have permission to view logs. Developer role required.")
         
         # Filter by screen if provided
         screen_id = self.request.query_params.get('screen_id')
@@ -134,7 +134,7 @@ class ScreenStatusLogViewSet(viewsets.ReadOnlyModelViewSet):
         - end_date: Filter to date (ISO or YYYY-MM-DD)
         """
         if not request.user.has_full_access():
-            raise PermissionDenied("You do not have permission to view log summaries. Admin or SuperAdmin role required.")
+            raise PermissionDenied("You do not have permission to view log summaries. Developer role required.")
         
         screen_id = request.query_params.get('screen_id')
         start_date = parse_date_param(request.query_params.get('start_date'))
@@ -205,7 +205,7 @@ class ContentDownloadLogViewSet(viewsets.ReadOnlyModelViewSet):
         
         # Only Admin and SuperAdmin can access logs
         if not user.has_full_access():
-            raise PermissionDenied("You do not have permission to view logs. Admin or SuperAdmin role required.")
+            raise PermissionDenied("You do not have permission to view logs. Developer role required.")
         
         # Filter by content if provided
         content_id = self.request.query_params.get('content_id')
@@ -268,7 +268,7 @@ class ContentDownloadLogViewSet(viewsets.ReadOnlyModelViewSet):
         - end_date: Filter to date (ISO or YYYY-MM-DD)
         """
         if not request.user.has_full_access():
-            raise PermissionDenied("You do not have permission to view log summaries. Admin or SuperAdmin role required.")
+            raise PermissionDenied("You do not have permission to view log summaries. Developer role required.")
         
         content_id = request.query_params.get('content_id')
         screen_id = request.query_params.get('screen_id')
@@ -354,7 +354,7 @@ class CommandExecutionLogViewSet(viewsets.ReadOnlyModelViewSet):
         
         # Only Admin and SuperAdmin can access logs
         if not user.has_full_access():
-            raise PermissionDenied("You do not have permission to view logs. Admin or SuperAdmin role required.")
+            raise PermissionDenied("You do not have permission to view logs. Developer role required.")
         
         # Filter by command if provided
         command_id = self.request.query_params.get('command_id')
@@ -427,7 +427,7 @@ class CommandExecutionLogViewSet(viewsets.ReadOnlyModelViewSet):
         - end_date: Filter to date (ISO or YYYY-MM-DD)
         """
         if not request.user.has_full_access():
-            raise PermissionDenied("You do not have permission to view log summaries. Admin or SuperAdmin role required.")
+            raise PermissionDenied("You do not have permission to view log summaries. Developer role required.")
         
         command_id = request.query_params.get('command_id')
         screen_id = request.query_params.get('screen_id')
@@ -512,7 +512,7 @@ class ErrorLogViewSet(viewsets.ReadOnlyModelViewSet):
         
         # Only SuperAdmin can access error logs
         if not user.is_superadmin():
-            raise PermissionDenied("Only SuperAdmin users can access error logs.")
+            raise PermissionDenied("Only Developer users can access error logs.")
         
         # Filter by level
         level = self.request.query_params.get('level')
@@ -566,7 +566,7 @@ class ErrorLogViewSet(viewsets.ReadOnlyModelViewSet):
         Mark an error as resolved.
         """
         if not request.user.is_superadmin():
-            raise PermissionDenied("Only SuperAdmin users can resolve errors.")
+            raise PermissionDenied("Only Developer users can resolve errors.")
         
         error_log = self.get_object()
         error_log.is_resolved = True
@@ -588,7 +588,7 @@ class ErrorLogViewSet(viewsets.ReadOnlyModelViewSet):
         Get error statistics.
         """
         if not request.user.is_superadmin():
-            raise PermissionDenied("Only SuperAdmin users can view error statistics.")
+            raise PermissionDenied("Only Developer users can view error statistics.")
         
         queryset = self.get_queryset()
         

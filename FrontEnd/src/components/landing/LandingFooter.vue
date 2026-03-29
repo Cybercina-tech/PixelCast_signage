@@ -4,7 +4,7 @@
       <div class="grid md:grid-cols-4 gap-8 mb-8">
         <!-- Product Info -->
         <div class="md:col-span-2">
-          <h3 class="text-lg font-bold text-white mb-3">ScreenGram</h3>
+          <h3 class="text-lg font-bold text-white mb-3">PixelCast Signage</h3>
           <p class="text-sm text-slate-500 leading-relaxed max-w-md">
             Enterprise digital signage management platform for controlling and monitoring displays at scale.
           </p>
@@ -54,7 +54,7 @@
       <!-- Bottom Bar -->
       <div class="pt-8 border-t border-slate-800 flex flex-col md:flex-row justify-between items-center gap-4">
         <p class="text-sm text-slate-500">
-          © {{ currentYear }} ScreenGram. All rights reserved.
+          © {{ currentYear }} PixelCast Signage. All rights reserved.
         </p>
         <p class="text-xs text-slate-600">
           Version 1.0.0

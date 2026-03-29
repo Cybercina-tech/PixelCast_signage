@@ -6,7 +6,7 @@
 set -e
 
 echo "=================================="
-echo "ScreenGram Docker Stack Diagnostics"
+echo "PixelCast Signage Docker Stack Diagnostics"
 echo "=================================="
 echo ""
 
@@ -39,11 +39,11 @@ docker compose ps
 
 echo ""
 echo "--- Network Status ---"
-docker network inspect screengram-net --format '{{range .Containers}}{{.Name}}: {{.IPv4Address}}{{"\n"}}{{end}}' 2>/dev/null || echo "Network not found"
+docker network inspect pixelcast-signage-net --format '{{range .Containers}}{{.Name}}: {{.IPv4Address}}{{"\n"}}{{end}}' 2>/dev/null || echo "Network not found"
 
 echo ""
 echo "--- Volume Status ---"
-docker volume ls | grep screengram
+docker volume ls | grep pixelcast-signage
 
 echo ""
 echo "--- Backend Logs (last 50 lines) ---"
@@ -55,7 +55,7 @@ docker compose logs --tail=30 frontend 2>/dev/null || echo "Frontend not running
 
 echo ""
 echo "--- Database Health ---"
-docker compose exec -T db pg_isready -U screengram_user 2>/dev/null && echo "✅ Database is ready" || echo "❌ Database not ready"
+docker compose exec -T db pg_isready -U pixelcast_signage_user 2>/dev/null && echo "✅ Database is ready" || echo "❌ Database not ready"
 
 echo ""
 echo "--- Installation Lock Status ---"

@@ -1,5 +1,5 @@
 """
-Notification Dispatcher for ScreenGram Digital Signage System.
+Notification Dispatcher for PixelCast Signage Digital Signage System.
 
 Handles event-driven notification delivery with:
 - Rule resolution

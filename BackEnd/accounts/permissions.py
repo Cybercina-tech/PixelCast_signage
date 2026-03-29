@@ -19,18 +19,18 @@ class RolePermissions:
     
     @staticmethod
     def can_view_all(user):
-        """Check if user can view all resources (SuperAdmin or Admin)"""
-        return user.is_superadmin() or user.is_admin()
-    
+        """Check if user can view all resources (Developer)"""
+        return user.is_developer()
+
     @staticmethod
     def can_manage_all(user):
-        """Check if user can manage all resources (SuperAdmin or Admin)"""
-        return user.is_superadmin() or user.is_admin()
-    
+        """Check if user can manage all resources (Developer)"""
+        return user.is_developer()
+
     @staticmethod
     def can_manage_own(user):
-        """Check if user can manage their own resources (SuperAdmin, Admin, or Manager)"""
-        return user.is_superadmin() or user.is_admin() or user.is_manager()
+        """Check if user can manage their own resources (Developer or Manager)"""
+        return user.is_developer() or user.is_manager()
     
     @staticmethod
     def can_view_own(user):
@@ -51,13 +51,9 @@ class RolePermissions:
         Returns:
             bool: True if user can edit the resource
         """
-        # SuperAdmin always has full access
-        if user.is_superadmin():
+        if user.is_developer():
             return True
-        
-        if user.is_admin():
-            return True
-        
+
         if user.is_manager():
             # Manager can edit their own resources
             if hasattr(resource, 'owner') and resource.owner == user:
@@ -81,13 +77,9 @@ class RolePermissions:
         Returns:
             bool: True if user can view the resource
         """
-        # SuperAdmin always has full access
-        if user.is_superadmin():
+        if user.is_developer():
             return True
-        
-        if user.is_admin():
-            return True
-        
+
         # Check organization access
         if hasattr(resource, 'owner') and resource.owner:
             return user.can_access_user_resource(resource.owner)
@@ -99,16 +91,16 @@ class RolePermissions:
 
 
 def require_admin(user):
-    """Decorator/function to require SuperAdmin or Admin role"""
-    if not (user.is_superadmin() or user.is_admin()):
-        raise PermissionDenied("SuperAdmin or Admin role required")
+    """Require Developer (full admin) role."""
+    if not user.is_developer():
+        raise PermissionDenied("Developer role required")
     return True
 
 
 def require_manager_or_admin(user):
-    """Decorator/function to require Manager, Admin, or SuperAdmin role"""
-    if not (user.is_superadmin() or user.is_admin() or user.is_manager()):
-        raise PermissionDenied("Manager, Admin, or SuperAdmin role required")
+    """Require Developer or Manager role."""
+    if not (user.is_developer() or user.is_manager()):
+        raise PermissionDenied("Developer or Manager role required")
     return True
 
 

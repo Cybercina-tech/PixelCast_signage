@@ -10,7 +10,7 @@
       <!-- Center: Copyright & Version -->
       <div class="status-section status-center">
         <span class="status-meta">
-          © {{ new Date().getFullYear() }} ScreenGram
+          © {{ new Date().getFullYear() }} PixelCast Signage
         </span>
         <span class="status-separator">·</span>
         <span class="status-meta status-version">

@@ -46,7 +46,7 @@ def check_analytics_permission(request):
     """
     Check if user has permission to access analytics.
     
-    Manager, Admin, and SuperAdmin roles can access analytics.
+    Developer and Manager roles can access analytics.
     
     Raises:
         PermissionDenied: If user doesn't have permission
@@ -60,10 +60,10 @@ def check_analytics_permission(request):
         
         # Check permission first, then fallback to role check
         has_perm = has_permission(request.user, 'view_analytics')
-        has_role = (request.user.is_superadmin() or request.user.is_admin() or request.user.is_manager())
+        has_role = request.user.is_developer() or request.user.is_manager()
         
         if not has_perm and not has_role:
-            raise PermissionDenied("Manager, Admin, or SuperAdmin role required to access analytics")
+            raise PermissionDenied("Developer or Manager role required to access analytics")
     except AttributeError as e:
         logger.error(f"Error checking analytics permission: {str(e)}", exc_info=True)
         raise PermissionDenied("Error checking permissions")

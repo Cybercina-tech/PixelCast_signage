@@ -36,7 +36,7 @@ import Footer from './Footer.vue'
 defineProps({
   title: {
     type: String,
-    default: 'ScreenGram',
+    default: 'PixelCast Signage',
   },
 })
 

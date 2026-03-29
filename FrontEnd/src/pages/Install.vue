@@ -28,7 +28,7 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
-            <h1 class="text-3xl font-bold text-white mb-2 tracking-tight">ScreenGram Installation</h1>
+            <h1 class="text-3xl font-bold text-white mb-2 tracking-tight">PixelCast Signage Installation</h1>
             <p class="text-emerald-100 dark:text-emerald-900 text-sm font-medium">Complete the setup to get started</p>
           </div>
         </div>
@@ -57,9 +57,9 @@
             class="space-y-6"
           >
             <div>
-              <h2 class="text-2xl font-bold text-primary mb-2">Welcome to ScreenGram</h2>
+              <h2 class="text-2xl font-bold text-primary mb-2">Welcome to PixelCast Signage</h2>
               <p class="text-secondary mb-4">
-                This installation wizard will guide you through setting up your ScreenGram digital signage system.
+                This installation wizard will guide you through setting up your PixelCast Signage digital signage system.
                 The process includes:
               </p>
               <ul class="space-y-2 text-secondary mb-6">
@@ -250,7 +250,7 @@
             <div>
               <h2 class="text-2xl font-bold text-primary mb-2">Create Administrator Account</h2>
               <p class="text-secondary mb-4">
-                Create your administrator account to access the ScreenGram dashboard.
+                Create your administrator account to access the PixelCast Signage dashboard.
               </p>
             </div>
 
@@ -413,7 +413,7 @@
               </div>
               <h3 class="text-2xl font-bold text-primary mb-2">Setup Complete!</h3>
               <p class="text-secondary mb-6">
-                Your ScreenGram installation is complete. You can now access the dashboard.
+                Your PixelCast Signage installation is complete. You can now access the dashboard.
               </p>
               <router-link
                 to="/login"

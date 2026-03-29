@@ -30,7 +30,7 @@
               scrolled ? 'text-xl' : ''
             ]"
           >
-            Screengram
+            PixelCast
           </span>
         </router-link>
 

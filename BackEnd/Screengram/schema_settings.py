@@ -1,5 +1,5 @@
 """
-OpenAPI/Swagger schema configuration for ScreenGram API.
+OpenAPI/Swagger schema configuration for PixelCast Signage API.
 
 Defines schema generation settings, security schemes, and metadata.
 
@@ -7,11 +7,11 @@ This file is imported by settings.py to configure drf-spectacular.
 """
 # OpenAPI Schema Configuration
 SPECTACULAR_SETTINGS = {
-    'TITLE': 'ScreenGram API',
+    'TITLE': 'PixelCast Signage API',
     'DESCRIPTION': """
-# ScreenGram Digital Signage Management API
+# PixelCast Signage Digital Signage Management API
 
-Complete API documentation for ScreenGram backend, covering all endpoints for managing screens, templates, content, schedules, commands, users, analytics, audit logs, and backups.
+Complete API documentation for PixelCast Signage backend, covering all endpoints for managing screens, templates, content, schedules, commands, users, analytics, audit logs, and backups.
 
 ## Authentication
 
@@ -144,7 +144,7 @@ For API support or questions, contact the development team.
     'EXTENSIONS_INFO': {
         'x-logo': {
             'url': '/static/logo.png',
-            'altText': 'ScreenGram Logo'
+            'altText': 'PixelCast Signage Logo'
         }
     },
     

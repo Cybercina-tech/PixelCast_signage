@@ -39,6 +39,7 @@ docker compose up db redis backend frontend-dev
 
 ## How It Works
 
+- **Backend `.env`:** Host `./.env` is mounted at **`/config/.env`** (not under `/app`) so it does not overlap with `./BackEnd:/app` on Docker Desktop (VirtioFS). Django uses `PIXELCAST_SIGNAGE_ENV_FILE=/config/.env`.
 - **frontend-dev** runs Vite dev server (`npm run dev`) – NOT `npm run build` + nginx
 - Your local `./FrontEnd` folder is mounted: `./FrontEnd:/app`
 - Anonymous volume `node_modules` prevents local packages from overwriting container's
@@ -63,7 +64,7 @@ docker compose up db redis backend frontend-dev
 
 **API calls failing?**
 - Backend must be running: `docker compose up backend`
-- Check network: `docker network inspect screengram-net`
+- Check network: `docker network inspect pixelcast-signage-net`
 
 **Port 5173 in use?**
 - Change port in docker-compose: `"5174:5173"`

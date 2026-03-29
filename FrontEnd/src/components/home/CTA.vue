@@ -17,7 +17,7 @@
           :delay="100"
           class="text-xl text-slate-300 mb-10 leading-relaxed"
         >
-          Join organizations using ScreenGram to streamline their digital signage operations
+          Join organizations using PixelCast Signage to streamline their digital signage operations
         </p>
         <div
           v-motion

@@ -1,7 +1,7 @@
 # Quick test runner - installs dependencies if needed, then runs tests
 # Usage: .\test_now.ps1
 
-Write-Host "ScreenGram Test Runner" -ForegroundColor Green
+Write-Host "PixelCast Signage Test Runner" -ForegroundColor Green
 Write-Host "======================" -ForegroundColor Green
 Write-Host ""
 

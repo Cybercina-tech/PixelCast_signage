@@ -183,7 +183,7 @@ class BulkOperationsErrorHandlingTests(BaseAPITestCase):
     def test_bulk_operations_permission_denied(self):
         """Test bulk operations with permission denied."""
         # Create user with limited permissions
-        viewer = self.create_user(role='Viewer')
+        viewer = self.create_user(role='Employee')
         self.client.force_authenticate(user=viewer)
         
         screen = self.create_screen(owner=self.user)  # Owned by different user

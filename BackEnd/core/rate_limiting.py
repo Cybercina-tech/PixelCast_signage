@@ -1,5 +1,5 @@
 """
-Unified rate limiting system for ScreenGram.
+Unified rate limiting system for PixelCast Signage.
 
 Provides:
 - Middleware for automatic rate limiting

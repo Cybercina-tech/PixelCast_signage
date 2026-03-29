@@ -1,4 +1,5 @@
 <template>
+  <div class="sidebar-root">
   <aside
     ref="sidebarRef"
     :class="[
@@ -17,7 +18,7 @@
               <BoltIcon class="w-6 h-6" />
             </div>
           </div>
-          <h2 class="logo-text">ScreenGram</h2>
+          <h2 class="logo-text">PixelCast Signage</h2>
         </div>
       </div>
       
@@ -121,8 +122,8 @@
         </div>
       </nav>
       
-      <!-- Super Admin Error Dashboard Toggle -->
-      <div v-if="isSuperAdmin" class="sidebar-footer">
+      <!-- Developer: Error Dashboard Toggle -->
+      <div v-if="isDeveloper" class="sidebar-footer">
         <button
           @click="errorDashboardOpen = !errorDashboardOpen"
           class="error-dashboard-button"
@@ -146,6 +147,7 @@
     class="fixed inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm z-30 lg:hidden transition-opacity duration-300"
     @click="$emit('close')"
   ></div>
+  </div>
 </template>
 
 <script setup>
@@ -211,9 +213,9 @@ const getIconComponent = (iconName) => {
   return iconMap[iconName] || HomeIcon
 }
 
-const isSuperAdmin = computed(() => {
+const isDeveloper = computed(() => {
   if (!authStore.user) return false
-  return authStore.user.role === 'SuperAdmin'
+  return authStore.user.role === 'Developer'
 })
 
 
@@ -277,6 +279,11 @@ watch(() => authStore.user, async (newUser) => {
 </script>
 
 <style scoped>
+/* Single template root for ESLint; children lay out as if direct siblings of parent */
+.sidebar-root {
+  display: contents;
+}
+
 /* Space Sidebar Base - Aether Identity */
 .space-sidebar {
   background: var(--sidebar-bg); /* Frosted glass with 80% opacity */

@@ -128,16 +128,10 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
         user = self.request.user
         queryset = AuditLog.objects.all()
 
-        # Apply role-based filtering
         user_role = getattr(user, 'role', None)
-        if user_role in ('SuperAdmin', 'Admin', 'Manager'):
-            # Admins and Managers can see all logs
+        if user_role == 'Developer':
             pass
-        elif user_role == 'Operator':
-            # Operators see logs for their assigned resources (simplified: own logs)
-            queryset = queryset.filter(user=user)
         else:
-            # Viewers see only their own logs
             queryset = queryset.filter(user=user)
 
         # Apply filters from query params
@@ -293,10 +287,8 @@ class SystemBackupViewSet(viewsets.ModelViewSet):
         return queryset.order_by('-started_at')
 
     def get_permissions(self):
-        """Apply stricter permissions for create/delete."""
-        if self.action in ('create', 'destroy', 'trigger', 'cleanup'):
-            return [IsAuthenticated(), RoleBasedPermission(required_roles=['SuperAdmin', 'Admin', 'Manager'])]
-        return super().get_permissions()
+        """Backups are Developer-only (system infrastructure)."""
+        return [IsAuthenticated(), RoleBasedPermission(required_roles=['Developer'])]
 
     @extend_schema(
         summary='Trigger backup',
@@ -468,7 +460,7 @@ class SystemBackupViewSet(viewsets.ModelViewSet):
     def cleanup(self, request):
         """Cleanup expired backups."""
         user_role = getattr(request.user, 'role', None)
-        if user_role not in ('SuperAdmin', 'Admin', 'Manager'):
+        if user_role != 'Developer':
             return Response(
                 {'error': 'Permission denied'},
                 status=status.HTTP_403_FORBIDDEN

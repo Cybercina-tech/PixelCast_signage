@@ -1,7 +1,7 @@
 """
 Django signals for notification event triggers.
 
-Integrates with existing ScreenGram systems to emit notification events.
+Integrates with existing PixelCast Signage systems to emit notification events.
 """
 
 import logging

@@ -1,6 +1,6 @@
-# ScreenGram - Future Plans & Roadmap
+# PixelCast Signage - Future Plans & Roadmap
 
-This document outlines planned improvements, fixes, and enhancements for the ScreenGram Digital Signage Management System.
+This document outlines planned improvements, fixes, and enhancements for the PixelCast Signage Digital Signage Management System.
 
 ## 1. Short-Term Fixes (Critical)
 

@@ -1,5 +1,5 @@
 """
-ASGI config for Screengram project.
+ASGI config for PixelCast Signage (package: Screengram).
 
 It exposes the ASGI callable as a module-level variable named ``application``.
 

@@ -179,7 +179,7 @@ AUDIT_LOG_LIST_EXAMPLE = OpenApiExample(
             {
                 'id': '123e4567-e89b-12d3-a456-426614174000',
                 'username': 'admin',
-                'user_role': 'Admin',
+                'user_role': 'Developer',
                 'action_type': 'create',
                 'resource_type': 'Screen',
                 'resource_name': 'Lobby Display 1',

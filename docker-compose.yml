@@ -5,19 +5,19 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     environment:
-      - POSTGRES_DB=${DB_NAME:-screengram_db}
-      - POSTGRES_USER=${DB_USER:-screengram_user}
+      - POSTGRES_DB=${DB_NAME:-pixelcast_signage_db}
+      - POSTGRES_USER=${DB_USER:-pixelcast_signage_user}
       - POSTGRES_PASSWORD=${DB_PASSWORD}
       - PGDATA=/var/lib/postgresql/data/pgdata
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-screengram_user} -d ${DB_NAME:-screengram_db}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-pixelcast_signage_user} -d ${DB_NAME:-pixelcast_signage_db}"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 10s
     restart: always
     networks:
-      - screengram-net
+      - pixelcast-signage-net
     # Security: Don't expose ports to host in production
     # ports:
     #   - "${DB_PORT:-5432}:5432"
@@ -36,7 +36,7 @@ services:
       start_period: 5s
     restart: always
     networks:
-      - screengram-net
+      - pixelcast-signage-net
     # Security: Don't expose ports to host in production
     # ports:
     #   - "${REDIS_PORT:-6379}:6379"
@@ -48,8 +48,8 @@ services:
     container_name: backend  # MUST match Nginx upstream name
     command: /app/entrypoint.sh
     volumes:
-      # Mount .env file for configuration persistence (read-only)
-      - ./.env:/app/.env:ro
+      # Isolated from ./BackEnd:/app (dev) to avoid VirtioFS mount overlap — wizard writes persist to host ./.env
+      - ./.env:/config/.env
       # Mount installation state directory - MUST be a directory (Docker volumes cannot be files)
       # The lock file is created at /app/installation_state/installed.lock
       - installation_state:/app/installation_state
@@ -60,12 +60,14 @@ services:
       # Backups - persists across container restarts
       - backend_backups:/app/backups
     environment:
+      # Canonical .env path inside the container (see BackEnd/setup/paths.py)
+      - PIXELCAST_SIGNAGE_ENV_FILE=/config/.env
       - SECRET_KEY=${SECRET_KEY}
       - DEBUG=${DEBUG:-False}
       - ALLOWED_HOSTS=${ALLOWED_HOSTS:-localhost,127.0.0.1,backend,frontend}
       - INSTALLATION_STATE_DIR=/app/installation_state
-      - DB_NAME=${DB_NAME:-screengram_db}
-      - DB_USER=${DB_USER:-screengram_user}
+      - DB_NAME=${DB_NAME:-pixelcast_signage_db}
+      - DB_USER=${DB_USER:-pixelcast_signage_user}
       - DB_PASSWORD=${DB_PASSWORD}
       - DB_HOST=db
       - DB_PORT=5432
@@ -93,7 +95,7 @@ services:
         condition: service_healthy
     restart: always
     networks:
-      - screengram-net
+      - pixelcast-signage-net
     # Backend is not exposed to host - only accessible via frontend proxy
 
   frontend:
@@ -110,7 +112,7 @@ services:
         condition: service_started  # Don't wait for healthy - Nginx handles unavailable backend gracefully
     restart: always
     networks:
-      - screengram-net
+      - pixelcast-signage-net
     # Health check for frontend
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
@@ -138,35 +140,35 @@ services:
     depends_on:
       - backend
     networks:
-      - screengram-net
+      - pixelcast-signage-net
 
 volumes:
   # Database data - CRITICAL: Must persist across updates
   postgres_data:
     driver: local
-    name: screengram_postgres_data
+    name: pixelcast-signage_postgres_data
   # Redis data - persists cache and session data
   redis_data:
     driver: local
-    name: screengram_redis_data
+    name: pixelcast-signage_redis_data
   # Static files - collected by Django, persists across container restarts
   backend_static:
     driver: local
-    name: screengram_backend_static
+    name: pixelcast-signage_backend_static
   # Media uploads - CRITICAL: User-uploaded content must persist
   backend_media:
     driver: local
-    name: screengram_backend_media
+    name: pixelcast-signage_backend_media
   # Backups - persists backup files
   backend_backups:
     driver: local
-    name: screengram_backend_backups
+    name: pixelcast-signage_backend_backups
   # Installation state - ensures installation wizard doesn't re-trigger on updates
   installation_state:
     driver: local
-    name: screengram_installation_state
+    name: pixelcast-signage_installation_state
 
 networks:
-  screengram-net:
+  pixelcast-signage-net:
     driver: bridge
-    name: screengram-net
+    name: pixelcast-signage-net

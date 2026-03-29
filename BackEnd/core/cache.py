@@ -1,5 +1,5 @@
 """
-Centralized caching system for ScreenGram.
+Centralized caching system for PixelCast Signage.
 
 Provides:
 - Cache decorators for views and functions

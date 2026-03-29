@@ -21,6 +21,7 @@ from .serializers import (
     DBCredentialsSerializer,
     DBCheckSerializer,
     RunMigrationsSerializer,
+    SeedAssetsSerializer,
     CreateAdminSerializer,
     FinalizeSerializer,
     SetupStatusSerializer
@@ -267,6 +268,44 @@ def run_migrations(request):
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
+def seed_assets(request):
+    """
+    Seed default notification events and related system assets.
+
+    Security: Only accessible if installation is not completed.
+    """
+    allowed, error_response = check_setup_allowed()
+    if not allowed:
+        return error_response
+
+    try:
+        out = StringIO()
+        err = StringIO()
+        call_command('init_notification_events', stdout=out, stderr=err, no_color=True)
+        msg = (out.getvalue() or '').strip() or 'Notification events initialized'
+        serializer = SeedAssetsSerializer({
+            'status': 'success',
+            'message': msg,
+        })
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    except CommandError as e:
+        logger.error(f"Seed assets failed: {str(e)}", exc_info=True)
+        serializer = SeedAssetsSerializer({
+            'status': 'error',
+            'message': f'Seed assets failed: {str(e)}',
+        })
+        return Response(serializer.data, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    except Exception as e:
+        logger.error(f"Error seeding assets: {str(e)}", exc_info=True)
+        serializer = SeedAssetsSerializer({
+            'status': 'error',
+            'message': f'Unexpected error: {str(e)}',
+        })
+        return Response(serializer.data, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
 def create_admin(request):
     """
     Create or update the admin (superuser) account (upsert).
@@ -307,13 +346,14 @@ def create_admin(request):
             existing.last_name = last_name
             existing.is_superuser = True
             existing.is_staff = True
+            existing.role = 'Developer'
             existing.set_password(password)
             existing.save()  # full save so hashed password is persisted
             user = existing
             created = False
             logger.info(f"Admin user updated: {username}")
         else:
-            # Create new superuser
+            # Create new superuser (first-install Developer)
             user = User.objects.create_superuser(
                 username=username,
                 email=email,
@@ -321,6 +361,8 @@ def create_admin(request):
                 first_name=first_name,
                 last_name=last_name,
             )
+            user.role = 'Developer'
+            user.save(update_fields=['role'])
             created = True
             logger.info(f"Admin user created: {username}")
         
@@ -389,12 +431,12 @@ def finalize(request):
     
     # Get current database settings from Django settings (if not provided)
     if not env_data.get('DB_NAME'):
-        env_data['DB_NAME'] = settings.DATABASES['default'].get('NAME', 'screengram_db')
+        env_data['DB_NAME'] = settings.DATABASES['default'].get('NAME', 'pixelcast_signage_db')
     if not env_data.get('DB_USER'):
-        env_data['DB_USER'] = settings.DATABASES['default'].get('USER', 'screengram_user')
+        env_data['DB_USER'] = settings.DATABASES['default'].get('USER', 'pixelcast_signage_user')
     if not env_data.get('DB_PASSWORD') or not str(env_data.get('DB_PASSWORD', '')).strip():
         # Auto-fix: use DB_USER as DB_PASSWORD when password is missing/empty
-        env_data['DB_PASSWORD'] = env_data.get('DB_USER', 'screengram_user')
+        env_data['DB_PASSWORD'] = env_data.get('DB_USER', 'pixelcast_signage_user')
     if not env_data.get('DB_HOST'):
         env_data['DB_HOST'] = settings.DATABASES['default'].get('HOST', 'db')
     if not env_data.get('DB_PORT'):

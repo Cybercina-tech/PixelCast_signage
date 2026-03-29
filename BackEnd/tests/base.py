@@ -1,5 +1,5 @@
 """
-Base test classes and utilities for ScreenGram tests.
+Base test classes and utilities for PixelCast Signage tests.
 """
 import json
 from django.test import TestCase, TransactionTestCase

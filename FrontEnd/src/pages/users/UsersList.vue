@@ -2,7 +2,7 @@
   <AppLayout>
     <div class="space-y-6">
       <div class="flex justify-between items-center">
-        <h1 class="text-2xl font-bold text-primary">Users & Roles</h1>
+        <h1 class="text-2xl font-bold text-primary">Team management</h1>
         <button
           @click="showCreateModal = true"
           class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
@@ -45,6 +45,7 @@
                 <PencilIcon class="w-4 h-4" />
               </button>
               <button
+                v-if="isDeveloper"
                 @click="handleChangeRole(row)"
                 class="action-btn-role"
                 title="Change Role"
@@ -89,11 +90,7 @@
           <div>
             <label class="label-base block text-sm mb-1">Role</label>
             <select v-model="form.role" class="select-base w-full px-3 py-2 rounded-lg">
-              <option value="Viewer">Viewer</option>
-              <option value="Manager">Manager</option>
-              <option value="Operator">Operator</option>
-              <option value="Admin">Admin</option>
-              <option value="SuperAdmin">SuperAdmin</option>
+              <option v-for="opt in roleOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
             </select>
           </div>
           <div>
@@ -117,11 +114,9 @@
           <div>
             <label class="label-base block text-sm mb-1">New Role</label>
             <select v-model="roleForm.role" required class="select-base w-full px-3 py-2 rounded-lg">
-              <option value="Viewer">Viewer</option>
+              <option value="Developer">Developer</option>
               <option value="Manager">Manager</option>
-              <option value="Operator">Operator</option>
-              <option value="Admin">Admin</option>
-              <option value="SuperAdmin">SuperAdmin</option>
+              <option value="Employee">Employee</option>
             </select>
           </div>
         </div>
@@ -139,8 +134,9 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 import { EyeIcon, PencilIcon, TrashIcon, ShieldCheckIcon } from '@heroicons/vue/24/outline'
 import { useUsersStore } from '@/stores/users'
 import { useNotification } from '@/composables/useNotification'
@@ -151,8 +147,22 @@ import Table from '@/components/common/Table.vue'
 import Modal from '@/components/common/Modal.vue'
 
 const router = useRouter()
+const authStore = useAuthStore()
 const usersStore = useUsersStore()
 const notify = useNotification()
+
+const isDeveloper = computed(() => authStore.user?.role === 'Developer')
+
+const roleOptions = computed(() => {
+  if (authStore.user?.role === 'Developer') {
+    return [
+      { value: 'Developer', label: 'Developer' },
+      { value: 'Manager', label: 'Manager' },
+      { value: 'Employee', label: 'Employee' },
+    ]
+  }
+  return [{ value: 'Employee', label: 'Employee' }]
+})
 
 const showCreateModal = ref(false)
 const showEditModal = ref(false)
@@ -165,12 +175,12 @@ const form = ref({
   email: '',
   full_name: '',
   password: '',
-  role: 'Viewer',
+  role: 'Employee',
   organization_name: '',
 })
 
 const roleForm = ref({
-  role: 'Viewer',
+  role: 'Employee',
 })
 
 const columns = [
@@ -192,7 +202,7 @@ const handleEdit = (row) => {
     email: row.email || '',
     full_name: row.full_name || '',
     password: '',
-    role: row.role || 'Viewer',
+    role: row.role || 'Employee',
     organization_name: row.organization_name || '',
   }
   showEditModal.value = true
@@ -200,7 +210,7 @@ const handleEdit = (row) => {
 
 const handleChangeRole = (row) => {
   roleChangingUser.value = row
-  roleForm.value.role = row.role || 'Viewer'
+  roleForm.value.role = row.role || 'Employee'
   showRoleModal.value = true
 }
 
@@ -271,7 +281,7 @@ const closeModal = () => {
     email: '',
     full_name: '',
     password: '',
-    role: 'Viewer',
+    role: 'Employee',
     organization_name: '',
   }
 }

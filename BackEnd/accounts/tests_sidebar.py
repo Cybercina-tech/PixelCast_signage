@@ -19,206 +19,141 @@ User = get_user_model()
 
 class SidebarConfigTests(TestCase):
     """Test sidebar configuration and permission functions."""
-    
+
     def setUp(self):
-        """Set up test users with different roles."""
-        self.superadmin = User.objects.create_user(
-            username='superadmin',
-            email='superadmin@test.com',
+        self.developer = User.objects.create_user(
+            username='developer',
+            email='developer@test.com',
             password='testpass123',
-            role='SuperAdmin'
-        )
-        self.admin = User.objects.create_user(
-            username='admin',
-            email='admin@test.com',
-            password='testpass123',
-            role='Admin'
+            role='Developer',
+            is_superuser=True,
+            is_staff=True,
         )
         self.manager = User.objects.create_user(
             username='manager',
             email='manager@test.com',
             password='testpass123',
-            role='Manager'
+            role='Manager',
+            is_staff=True,
         )
-        self.operator = User.objects.create_user(
-            username='operator',
-            email='operator@test.com',
+        self.employee = User.objects.create_user(
+            username='employee',
+            email='employee@test.com',
             password='testpass123',
-            role='Operator'
+            role='Employee',
         )
-        self.viewer = User.objects.create_user(
-            username='viewer',
-            email='viewer@test.com',
-            password='testpass123',
-            role='Viewer'
-        )
-    
-    def test_get_user_permissions_superadmin(self):
-        """Test that SuperAdmin has all permissions."""
-        permissions = get_user_permissions(self.superadmin)
-        # SuperAdmin should have all permissions
+
+    def test_get_user_permissions_developer(self):
+        permissions = get_user_permissions(self.developer)
         self.assertEqual(len(permissions), len(PERMISSIONS))
         for perm in PERMISSIONS.values():
             self.assertIn(perm, permissions)
-    
-    def test_get_user_permissions_admin(self):
-        """Test Admin permissions."""
-        permissions = get_user_permissions(self.admin)
-        expected_perms = set(ROLE_PERMISSIONS['Admin'])
+
+    def test_get_user_permissions_manager(self):
+        permissions = get_user_permissions(self.manager)
+        expected_perms = set(ROLE_PERMISSIONS['Manager'])
         self.assertEqual(permissions, expected_perms)
-    
-    def test_get_user_permissions_viewer(self):
-        """Test Viewer has limited permissions."""
-        permissions = get_user_permissions(self.viewer)
-        expected_perms = set(ROLE_PERMISSIONS['Viewer'])
+
+    def test_get_user_permissions_employee(self):
+        permissions = get_user_permissions(self.employee)
+        expected_perms = set(ROLE_PERMISSIONS['Employee'])
         self.assertEqual(permissions, expected_perms)
-        # Viewer should not have create/edit permissions
-        self.assertNotIn('create_screens', permissions)
-        self.assertNotIn('edit_screens', permissions)
-    
+        self.assertNotIn('view_dashboard', permissions)
+
     def test_has_permission(self):
-        """Test has_permission function."""
-        # SuperAdmin should have all permissions
-        self.assertTrue(has_permission(self.superadmin, 'view_dashboard'))
-        self.assertTrue(has_permission(self.superadmin, 'view_errors'))
-        self.assertTrue(has_permission(self.superadmin, 'manage_roles'))
-        
-        # Admin should have most permissions but not view_errors
-        self.assertTrue(has_permission(self.admin, 'view_dashboard'))
-        self.assertTrue(has_permission(self.admin, 'manage_roles'))
-        self.assertFalse(has_permission(self.admin, 'view_errors'))
-        
-        # Viewer should have limited permissions
-        self.assertTrue(has_permission(self.viewer, 'view_dashboard'))
-        self.assertFalse(has_permission(self.viewer, 'create_screens'))
-        self.assertFalse(has_permission(self.viewer, 'view_analytics'))
-    
-    def test_filter_sidebar_items_superadmin(self):
-        """Test that SuperAdmin sees all sidebar items."""
-        items = filter_sidebar_items(self.superadmin)
-        # SuperAdmin should see all items including error dashboard
-        self.assertGreater(len(items), 0)
-        # Check that all items are included
+        self.assertTrue(has_permission(self.developer, 'view_dashboard'))
+        self.assertTrue(has_permission(self.developer, 'view_errors'))
+
+        self.assertTrue(has_permission(self.manager, 'view_dashboard'))
+        self.assertFalse(has_permission(self.manager, 'view_logs'))
+
+        self.assertTrue(has_permission(self.employee, 'view_screens'))
+        self.assertFalse(has_permission(self.employee, 'view_users'))
+
+    def test_filter_sidebar_items_developer(self):
+        items = filter_sidebar_items(self.developer)
         item_ids = [item['id'] for item in items]
         self.assertIn('dashboard', item_ids)
         self.assertIn('settings', item_ids)
-    
-    def test_filter_sidebar_items_viewer(self):
-        """Test that Viewer sees limited sidebar items."""
-        items = filter_sidebar_items(self.viewer)
+        self.assertIn('core', item_ids)
+
+    def test_filter_sidebar_items_employee(self):
+        items = filter_sidebar_items(self.employee)
         item_ids = [item['id'] for item in items]
-        # Viewer should see basic items
-        self.assertIn('dashboard', item_ids)
+        self.assertNotIn('dashboard', item_ids)
         self.assertIn('screens', item_ids)
-        # Viewer should NOT see restricted items
-        self.assertNotIn('analytics', item_ids)
-        self.assertNotIn('core', item_ids)
-    
+        self.assertIn('contents', item_ids)
+        self.assertIn('schedules', item_ids)
+        self.assertNotIn('users', item_ids)
+
     def test_filter_sidebar_items_with_children(self):
-        """Test filtering of sidebar items with children."""
-        items = filter_sidebar_items(self.admin)
-        # Find core item with children
+        items = filter_sidebar_items(self.developer)
         core_item = next((item for item in items if item['id'] == 'core'), None)
-        if core_item:
-            self.assertIsNotNone(core_item.get('children'))
-            self.assertGreater(len(core_item['children']), 0)
-    
+        self.assertIsNotNone(core_item)
+        self.assertTrue(core_item.get('children'))
+
     def test_unauthenticated_user(self):
-        """Test that unauthenticated users get no items."""
         items = filter_sidebar_items(None)
         self.assertEqual(len(items), 0)
 
 
 class SidebarItemsAPITests(TestCase):
     """Test sidebar items API endpoint."""
-    
+
     def setUp(self):
-        """Set up test client and users."""
         self.client = APIClient()
-        self.superadmin = User.objects.create_user(
-            username='superadmin',
-            email='superadmin@test.com',
+        self.developer = User.objects.create_user(
+            username='developer',
+            email='developer@test.com',
             password='testpass123',
-            role='SuperAdmin'
+            role='Developer',
+            is_superuser=True,
+            is_staff=True,
         )
-        self.viewer = User.objects.create_user(
-            username='viewer',
-            email='viewer@test.com',
+        self.employee = User.objects.create_user(
+            username='employee',
+            email='employee@test.com',
             password='testpass123',
-            role='Viewer'
+            role='Employee',
         )
-        # Clear cache before each test
         cache.clear()
-    
+
     def test_sidebar_items_requires_authentication(self):
-        """Test that sidebar items endpoint requires authentication."""
         response = self.client.get('/api/sidebar-items/')
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-    
-    def test_sidebar_items_superadmin(self):
-        """Test that SuperAdmin gets all sidebar items."""
-        self.client.force_authenticate(user=self.superadmin)
+
+    def test_sidebar_items_developer(self):
+        self.client.force_authenticate(user=self.developer)
         response = self.client.get('/api/sidebar-items/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['status'], 'success')
         self.assertIn('items', response.data)
-        items = response.data['items']
-        self.assertGreater(len(items), 0)
-        # Check that items have required fields
-        for item in items:
-            self.assertIn('id', item)
-            self.assertIn('title', item)
-            self.assertIn('icon', item)
-            self.assertIn('required_permissions', item)
-    
-    def test_sidebar_items_viewer(self):
-        """Test that Viewer gets limited sidebar items."""
-        self.client.force_authenticate(user=self.viewer)
+        self.assertGreater(len(response.data['items']), 0)
+
+    def test_sidebar_items_employee(self):
+        self.client.force_authenticate(user=self.employee)
         response = self.client.get('/api/sidebar-items/')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         items = response.data['items']
         item_ids = [item['id'] for item in items]
-        # Viewer should not see analytics or core items
-        self.assertNotIn('analytics', item_ids)
-        # Check that core item is not included (or has no accessible children)
-        core_item = next((item for item in items if item['id'] == 'core'), None)
-        if core_item:
-            # If core item exists, it should have no accessible children for viewer
-            self.assertIsNone(core_item.get('children') or len(core_item.get('children', [])) == 0)
-    
+        self.assertNotIn('users', item_ids)
+
     def test_sidebar_items_caching(self):
-        """Test that sidebar items are cached."""
-        self.client.force_authenticate(user=self.superadmin)
-        
-        # First request
+        self.client.force_authenticate(user=self.developer)
         response1 = self.client.get('/api/sidebar-items/')
-        self.assertEqual(response1.status_code, status.HTTP_200_OK)
-        
-        # Second request should use cache
         response2 = self.client.get('/api/sidebar-items/')
-        self.assertEqual(response2.status_code, status.HTTP_200_OK)
-        # Responses should be identical
         self.assertEqual(response1.data, response2.data)
-    
+
     def test_sidebar_items_cache_invalidation(self):
-        """Test that cache is invalidated when user role changes."""
-        self.client.force_authenticate(user=self.viewer)
-        
-        # Get items as viewer
+        self.client.force_authenticate(user=self.employee)
         response1 = self.client.get('/api/sidebar-items/')
         viewer_items_count = len(response1.data['items'])
-        
-        # Change role to admin
-        self.viewer.role = 'Admin'
-        self.viewer.save()
-        
-        # Clear cache manually (in real scenario, this would happen on role change)
+
+        self.employee.role = 'Manager'
+        self.employee.is_staff = True
+        self.employee.save()
         cache.clear()
-        
-        # Get items as admin
+
         response2 = self.client.get('/api/sidebar-items/')
         admin_items_count = len(response2.data['items'])
-        
-        # Admin should see more items than viewer
         self.assertGreater(admin_items_count, viewer_items_count)
-

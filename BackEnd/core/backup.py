@@ -1,5 +1,5 @@
 """
-Automated backup system for ScreenGram.
+Automated backup system for PixelCast Signage.
 
 Provides:
 - Database backups (SQLite, PostgreSQL, MySQL)

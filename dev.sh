@@ -1,10 +1,10 @@
 #!/bin/bash
-# Start ScreenGram with hot-reloading frontend (Vite dev server)
+# Start PixelCast Signage with hot-reloading frontend (Vite dev server)
 # Edit Vue files - changes appear instantly at http://localhost:5173
 
 set -e
 
-echo "Starting ScreenGram (dev mode with HMR)..."
+echo "Starting PixelCast Signage (dev mode with HMR)..."
 echo "Frontend: http://localhost:5173"
 echo ""
 

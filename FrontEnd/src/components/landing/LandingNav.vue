@@ -6,7 +6,7 @@
           to="/"
           class="flex items-center space-x-2 hover:opacity-80 transition-opacity"
         >
-          <span class="text-xl font-bold text-slate-900 tracking-tight">ScreenGram</span>
+          <span class="text-xl font-bold text-slate-900 tracking-tight">PixelCast Signage</span>
         </router-link>
         <div class="flex items-center space-x-4">
           <router-link

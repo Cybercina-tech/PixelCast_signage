@@ -43,16 +43,16 @@ import TrustSection from '../components/home/TrustSection.vue'
 import CTA from '../components/home/CTA.vue'
 
 onMounted(() => {
-  document.title = 'ScreenGram - Enterprise Digital Signage Management'
+  document.title = 'PixelCast Signage - Enterprise Digital Signage Management'
   
   // Add meta description
   const metaDescription = document.querySelector('meta[name="description"]')
   if (metaDescription) {
-    metaDescription.setAttribute('content', 'ScreenGram - Manage and control your digital signage network from one powerful platform. Real-time monitoring, content scheduling, and secure command execution.')
+    metaDescription.setAttribute('content', 'PixelCast Signage - Manage and control your digital signage network from one powerful platform. Real-time monitoring, content scheduling, and secure command execution.')
   } else {
     const meta = document.createElement('meta')
     meta.name = 'description'
-    meta.content = 'ScreenGram - Manage and control your digital signage network from one powerful platform. Real-time monitoring, content scheduling, and secure command execution.'
+    meta.content = 'PixelCast Signage - Manage and control your digital signage network from one powerful platform. Real-time monitoring, content scheduling, and secure command execution.'
     document.head.appendChild(meta)
   }
 })

@@ -302,15 +302,21 @@ class AdminDashboardConsumer(AsyncWebsocketConsumer):
         if not screen_id:
             return False
         
-        # SuperAdmin and Admin have full access
-        if self.user.has_full_access():
+        if self.user.is_developer() or self.user.is_manager():
             return True
-        
-        # Check organization match
+
         try:
-            screen = await database_sync_to_async(Screen.objects.get)(id=screen_id)
-            if self.organization_name and screen.organization_name:
-                return self.organization_name == screen.organization_name
+            screen = await database_sync_to_async(
+                lambda: Screen.objects.select_related('owner').get(id=screen_id)
+            )()
+            if screen.owner_id == self.user.id:
+                return True
+            if (
+                self.organization_name
+                and screen.owner
+                and getattr(screen.owner, 'organization_name', None) == self.organization_name
+            ):
+                return True
             return False
         except ObjectDoesNotExist:
             return False
@@ -327,17 +333,22 @@ class AdminDashboardConsumer(AsyncWebsocketConsumer):
         if not command_id:
             return False
         
-        # SuperAdmin and Admin have full access
-        if self.user.has_full_access():
+        if self.user.is_developer() or self.user.is_manager():
             return True
-        
-        # Check organization match via screen
+
         try:
-            command = await database_sync_to_async(Command.objects.get)(id=command_id)
+            command = await database_sync_to_async(
+                lambda: Command.objects.select_related('screen', 'screen__owner').get(id=command_id)
+            )()
             screen = command.screen
-            
-            if self.organization_name and screen.organization_name:
-                return self.organization_name == screen.organization_name
+            if screen.owner_id == self.user.id:
+                return True
+            if (
+                self.organization_name
+                and screen.owner
+                and getattr(screen.owner, 'organization_name', None) == self.organization_name
+            ):
+                return True
             return False
         except ObjectDoesNotExist:
             return False

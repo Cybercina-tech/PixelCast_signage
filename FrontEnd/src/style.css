@@ -4,6 +4,10 @@
 
 /* CSS Variables for Theme System - Aether Identity */
 :root {
+  /* Space Cockpit / Energy Rail — cosmic indigo + violet (wizard, scrollbar, auth accents) */
+  --cosmic-primary: #6366F1;
+  --cosmic-secondary: #A855F7;
+
   /* Light Mode - Aether: High-Tech Laboratory in the Clouds */
   --bg-primary: #FEFCF8; /* Warm-white background to reduce blue light strain */
   --bg-secondary: #FAF8F4; /* Slightly warmer for sidebar/containers */
@@ -1058,8 +1062,8 @@
 .auth-page {
   --auth-bg-light: #FDF8F3;
   --auth-bg-dark: #1A1F2C;
-  --auth-primary: #6366F1;
-  --auth-primary-glow: rgba(99, 102, 241, 0.3);
+  --auth-primary: var(--cosmic-primary);
+  --auth-primary-glow: color-mix(in srgb, var(--cosmic-primary) 30%, transparent);
   --auth-accent: #FF6B6B;
   --auth-glass: rgba(255, 255, 255, 0.12);
   --auth-glass-border: rgba(255, 255, 255, 0.18);
@@ -1109,9 +1113,9 @@
   animation: auth-blob-float 12s ease-in-out infinite;
 }
 
-.auth-blob-1 { width: 400px; height: 400px; top: -100px; right: -100px; background: #6366F1; animation-delay: 0s; }
+.auth-blob-1 { width: 400px; height: 400px; top: -100px; right: -100px; background: var(--cosmic-primary); animation-delay: 0s; }
 .auth-blob-2 { width: 350px; height: 350px; bottom: -80px; left: -80px; background: #FF6B6B; animation-delay: -4s; }
-.auth-blob-3 { width: 300px; height: 300px; top: 50%; left: 50%; background: #8B5CF6; animation-delay: -8s; }
+.auth-blob-3 { width: 300px; height: 300px; top: 50%; left: 50%; background: var(--cosmic-secondary); animation-delay: -8s; }
 
 @keyframes auth-blob-float {
   0%, 100% { transform: translate(0, 0) scale(1); }
@@ -1121,18 +1125,18 @@
 
 .auth-input-glow:focus {
   border-color: var(--auth-primary) !important;
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2), 0 0 20px var(--auth-primary-glow) !important;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--cosmic-primary) 20%, transparent), 0 0 20px var(--auth-primary-glow) !important;
   transition: all 0.3s ease-in-out;
 }
 
 .auth-btn-primary {
   background: var(--auth-primary) !important;
-  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4) !important;
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--cosmic-primary) 40%, transparent) !important;
   transition: all 0.3s ease !important;
 }
 
 .auth-btn-primary:hover:not(:disabled) {
-  box-shadow: 0 6px 24px rgba(99, 102, 241, 0.5) !important;
+  box-shadow: 0 6px 24px color-mix(in srgb, var(--cosmic-primary) 50%, transparent) !important;
   transform: translateY(-2px);
 }
 
@@ -1154,8 +1158,8 @@
 }
 
 .auth-btn-outline:hover {
-  background: rgba(99, 102, 241, 0.1);
-  box-shadow: 0 0 20px rgba(99, 102, 241, 0.2);
+  background: color-mix(in srgb, var(--cosmic-primary) 10%, transparent);
+  box-shadow: 0 0 20px color-mix(in srgb, var(--cosmic-primary) 20%, transparent);
 }
 
 .auth-heading {
@@ -1179,7 +1183,7 @@
 /* Firefox: thin rail + Electric Indigo thumb, subtle track */
 * {
   scrollbar-width: thin;
-  scrollbar-color: #6366F1 rgba(255, 255, 255, 0.02);
+  scrollbar-color: var(--cosmic-primary) rgba(255, 255, 255, 0.02);
 }
 
 /* WebKit (Chrome, Safari, Edge): 6px rail, gradient thumb, neon hover */
@@ -1193,20 +1197,20 @@
 }
 
 *::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, #6366F1 0%, #A855F7 100%);
+  background: linear-gradient(180deg, var(--cosmic-primary) 0%, var(--cosmic-secondary) 100%);
   border-radius: 3px;
   transition: box-shadow 0.2s ease;
 }
 
 *::-webkit-scrollbar-thumb:hover {
-  box-shadow: 0 0 8px #6366F1;
+  box-shadow: 0 0 8px var(--cosmic-primary);
 }
 
 /* Custom Scrollbar Styles - Thin and Elegant (legacy class, inherits global) */
 @layer utilities {
   .custom-scrollbar {
     scrollbar-width: thin;
-    scrollbar-color: #6366F1 rgba(255, 255, 255, 0.02);
+    scrollbar-color: var(--cosmic-primary) rgba(255, 255, 255, 0.02);
     overscroll-behavior-y: contain;
   }
   
@@ -1220,13 +1224,13 @@
   }
   
   .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: linear-gradient(180deg, #6366F1 0%, #A855F7 100%);
+    background: linear-gradient(180deg, var(--cosmic-primary) 0%, var(--cosmic-secondary) 100%);
     border-radius: 3px;
     transition: box-shadow 0.2s ease;
   }
   
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    box-shadow: 0 0 8px #6366F1;
+    box-shadow: 0 0 8px var(--cosmic-primary);
   }
   
   /* Prevent scroll chaining */

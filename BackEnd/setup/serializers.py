@@ -53,6 +53,12 @@ class RunMigrationsSerializer(serializers.Serializer):
     )
 
 
+class SeedAssetsSerializer(serializers.Serializer):
+    """Serializer for seeding default notification events and related assets."""
+    status = serializers.CharField(read_only=True)
+    message = serializers.CharField(read_only=True)
+
+
 class CreateAdminSerializer(serializers.Serializer):
     """Serializer for creating or updating admin user (upsert)."""
     username = serializers.CharField(

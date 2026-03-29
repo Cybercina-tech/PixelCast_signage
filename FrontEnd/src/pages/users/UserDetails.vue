@@ -51,17 +51,14 @@
         
         <Card title="Access & Permissions">
           <div class="space-y-2">
-            <div v-if="user.role === 'SuperAdmin' || user.role === 'Admin'" class="p-2 bg-green-50 dark:bg-green-900/20 rounded text-primary">
-              Full access to all resources
-            </div>
-            <div v-else-if="user.role === 'Operator'" class="p-2 bg-blue-50 dark:bg-blue-900/20 rounded text-primary">
-              Can execute commands and manage resources
+            <div v-if="user.role === 'Developer'" class="p-2 bg-green-50 dark:bg-green-900/20 rounded text-primary">
+              Full system access (settings, logs, team, content)
             </div>
             <div v-else-if="user.role === 'Manager'" class="p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded text-primary">
-              Can manage resources and view reports
+              Manage Employees, screens, and content; no system settings
             </div>
             <div v-else class="p-2 bg-gray-50 dark:bg-gray-800 rounded text-primary">
-              Read-only access
+              Screens, playlists, and media library
             </div>
           </div>
         </Card>
