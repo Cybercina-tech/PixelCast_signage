@@ -209,3 +209,7 @@ __marimo__/
 ./.gitignore
 /prompts.txt
 /FuturePlans.md
+
+# ScreenGram — avoid unanchored directory names (e.g. bare `logs`) that match
+# source paths like FrontEnd/src/pages/logs/. FrontEnd/.gitignore uses leading
+# `/` for tooling dirs; keep Python ignores above as-is for venv/build artifacts.
