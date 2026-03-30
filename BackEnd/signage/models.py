@@ -1,5 +1,6 @@
 import uuid
 import secrets
+import hashlib
 from django.db import models
 from django.conf import settings
 from django.core.validators import MinValueValidator, MaxValueValidator
@@ -66,21 +67,47 @@ class Screen(models.Model):
         help_text="User who owns or manages this screen"
     )
     
-    # System & Security
+    # Legacy auth fields (kept for migration compatibility, no longer used at runtime)
     auth_token = models.CharField(
         max_length=255,
         unique=True,
         db_index=True,
         blank=True,
-        help_text="Authentication token for device communication (auto-generated if not provided)"
+        help_text="Legacy auth token (deprecated, use device_token_hash)"
     )
     secret_key = models.CharField(
         max_length=255,
         unique=True,
         db_index=True,
         blank=True,
-        help_text="Secret key for secure device operations (auto-generated if not provided)"
+        help_text="Legacy secret key (deprecated, use device_token_hash)"
     )
+
+    # Secure device authentication (replaces auth_token/secret_key for runtime)
+    device_token_hash = models.CharField(
+        max_length=128,
+        unique=True,
+        db_index=True,
+        blank=True,
+        null=True,
+        help_text="SHA-256 hash of the device token issued during pairing"
+    )
+    device_token_issued_at = models.DateTimeField(
+        blank=True,
+        null=True,
+        help_text="When the current device token was issued"
+    )
+    token_revoked_at = models.DateTimeField(
+        blank=True,
+        null=True,
+        help_text="When the device token was revoked (forces re-pair)"
+    )
+    last_paired_at = models.DateTimeField(
+        blank=True,
+        null=True,
+        help_text="When this screen was last successfully paired"
+    )
+
     registration_date = models.DateTimeField(
         auto_now_add=True,
         help_text="Date and time when the screen was registered"
@@ -209,12 +236,13 @@ class Screen(models.Model):
         indexes = [
             models.Index(fields=['device_id']),
             models.Index(fields=['auth_token']),
+            models.Index(fields=['device_token_hash']),
             models.Index(fields=['is_online', 'last_heartbeat_at']),
             models.Index(fields=['owner', 'is_online']),
         ]
     
     def save(self, *args, **kwargs):
-        """Override save to auto-generate auth_token and secret_key if not provided."""
+        """Override save to auto-generate legacy auth_token and secret_key if not provided."""
         if not self.auth_token:
             self.auth_token = secrets.token_urlsafe(32)
         if not self.secret_key:
@@ -223,6 +251,59 @@ class Screen(models.Model):
     
     def __str__(self):
         return self.name
+
+    # ── Device token helpers ──────────────────────────────────────────
+
+    @staticmethod
+    def hash_device_token(raw_token: str) -> str:
+        """Produce a SHA-256 hex digest of *raw_token*."""
+        return hashlib.sha256(raw_token.encode()).hexdigest()
+
+    def issue_device_token(self):
+        """
+        Generate a new device token, store its hash, and return the raw token.
+        The raw token is returned exactly once (during pairing handshake) and
+        must be stored by the TV in localStorage.
+        """
+        from django.utils import timezone
+        raw_token = secrets.token_urlsafe(48)
+        self.device_token_hash = self.hash_device_token(raw_token)
+        self.device_token_issued_at = timezone.now()
+        self.token_revoked_at = None
+        self.save(update_fields=[
+            'device_token_hash', 'device_token_issued_at', 'token_revoked_at',
+        ])
+        return raw_token
+
+    def verify_device_token(self, raw_token: str) -> bool:
+        """Return True if *raw_token* matches the stored hash and is not revoked."""
+        if not raw_token or not self.device_token_hash:
+            return False
+        if self.token_revoked_at is not None:
+            return False
+        return self.hash_device_token(raw_token) == self.device_token_hash
+
+    def revoke_device_token(self):
+        """Revoke the current device token, forcing the TV back to pairing."""
+        from django.utils import timezone
+        self.token_revoked_at = timezone.now()
+        self.device_token_hash = None
+        self.is_online = False
+        self.save(update_fields=['token_revoked_at', 'device_token_hash', 'is_online'])
+
+    @classmethod
+    def authenticate_device(cls, screen_id, raw_token):
+        """
+        Look up a screen by *screen_id* and verify *raw_token*.
+        Returns the Screen instance on success, None otherwise.
+        """
+        try:
+            screen = cls.objects.get(id=screen_id)
+        except (cls.DoesNotExist, ValueError):
+            return None
+        if screen.verify_device_token(raw_token):
+            return screen
+        return None
     
     def is_heartbeat_stale(self, timeout_minutes=5):
         """
@@ -606,6 +687,13 @@ class PairingSession(models.Model):
         help_text="When this session was successfully paired"
     )
     
+    # One-time activation delivery marker
+    activation_delivered_at = models.DateTimeField(
+        blank=True,
+        null=True,
+        help_text="When the device token was delivered to the TV (one-time handshake)"
+    )
+
     # Screen relationship (set after pairing)
     screen = models.OneToOneField(
         'Screen',

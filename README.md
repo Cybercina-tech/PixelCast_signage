@@ -1,5 +1,9 @@
 # PixelCast Signage - Digital Signage Management System
 
+## Installation
+- General install steps: [`INSTALLATION.md`](./INSTALLATION.md)
+- cPanel/shared hosting install steps: [`CPANEL_INSTALLATION.md`](./CPANEL_INSTALLATION.md)
+
 ## 1. Project Overview
 
 **What this system is:**

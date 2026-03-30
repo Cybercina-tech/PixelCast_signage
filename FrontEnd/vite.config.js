@@ -70,6 +70,16 @@ export default defineConfig({
         changeOrigin: true,
         ws: true,
       },
+      // Player IoT traffic (template, heartbeat, commands) — same issue as /api when backend
+      // is only reachable as backend:8000 inside Docker; browser must use same-origin /iot.
+      '/iot': {
+        target: backendProxyTarget,
+        changeOrigin: true,
+      },
+      '/public-iot': {
+        target: backendProxyTarget,
+        changeOrigin: true,
+      },
     },
   },
   resolve: {

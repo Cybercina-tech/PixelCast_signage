@@ -326,6 +326,8 @@ export const screensAPI = {
   patch: (id, data) => api.patch(`/screens/${id}/`, data),
   delete: (id) => api.delete(`/screens/${id}/`),
   heartbeat: (id, data) => api.post(`/screens/${id}/heartbeat/`, data),
+  revokeToken: (id) => api.post(`/screens/${id}/revoke-token/`),
+  regenerateToken: (id) => api.post(`/screens/${id}/regenerate-token/`),
   // Standalone endpoints (for screen clients)
   heartbeatStandalone: (data) => api.post('/screens/heartbeat/', data),
   commandPull: (params) => api.get('/screens/command-pull/', { params }),

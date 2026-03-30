@@ -212,12 +212,28 @@
         </div>
       </div>
 
-      <!-- Delete Screen Button (Danger Zone) -->
-      <div class="card-base rounded-2xl p-6 border-dusty-red/30">
+      <!-- Danger Zone -->
+      <div class="card-base rounded-2xl p-6 border-dusty-red/30 space-y-4">
+        <h3 class="text-lg font-semibold text-dusty-red mb-1">Danger Zone</h3>
+
         <div class="flex items-center justify-between">
           <div>
-            <h3 class="text-lg font-semibold text-dusty-red mb-1">Danger Zone</h3>
-            <p class="text-sm text-muted">Permanently remove this screen from your system</p>
+            <p class="text-sm text-primary font-medium">Revoke Device Token</p>
+            <p class="text-xs text-muted">Forces the TV back to pairing mode. It will need to be re-paired.</p>
+          </div>
+          <button
+            @click="handleRevokeToken"
+            :disabled="revokingToken"
+            class="px-5 py-2 border-2 border-amber-500/50 hover:bg-amber-500/20 hover:border-amber-500 text-amber-400 rounded-lg transition-all duration-200 font-semibold disabled:opacity-50"
+          >
+            {{ revokingToken ? 'Revoking...' : 'Revoke Token' }}
+          </button>
+        </div>
+
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm text-primary font-medium">Delete Screen</p>
+            <p class="text-xs text-muted">Permanently remove this screen from your system.</p>
           </div>
           <button
             @click="handleDeleteScreen"
@@ -315,6 +331,7 @@ import { useScreensStore } from '@/stores/screens'
 import { useTemplatesStore } from '@/stores/templates'
 import { useCommandsStore } from '@/stores/commands'
 import { useLogsStore } from '@/stores/logs'
+import { screensAPI } from '@/services/api'
 import { useNotification } from '@/composables/useNotification'
 import { useDeleteConfirmation } from '@/composables/useDeleteConfirmation'
 import AppLayout from '@/components/layout/AppLayout.vue'
@@ -352,6 +369,7 @@ const editingName = ref(false)
 const editableName = ref('')
 const actionLoading = ref(false)
 const screenshotLoading = ref(false)
+const revokingToken = ref(false)
 
 const commandForm = ref({
   type: 'restart',
@@ -554,6 +572,22 @@ const handleTakeScreenshot = async () => {
     notify.error(errorMsg)
   } finally {
     screenshotLoading.value = false
+  }
+}
+
+const handleRevokeToken = async () => {
+  if (!screen.value?.id) return
+  if (!confirm('Revoke the device token? The TV will be forced back to pairing mode.')) return
+  revokingToken.value = true
+  try {
+    await screensAPI.revokeToken(screen.value.id)
+    notify.success('Device token revoked. The TV will return to pairing mode.')
+    await loadScreenData()
+  } catch (error) {
+    const msg = error.response?.data?.error || error.message || 'Failed to revoke token'
+    notify.error(msg)
+  } finally {
+    revokingToken.value = false
   }
 }
 

@@ -26,9 +26,8 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
 
-const router = useRouter()
+const emit = defineEmits(['return-to-pairing'])
 const countdown = ref(30)
 
 let countdownInterval = null
@@ -36,19 +35,15 @@ let countdownInterval = null
 onMounted(() => {
   countdownInterval = setInterval(() => {
     countdown.value--
-    
     if (countdown.value <= 0) {
       clearInterval(countdownInterval)
-      // Redirect to pairing page
-      router.push('/player/connect')
+      emit('return-to-pairing')
     }
   }, 1000)
 })
 
 onUnmounted(() => {
-  if (countdownInterval) {
-    clearInterval(countdownInterval)
-  }
+  if (countdownInterval) clearInterval(countdownInterval)
 })
 </script>
 

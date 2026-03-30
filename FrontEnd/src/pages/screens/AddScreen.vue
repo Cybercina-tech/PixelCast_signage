@@ -204,9 +204,9 @@ import Card from '@/components/common/Card.vue'
 const router = useRouter()
 const screensStore = useScreensStore()
 
-/** Full URL to /player/connect — same page the TV should load in its browser */
+/** Full URL to /player — the TV opens this and pairing is embedded */
 const playerConnectAbsoluteUrl = computed(() => {
-  const r = router.resolve({ name: 'player-connect' })
+  const r = router.resolve({ path: '/player' })
   return new URL(r.href, window.location.origin).href
 })
 

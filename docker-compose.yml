@@ -137,6 +137,7 @@ services:
     environment:
       - CHOKIDAR_USEPOLLING=true
       - VITE_API_BASE_URL=/api
+      - VITE_IOT_BASE_URL=/iot
       - VITE_PROXY_TARGET=http://backend:8000
     depends_on:
       - backend

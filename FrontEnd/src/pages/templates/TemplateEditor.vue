@@ -907,9 +907,9 @@ const handleMediaSelect = async (data) => {
       const isBackendWidget = uuidRegex.test(selectedWidget.value.id)
       
       if (isBackendWidget) {
-        // Widget is saved to backend - link content to widget
+        // Widget is saved to backend - link content to widget (PATCH: partial update; PUT would omit required fields)
         const { contentsAPI } = await import('@/services/api')
-        await contentsAPI.update(data.content.id, {
+        await contentsAPI.patch(data.content.id, {
           widget: selectedWidget.value.id
         })
         notify.success('Content linked to widget')
