@@ -17,6 +17,8 @@ If your host can run Docker, this is the simplest path (it also runs the migrati
    - Create `.env` in the repo root from `env.example` and set:
      - `SECRET_KEY`
      - `DB_PASSWORD`
+     - `LICENSE_SERVER_URL` (for license checks)
+     - `CODECANYON_TOKEN` (optional auth for your license server)
 2. Start the stack:
 ```bash
 docker compose up -d
@@ -59,6 +61,11 @@ cp env.example .env
    - Set `DB_HOST` (for example `localhost` if PostgreSQL runs on the same server)
    - Set `BASE_URL` to your public URL (example: `https://example.com`)
    - Update `ALLOWED_HOSTS` to include your domain
+   - Configure licensing:
+     - `LICENSE_SERVER_URL` (required for enforced validation)
+     - `CODECANYON_PRODUCT_ID` (can remain empty before marketplace publish)
+     - `LICENSE_ENFORCEMENT_ENABLED=True`
+     - `LICENSE_OFFLINE_GRACE_HOURS=72`
 3. If you want **SQLite** instead of PostgreSQL:
    - set `USE_SQLITE=True`
    - you can still keep `DB_*` values, but the Django DB engine will use `db.sqlite3`
@@ -132,6 +139,18 @@ Setup endpoints are under:
 If you run migrations/admin manually (sections above), you can also skip the wizard by setting one of:
 - `PIXELCAST_SIGNAGE_INSTALLED=true` in `.env`, or
 - ensuring `installed.lock` exists under `INSTALLATION_STATE_DIR` (in Docker it’s mounted to `/app/installation_state`).
+
+## License activation (MVP)
+
+After first admin login, open `/settings/license` in the dashboard:
+
+- `GET /api/license/status/` shows current state, product-id source (`env`/`db`/`temporary`), and grace window.
+- `POST /api/license/activate/` saves purchase code and performs immediate validation.
+- `POST /api/license/revalidate/` forces a fresh validation call.
+
+Notes:
+- If `CODECANYON_PRODUCT_ID` is empty, the backend uses temporary mode payloads so you can launch before CodeCanyon item publish.
+- Once published, set `CODECANYON_PRODUCT_ID` in `.env` and restart; no source changes are required.
 
 ## Updating
 

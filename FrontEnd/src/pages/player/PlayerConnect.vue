@@ -6,12 +6,18 @@
 
 <script setup>
 import { onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 
 const router = useRouter()
+const route = useRoute()
 
 onMounted(() => {
-  router.replace('/player')
+  const screenId = route.query.screenId || route.query.screen_id || route.params.screenId
+  if (screenId) {
+    router.replace(`/player/${screenId}?pair=1`)
+    return
+  }
+  router.replace('/player?pair=1')
 })
 </script>
 

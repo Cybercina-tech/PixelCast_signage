@@ -25,9 +25,24 @@
       v-if="widget.type === 'video'"
       :widget="widget"
     />
+
+    <ClockWidget
+      v-if="widget.type === 'clock'"
+      :widget="widget"
+    />
+
+    <WebviewWidget
+      v-if="widget.type === 'webview'"
+      :widget="widget"
+    />
+
+    <ChartWidget
+      v-if="widget.type === 'chart'"
+      :widget="widget"
+    />
     
     <!-- Warn if widget type is not recognized -->
-    <div v-if="widget.type !== 'image' && widget.type !== 'text' && widget.type !== 'video'" class="widget-error" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,0,0,0.3); display: flex; align-items: center; justify-content: center; color: white; font-size: 12px;">
+    <div v-if="!['image','text','video','clock','webview','chart'].includes(widget.type)" class="widget-error" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,0,0,0.3); display: flex; align-items: center; justify-content: center; color: white; font-size: 12px;">
       Unknown widget type: {{ widget.type }}
     </div>
   </div>
@@ -38,6 +53,9 @@ import { computed, onMounted } from 'vue'
 import ImageWidget from './widgets/ImageWidget.vue'
 import TextWidget from './widgets/TextWidget.vue'
 import VideoWidget from './widgets/VideoWidget.vue'
+import ClockWidget from './widgets/ClockWidget.vue'
+import WebviewWidget from './widgets/WebviewWidget.vue'
+import ChartWidget from './widgets/ChartWidget.vue'
 
 const props = defineProps({
   widget: {

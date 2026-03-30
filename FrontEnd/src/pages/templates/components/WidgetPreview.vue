@@ -18,6 +18,16 @@
       :widget="playerWidget"
     />
 
+    <WebviewWidget
+      v-else-if="widget.type === 'webview'"
+      :widget="playerWidget"
+    />
+
+    <ChartWidget
+      v-else-if="widget.type === 'chart'"
+      :widget="playerWidget"
+    />
+
     <!-- Clock Widget -->
     <div v-else-if="widget.type === 'clock'" class="clock-widget-preview" :style="clockStyle">
       {{ currentTime }}
@@ -40,6 +50,8 @@ import { computed, ref, onMounted, onUnmounted } from 'vue'
 import TextWidget from '@/components/player/widgets/TextWidget.vue'
 import ImageWidget from '@/components/player/widgets/ImageWidget.vue'
 import VideoWidget from '@/components/player/widgets/VideoWidget.vue'
+import WebviewWidget from '@/components/player/widgets/WebviewWidget.vue'
+import ChartWidget from '@/components/player/widgets/ChartWidget.vue'
 
 const props = defineProps({
   widget: {
@@ -56,6 +68,15 @@ let timeInterval = null
 const playerWidget = computed(() => {
   const widget = props.widget
   const style = widget.style || {}
+  let parsedChart = null
+
+  if (widget.type === 'chart' && widget.content) {
+    try {
+      parsedChart = JSON.parse(widget.content)
+    } catch {
+      parsedChart = null
+    }
+  }
   
   // Create a player-compatible widget object
   // Player widgets expect: widget.content_json (for styles) and widget.contents[] (for content data)
@@ -75,6 +96,8 @@ const playerWidget = computed(() => {
       lineHeight: style.lineHeight,
       // Image/Video widget style properties
       objectFit: style.objectFit,
+      // Chart config is passed to player chart renderer
+      chart: parsedChart,
     },
     // contents array contains the actual content items
     contents: widget.content ? [{
@@ -86,8 +109,13 @@ const playerWidget = computed(() => {
       text_content: widget.type === 'text' ? widget.content : undefined,
       // Image/Video content URL
       secure_url: (widget.type === 'image' || widget.type === 'video') ? widget.content : undefined,
+      // Webview URL
+      file_url: widget.type === 'webview' ? widget.content : undefined,
       // Content-level JSON (can override widget-level styles)
-      content_json: style
+      content_json: {
+        ...style,
+        chart: parsedChart
+      }
     }] : []
   }
   

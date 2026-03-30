@@ -14,33 +14,33 @@
   --brand-primary-active: #047857;
 
   /* Light Mode — cool gray base, clearer depth */
-  --bg-primary: #F8FAFC;
-  --bg-secondary: #F1F5F9;
-  --bg-color: linear-gradient(to bottom, #F8FAFC, #F1F5F9);
-  --bg-color-solid: #F8FAFC;
-  --card-bg: rgba(255, 255, 255, 0.92);
+  --bg-primary: #F5F8FF;
+  --bg-secondary: #EDF2FB;
+  --bg-color: radial-gradient(circle at 10% 0%, #ffffff 0%, #f5f8ff 45%, #edf2fb 100%);
+  --bg-color-solid: #F5F8FF;
+  --card-bg: rgba(255, 255, 255, 0.9);
   --card-bg-backdrop: blur(16px);
   --glass-bg: rgba(255, 255, 255, 0.88);
-  --border-color: rgba(0, 0, 0, 0.06);
-  --shadow-soft: 0 1px 2px rgba(15, 23, 42, 0.06), 0 4px 12px rgba(15, 23, 42, 0.08);
-  --shadow-medium: 0 4px 6px rgba(15, 23, 42, 0.07), 0 12px 24px rgba(15, 23, 42, 0.1);
-  --shadow-strong: 0 8px 16px rgba(15, 23, 42, 0.08), 0 20px 40px rgba(15, 23, 42, 0.12);
+  --border-color: rgba(30, 41, 59, 0.1);
+  --shadow-soft: 0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 20px rgba(51, 65, 85, 0.08);
+  --shadow-medium: 0 8px 20px rgba(15, 23, 42, 0.1), 0 18px 32px rgba(51, 65, 85, 0.12);
+  --shadow-strong: 0 12px 28px rgba(15, 23, 42, 0.12), 0 28px 48px rgba(51, 65, 85, 0.16);
 
   /* Form fields — track surfaces without fighting parent panels */
-  --input-bg: rgba(255, 255, 255, 0.98);
-  --input-border: rgba(0, 0, 0, 0.08);
-  --input-focus-ring: rgba(9, 132, 227, 0.22);
-  --text-main: #2D3436; /* Deep charcoal, easier on eyes than pure black */
-  --text-heading: #2D3436;
-  --text-body: #2D3436;
-  --text-muted: #636E72; /* For labels and secondary info */
-  --sidebar-bg: rgba(248, 250, 252, 0.85);
+  --input-bg: rgba(255, 255, 255, 0.96);
+  --input-border: rgba(30, 41, 59, 0.14);
+  --input-focus-ring: rgba(59, 130, 246, 0.2);
+  --text-main: #1e293b;
+  --text-heading: #0f172a;
+  --text-body: #1e293b;
+  --text-muted: #64748b;
+  --sidebar-bg: rgba(245, 248, 255, 0.92);
   --icon-color: #2D3436;
-  --accent-color: #0984E3; /* Professional blue that works on light backgrounds */
-  --button-primary: #0984E3;
+  --accent-color: #2563eb;
+  --button-primary: #2563eb;
   --button-text: #FFFFFF;
-  --button-shadow: 0 2px 8px rgba(9, 132, 227, 0.2), 0 1px 3px rgba(9, 132, 227, 0.15);
-  --button-shadow-hover: 0 4px 12px rgba(9, 132, 227, 0.3), 0 2px 6px rgba(9, 132, 227, 0.2);
+  --button-shadow: 0 8px 18px rgba(37, 99, 235, 0.2), 0 2px 6px rgba(37, 99, 235, 0.12);
+  --button-shadow-hover: 0 12px 24px rgba(37, 99, 235, 0.28), 0 6px 10px rgba(37, 99, 235, 0.16);
   --grid-color: #E2E8F0;
   --notification-error-bg: rgba(255, 235, 235, 0.8); /* Pastel red with 80% opacity */
   --notification-success-bg: rgba(235, 255, 235, 0.8); /* Pastel green with 80% opacity */

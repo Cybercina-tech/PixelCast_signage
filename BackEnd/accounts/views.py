@@ -70,6 +70,8 @@ class UserViewSet(viewsets.ModelViewSet):
             raise PermissionDenied("You do not have permission to create users.")
         if not (user.is_developer() or user.is_manager()):
             raise PermissionDenied("You do not have permission to create users.")
+        if user.is_manager() and serializer.validated_data.get('role', 'Employee') != 'Employee':
+            raise PermissionDenied("Managers can only create Employee accounts.")
 
         # Sanitize input
         validated_data = serializer.validated_data
@@ -490,7 +492,7 @@ def login_view(request):
         remaining_time = AccountLockoutManager.get_remaining_lockout_time(username)
         logger.warning(f'Login attempt for locked account: {username}')
         return Response({
-            'error': 'Account temporarily locked due to multiple failed login attempts. Please try again later.',
+            'error': 'Account lockout is active due to multiple failed login attempts. Please try again later.',
             'lockout_seconds': remaining_time
         }, status=status.HTTP_429_TOO_MANY_REQUESTS)
     
@@ -551,8 +553,8 @@ def login_view(request):
     
     # Authentication failed - record attempt (prevent user enumeration)
     # Don't reveal whether username exists or password is wrong
-    is_locked_username, remaining_username = AccountLockoutManager.record_failed_attempt(username)
-    is_locked_ip, remaining_ip = AccountLockoutManager.record_failed_attempt(client_ip)
+    is_locked_username, _ = AccountLockoutManager.record_failed_attempt(username)
+    is_locked_ip, _ = AccountLockoutManager.record_failed_attempt(client_ip)
     
     # Log failed login attempt
     try:
@@ -590,9 +592,11 @@ def login_view(request):
     
     # Return generic error (prevent user enumeration)
     if is_locked_username or is_locked_ip:
+        username_lockout_seconds = AccountLockoutManager.get_remaining_lockout_time(username)
+        ip_lockout_seconds = AccountLockoutManager.get_remaining_lockout_time(client_ip)
         return Response({
-            'error': 'Account temporarily locked due to multiple failed login attempts. Please try again later.',
-            'lockout_seconds': max(remaining_username, remaining_ip)
+            'error': 'Account lockout is active due to multiple failed login attempts. Please try again later.',
+            'lockout_seconds': max(username_lockout_seconds, ip_lockout_seconds)
         }, status=status.HTTP_429_TOO_MANY_REQUESTS)  # Using 429 as Django doesn't have 423
     
     # Use serializer error message if available, otherwise generic message

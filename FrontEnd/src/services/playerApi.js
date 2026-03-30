@@ -57,12 +57,15 @@ export const getScreenId = () => screenId
 
 // ── Helpers ──────────────────────────────────────────────────────
 
-function requireIdentity() {
-  if (!screenId || !deviceToken) {
+function resolveIdentity(override = {}) {
+  const resolvedScreenId = override.screenId || screenId
+  const resolvedDeviceToken = override.deviceToken || deviceToken
+  if (!resolvedScreenId || !resolvedDeviceToken) {
     const err = new Error('Device not paired. screen_id and device_token are required.')
     err.code = 'DEVICE_NOT_PAIRED'
     throw err
   }
+  return { screenId: resolvedScreenId, deviceToken: resolvedDeviceToken }
 }
 
 function wrapError(error) {
@@ -80,11 +83,11 @@ function wrapError(error) {
 
 // ── API methods ──────────────────────────────────────────────────
 
-export const fetchTemplate = async () => {
-  requireIdentity()
+export const fetchTemplate = async (override = {}) => {
+  const identity = resolveIdentity(override)
   try {
     const response = await playerApi.get('/player/template/', {
-      params: { screen_id: screenId },
+      params: { screen_id: identity.screenId },
     })
     return response.data
   } catch (error) {
@@ -92,11 +95,11 @@ export const fetchTemplate = async () => {
   }
 }
 
-export const sendHeartbeat = async (systemInfo = {}) => {
-  requireIdentity()
+export const sendHeartbeat = async (systemInfo = {}, override = {}) => {
+  const identity = resolveIdentity(override)
   try {
     const response = await playerApi.post('/screens/heartbeat/', {
-      screen_id: screenId,
+      screen_id: identity.screenId,
       ...systemInfo,
     })
     return response.data
@@ -105,11 +108,11 @@ export const sendHeartbeat = async (systemInfo = {}) => {
   }
 }
 
-export const fetchPendingCommands = async () => {
-  requireIdentity()
+export const fetchPendingCommands = async (override = {}) => {
+  const identity = resolveIdentity(override)
   try {
     const response = await playerApi.get('/commands/pending/', {
-      params: { screen_id: screenId, limit: 10 },
+      params: { screen_id: identity.screenId, limit: 10 },
     })
     return response.data
   } catch (error) {
@@ -117,12 +120,12 @@ export const fetchPendingCommands = async () => {
   }
 }
 
-export const updateCommandStatus = async (commandId, status, errorMessage = '', responsePayload = {}) => {
-  requireIdentity()
+export const updateCommandStatus = async (commandId, status, errorMessage = '', responsePayload = {}, override = {}) => {
+  const identity = resolveIdentity(override)
   if (!commandId) throw new Error('command_id is required')
   try {
     const response = await playerApi.post('/commands/status/', {
-      screen_id: screenId,
+      screen_id: identity.screenId,
       command_id: commandId,
       status,
       error_message: errorMessage,

@@ -59,6 +59,19 @@
                 <dd class="text-sm text-primary font-mono">{{ screen.device_id }}</dd>
               </div>
               <div>
+                <dt class="text-xs font-medium text-muted uppercase tracking-wider mb-1">Player URL</dt>
+                <dd class="text-sm text-primary break-all space-y-2">
+                  <div class="font-mono">{{ playerUrl }}</div>
+                  <button
+                    type="button"
+                    @click="copyPlayerUrl"
+                    class="btn-outline px-3 py-1 rounded-lg text-xs"
+                  >
+                    Copy URL
+                  </button>
+                </dd>
+              </div>
+              <div>
                 <dt class="text-xs font-medium text-muted uppercase tracking-wider mb-1">Name</dt>
                 <dd class="text-sm text-primary">
                   <input
@@ -353,6 +366,12 @@ const { confirmDelete } = useDeleteConfirmation()
 const screen = computed(() => screensStore.currentScreen)
 const templates = computed(() => templatesStore.templates)
 const isOnline = computed(() => screensStore.getScreenStatus(screen.value) === 'online')
+const playerUrl = computed(() => {
+  const screenId = screen.value?.id || getScreenId()
+  if (!screenId) return ''
+  const origin = window.location.origin
+  return `${origin}/player/${screenId}`
+})
 
 const pendingCommands = ref([])
 const commandHistory = ref([])
@@ -407,6 +426,16 @@ const getScreenId = () => {
 const formatDate = (dateString) => {
   if (!dateString) return 'N/A'
   return new Date(dateString).toLocaleString()
+}
+
+const copyPlayerUrl = async () => {
+  if (!playerUrl.value) return
+  try {
+    await navigator.clipboard.writeText(playerUrl.value)
+    notify.success('Player URL copied')
+  } catch (_) {
+    notify.error('Failed to copy player URL')
+  }
 }
 
 const formatLastHeartbeat = (dateString) => {

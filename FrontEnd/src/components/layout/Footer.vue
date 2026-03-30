@@ -63,7 +63,7 @@ const updateTime = () => {
 const checkLatency = async () => {
   try {
     const start = performance.now()
-    await fetch('/api/health', {
+    await fetch('/api/health/', {
       method: 'GET',
       signal: AbortSignal.timeout(2000)
     })

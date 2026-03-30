@@ -5,7 +5,9 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "e2e": "playwright test",
+    "e2e:headed": "playwright test --headed"
   },
   "dependencies": {
     "@fontsource/inter": "^5.2.8",
@@ -21,10 +23,11 @@
     "vue3-moveable": "^0.28.0"
   },
   "devDependencies": {
-    "@vitejs/plugin-vue": "^5.0.4",
+    "@playwright/test": "^1.58.2",
+    "@vitejs/plugin-vue": "^6.0.5",
     "autoprefixer": "^10.4.19",
     "postcss": "^8.4.35",
     "tailwindcss": "^3.4.1",
-    "vite": "^5.1.6"
+    "vite": "^8.0.3"
   }
 }

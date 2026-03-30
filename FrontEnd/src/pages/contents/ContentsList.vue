@@ -1,7 +1,7 @@
 <template>
   <AppLayout>
-    <!-- Animated Starry Background -->
-    <div class="fixed inset-0 pointer-events-none overflow-hidden z-0">
+    <!-- Animated Background (only visible in dark mode) -->
+    <div class="fixed inset-0 pointer-events-none overflow-hidden z-0 dark:block hidden">
       <div class="absolute inset-0" ref="starsContainer"></div>
       <div class="absolute top-0 left-1/4 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl animate-pulse"></div>
       <div class="absolute bottom-0 right-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl animate-pulse" style="animation-delay: 1s;"></div>
@@ -12,12 +12,12 @@
       <!-- Header -->
       <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 class="text-3xl md:text-4xl font-bold text-white mb-2">
+          <h1 class="text-3xl md:text-4xl font-bold text-primary mb-2">
             <span class="bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
               Media Library
             </span>
           </h1>
-          <p class="text-slate-400">Manage and organize your digital assets</p>
+          <p class="text-muted">Manage and organize your digital assets</p>
         </div>
         <button
           @click="showUploadModal = true"
@@ -32,39 +32,39 @@
 
       <!-- Stats Cards -->
       <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div class="backdrop-blur-md bg-white/5 border border-white/10 rounded-2xl p-4">
-          <div class="text-sm text-slate-400 mb-1">Total Media</div>
-          <div class="text-2xl font-bold text-white">{{ contentStore.contents.length }}</div>
+        <div class="card-base rounded-2xl p-4">
+          <div class="text-sm text-muted mb-1">Total Media</div>
+          <div class="text-2xl font-bold text-primary">{{ contentStore.contents.length }}</div>
         </div>
-        <div class="backdrop-blur-md bg-white/5 border border-white/10 rounded-2xl p-4">
-          <div class="text-sm text-slate-400 mb-1">Images</div>
-          <div class="text-2xl font-bold text-white">{{ imageCount }}</div>
+        <div class="card-base rounded-2xl p-4">
+          <div class="text-sm text-muted mb-1">Images</div>
+          <div class="text-2xl font-bold text-primary">{{ imageCount }}</div>
         </div>
-        <div class="backdrop-blur-md bg-white/5 border border-white/10 rounded-2xl p-4">
-          <div class="text-sm text-slate-400 mb-1">Videos</div>
-          <div class="text-2xl font-bold text-white">{{ videoCount }}</div>
+        <div class="card-base rounded-2xl p-4">
+          <div class="text-sm text-muted mb-1">Videos</div>
+          <div class="text-2xl font-bold text-primary">{{ videoCount }}</div>
         </div>
-        <div class="backdrop-blur-md bg-white/5 border border-white/10 rounded-2xl p-4">
-          <div class="text-sm text-slate-400 mb-1">Unassigned</div>
-          <div class="text-2xl font-bold text-white">{{ unassignedCount }}</div>
+        <div class="card-base rounded-2xl p-4">
+          <div class="text-sm text-muted mb-1">Unassigned</div>
+          <div class="text-2xl font-bold text-primary">{{ unassignedCount }}</div>
         </div>
       </div>
 
       <!-- Filters & Search -->
-      <div class="backdrop-blur-md bg-white/5 border border-white/10 rounded-2xl p-4">
+      <div class="card-base rounded-2xl p-4">
         <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div class="md:col-span-2">
             <input
               v-model="searchQuery"
               type="text"
               placeholder="Search media..."
-              class="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+              class="input-base w-full px-4 py-2 rounded-lg"
             />
           </div>
           <div>
             <select
               v-model="filterType"
-              class="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+              class="select-base w-full px-4 py-2 rounded-lg"
             >
               <option :value="null">All Types</option>
               <option value="image">Images</option>
@@ -74,7 +74,7 @@
           <div>
             <select
               v-model="filterStatus"
-              class="w-full px-4 py-2 bg-white/5 border border-white/10 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all duration-200"
+              class="select-base w-full px-4 py-2 rounded-lg"
             >
               <option :value="null">All Status</option>
               <option value="assigned">Assigned</option>
@@ -115,17 +115,17 @@
       <div v-if="contentStore.loading && contentStore.contents.length === 0" class="flex items-center justify-center py-20">
         <div class="text-center">
           <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500 mx-auto mb-4"></div>
-          <p class="text-slate-400">Loading media library...</p>
+          <p class="text-muted">Loading media library...</p>
         </div>
       </div>
 
       <!-- Error State -->
       <div v-else-if="contentStore.error && contentStore.contents.length === 0" class="text-center py-20">
-        <div class="backdrop-blur-md bg-red-500/10 border border-red-500/30 rounded-2xl p-8 max-w-md mx-auto">
+        <div class="card-base border border-red-500/30 rounded-2xl p-8 max-w-md mx-auto">
           <svg class="w-16 h-16 text-red-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          <p class="text-red-400 font-medium mb-2">{{ contentStore.error }}</p>
+          <p class="text-error font-medium mb-2">{{ contentStore.error }}</p>
           <button
             @click="loadContents"
             class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm transition-colors duration-200 mt-4"
@@ -137,12 +137,12 @@
 
       <!-- Empty State -->
       <div v-else-if="filteredContents.length === 0" class="text-center py-20">
-        <div class="backdrop-blur-md bg-white/5 border border-white/10 rounded-2xl p-12 max-w-md mx-auto">
-          <svg class="w-20 h-20 text-slate-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div class="card-base rounded-2xl p-12 max-w-md mx-auto">
+          <svg class="w-20 h-20 text-muted mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
           </svg>
-          <h3 class="text-xl font-medium text-white mb-2">No media found</h3>
-          <p class="text-slate-400 text-sm mb-6">
+          <h3 class="text-xl font-medium text-primary mb-2">No media found</h3>
+          <p class="text-muted text-sm mb-6">
             {{ searchQuery || filterType || filterStatus ? 'Try adjusting your filters' : 'Upload some content to get started' }}
           </p>
           <button
@@ -166,14 +166,15 @@
           :key="content.id"
           @click="toggleSelection(content.id)"
           :class="[
-            'group relative cursor-pointer rounded-xl overflow-hidden border-2 transition-all duration-200 backdrop-blur-md bg-white/5',
+            'group relative cursor-pointer rounded-xl overflow-hidden border-2 transition-all duration-200 backdrop-blur-md',
             selectedItems.includes(content.id)
               ? 'border-indigo-500 ring-2 ring-indigo-500/50 shadow-lg scale-105'
-              : 'border-white/10 hover:border-white/20 hover:shadow-lg'
+              : 'border-border-color hover:border-border-color hover:shadow-lg'
           ]"
+          style="background: var(--card-bg);"
         >
           <!-- Thumbnail -->
-          <div class="aspect-square bg-gray-900 relative overflow-hidden">
+          <div class="aspect-square bg-slate-100 dark:bg-gray-900 relative overflow-hidden">
             <!-- Smart Media Preview -->
             <SmartMediaPreview
               :file-url="content.secure_url || content.absolute_file_url || content.file_url"
@@ -259,11 +260,11 @@
           </div>
 
           <!-- Content Info -->
-          <div class="p-3 bg-white/5">
-            <p class="text-sm text-white font-medium truncate" :title="content.name">
+          <div class="p-3 bg-surface-inset">
+            <p class="text-sm text-primary font-medium truncate" :title="content.name">
               {{ content.name || 'Untitled' }}
             </p>
-            <div class="flex items-center justify-between mt-2 text-xs text-slate-400">
+            <div class="flex items-center justify-between mt-2 text-xs text-muted">
               <span v-if="content.image_width && content.image_height">
                 {{ content.image_width }}×{{ content.image_height }}
               </span>
@@ -271,7 +272,7 @@
                 {{ formatFileSize(content.file_size) }}
               </span>
             </div>
-            <div class="text-xs text-slate-500 mt-1">
+            <div class="text-xs text-muted mt-1">
               {{ formatDate(content.created_at) }}
             </div>
           </div>

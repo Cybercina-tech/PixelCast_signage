@@ -273,13 +273,13 @@ watch(() => authStore.user, async (newUser) => {
   } else {
     sidebarStore.clearSidebarItems()
   }
-}, { immediate: true })
+})
 </script>
 
 <style scoped>
-/* Single template root for ESLint; children lay out as if direct siblings of parent */
+/* Keep a regular wrapper to avoid overlay stacking edge cases. */
 .sidebar-root {
-  display: contents;
+  display: block;
 }
 
 /* Space Sidebar Base - Aether Identity */

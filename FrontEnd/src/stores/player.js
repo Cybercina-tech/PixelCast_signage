@@ -3,6 +3,7 @@ import playerAPI from '@/services/playerApi'
 import { collectSystemInfo } from '@/composables/useSystemInfo'
 
 const STORAGE_KEYS = {
+  identities: 'player_identities',
   screenId: 'player_screen_id',
   deviceToken: 'player_device_token',
   isPaired: 'player_is_paired',
@@ -24,49 +25,151 @@ export const usePlayerStore = defineStore('player', {
     retryTimer: null,
     lastSuccessfulHeartbeat: null,
     connectionLostTimer: null,
+    activeScreenId: null,
   }),
 
   actions: {
     // ── Device identity helpers ────────────────────────────────────
 
-    saveDeviceIdentity(screenId, deviceToken) {
+    normalizeScreenId(screenId) {
+      return screenId ? String(screenId).trim() : null
+    },
+
+    getStoredIdentities() {
       try {
-        localStorage.setItem(STORAGE_KEYS.screenId, screenId)
+        const raw = localStorage.getItem(STORAGE_KEYS.identities)
+        if (!raw) return {}
+        const parsed = JSON.parse(raw)
+        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {}
+        return parsed
+      } catch (_) {
+        return {}
+      }
+    },
+
+    saveStoredIdentities(identities) {
+      try {
+        localStorage.setItem(STORAGE_KEYS.identities, JSON.stringify(identities))
+      } catch (e) {
+        console.error('[PlayerStore] Failed to persist player identities:', e)
+      }
+    },
+
+    migrateLegacyIdentity() {
+      const legacyScreenId = localStorage.getItem(STORAGE_KEYS.screenId)
+      const legacyDeviceToken = localStorage.getItem(STORAGE_KEYS.deviceToken)
+      if (!legacyScreenId || !legacyDeviceToken) return
+
+      const identities = this.getStoredIdentities()
+      if (!identities[legacyScreenId]) {
+        identities[legacyScreenId] = legacyDeviceToken
+        this.saveStoredIdentities(identities)
+      }
+    },
+
+    getFirstStoredScreenId() {
+      const identities = this.getStoredIdentities()
+      const first = Object.keys(identities)[0]
+      return first || null
+    },
+
+    setActiveScreen(screenId) {
+      this.activeScreenId = this.normalizeScreenId(screenId)
+    },
+
+    getActiveScreenId() {
+      return this.activeScreenId
+    },
+
+    resolveScreenId(screenId) {
+      const normalized = this.normalizeScreenId(screenId)
+      if (normalized) return normalized
+      if (this.activeScreenId) return this.activeScreenId
+      const legacyScreenId = this.normalizeScreenId(localStorage.getItem(STORAGE_KEYS.screenId))
+      if (legacyScreenId) return legacyScreenId
+      return this.getFirstStoredScreenId()
+    },
+
+    saveDeviceIdentity(screenId, deviceToken) {
+      const normalizedScreenId = this.normalizeScreenId(screenId)
+      if (!normalizedScreenId || !deviceToken) return
+
+      try {
+        const identities = this.getStoredIdentities()
+        identities[normalizedScreenId] = deviceToken
+        this.saveStoredIdentities(identities)
+
+        // Keep legacy keys aligned with currently active identity for backward compatibility.
+        localStorage.setItem(STORAGE_KEYS.screenId, normalizedScreenId)
         localStorage.setItem(STORAGE_KEYS.deviceToken, deviceToken)
         localStorage.setItem(STORAGE_KEYS.isPaired, 'true')
         localStorage.setItem(STORAGE_KEYS.pairedAt, new Date().toISOString())
       } catch (e) {
         console.error('[PlayerStore] Failed to save device identity:', e)
       }
-      playerAPI.setDeviceIdentity({ screenId, deviceToken })
+      this.setActiveScreen(normalizedScreenId)
+      playerAPI.setDeviceIdentity({ screenId: normalizedScreenId, deviceToken })
     },
 
-    loadDeviceIdentity() {
-      const screenId = localStorage.getItem(STORAGE_KEYS.screenId)
-      const deviceToken = localStorage.getItem(STORAGE_KEYS.deviceToken)
-      if (screenId && deviceToken) {
-        playerAPI.setDeviceIdentity({ screenId, deviceToken })
+    loadDeviceIdentity(screenId = null) {
+      this.migrateLegacyIdentity()
+      const resolvedScreenId = this.resolveScreenId(screenId)
+      if (!resolvedScreenId) return false
+
+      const identities = this.getStoredIdentities()
+      const token = identities[resolvedScreenId]
+
+      if (token) {
+        this.setActiveScreen(resolvedScreenId)
+        localStorage.setItem(STORAGE_KEYS.screenId, resolvedScreenId)
+        localStorage.setItem(STORAGE_KEYS.deviceToken, token)
+        localStorage.setItem(STORAGE_KEYS.isPaired, 'true')
+        playerAPI.setDeviceIdentity({ screenId: resolvedScreenId, deviceToken: token })
         return true
       }
       return false
     },
 
-    hasDeviceIdentity() {
-      return !!(
-        localStorage.getItem(STORAGE_KEYS.screenId) &&
-        localStorage.getItem(STORAGE_KEYS.deviceToken)
-      )
+    hasDeviceIdentity(screenId = null) {
+      this.migrateLegacyIdentity()
+      const resolvedScreenId = this.resolveScreenId(screenId)
+      if (!resolvedScreenId) return false
+
+      const identities = this.getStoredIdentities()
+      return !!identities[resolvedScreenId]
     },
 
-    clearDeviceIdentity() {
-      for (const key of Object.values(STORAGE_KEYS)) {
-        try { localStorage.removeItem(key) } catch (_) { /* ignore */ }
+    clearDeviceIdentity(screenId = null) {
+      const resolvedScreenId = this.resolveScreenId(screenId)
+      if (resolvedScreenId) {
+        const identities = this.getStoredIdentities()
+        delete identities[resolvedScreenId]
+        this.saveStoredIdentities(identities)
+      } else {
+        for (const key of Object.values(STORAGE_KEYS)) {
+          try { localStorage.removeItem(key) } catch (_) { /* ignore */ }
+        }
       }
+
+      const activeIdentity = playerAPI.getDeviceIdentity()
+      if (!resolvedScreenId || activeIdentity.screenId === resolvedScreenId) {
+        playerAPI.clearDeviceIdentity()
+      }
+
+      if (!resolvedScreenId || this.activeScreenId === resolvedScreenId) {
+        this.activeScreenId = null
+      }
+
+      try {
+        localStorage.removeItem(STORAGE_KEYS.screenId)
+        localStorage.removeItem(STORAGE_KEYS.deviceToken)
+        localStorage.removeItem(STORAGE_KEYS.isPaired)
+      } catch (_) { /* ignore */ }
+
       // Also clean up legacy keys
       for (const k of ['player_auth_token', 'player_secret_key']) {
         try { localStorage.removeItem(k) } catch (_) { /* ignore */ }
       }
-      playerAPI.clearDeviceIdentity()
     },
 
     // Legacy alias expected by WebPlayer.vue
@@ -76,11 +179,17 @@ export const usePlayerStore = defineStore('player', {
 
     // ── Initialization ─────────────────────────────────────────────
 
-    async initialize() {
+    async initialize(screenId = null) {
       try {
-        if (!this.loadDeviceIdentity()) {
+        const resolvedScreenId = this.resolveScreenId(screenId)
+        if (resolvedScreenId) {
+          this.setActiveScreen(resolvedScreenId)
+        }
+
+        if (!this.loadDeviceIdentity(this.activeScreenId)) {
           const error = new Error('Screen not paired. Please pair your screen first.')
           error.code = 'SCREEN_NOT_PAIRED'
+          error.screenId = this.activeScreenId
           throw error
         }
         await this.fetchTemplate()
@@ -105,6 +214,11 @@ export const usePlayerStore = defineStore('player', {
 
     async fetchTemplate() {
       try {
+        if (!this.loadDeviceIdentity(this.activeScreenId)) {
+          const error = new Error('Screen not paired. Please pair your screen first.')
+          error.code = 'SCREEN_NOT_PAIRED'
+          throw error
+        }
         this.status = 'loading'
         this.errorMessage = null
         const response = await playerAPI.fetchTemplate()
@@ -216,13 +330,13 @@ export const usePlayerStore = defineStore('player', {
     // ── Polling ────────────────────────────────────────────────────
 
     startPolling() {
-      if (!this.hasDeviceIdentity()) {
+      if (!this.hasDeviceIdentity(this.activeScreenId)) {
         this.status = 'unpaired'
         this.errorMessage = 'Screen not paired.'
         return
       }
       // Ensure API has identity loaded
-      this.loadDeviceIdentity()
+      this.loadDeviceIdentity(this.activeScreenId)
 
       if (this.pollingInterval) { clearInterval(this.pollingInterval); this.pollingInterval = null }
 
@@ -268,8 +382,9 @@ export const usePlayerStore = defineStore('player', {
     // ── Commands ───────────────────────────────────────────────────
 
     async fetchAndExecuteCommands() {
-      if (!this.hasDeviceIdentity()) return
+      if (!this.hasDeviceIdentity(this.activeScreenId)) return
       try {
+        this.loadDeviceIdentity(this.activeScreenId)
         const response = await playerAPI.fetchPendingCommands()
         if (response.status === 'success' && response.commands?.length > 0) {
           for (const command of response.commands) {

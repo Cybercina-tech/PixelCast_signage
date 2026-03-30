@@ -47,6 +47,7 @@ import Backups from '../pages/core/Backups.vue'
 
 // Settings
 import Settings from '../pages/Settings.vue'
+import LicenseSettings from '../pages/LicenseSettings.vue'
 
 // User Management
 import Profile from '../pages/Profile.vue'
@@ -118,6 +119,12 @@ const routes = [
     name: 'player-connect',
     component: PlayerConnect,
     meta: { public: true }, // Public pairing route
+  },
+  {
+    path: '/player/:screenId',
+    name: 'player-screen',
+    component: WebPlayer,
+    meta: { public: true },
   },
   {
     path: '/dashboard',
@@ -243,6 +250,12 @@ const routes = [
     path: '/settings',
     name: 'settings',
     component: Settings,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/settings/license',
+    name: 'settings-license',
+    component: LicenseSettings,
     meta: { requiresAuth: true },
   },
   {

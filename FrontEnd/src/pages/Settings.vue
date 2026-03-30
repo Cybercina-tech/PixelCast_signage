@@ -348,6 +348,26 @@
                 </div>
               </div>
             </Card>
+
+            <Card
+              v-else-if="activeTab === 'license'"
+              key="license"
+              title="License Management"
+              subtitle="Activate and monitor your CodeCanyon license"
+            >
+              <div class="space-y-4">
+                <p class="text-sm text-muted">
+                  Use the dedicated license page to activate purchase code, configure product ID override, and revalidate license status.
+                </p>
+                <button
+                  type="button"
+                  class="btn-primary px-4 py-2 rounded-lg text-sm"
+                  @click="$router.push('/settings/license')"
+                >
+                  Open License Settings
+                </button>
+              </div>
+            </Card>
           </Transition>
         </div>
       </div>
@@ -396,6 +416,7 @@ import {
   BellIcon,
   ShieldCheckIcon,
   Cog6ToothIcon,
+  KeyIcon,
   CameraIcon,
   CalendarIcon,
   ComputerDesktopIcon,
@@ -415,6 +436,7 @@ const tabs = [
   { id: 'notifications', label: 'Notifications', icon: BellIcon },
   { id: 'security', label: 'Security', icon: ShieldCheckIcon },
   { id: 'system', label: 'System', icon: Cog6ToothIcon },
+  { id: 'license', label: 'License', icon: KeyIcon },
 ]
 
 const activeTab = ref('profile')

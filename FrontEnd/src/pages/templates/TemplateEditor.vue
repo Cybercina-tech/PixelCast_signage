@@ -110,6 +110,24 @@
                 </svg>
                 <span>Add Date</span>
               </button>
+              <button
+                @click="addWidget('webview')"
+                class="w-full px-4 py-3 bg-gray-700 hover:bg-gray-600 active:scale-95 rounded-lg text-left text-white transition-all duration-200 flex items-center gap-2 font-medium"
+              >
+                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12H3m0 0l4-4m-4 4l4 4m14-4l-4-4m4 4l-4 4" />
+                </svg>
+                <span>Add Webview</span>
+              </button>
+              <button
+                @click="addWidget('chart')"
+                class="w-full px-4 py-3 bg-gray-700 hover:bg-gray-600 active:scale-95 rounded-lg text-left text-white transition-all duration-200 flex items-center gap-2 font-medium"
+              >
+                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3v18h18M8 13l3-3 3 2 4-5" />
+                </svg>
+                <span>Add Chart</span>
+              </button>
             </div>
 
             <!-- Widget List (Layers) -->
@@ -124,7 +142,7 @@
               </div>
               <div v-else class="space-y-2" ref="layersList">
                 <div
-                  v-for="(widget, index) in sortedWidgetsByZIndex"
+                  v-for="widget in sortedWidgetsByZIndex"
                   :key="widget.id"
                   :data-widget-id="widget.id"
                   :draggable="true"
@@ -540,6 +558,38 @@
                   </div>
                 </div>
               </div>
+
+              <div v-if="selectedWidget.type === 'webview'">
+                <h3 class="text-sm font-semibold mb-3 text-gray-400 uppercase">Webview Properties</h3>
+                <div class="space-y-3">
+                  <div>
+                    <label class="block text-xs font-medium text-gray-400 mb-1.5">URL</label>
+                    <input
+                      v-model="selectedWidget.content"
+                      type="url"
+                      placeholder="https://example.com"
+                      class="w-full px-3 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                      @input="updateWidgetProperty('content', $event.target.value)"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div v-if="selectedWidget.type === 'chart'">
+                <h3 class="text-sm font-semibold mb-3 text-gray-400 uppercase">Chart Properties</h3>
+                <div class="space-y-3">
+                  <div>
+                    <label class="block text-xs font-medium text-gray-400 mb-1.5">Chart Config (JSON)</label>
+                    <textarea
+                      v-model="selectedWidget.content"
+                      rows="8"
+                      placeholder='{"type":"bar","data":{"labels":["A","B"],"datasets":[{"label":"Series","data":[1,2]}]}}'
+                      class="w-full px-3 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 font-mono"
+                      @input="updateWidgetProperty('content', $event.target.value)"
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div v-else class="text-center py-12">
@@ -730,8 +780,8 @@ const handleWheel = (e) => {
 
 // Add widget
 const addWidget = (type) => {
-  const defaultWidth = type === 'text' ? 300 : type === 'image' || type === 'video' ? 400 : 200
-  const defaultHeight = type === 'text' ? 100 : type === 'image' || type === 'video' ? 300 : 100
+  const defaultWidth = type === 'text' ? 300 : type === 'image' || type === 'video' || type === 'webview' ? 400 : type === 'chart' ? 500 : 200
+  const defaultHeight = type === 'text' ? 100 : type === 'image' || type === 'video' || type === 'webview' ? 300 : type === 'chart' ? 300 : 100
 
   const widget = {
     id: generateId(),
@@ -744,7 +794,18 @@ const addWidget = (type) => {
     rotation: 0,
     zIndex: widgets.value.length,
     visible: true, // Default to visible
-    content: type === 'text' ? 'Sample Text' : type === 'clock' ? 'HH:mm:ss' : type === 'date' ? 'YYYY-MM-DD' : '',
+    content:
+      type === 'text'
+        ? 'Sample Text'
+        : type === 'clock'
+        ? 'HH:mm:ss'
+        : type === 'date'
+        ? 'YYYY-MM-DD'
+        : type === 'webview'
+        ? 'https://example.com'
+        : type === 'chart'
+        ? '{"type":"bar","data":{"labels":["A","B","C"],"datasets":[{"label":"Series","data":[12,19,7]}]}}'
+        : '',
     style: {
       color: type === 'text' || type === 'clock' || type === 'date' ? '#000000' : undefined,
       fontSize: type === 'text' || type === 'clock' || type === 'date' ? '24px' : undefined,

@@ -41,7 +41,7 @@
               <div class="h-8 bg-card rounded w-16"></div>
             </div>
           </div>
-          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
             <div class="card-base rounded-2xl p-6 animate-pulse">
               <div class="h-6 bg-card rounded w-32 mb-6"></div>
               <div class="h-48 bg-card rounded"></div>
@@ -780,11 +780,11 @@ onUnmounted(() => {
 
 /* Screen Stat Cards - Floating Shadow Effect */
 .screen-stat-card {
-  background: #FFFFFF;
+  background: var(--surface-3);
   box-shadow: 
-    0 4px 6px -1px rgba(0, 0, 0, 0.05),
-    0 2px 4px -1px rgba(0, 0, 0, 0.03),
-    0 0 0 1px rgba(0, 0, 0, 0.05);
+    0 8px 18px -8px rgba(15, 23, 42, 0.2),
+    0 3px 8px -4px rgba(15, 23, 42, 0.12),
+    0 0 0 1px rgba(30, 41, 59, 0.08);
 }
 
 .dark .screen-stat-card {
@@ -795,10 +795,10 @@ onUnmounted(() => {
 
 .screen-stat-card:hover {
   box-shadow: 
-    0 10px 15px -3px rgba(0, 0, 0, 0.1),
-    0 4px 6px -2px rgba(0, 0, 0, 0.05),
-    0 0 0 1px rgba(0, 0, 0, 0.05);
-  transform: translateY(-2px);
+    0 14px 24px -10px rgba(15, 23, 42, 0.25),
+    0 8px 14px -8px rgba(15, 23, 42, 0.18),
+    0 0 0 1px rgba(37, 99, 235, 0.15);
+  transform: translateY(-3px);
 }
 
 .dark .screen-stat-card:hover {

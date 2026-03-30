@@ -1,13 +1,13 @@
 <template>
   <div
-    class="group relative bg-gray-800 border border-gray-700 rounded-xl overflow-hidden hover:ring-2 hover:ring-blue-500 transition-all"
+    class="group relative card-base rounded-xl overflow-hidden hover:ring-2 hover:ring-blue-500/50 transition-all"
   >
     <!-- Status Badge -->
     <div class="absolute top-4 right-4 z-10">
       <span
         :class="[
           'px-2 py-1 rounded-full text-xs font-medium',
-          template.is_active ? 'bg-emerald-500/20 text-emerald-400' : 'bg-gray-500/20 text-gray-400'
+          template.is_active ? 'bg-emerald-500/20 text-emerald-400' : 'bg-surface-inset text-muted border border-border-color'
         ]"
       >
         {{ template.is_active ? 'Active' : 'Inactive' }}
@@ -15,26 +15,26 @@
     </div>
 
     <!-- Mini Canvas Preview -->
-    <div class="relative bg-gray-900 border-b border-gray-700 p-4">
+    <div class="relative bg-surface-inset border-b border-border-color p-4">
       <div 
-        class="aspect-video bg-black rounded-lg overflow-hidden relative"
+        class="aspect-video bg-slate-100 dark:bg-slate-900 rounded-lg overflow-hidden relative"
         :style="{ aspectRatio: `${template.width}/${template.height}` }"
       >
         <!-- Monitor Frame Effect -->
-        <div class="absolute inset-0 border-2 border-gray-700 rounded-lg pointer-events-none"></div>
+        <div class="absolute inset-0 border-2 border-border-color rounded-lg pointer-events-none"></div>
         
         <!-- Template Preview Content -->
-        <div class="w-full h-full flex items-center justify-center bg-gradient-to-br from-indigo-500/20 to-blue-500/20 relative">
+        <div class="w-full h-full flex items-center justify-center bg-gradient-to-br from-indigo-100 to-blue-100 dark:from-indigo-500/20 dark:to-blue-500/20 relative">
           <!-- Grid Pattern Background -->
           <div class="absolute inset-0 bg-grid-pattern opacity-10"></div>
           
           <!-- Preview Content -->
           <div class="relative z-10 text-center p-4">
             <DocumentTextIcon class="w-12 h-12 text-indigo-400 mx-auto mb-2" />
-            <p class="text-xs text-gray-300 font-medium truncate max-w-[200px]">
+            <p class="text-xs text-primary font-medium truncate max-w-[200px]">
               {{ template.name }}
             </p>
-            <p class="text-xs text-gray-500 mt-1">
+            <p class="text-xs text-muted mt-1">
               {{ template.width }}×{{ template.height }}
             </p>
           </div>
@@ -46,10 +46,10 @@
     <div class="p-4 space-y-3">
       <!-- Header -->
       <div>
-        <h3 class="text-lg font-semibold text-white mb-1 truncate">
+        <h3 class="text-lg font-semibold text-primary mb-1 truncate">
           {{ template.name || 'Unnamed Template' }}
         </h3>
-        <p v-if="template.description" class="text-sm text-gray-400 line-clamp-2">
+        <p v-if="template.description" class="text-sm text-muted line-clamp-2">
           {{ template.description }}
         </p>
       </div>
@@ -62,7 +62,7 @@
         <span class="px-2 py-1 bg-purple-500/20 text-purple-400 rounded-md text-xs font-medium">
           {{ template.width }}×{{ template.height }}
         </span>
-        <span v-if="template.version" class="px-2 py-1 bg-gray-500/20 text-gray-400 rounded-md text-xs font-medium">
+        <span v-if="template.version" class="px-2 py-1 bg-surface-inset text-muted border border-border-color rounded-md text-xs font-medium">
           v{{ template.version }}
         </span>
       </div>
@@ -70,23 +70,23 @@
       <!-- Metadata -->
       <div class="space-y-2 text-sm">
         <div class="flex items-center justify-between">
-          <span class="text-gray-400">Last Modified</span>
-          <span class="text-gray-300">{{ formatLastModified(template.updated_at) }}</span>
+          <span class="text-muted">Last Modified</span>
+          <span class="text-primary">{{ formatLastModified(template.updated_at) }}</span>
         </div>
         <div class="flex items-center justify-between">
-          <span class="text-gray-400">Created By</span>
-          <span class="text-gray-300">{{ getCreatedBy(template.created_by) }}</span>
+          <span class="text-muted">Created By</span>
+          <span class="text-primary">{{ getCreatedBy(template.created_by) }}</span>
         </div>
         <div class="flex items-center justify-between">
-          <span class="text-gray-400">Screens Using</span>
-          <span class="text-gray-300">{{ template.screens_count || 0 }}</span>
+          <span class="text-muted">Screens Using</span>
+          <span class="text-primary">{{ template.screens_count || 0 }}</span>
         </div>
       </div>
     </div>
 
     <!-- Hover Overlay with Miniature Action Buttons -->
-    <div class="absolute inset-0 bg-black/40 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center z-20">
-      <div class="flex items-center gap-2 bg-black/40 backdrop-blur-sm rounded-lg p-2 border border-white/10">
+    <div class="absolute inset-0 bg-slate-900/40 dark:bg-black/40 backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center z-20">
+      <div class="flex items-center gap-2 bg-slate-900/45 dark:bg-black/40 backdrop-blur-sm rounded-lg p-2 border border-white/20 dark:border-white/10">
         <!-- Edit Button -->
         <button
           @click.stop="$emit('edit', template)"

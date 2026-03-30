@@ -30,6 +30,11 @@ class AccountLockoutManager:
     def get_attempt_key(identifier):
         """Generate cache key for login attempt tracking."""
         return f'login_attempts:{identifier}'
+
+    @staticmethod
+    def get_lockout_until_key(identifier):
+        """Generate cache key for lockout expiry timestamp."""
+        return f'account_lockout_until:{identifier}'
     
     @classmethod
     def record_failed_attempt(cls, identifier):
@@ -47,6 +52,7 @@ class AccountLockoutManager:
         
         attempt_key = cls.get_attempt_key(identifier)
         lockout_key = cls.get_lockout_key(identifier)
+        lockout_until_key = cls.get_lockout_until_key(identifier)
         
         # Check if account is already locked
         if cache.get(lockout_key):
@@ -59,6 +65,8 @@ class AccountLockoutManager:
         # Lock account if max attempts reached
         if attempts >= MAX_LOGIN_ATTEMPTS:
             cache.set(lockout_key, True, timeout=LOCKOUT_DURATION)
+            lockout_until = int(time.time()) + LOCKOUT_DURATION
+            cache.set(lockout_until_key, lockout_until, timeout=LOCKOUT_DURATION)
             logger.warning(f'Account locked due to failed login attempts: {identifier}')
             return True, 0
         
@@ -73,9 +81,11 @@ class AccountLockoutManager:
         
         attempt_key = cls.get_attempt_key(identifier)
         lockout_key = cls.get_lockout_key(identifier)
+        lockout_until_key = cls.get_lockout_until_key(identifier)
         
         cache.delete(attempt_key)
         cache.delete(lockout_key)
+        cache.delete(lockout_until_key)
     
     @classmethod
     def is_locked(cls, identifier):
@@ -92,9 +102,20 @@ class AccountLockoutManager:
         if not ACCOUNT_LOCKOUT_ENABLED:
             return 0
         
-        lockout_key = cls.get_lockout_key(identifier)
-        ttl = cache.ttl(lockout_key)
-        return max(0, ttl) if ttl else 0
+        if not cls.is_locked(identifier):
+            return 0
+
+        lockout_until = cache.get(cls.get_lockout_until_key(identifier))
+        if lockout_until is None:
+            # Fallback when backend doesn't preserve custom timestamp.
+            return LOCKOUT_DURATION
+
+        try:
+            remaining = int(lockout_until) - int(time.time())
+        except (ValueError, TypeError):
+            return LOCKOUT_DURATION
+
+        return max(0, remaining)
 
 
 class PasswordStrengthChecker:

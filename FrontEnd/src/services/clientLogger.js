@@ -158,13 +158,24 @@ async function flushLogQueue() {
  * Get screen ID from URL or localStorage (for Player)
  */
 function getScreenId() {
+  // Try to get from route params (/player/:screenId, /screens/:id)
+  const playerPathMatch = window.location.pathname.match(/\/player\/([^\/]+)/)
+  if (playerPathMatch?.[1]) return playerPathMatch[1]
+
+  const screenPathMatch = window.location.pathname.match(/\/screens\/([^\/]+)/)
+  if (screenPathMatch?.[1]) return screenPathMatch[1]
+
   // Try to get from URL params
   const urlParams = new URLSearchParams(window.location.search)
   const screenId = urlParams.get('screen_id')
   if (screenId) return screenId
   
-  // Try to get from localStorage
-  return localStorage.getItem('screen_id') || null
+  // Try to get from localStorage (new and legacy keys)
+  return (
+    localStorage.getItem('player_screen_id') ||
+    localStorage.getItem('screen_id') ||
+    null
+  )
 }
 
 /**

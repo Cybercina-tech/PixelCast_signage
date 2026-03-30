@@ -19,6 +19,7 @@ from django.urls import path, include, re_path
 from django.conf import settings
 from django.conf.urls.static import static
 from django.views.static import serve
+from django.http import JsonResponse
 from rest_framework.routers import DefaultRouter
 from log.views import ErrorLogViewSet
 
@@ -31,6 +32,7 @@ urlpatterns = [
     
     # Setup/Installation endpoints (must be before other API routes)
     path('api/setup/', include('setup.urls')),
+    path('api/license/', include('licensing.urls')),
     
     # THE IoT ESCAPE PLAN: IoT endpoints outside /api/ namespace to bypass strict security filters
     # This allows IoT devices to communicate without authentication middleware interference
@@ -39,10 +41,13 @@ urlpatterns = [
     # LAST RESORT: Public IoT endpoints (keeping for backward compatibility)
     path('public-iot/', include('signage.urls')),  # Public IoT endpoints (heartbeat, template)
     
+    # Lightweight health probe used by frontend footer/status checks.
+    path('api/health/', lambda request: JsonResponse({'status': 'ok'})),
+
     path('api/', include('accounts.urls')),
+    path('api/', include('commands.urls')),
     path('api/', include('signage.urls')),  # Keep original for other endpoints
     path('api/', include('templates.urls')),
-    path('api/', include('commands.urls')),
     path('api/', include('bulk_operations.urls')),  # Bulk operations endpoints
     path('api/', include('content_validation.urls')),  # Content validation endpoints
     path('api/', include('analytics.urls')),  # Analytics dashboard endpoints

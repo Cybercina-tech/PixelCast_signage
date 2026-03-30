@@ -55,6 +55,7 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { usePlayerStore } from '@/stores/player'
 import { useResponsiveScaling } from '@/composables/useResponsiveScaling'
 import LayerRenderer from '@/components/player/LayerRenderer.vue'
@@ -62,10 +63,16 @@ import UnpairMessage from '@/components/player/UnpairMessage.vue'
 import PairingFlow from '@/components/player/PairingFlow.vue'
 
 const playerStore = usePlayerStore()
+const route = useRoute()
 const playerContainer = ref(null)
 const templateContainer = ref(null)
 
 const showPairing = ref(false)
+const routeScreenId = computed(() => {
+  const raw = route.params.screenId
+  return raw ? String(raw).trim() : null
+})
+const forcePairing = computed(() => route.query.pair === '1')
 
 const status = computed(() => playerStore.status)
 const template = computed(() => playerStore.template)
@@ -76,22 +83,59 @@ const overlayMessage = computed(() => playerStore.overlayMessage)
 
 // When status becomes 'unpaired' and we have no device identity, show pairing
 watch(status, (s) => {
-  if (s === 'unpaired' && !playerStore.hasDeviceIdentity()) {
+  if (s === 'unpaired' && !playerStore.hasDeviceIdentity(routeScreenId.value)) {
     showPairing.value = true
   }
 })
 
+watch(routeScreenId, async (newScreenId, oldScreenId) => {
+  if (newScreenId === oldScreenId) return
+  playerStore.stopPolling()
+  playerStore.setActiveScreen(newScreenId)
+
+  if (!playerStore.hasDeviceIdentity(newScreenId)) {
+    showPairing.value = true
+    return
+  }
+
+  showPairing.value = false
+  try {
+    await playerStore.initialize(newScreenId)
+    if (playerStore.status !== 'unpaired') {
+      playerStore.startPolling()
+    }
+  } catch (_) {
+    showPairing.value = true
+  }
+})
+
+watch(forcePairing, async (isForced) => {
+  if (!isForced) return
+  playerStore.stopPolling()
+  playerStore.setActiveScreen(routeScreenId.value)
+  showPairing.value = true
+})
+
 function enterPairing() {
-  playerStore.clearDeviceIdentity()
+  playerStore.clearDeviceIdentity(routeScreenId.value)
   playerStore.stopPolling()
   showPairing.value = true
 }
 
 function handlePaired({ screenId, deviceToken }) {
-  playerStore.saveDeviceIdentity(screenId, deviceToken)
+  const expectedScreenId = routeScreenId.value
+  if (expectedScreenId && screenId && expectedScreenId !== String(screenId)) {
+    playerStore.status = 'unpaired'
+    playerStore.errorMessage = 'Paired to a different screen. Please pair this TV with the screen from the current URL.'
+    showPairing.value = true
+    return
+  }
+
+  const targetScreenId = expectedScreenId || screenId
+  playerStore.saveDeviceIdentity(targetScreenId, deviceToken)
   showPairing.value = false
   // Re-initialize the player with the new identity
-  playerStore.initialize().then(() => {
+  playerStore.initialize(targetScreenId).then(() => {
     playerStore.startPolling()
   }).catch((err) => {
     console.error('[WebPlayer] Post-pairing init failed:', err)
@@ -167,14 +211,21 @@ onMounted(async () => {
   document.addEventListener('selectstart', (e) => e.preventDefault())
   document.addEventListener('dragstart', (e) => e.preventDefault())
 
+  playerStore.setActiveScreen(routeScreenId.value)
+
+  if (forcePairing.value) {
+    showPairing.value = true
+    return
+  }
+
   // Decide: pair or play
-  if (!playerStore.hasDeviceIdentity()) {
+  if (!playerStore.hasDeviceIdentity(routeScreenId.value)) {
     showPairing.value = true
     return
   }
 
   try {
-    await playerStore.initialize()
+    await playerStore.initialize(routeScreenId.value)
 
     if (playerStore.status === 'unpaired') {
       showPairing.value = true
@@ -188,7 +239,7 @@ onMounted(async () => {
       error.code === 'DEVICE_NOT_PAIRED' ||
       error.code === 'DEVICE_AUTH_FAILED'
     ) {
-      playerStore.clearDeviceIdentity()
+      playerStore.clearDeviceIdentity(routeScreenId.value)
       showPairing.value = true
       return
     }

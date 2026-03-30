@@ -1,11 +1,20 @@
 /**
  * Origin used for API-relative dev setups (e.g. VITE_API_BASE_URL=/api).
  */
+function isInternalDockerHostname(hostname) {
+  if (!hostname) return false
+  const normalized = String(hostname).toLowerCase()
+  return ['backend', 'django', 'web', 'api'].includes(normalized)
+}
+
 export function getBackendOrigin() {
   const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api'
   if (apiBase.startsWith('http://') || apiBase.startsWith('https://')) {
     try {
       const parsed = new URL(apiBase)
+      if (isInternalDockerHostname(parsed.hostname)) {
+        return typeof window !== 'undefined' ? window.location.origin : 'http://localhost:8000'
+      }
       return `${parsed.protocol}//${parsed.host}`
     } catch {
       return 'http://localhost:8000'
@@ -29,7 +38,16 @@ export function resolveMediaFileUrl(fileUrl) {
   const url = String(fileUrl).trim()
 
   if (url.startsWith('http://') || url.startsWith('https://')) {
-    return url
+    try {
+      const parsed = new URL(url)
+      if (!isInternalDockerHostname(parsed.hostname)) {
+        return url
+      }
+      const publicOrigin = getBackendOrigin()
+      return `${publicOrigin}${parsed.pathname}${parsed.search}${parsed.hash}`
+    } catch {
+      return url
+    }
   }
 
   const origin = getBackendOrigin()

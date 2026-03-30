@@ -1,11 +1,12 @@
 <template>
-  <div
-    :class="[
-      'fixed right-0 top-0 h-full bg-card/95 dark:bg-slate-900/95 backdrop-blur-lg border-l border-border-color transition-transform duration-300 z-50',
-      isOpen ? 'translate-x-0' : 'translate-x-full',
-    ]"
-    class="w-96 max-w-[90vw] flex flex-col"
-  >
+  <Teleport to="body">
+    <div
+      :class="[
+        'fixed right-0 top-0 h-full bg-card/95 dark:bg-slate-900/95 backdrop-blur-lg border-l border-border-color transition-transform duration-300 z-[1200]',
+        isOpen ? 'translate-x-0' : 'translate-x-full',
+      ]"
+      class="w-96 max-w-[90vw] flex flex-col"
+    >
     <!-- Header -->
     <div class="p-4 border-b border-border-color flex items-center justify-between bg-card dark:bg-slate-800">
       <div class="flex items-center gap-2">
@@ -227,12 +228,13 @@
     </div>
 
     <!-- Overlay for mobile -->
-    <div
-      v-if="isOpen"
-      class="fixed inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm z-40 md:hidden"
-      @click="$emit('close')"
-    ></div>
-  </div>
+      <div
+        v-if="isOpen"
+        class="fixed inset-0 bg-black/50 dark:bg-black/70 backdrop-blur-sm z-[1190] md:hidden"
+        @click="$emit('close')"
+      ></div>
+    </div>
+  </Teleport>
 </template>
 
 <script setup>

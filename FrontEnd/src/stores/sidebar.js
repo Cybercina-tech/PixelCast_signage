@@ -8,33 +8,54 @@ export const useSidebarStore = defineStore('sidebar', {
     loading: false,
     error: null,
     lastFetched: null,
+    fetchPromise: null,
   }),
   actions: {
-    async fetchSidebarItems() {
+    async fetchSidebarItems(options = {}) {
+      const { force = false, minIntervalMs = 5000 } = options
+
+      if (this.fetchPromise) {
+        return this.fetchPromise
+      }
+
+      if (!force && this.lastFetched) {
+        const elapsed = Date.now() - new Date(this.lastFetched).getTime()
+        if (elapsed < minIntervalMs) {
+          return this.items
+        }
+      }
+
       this.loading = true
       this.error = null
-      try {
-        const response = await usersAPI.sidebarItems()
-        const newItems = response.data.items || []
-        
-        // Smart update: Only update sidebar items if changed
-        // This prevents re-triggering entrance animations
-        this.items = smartUpdateArray(this.items || [], newItems, 'id')
-        this.lastFetched = new Date()
-        return this.items
-      } catch (error) {
-        this.error = error.response?.data?.detail || error.message || 'Failed to load sidebar items'
-        console.error('Failed to fetch sidebar items:', error)
-        // Return empty array on error to prevent breaking the UI
-        this.items = []
-        return []
-      } finally {
-        this.loading = false
-      }
+
+      this.fetchPromise = (async () => {
+        try {
+          const response = await usersAPI.sidebarItems()
+          const newItems = response.data.items || []
+
+          // Smart update: Only update sidebar items if changed
+          // This prevents re-triggering entrance animations
+          this.items = smartUpdateArray(this.items || [], newItems, 'id')
+          this.lastFetched = new Date()
+          return this.items
+        } catch (error) {
+          this.error = error.response?.data?.detail || error.message || 'Failed to load sidebar items'
+          console.error('Failed to fetch sidebar items:', error)
+          // Return empty array on error to prevent breaking the UI
+          this.items = []
+          return []
+        } finally {
+          this.loading = false
+          this.fetchPromise = null
+        }
+      })()
+
+      return this.fetchPromise
     },
     clearSidebarItems() {
       this.items = []
       this.lastFetched = null
+      this.fetchPromise = null
     },
   },
   getters: {

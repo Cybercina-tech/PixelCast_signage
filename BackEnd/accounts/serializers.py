@@ -122,8 +122,19 @@ class UserListSerializer(serializers.ModelSerializer):
 
 class UserCreateSerializer(serializers.ModelSerializer):
     """Serializer for creating new users"""
-    password = serializers.CharField(write_only=True, required=True, validators=[validate_password])
-    password_confirm = serializers.CharField(write_only=True, required=True)
+    password = serializers.CharField(
+        write_only=True,
+        required=True,
+        allow_blank=False,
+        trim_whitespace=False,
+        validators=[validate_password],
+    )
+    password_confirm = serializers.CharField(
+        write_only=True,
+        required=True,
+        allow_blank=False,
+        trim_whitespace=False,
+    )
 
     class Meta:
         model = User
@@ -137,22 +148,6 @@ class UserCreateSerializer(serializers.ModelSerializer):
             'role': {'default': 'Employee'},
         }
     
-    def validate_password(self, value):
-        """Enhanced password validation"""
-        if not value:
-            raise serializers.ValidationError("Password is required.")
-        
-        # Additional strength check
-        from .security import PasswordStrengthChecker
-        strength = PasswordStrengthChecker.check_password_strength(value)
-        
-        if not strength['is_strong']:
-            # Provide feedback but don't block (Django validators will catch critical issues)
-            if strength['feedback']:
-                logger.warning(f'Weak password detected: {strength["feedback"]}')
-        
-        return value
-    
     def validate(self, attrs):
         """Validate password confirmation and strength"""
         password = attrs.get('password')
@@ -161,45 +156,12 @@ class UserCreateSerializer(serializers.ModelSerializer):
         if password != password_confirm:
             raise serializers.ValidationError({"password_confirm": "Password fields didn't match."})
 
-        role = attrs.get('role', 'Employee')
-        request = self.context.get('request')
-        if request and request.user.is_authenticated:
-            if request.user.is_employee():
-                raise serializers.ValidationError('You do not have permission to create users.')
-            if request.user.is_manager() and not request.user.is_developer():
-                if role != 'Employee':
-                    raise serializers.ValidationError({
-                        'role': 'Managers can only create Employee accounts.'
-                    })
-
         # Check password strength
         from .security import PasswordStrengthChecker
         strength = PasswordStrengthChecker.check_password_strength(password)
 
-        if strength['score'] < 2:
-            # Create user-friendly password validation message
-            feedback_messages = []
-            for msg in strength['feedback'][:2]:
-                if '8 characters' in msg:
-                    feedback_messages.append('Use at least 8 characters')
-                elif 'lowercase' in msg.lower():
-                    feedback_messages.append('Include lowercase letters')
-                elif 'uppercase' in msg.lower():
-                    feedback_messages.append('Include uppercase letters')
-                elif 'numbers' in msg.lower() or 'digit' in msg.lower():
-                    feedback_messages.append('Include numbers')
-                elif 'special' in msg.lower():
-                    feedback_messages.append('Include special characters')
-                else:
-                    feedback_messages.append(msg)
-            
-            error_msg = 'Password must be at least 8 characters and include numbers and English letters.'
-            if feedback_messages:
-                error_msg = f"Password is too weak. {'. '.join(feedback_messages)}."
-            
-            raise serializers.ValidationError({
-                "password": error_msg
-            })
+        if strength['score'] < 2 and strength['feedback']:
+            logger.warning(f'Weak password detected during user create: {strength["feedback"]}')
         
         return attrs
     
@@ -213,10 +175,7 @@ class UserCreateSerializer(serializers.ModelSerializer):
         """Create user with hashed password"""
         validated_data.pop('password_confirm')
         password = validated_data.pop('password')
-        user = User.objects.create(**validated_data)
-        user.set_password(password)
-        user.save()
-        return user
+        return User.objects.create_user(password=password, **validated_data)
 
 
 class LoginSerializer(serializers.Serializer):

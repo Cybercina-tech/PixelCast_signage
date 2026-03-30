@@ -1,13 +1,13 @@
 <template>
-  <div class="relative w-full h-full overflow-hidden bg-gray-900">
+  <div class="relative w-full h-full overflow-hidden bg-slate-100 dark:bg-gray-900">
     <!-- Skeleton Loader -->
     <div
       v-if="loading"
-      class="absolute inset-0 flex items-center justify-center bg-gray-800 animate-pulse"
+      class="absolute inset-0 flex items-center justify-center bg-slate-200 dark:bg-gray-800 animate-pulse"
     >
       <div class="flex flex-col items-center gap-2">
         <div class="w-12 h-12 border-4 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin"></div>
-        <span class="text-xs text-gray-400">Loading...</span>
+        <span class="text-xs text-slate-500 dark:text-gray-400">Loading...</span>
       </div>
     </div>
 
@@ -47,11 +47,11 @@
       <!-- Video Play Overlay -->
       <div
         v-if="!isVideoPlaying && !playOnHover"
-        class="absolute inset-0 flex items-center justify-center bg-black/30 cursor-pointer z-10"
+        class="absolute inset-0 flex items-center justify-center bg-slate-900/25 dark:bg-black/30 cursor-pointer z-10"
         @click="playVideo"
       >
-        <div class="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white/30 transition-colors">
-          <svg class="w-8 h-8 text-white ml-1" fill="currentColor" viewBox="0 0 24 24">
+        <div class="w-16 h-16 bg-white/70 dark:bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center hover:bg-white/80 dark:hover:bg-white/30 transition-colors">
+          <svg class="w-8 h-8 text-slate-800 dark:text-white ml-1" fill="currentColor" viewBox="0 0 24 24">
             <path d="M8 5v14l11-7z" />
           </svg>
         </div>
@@ -59,7 +59,7 @@
       <!-- Video Duration Badge -->
       <div
         v-if="videoDuration && showDuration"
-        class="absolute bottom-2 right-2 px-2 py-1 bg-black/70 text-white text-xs rounded backdrop-blur-sm z-10"
+        class="absolute bottom-2 right-2 px-2 py-1 bg-slate-900/70 text-white text-xs rounded backdrop-blur-sm z-10"
       >
         {{ formatDuration(videoDuration) }}
       </div>
@@ -68,7 +68,7 @@
     <!-- Fallback: File Not Found -->
     <div
       v-else
-      class="absolute inset-0 flex flex-col items-center justify-center bg-gray-800 text-gray-500"
+      class="absolute inset-0 flex flex-col items-center justify-center bg-slate-100 dark:bg-gray-800 text-slate-500 dark:text-gray-500"
     >
       <svg class="w-12 h-12 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path

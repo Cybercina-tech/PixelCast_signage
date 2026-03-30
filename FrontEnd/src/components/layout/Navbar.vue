@@ -23,7 +23,10 @@
             </router-link>
             <template v-if="breadcrumbs.length > 0">
               <span class="breadcrumb-separator">›</span>
-              <template v-for="(crumb, index) in breadcrumbs" :key="index">
+              <span
+                v-for="(crumb, index) in breadcrumbs"
+                :key="`${crumb.path || crumb.label}-${index}`"
+              >
                 <router-link
                   v-if="index < breadcrumbs.length - 1"
                   :to="crumb.path"
@@ -43,7 +46,7 @@
                 >
                   ›
                 </span>
-              </template>
+              </span>
             </template>
           </nav>
         </div>
@@ -437,7 +440,7 @@ onUnmounted(() => {
   position: sticky;
   top: 0;
   z-index: 40;
-  background: var(--card-bg); /* Frosted glass with 80% opacity */
+  background: var(--surface-3); /* More solid to avoid transparent look */
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: none; /* No borders - Aether uses soft shadows */
@@ -446,9 +449,9 @@ onUnmounted(() => {
 }
 
 .dark .sleek-navbar {
-  background: transparent;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  box-shadow: none;
+  background: var(--surface-3);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: var(--shadow-soft);
 }
 
 .navbar-container {
@@ -684,13 +687,22 @@ onUnmounted(() => {
   background: transparent;
   border: none;
   border-radius: 4px;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--text-muted);
   cursor: pointer;
   transition: all 0.3s ease;
   flex-shrink: 0;
 }
 
 .search-close:hover {
+  color: var(--text-main);
+  background: rgba(15, 23, 42, 0.08);
+}
+
+.dark .search-close {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.dark .search-close:hover {
   color: rgba(255, 255, 255, 0.8);
   background: rgba(255, 255, 255, 0.1);
 }
@@ -871,18 +883,22 @@ onUnmounted(() => {
   align-items: center;
   justify-content: space-between;
   padding: 1rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .dropdown-title {
   font-size: 0.875rem;
   font-weight: 600;
+  color: var(--text-heading);
+}
+
+.dark .dropdown-title {
   color: rgba(255, 255, 255, 0.9);
 }
 
 .dropdown-action {
   font-size: 0.75rem;
-  color: #00d2ff;
+  color: var(--accent-color);
   background: transparent;
   border: none;
   cursor: pointer;
@@ -890,7 +906,7 @@ onUnmounted(() => {
 }
 
 .dropdown-action:hover {
-  color: #00b8e6;
+  opacity: 0.8;
 }
 
 .space-action {
@@ -900,6 +916,12 @@ onUnmounted(() => {
 }
 
 .space-action:hover {
+  background: rgba(37, 99, 235, 0.1);
+  color: var(--accent-color);
+  box-shadow: 0 0 10px rgba(37, 99, 235, 0.2);
+}
+
+.dark .space-action:hover {
   background: rgba(0, 210, 255, 0.1);
   color: #00d2ff;
   box-shadow: 0 0 10px rgba(0, 210, 255, 0.2);
@@ -908,12 +930,20 @@ onUnmounted(() => {
 .user-name {
   font-size: 0.875rem;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--text-heading);
   margin-bottom: 0.25rem;
 }
 
 .user-email {
   font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.dark .user-name {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.dark .user-email {
   color: rgba(255, 255, 255, 0.5);
 }
 
@@ -926,6 +956,10 @@ onUnmounted(() => {
   padding: 2rem;
   text-align: center;
   font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+.dark .dropdown-empty {
   color: rgba(255, 255, 255, 0.5);
 }
 
@@ -938,8 +972,12 @@ onUnmounted(() => {
 }
 
 .empty-icon {
-  color: rgba(255, 255, 255, 0.3);
+  color: rgba(100, 116, 139, 0.7);
   opacity: 0.6;
+}
+
+.dark .empty-icon {
+  color: rgba(255, 255, 255, 0.3);
 }
 
 .notification-item {
@@ -948,7 +986,7 @@ onUnmounted(() => {
   padding: 0.875rem 1rem;
   cursor: pointer;
   transition: all 0.3s ease;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .notification-item:last-child {
@@ -956,6 +994,10 @@ onUnmounted(() => {
 }
 
 .notification-item:hover {
+  background: rgba(15, 23, 42, 0.05);
+}
+
+.dark .notification-item:hover {
   background: rgba(255, 255, 255, 0.05);
 }
 
@@ -981,10 +1023,18 @@ onUnmounted(() => {
 }
 
 .notification-unread {
-  background: rgba(0, 210, 255, 0.05);
+  background: rgba(37, 99, 235, 0.08);
 }
 
 .notification-unread::before {
+  background: rgba(37, 99, 235, 0.35);
+}
+
+.dark .notification-unread {
+  background: rgba(0, 210, 255, 0.05);
+}
+
+.dark .notification-unread::before {
   background: rgba(0, 210, 255, 0.3);
 }
 
@@ -1023,19 +1073,31 @@ onUnmounted(() => {
 .notification-title {
   font-size: 0.875rem;
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--text-heading);
   margin-bottom: 0.25rem;
 }
 
 .notification-message {
   font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--text-muted);
   margin-bottom: 0.25rem;
   line-height: 1.4;
 }
 
 .notification-time {
   font-size: 0.625rem;
+  color: color-mix(in srgb, var(--text-muted) 80%, transparent);
+}
+
+.dark .notification-title {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.dark .notification-message {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.dark .notification-time {
   color: rgba(255, 255, 255, 0.4);
 }
 
@@ -1050,7 +1112,7 @@ onUnmounted(() => {
   width: 100%;
   padding: 0.625rem 1rem;
   font-size: 0.875rem;
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--text-main);
   text-decoration: none;
   background: transparent;
   border: none;
@@ -1060,13 +1122,26 @@ onUnmounted(() => {
 }
 
 .dropdown-item:hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: rgba(255, 255, 255, 0.9);
+  background: rgba(15, 23, 42, 0.06);
+  color: var(--text-heading);
 }
 
 .dropdown-item svg {
   width: 1rem;
   height: 1rem;
+  color: var(--text-muted);
+}
+
+.dark .dropdown-item {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.dark .dropdown-item:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.dark .dropdown-item svg {
   color: rgba(255, 255, 255, 0.5);
 }
 
@@ -1081,7 +1156,7 @@ onUnmounted(() => {
 
 .dropdown-divider {
   height: 1px;
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--border-color);
   margin: 0.5rem 0;
 }
 

@@ -46,14 +46,14 @@ The system uses a Django REST API backend to manage screens, templates, content,
 - ✅ IP address tracking (last_ip field)
 - ✅ Pairing session cleanup management command
 - ✅ ScreenConnectionRegistry for WebSocket connection management
-- ⚠️ Heartbeat endpoint has documented 401 authentication issues (see Known Issues)
+- ✅ Device-token heartbeat flow is implemented and covered by tests (`X-Device-Token` + `screen_id`)
 - ⚠️ Pairing works but credentials handling has been refactored (screen_id method added, legacy auth_token/secret_key method still supported)
 
 ### Web Player
 - ✅ Fullscreen responsive player component
 - ✅ Template polling (fetches template every 5 minutes from `/iot/player/template/`)
 - ✅ Layer-based rendering with proper z-indexing
-- ✅ Widget rendering (supports image widgets currently)
+- ✅ Widget rendering (supports image, text, video, clock, webview, chart)
 - ✅ Responsive scaling (320px to 8K displays) using CSS transform: scale()
 - ✅ Aspect ratio preservation
 - ✅ Heartbeat functionality (sends periodic heartbeats to backend every 30-60 seconds)
@@ -61,8 +61,8 @@ The system uses a Django REST API backend to manage screens, templates, content,
 - ✅ Credential management (localStorage for screen_id or auth_token/secret_key)
 - ✅ Unpaired state handling with redirect to pairing page
 - ⚠️ Template rendering may show black screens if template has no active layers/widgets/content
-- ⚠️ Only image widget type is fully implemented; video, text, webview, chart widgets exist in models but may not render properly
-- ⚠️ VideoWidget.vue and TextWidget.vue components exist but may be incomplete
+- ✅ Image, text, and video widgets are implemented in player renderer
+- ✅ Webview/chart/clock widget rendering is implemented in player
 
 ### Content Management
 - ✅ Content CRUD operations
@@ -76,8 +76,8 @@ The system uses a Django REST API backend to manage screens, templates, content,
 - ✅ Secure URL generation (signed URLs for S3, regular URLs for local)
 - ✅ ContentStorageManager with comprehensive validation
 - ✅ Content retry mechanism (max 3 retries)
-- ⚠️ Upload endpoint has documented 400 error issues (Content-Type header boundary issues fixed, but other issues may persist)
-- ⚠️ Preview reliability may be unstable (file_url generation issues documented)
+- ✅ Upload endpoint explicitly handles multipart/form-data (`file`) and returns structured errors
+- ⚠️ Preview for standalone media (content without widget/layer/template chain) can fail permission checks
 - ⚠️ Media files may not save to expected local paths in some cases
 
 ### Templates / Widgets
@@ -92,7 +92,7 @@ The system uses a Django REST API backend to manage screens, templates, content,
 - ✅ Template thumbnail support
 - ⚠️ Template preview/visual editor not implemented (only data model)
 - ⚠️ Template designer UI not implemented (create/edit via forms only)
-- ⚠️ Some widget types (video, text, webview, chart, clock) may not render properly in web player
+- ✅ Widget types (video, text, webview, chart, clock) render in web player
 - ⚠️ Widget animations not implemented in player
 
 ### Media Upload & Preview
@@ -103,8 +103,8 @@ The system uses a Django REST API backend to manage screens, templates, content,
 - ✅ Storage path generation with user-based organization
 - ✅ URL generation for file access
 - ✅ Content validation module with security checks
-- ⚠️ Upload 400 errors documented (Content-Type boundary issues fixed, other issues may remain)
-- ⚠️ Preview not always reliable (file_url may not be accessible)
+- ✅ Upload endpoint uses multipart parsers and returns explicit client-actionable error payloads
+- ⚠️ Preview can fail for standalone content not linked to widget/layer/template
 - ⚠️ Media files may not save correctly to local storage in some cases
 
 ### Heartbeat & Screen Status
@@ -116,8 +116,8 @@ The system uses a Django REST API backend to manage screens, templates, content,
 - ✅ Management command to mark offline screens (`check_heartbeats`)
 - ✅ WebSocket heartbeat support (via ScreenConnectionRegistry)
 - ✅ Multiple credential extraction methods (screen_id, auth_token/secret_key, URL params, env vars)
-- ⚠️ Heartbeat 401 errors documented - authentication issues with request body parsing
-- ⚠️ Heartbeat endpoint has multiple credential extraction methods but may fail in some scenarios
+- ✅ IoT heartbeat endpoint uses device-token auth and has passing endpoint tests for valid/invalid/revoked tokens
+- ⚠️ Requests can return 503 before installation is finalized (`/install` not completed or install flag missing)
 
 ### Schedules
 - ✅ Schedule CRUD operations
@@ -166,6 +166,7 @@ The system uses a Django REST API backend to manage screens, templates, content,
 - ✅ Celery configuration for async tasks
 - ✅ Notification system (encrypted notifications, async delivery)
 - ✅ Installation wizard with environment configuration
+- ✅ License enforcement middleware with env-first product ID resolution and 72h grace support
 - ✅ Docker containerization with auto-migration entrypoint
 - ✅ GitHub webhook deployment automation
 - ⚠️ Automated backup scheduling configured but may need Celery workers running
@@ -260,29 +261,31 @@ The system uses a Django REST API backend to manage screens, templates, content,
 
 ## 4. Known Issues & Limitations
 
+Verification snapshot: Mar 2026 (code inspection + focused endpoint tests).
+
 ### Upload Issues (400 Errors)
-- **Issue**: Content upload endpoint (`POST /api/contents/{id}/upload/`) may return 400 errors
-- **Status**: Content-Type header boundary issue has been fixed, but other issues may persist
-- **Symptoms**: "File is required" error even when file is sent, validation errors
-- **Workaround**: Ensure FormData is sent correctly, check browser Network tab for request format
-- **Root Cause**: May be related to MultiPartParser configuration or file validation logic in ContentStorageManager
+- **Issue**: Upload returns 400 when payload shape/content validation is invalid
+- **Status**: Multipart parser support is present and `file` field validation is explicit
+- **Symptoms**: "File is required" for malformed non-multipart requests, or validation/security errors
+- **Workaround**: Send multipart/form-data with `file` and verify request boundary/header in client
+- **Root Cause**: Typically client payload format or validation rejection, not missing parser support
 
 ### Preview Problems
 - **Issue**: Content preview may not display correctly after upload
-- **Possible Causes**: 
-  - `file_url` not generated correctly by ContentStorageManager
+- **Possible Causes**:
+  - Standalone content (no widget/layer/template relation) fails preview permission chain
   - `MEDIA_URL` not configured properly in settings
   - CORS issues preventing file access
   - File not actually saved to disk (storage backend issue)
-- **Status**: Needs investigation
-- **Workaround**: Check file_url in content details, verify file exists in media directory
+- **Status**: Partially confirmed (standalone preview permission path)
+- **Workaround**: Link content to a template/widget before preview, and verify media routing config
 
 ### Heartbeat 401 Issues
-- **Issue**: Heartbeat endpoint (`POST /api/screens/heartbeat/` or `/iot/screens/heartbeat/`) may return 401 Unauthorized
-- **Status**: Multiple fixes applied (request body parsing, credential extraction from multiple sources: body, query params, env vars)
-- **Symptoms**: "Authentication credentials were not provided" even when credentials are sent
-- **Workaround**: Ensure credentials are sent in POST body as JSON, check backend logs for parsing issues
-- **Root Cause**: Complex credential extraction logic may fail in edge cases (screen_id vs auth_token/secret_key)
+- **Issue**: Historical 401 reports existed in legacy auth flow
+- **Status**: Current IoT device-token heartbeat path passes focused tests (valid token=200, missing/revoked token=401)
+- **Symptoms**: Non-installed environments can return 503 due installation middleware
+- **Workaround**: Complete `/install` or set `PIXELCAST_SIGNAGE_INSTALLED=true`, then send `X-Device-Token` + `screen_id`
+- **Root Cause**: Most current failures are setup/installation state, not heartbeat parser/auth logic
 
 ### Template Black Screen Problems
 - **Issue**: Web player may show black screen when rendering templates
@@ -309,7 +312,7 @@ The system uses a Django REST API backend to manage screens, templates, content,
 ### Missing Validations
 - Template activation on offline screens (allows activation but content won't sync)
 - Content type validation may not catch all invalid files
-- Widget type rendering (only image widgets fully implemented)
+- Widget type rendering regressions can still happen; keep e2e coverage for player widgets
 - Schedule timezone validation (timezone support not fully implemented, uses UTC)
 
 ### Missing Permissions
@@ -318,11 +321,11 @@ The system uses a Django REST API backend to manage screens, templates, content,
 - Template/widget/content access may not respect organization boundaries in all cases
 
 ### Partial Implementations
-- **Video Widgets**: Models exist, VideoWidget.vue component exists but rendering may not be fully implemented
-- **Text Widgets**: Models exist, TextWidget.vue component exists but rendering may not be fully implemented
-- **Webview Widgets**: Models exist but rendering not implemented
-- **Chart Widgets**: Models exist but rendering not implemented
-- **Clock Widgets**: Models exist but rendering not implemented
+- **Video Widgets**: Implemented in player renderer, but needs broader real-device QA coverage
+- **Text Widgets**: Implemented in player renderer, but needs broader real-device QA coverage
+- **Webview Widgets**: Implemented in editor preview and player renderer; needs broader real-device QA coverage
+- **Chart Widgets**: Implemented in editor preview and player renderer; needs broader real-device QA coverage
+- **Clock Widgets**: Implemented in editor preview and player renderer; needs broader real-device QA coverage
 - **Template Preview**: No visual preview in dashboard (only data editing)
 - **Template Designer**: No drag-and-drop designer UI
 - **Schedule Execution**: May not work correctly for all repeat types
@@ -344,6 +347,7 @@ The system uses a Django REST API backend to manage screens, templates, content,
 - Auto-migration on container startup
 - GitHub webhook deployment automation available
 - Environment variables documented in env.example
+- License API endpoints available at `/api/license/status/`, `/api/license/activate/`, `/api/license/revalidate/`
 - Celery workers need to be started separately for async tasks
 - Redis required for production WebSocket and caching
 
@@ -354,5 +358,5 @@ The system uses a Django REST API backend to manage screens, templates, content,
 
 ---
 
-**Last Updated**: 2024  
+**Last Updated**: 2026-03-30  
 **Status**: Active Development - See FuturePlans.md for roadmap

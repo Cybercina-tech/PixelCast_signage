@@ -25,6 +25,7 @@ const ERROR_MESSAGES = {
   502: 'Service temporarily unavailable. Please try again later.',
   503: 'Service unavailable. Please try again later.',
   504: 'Request timeout. Please try again.',
+  402: 'License required. Please activate your license.',
 }
 
 /**
@@ -139,6 +140,14 @@ api.interceptors.response.use(
         window.location.href = '/install'
         return Promise.reject(error)
       }
+    }
+
+    // Handle license enforcement responses
+    if ((status === 402 || status === 403) && typeof errorData.error === 'string' && errorData.error.startsWith('license_')) {
+      if (window.location.pathname !== '/settings/license') {
+        window.location.href = '/settings/license'
+      }
+      return Promise.reject(error)
     }
     
     // Don't try to refresh token for auth endpoints (login, signup, etc.)
@@ -564,6 +573,14 @@ export const coreAPI = {
     verify: (id) => api.post(`/core/backups/${id}/verify/`),
     cleanup: () => api.post('/core/backups/cleanup/'),
   },
+}
+
+// Licensing API
+export const licenseAPI = {
+  status: () => api.get('/license/status/'),
+  activate: (data) => api.post('/license/activate/', data),
+  revalidate: (data = { force: true }) => api.post('/license/revalidate/', data),
+  setProductIdOverride: (data) => api.post('/license/product-id-override/', data),
 }
 
 // Admin API (SuperAdmin only)

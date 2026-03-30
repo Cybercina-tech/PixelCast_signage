@@ -149,6 +149,15 @@ ACCOUNT_LOCKOUT_ENABLED = os.environ.get('ACCOUNT_LOCKOUT_ENABLED', 'True').lowe
 MAX_LOGIN_ATTEMPTS = int(os.environ.get('MAX_LOGIN_ATTEMPTS', '5'))
 LOCKOUT_DURATION = int(os.environ.get('LOCKOUT_DURATION', '900'))  # 15 minutes
 
+# Licensing Configuration
+LICENSE_SERVER_URL = env('LICENSE_SERVER_URL', default='')
+CODECANYON_TOKEN = env('CODECANYON_TOKEN', default='')
+CODECANYON_PRODUCT_ID = env('CODECANYON_PRODUCT_ID', default='')
+LICENSE_ENFORCEMENT_ENABLED = env('LICENSE_ENFORCEMENT_ENABLED', default=True, cast=bool)
+LICENSE_OFFLINE_GRACE_HOURS = env('LICENSE_OFFLINE_GRACE_HOURS', default=72, cast=int)
+LICENSE_CACHE_TTL_SECONDS = env('LICENSE_CACHE_TTL_SECONDS', default=900, cast=int)
+LICENSE_SERVER_TIMEOUT_SECONDS = env('LICENSE_SERVER_TIMEOUT_SECONDS', default=8, cast=int)
+
 
 # Application definition
 
@@ -164,6 +173,7 @@ INSTALLED_APPS = [
     'rest_framework',  # Django REST Framework
     'rest_framework_simplejwt',  # JWT Authentication
     'setup',  # Setup/Installation wizard (must be early for middleware)
+    'licensing',  # License management and enforcement
     'core',  # Core infrastructure (caching, rate limiting, audit, backup)
     'accounts',  # App for User management (must be before other apps)
     'signage',  # App for Screen management
@@ -186,6 +196,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'licensing.middleware.LicenseEnforcementMiddleware',  # License gate for protected APIs
     'log.middleware.ErrorLoggingMiddleware',  # Error logging middleware (must be after auth)
     'core.middleware.JSONErrorResponseMiddleware',  # JSON error responses (must be after ErrorLoggingMiddleware)
     'django.contrib.messages.middleware.MessageMiddleware',
@@ -318,8 +329,7 @@ REST_FRAMEWORK = {
         'rest_framework.authentication.SessionAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.AllowAny',  # TEMPORARY: Changed from IsAuthenticated to test if 401 disappears
-        # 'rest_framework.permissions.IsAuthenticated',  # Original setting - uncomment after testing
+        'rest_framework.permissions.IsAuthenticated',
     ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 50,

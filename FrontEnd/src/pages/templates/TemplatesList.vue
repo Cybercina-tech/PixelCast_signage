@@ -3,49 +3,49 @@
     <div class="space-y-6">
       <!-- Stats Header -->
       <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div class="bg-gray-800 border border-gray-700 rounded-xl p-4 backdrop-blur-sm">
+        <div class="card-base rounded-xl p-4">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-sm text-gray-400 mb-1">Total Templates</p>
-              <p class="text-2xl font-bold text-white">{{ stats.total }}</p>
+              <p class="text-sm text-muted mb-1">Total Templates</p>
+              <p class="text-2xl font-bold text-primary">{{ stats.total }}</p>
             </div>
-            <div class="w-12 h-12 rounded-lg bg-gray-700/50 flex items-center justify-center">
-              <DocumentTextIcon class="w-6 h-6 text-gray-300" />
+            <div class="w-12 h-12 rounded-lg bg-surface-inset border border-border-color flex items-center justify-center">
+              <DocumentTextIcon class="w-6 h-6 text-muted" />
             </div>
           </div>
         </div>
         
-        <div class="bg-gray-800 border border-gray-700 rounded-xl p-4 backdrop-blur-sm">
+        <div class="card-base rounded-xl p-4">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-sm text-gray-400 mb-1">Active</p>
+              <p class="text-sm text-muted mb-1">Active</p>
               <p class="text-2xl font-bold text-emerald-400">{{ stats.active }}</p>
             </div>
-            <div class="w-12 h-12 rounded-lg bg-emerald-500/20 flex items-center justify-center">
+            <div class="w-12 h-12 rounded-lg bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center">
               <div class="w-3 h-3 rounded-full bg-emerald-400"></div>
             </div>
           </div>
         </div>
         
-        <div class="bg-gray-800 border border-gray-700 rounded-xl p-4 backdrop-blur-sm">
+        <div class="card-base rounded-xl p-4">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-sm text-gray-400 mb-1">Inactive</p>
-              <p class="text-2xl font-bold text-gray-400">{{ stats.inactive }}</p>
+              <p class="text-sm text-muted mb-1">Inactive</p>
+              <p class="text-2xl font-bold text-muted">{{ stats.inactive }}</p>
             </div>
-            <div class="w-12 h-12 rounded-lg bg-gray-500/20 flex items-center justify-center">
-              <div class="w-3 h-3 rounded-full bg-gray-400"></div>
+            <div class="w-12 h-12 rounded-lg bg-surface-inset border border-border-color flex items-center justify-center">
+              <div class="w-3 h-3 rounded-full bg-slate-400"></div>
             </div>
           </div>
         </div>
         
-        <div class="bg-gray-800 border border-gray-700 rounded-xl p-4 backdrop-blur-sm">
+        <div class="card-base rounded-xl p-4">
           <div class="flex items-center justify-between">
             <div>
-              <p class="text-sm text-gray-400 mb-1">Most Used</p>
+              <p class="text-sm text-muted mb-1">Most Used</p>
               <p class="text-2xl font-bold text-blue-400">{{ stats.mostUsed }}</p>
             </div>
-            <div class="w-12 h-12 rounded-lg bg-blue-500/20 flex items-center justify-center">
+            <div class="w-12 h-12 rounded-lg bg-blue-500/20 border border-blue-500/30 flex items-center justify-center">
               <ChartBarIcon class="w-6 h-6 text-blue-400" />
             </div>
           </div>
@@ -54,7 +54,7 @@
 
       <!-- Header -->
       <div class="flex justify-between items-center">
-        <h1 class="text-2xl font-bold text-white">Templates</h1>
+        <h1 class="text-2xl font-bold text-primary">Templates</h1>
         <button
           @click="showCreateModal = true"
           class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-all flex items-center gap-2"
@@ -65,27 +65,27 @@
       </div>
 
       <!-- Search & Filters -->
-      <div class="bg-gray-800 border border-gray-700 rounded-xl p-4">
+      <div class="card-base rounded-xl p-4">
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div class="md:col-span-2">
-            <label class="block text-sm text-gray-400 mb-2">Search</label>
+            <label class="block text-sm text-muted mb-2">Search</label>
             <div class="relative">
-              <MagnifyingGlassIcon class="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+              <MagnifyingGlassIcon class="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted" />
               <input
                 v-model="templatesStore.filters.search"
                 type="text"
                 placeholder="Search by name or description..."
-                class="w-full pl-10 pr-4 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="input-base w-full pl-10 pr-4 py-2 rounded-lg"
                 @input="handleSearch"
               />
             </div>
           </div>
           
           <div>
-            <label class="block text-sm text-gray-400 mb-2">Status</label>
+            <label class="block text-sm text-muted mb-2">Status</label>
             <select
               v-model="templatesStore.filters.is_active"
-              class="w-full px-4 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              class="select-base w-full px-4 py-2 rounded-lg"
               @change="handleFilter"
             >
               <option :value="null">All Status</option>
@@ -99,21 +99,21 @@
       <!-- Content Area -->
       <div v-if="templatesStore.loading && templatesStore.templates.length === 0" class="text-center py-12">
         <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-        <p class="mt-4 text-gray-400">Loading templates...</p>
+        <p class="mt-4 text-muted">Loading templates...</p>
       </div>
       
       <div v-else-if="templatesStore.error && templatesStore.templates.length === 0" class="text-center py-12">
-        <p class="text-red-400">{{ templatesStore.error }}</p>
+        <p class="text-error">{{ templatesStore.error }}</p>
       </div>
       
       <!-- Empty State -->
       <div v-else-if="templatesStore.filteredTemplates.length === 0" class="text-center py-16">
         <div class="max-w-md mx-auto">
-          <div class="w-24 h-24 mx-auto mb-6 rounded-full bg-gray-800 border border-gray-700 flex items-center justify-center">
-            <DocumentTextIcon class="w-12 h-12 text-gray-500" />
+          <div class="w-24 h-24 mx-auto mb-6 rounded-full bg-surface-inset border border-border-color flex items-center justify-center">
+            <DocumentTextIcon class="w-12 h-12 text-muted" />
           </div>
-          <h3 class="text-xl font-semibold text-white mb-2">No Templates Found</h3>
-          <p class="text-gray-400 mb-6">
+          <h3 class="text-xl font-semibold text-primary mb-2">No Templates Found</h3>
+          <p class="text-muted mb-6">
             {{ templatesStore.filters.search || templatesStore.filters.is_active !== null
               ? 'Try adjusting your filters to see more results.' 
               : 'Get started by creating your first template.' }}

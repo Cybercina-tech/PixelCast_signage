@@ -320,6 +320,9 @@ class TemplateViewSet(viewsets.ModelViewSet):
                         'image': 'image',
                         'video': 'video',
                         'text': 'text',
+                        'clock': 'clock',
+                        'webview': 'webview',
+                        'chart': 'chart',
                     }
                     content_type = content_type_map.get(widget_type, 'image')
                     
