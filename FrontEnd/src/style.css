@@ -60,53 +60,60 @@
 }
 
 .dark {
-  /* Dark Mode - Cosmic Theme */
+  /* Dark Mode - Cosmic Theme with clearer elevation */
   --brand-primary: #10b981;
   --brand-primary-hover: #34d399;
   --brand-primary-active: #059669;
 
-  --bg-primary: #0a0a1a;
-  --bg-secondary: #12122b;
-  --bg-color: linear-gradient(to bottom right, #0f172a, #1e293b, #1e1b4b);
-  --bg-color-solid: #09090b;
-  --card-bg: rgba(30, 41, 59, 0.95);
-  --card-bg-backdrop: blur(20px);
-  --glass-bg: rgba(10, 10, 26, 0.6);
-  --border-color: rgba(255, 255, 255, 0.1);
-  --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.3);
-  --shadow-medium: 0 4px 16px rgba(0, 0, 0, 0.4);
-  --shadow-strong: 0 8px 24px rgba(0, 0, 0, 0.5);
+  /* پس‌زمینه اصلی کمی تیره‌تر و خالص‌تر برای ایجاد عمق */
+  --bg-primary: #020617;
+  --bg-secondary: #020617;
+  --bg-color: linear-gradient(to bottom right, #020617, #020617, #020617);
+  --bg-color-solid: #020617; /* Slate-950 */
 
-  /* Slightly lifted from pure black for depth inside modals/panels */
-  --input-bg: rgba(51, 65, 85, 0.92);
-  --input-border: rgba(255, 255, 255, 0.14);
+  /* کارت‌ها و سطوح جلوتر کمی روشن‌تر از پس‌زمینه برای جداسازی بهتر */
+  --card-bg: #1e293b; /* Slate-800 خالص */
+  --card-bg-backdrop: rgba(30, 41, 59, 0.8);
+  --glass-bg: rgba(15, 23, 42, 0.85);
+
+  /* سطوح مختلف (Elevation) برای عمق در دارک‌مود */
+  --surface-1: #020617;          /* هم‌رنگ پس‌زمینه پایه */
+  --surface-2: #0f172a;          /* Slate-900 - برای بخش‌های فرو رفته */
+  --surface-3: #1e293b;          /* Slate-800 - برای کارت‌ها و المان‌های برجسته */
+  --surface-inset: rgba(0, 0, 0, 0.4);
+
+  /* مرزها ظریف اما قابل تشخیص */
+  --border-color: rgba(148, 163, 184, 0.1); /* Slate-400 با شفافیت کم */
+
+  /* سایر توکن‌های موجود را با تم جدید هماهنگ نگه می‌داریم */
+  --shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.45);
+  --shadow-medium: 0 4px 20px rgba(0, 0, 0, 0.55);
+  --shadow-strong: 0 10px 30px rgba(0, 0, 0, 0.7);
+
+  --input-bg: rgba(30, 41, 59, 0.92);
+  --input-border: rgba(148, 163, 184, 0.4);
   --input-focus-ring: rgba(16, 185, 129, 0.35);
   --text-main: #e0e0e0;
   --text-heading: #fafafa;
   --text-body: #e2e8f0;
   --text-muted: #a0a0a0;
-  --sidebar-bg: rgba(10, 10, 26, 0.6);
+  --sidebar-bg: rgba(15, 23, 42, 0.8);
   --icon-color: #06b6d4;
   --accent-color: #00d2ff;
   --button-primary: #06b6d4;
   --button-text: #ffffff;
   --button-shadow: 0 0 20px rgba(6, 182, 212, 0.3);
   --button-shadow-hover: 0 0 30px rgba(6, 182, 212, 0.5);
-  --grid-color: rgba(255, 255, 255, 0.1);
-  --notification-error-bg: rgba(30, 41, 59, 0.95);
-  --notification-success-bg: rgba(30, 41, 59, 0.95);
-  --notification-warning-bg: rgba(30, 41, 59, 0.95);
-  --notification-info-bg: rgba(30, 41, 59, 0.95);
+  --grid-color: rgba(255, 255, 255, 0.12);
+  --notification-error-bg: rgba(15, 23, 42, 0.96);
+  --notification-success-bg: rgba(15, 23, 42, 0.96);
+  --notification-warning-bg: rgba(15, 23, 42, 0.96);
+  --notification-info-bg: rgba(15, 23, 42, 0.96);
   --warm-tint: transparent;
   --forest-green: #10b981;
   --dusty-red: #ef4444;
-  --cream-bg: rgba(31, 41, 55, 0.8);
+  --cream-bg: rgba(15, 23, 42, 0.9);
   --zebra-stripe: rgba(31, 41, 55, 0.5);
-
-  --surface-1: var(--bg-color-solid);
-  --surface-2: var(--card-bg);
-  --surface-3: rgba(51, 65, 85, 0.98);
-  --surface-inset: rgba(15, 23, 42, 0.55);
 }
 
 @layer base {
@@ -341,7 +348,9 @@
   }
 
   .dark .starry-blob {
-    opacity: 0.3;
+    /* Avoid GPU blend artifacts in dark mode on some displays/browsers */
+    mix-blend-mode: normal;
+    opacity: 0.22;
   }
 
   .starry-blob-1 {
@@ -778,6 +787,22 @@
 
   .dark .card-base {
     box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
+  }
+
+  /*
+   * Dark-mode compositing stability:
+   * Disable backdrop blur on elevated cards/surfaces to prevent "flat/black" artifacts
+   * that can appear/disappear when viewport changes (e.g., opening DevTools).
+   */
+  .dark .card-base,
+  .dark .bg-card,
+  .dark .bg-surface-2,
+  .dark .bg-surface-3 {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    background-color: var(--card-bg) !important;
+    opacity: 1 !important;
+    mix-blend-mode: normal;
   }
 
   .card-base:hover {

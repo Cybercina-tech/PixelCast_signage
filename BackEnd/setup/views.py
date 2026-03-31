@@ -84,6 +84,11 @@ def setup_status(request):
             'database_connected': db_connected,
             'migrations_applied': migrations_applied,
             'admin_exists': admin_exists,
+            'db_name': settings.DATABASES['default'].get('NAME', 'pixelcast_signage_db'),
+            'db_user': settings.DATABASES['default'].get('USER', 'pixelcast_signage_user'),
+            'db_password': settings.DATABASES['default'].get('PASSWORD', ''),
+            'db_host': settings.DATABASES['default'].get('HOST', 'db'),
+            'db_port': str(settings.DATABASES['default'].get('PORT', '5432')),
         })
         
         return Response(serializer.data, status=status.HTTP_200_OK)

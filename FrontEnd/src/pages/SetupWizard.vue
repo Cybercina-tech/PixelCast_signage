@@ -152,7 +152,7 @@
                   <ServerIcon class="w-5 h-5 sm:w-6 sm:h-6 text-indigo-400 cosmic-icon" />
                 </div>
                 <h2 class="cosmic-heading text-base sm:text-lg font-bold text-white mb-0.5">Database Configuration</h2>
-                <p class="text-slate-400 text-[11px]">Enter your PostgreSQL database credentials</p>
+                <p class="text-slate-400 text-[11px]">Database credentials are loaded from server environment (.env)</p>
               </div>
 
               <form @submit.prevent="testDatabaseConnection" class="space-y-2 max-w-2xl mx-auto">
@@ -206,14 +206,15 @@
                     />
                   </div>
                   <div>
-                    <label for="db-password" class="block text-sm font-medium text-slate-400 mb-1.5">Password</label>
+                    <label for="db-password" class="block text-sm font-medium text-slate-400 mb-1.5">Password (auto-generated)</label>
                     <div class="relative">
                       <input
                         id="db-password"
                         v-model="setupData.db.password"
                         :type="showDbPassword ? 'text' : 'password'"
+                        readonly
                         class="cosmic-input w-full px-4 py-3 rounded-xl pr-12 bg-black/40 border border-white/10 text-white placeholder-slate-500 focus:outline-none transition-all duration-300"
-                        placeholder="Optional: leave blank to use username as password"
+                        placeholder="Loaded from DB_PASSWORD in .env"
                       />
                       <button
                         type="button"
@@ -226,6 +227,9 @@
                     </div>
                   </div>
                 </div>
+                <p class="text-[11px] text-slate-500 -mt-1">
+                  This value is preloaded from <code>DB_PASSWORD</code> and should be noted safely. To rotate it, update <code>.env</code> before first DB initialization.
+                </p>
 
                 <!-- Connection Status -->
                 <transition name="fade">
@@ -818,7 +822,13 @@ onMounted(async () => {
     const response = await setupAPI.status()
     if (response.data.installed) {
       router.push('/login')
+      return
     }
+    setupData.db.host = response.data.db_host || setupData.db.host
+    setupData.db.port = Number(response.data.db_port || setupData.db.port)
+    setupData.db.name = response.data.db_name || setupData.db.name
+    setupData.db.user = response.data.db_user || setupData.db.user
+    setupData.db.password = response.data.db_password || ''
   } catch (error) {
     console.error('Failed to check installation status:', error)
   }

@@ -5,6 +5,15 @@ export default {
     "./index.html",
     "./src/**/*.{vue,js,ts,jsx,tsx}",
   ],
+  // کلاس‌هایی که ممکن است به‌صورت داینامیک یا کم‌استفاده باشند تا در Purge حذف نشوند
+  safelist: [
+    'bg-card',
+    'bg-surface-1',
+    'bg-surface-2',
+    'bg-surface-3',
+    'border',
+    'border-border-color',
+  ],
   theme: {
     // Keep all custom tokens under `extend` — do not set `theme.colors` at the top level
     // or Tailwind's default palette (white, black, slate, …) will be replaced.
@@ -27,6 +36,8 @@ export default {
           3: 'var(--surface-3)',
           inset: 'var(--surface-inset)',
         },
+        // Border tokens — هم به‌صورت utility اختصاصی و هم نام عمومی
+        border: 'var(--border-color)',
         'border-color': {
           DEFAULT: 'var(--border-color)',
         },
@@ -113,6 +124,9 @@ export default {
             'background-position': 'right center'
           },
         },
+      },
+      boxShadow: {
+        'card-dark': '0 4px 20px -2px rgba(0, 0, 0, 0.5)',
       },
     },
   },
