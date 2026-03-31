@@ -86,13 +86,13 @@ services:
       test: ["CMD", "python", "-c", "import urllib.request; import sys; response = urllib.request.urlopen('http://localhost:8000/api/setup/status/', timeout=5); sys.exit(0 if response.getcode() in [200, 503] else 1)"]
       interval: 30s
       timeout: 10s
-      retries: 3
-      start_period: 60s  # Increased to allow migrations to complete
+      retries: 5
+      start_period: 90s  # Allow extra time for migrations on cold start
     depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
+      # Only require containers to be started; don't block on health checks.
+      # This avoids long startup failures if DB/Redis health is slow to go green.
+      - db
+      - redis
     restart: always
     networks:
       - pixelcast-signage-net
@@ -125,12 +125,13 @@ services:
   # Run: docker compose up db redis backend frontend-dev
   # Open: http://localhost:5173
   frontend-dev:
+    profiles: ["dev"]  # Prevent accidental startup in production
     build:
       context: ./FrontEnd
       dockerfile: Dockerfile.dev
     container_name: frontend-dev
     ports:
-      - "5173:5173"
+      - "5175:5173"
     volumes:
       - ./FrontEnd:/app
       - /app/node_modules  # Crucial: prevent local node_modules from overwriting container's
