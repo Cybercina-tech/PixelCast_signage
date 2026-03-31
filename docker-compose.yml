@@ -97,7 +97,7 @@ services:
     networks:
       - pixelcast-signage-net
     # Backend is not exposed to host - only accessible via frontend proxy
-
+aa
   frontend:
     build:
       context: ./FrontEnd
