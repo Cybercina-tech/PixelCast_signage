@@ -115,6 +115,9 @@ services:
     environment:
       - VITE_API_BASE_URL=/api
       - VITE_IOT_BASE_URL=/iot
+    volumes:
+      # Mount backend media as read-only so Nginx can serve uploaded files directly
+      - backend_media:/app/media:ro
     depends_on:
       backend:
         condition: service_started  # Don't wait for healthy - Nginx handles unavailable backend gracefully

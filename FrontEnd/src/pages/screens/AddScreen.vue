@@ -25,7 +25,7 @@
               <p class="text-sm font-semibold text-primary">Open this page on your TV</p>
               <p class="text-sm text-muted">
                 The display must show the pairing code from the
-                <span class="text-primary font-medium">TV pairing</span> page. Use the link below on the TV’s browser,
+                <span class="text-primary font-medium">Player Connect</span> page. Use the link below on the TV’s browser,
                 or open it here in a new tab to test.
               </p>
               <div class="flex flex-col sm:flex-row sm:items-stretch gap-3">
@@ -35,7 +35,7 @@
                   rel="noopener noreferrer"
                   class="btn-outline inline-flex items-center justify-center px-4 py-2.5 rounded-lg text-sm font-medium whitespace-nowrap shrink-0"
                 >
-                  Open TV pairing page
+                  Open Player Connect page
                 </a>
                 <div
                   class="flex-1 min-w-0 rounded-lg border border-border-color bg-card px-3 py-2 font-mono text-xs text-primary break-all"
@@ -204,9 +204,9 @@ import Card from '@/components/common/Card.vue'
 const router = useRouter()
 const screensStore = useScreensStore()
 
-/** Full URL to /player — the TV opens this and pairing is embedded */
+/** Full URL to /player/connect — the TV opens this and pairing is embedded */
 const playerConnectAbsoluteUrl = computed(() => {
-  const r = router.resolve({ path: '/player' })
+  const r = router.resolve({ path: '/player/connect' })
   return new URL(r.href, window.location.origin).href
 })
 

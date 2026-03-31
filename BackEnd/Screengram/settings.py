@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 import os
+from urllib.parse import urlparse
 from dotenv import load_dotenv
 from typing import Any, Optional, Union
 
@@ -109,6 +110,15 @@ DEBUG = env('DEBUG', default=False, cast=bool)
 
 # Allowed hosts - safe default for development
 ALLOWED_HOSTS = env('ALLOWED_HOSTS', default='localhost,127.0.0.1,backend,frontend', cast=list)
+
+# CSRF trusted origins for HTTPS deployments behind reverse proxies (Traefik/Nginx)
+CSRF_TRUSTED_ORIGINS = env('CSRF_TRUSTED_ORIGINS', default='', cast=list)
+if not CSRF_TRUSTED_ORIGINS:
+    base_url_for_csrf = env('BASE_URL', default='')
+    if isinstance(base_url_for_csrf, str) and base_url_for_csrf:
+        parsed_base_url = urlparse(base_url_for_csrf)
+        if parsed_base_url.scheme in ('http', 'https') and parsed_base_url.netloc:
+            CSRF_TRUSTED_ORIGINS = [f"{parsed_base_url.scheme}://{parsed_base_url.netloc}"]
 
 # CORS Configuration
 CORS_ALLOWED_ORIGINS = [
