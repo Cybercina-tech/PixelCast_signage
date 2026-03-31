@@ -112,6 +112,9 @@ services:
       - traefik.http.services.pixelcast-application-hiakj5-6-websecure.loadbalancer.server.port=80
     # No host port publishing in production behind Traefik/Dokploy.
     # Traefik should route directly to container port 80 via Docker network.
+    environment:
+      - VITE_API_BASE_URL=/api
+      - VITE_IOT_BASE_URL=/iot
     depends_on:
       backend:
         condition: service_started  # Don't wait for healthy - Nginx handles unavailable backend gracefully

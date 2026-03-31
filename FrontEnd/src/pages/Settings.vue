@@ -524,7 +524,7 @@ const securitySettings = ref({
 })
 
 const systemSettings = ref({
-  apiBaseUrl: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api',
+  apiBaseUrl: import.meta.env.VITE_API_BASE_URL || '/api',
   wsUrl: import.meta.env.VITE_WS_HOST || 'ws://localhost:8000/ws/dashboard/',
   storageBackend: 'local',
   s3Bucket: '',

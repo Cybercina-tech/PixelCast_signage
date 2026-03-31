@@ -207,7 +207,7 @@
                   </svg>
                 </div>
                 <h3 class="text-xl lg:text-2xl font-bold text-white mb-2 lg:mb-3">{{ feature.title }}</h3>
-                <p class="text-white/60 leading-relaxed text-sm lg:text-base">{{ feature.description }}</p>
+                <p class="text-white leading-relaxed text-sm lg:text-base">{{ feature.description }}</p>
               </div>
             </div>
           </div>
@@ -308,9 +308,9 @@
               </div>
               <!-- Tab Content -->
               <div class="grid md:grid-cols-2 gap-6 lg:gap-8 items-center">
-                <div>
+                <div class="text-white">
                   <h3 class="text-2xl lg:text-3xl font-bold text-white mb-3 lg:mb-4">{{ industries[activeTab].title }}</h3>
-                  <p class="text-white/70 mb-4 lg:mb-6 leading-relaxed text-sm lg:text-base">{{ industries[activeTab].description }}</p>
+                  <p class="text-white mb-4 lg:mb-6 leading-relaxed text-sm lg:text-base">{{ industries[activeTab].description }}</p>
                   <ul class="space-y-2 lg:space-y-3">
                     <li 
                       v-for="(benefit, idx) in industries[activeTab].benefits" 
@@ -320,7 +320,7 @@
                       <svg class="w-5 lg:w-6 h-5 lg:h-6 text-cyan-400 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
                         <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
                       </svg>
-                      <span class="text-white/80 text-sm lg:text-base">{{ benefit }}</span>
+                      <span class="text-white text-sm lg:text-base">{{ benefit }}</span>
                     </li>
                   </ul>
                 </div>

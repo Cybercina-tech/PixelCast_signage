@@ -8,7 +8,7 @@ function isInternalDockerHostname(hostname) {
 }
 
 export function getBackendOrigin() {
-  const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api'
+  const apiBase = import.meta.env.VITE_API_BASE_URL || '/api'
   if (apiBase.startsWith('http://') || apiBase.startsWith('https://')) {
     try {
       const parsed = new URL(apiBase)

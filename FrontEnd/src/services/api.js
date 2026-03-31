@@ -1,8 +1,8 @@
 import axios from 'axios'
 import { getNotification } from '@/composables/useNotification'
 
-// API base URL - update this to match your backend
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api'
+// API base URL - must be set via Vite env (e.g. /api behind Nginx/Traefik)
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
 
 const api = axios.create({
   baseURL: API_BASE_URL,
