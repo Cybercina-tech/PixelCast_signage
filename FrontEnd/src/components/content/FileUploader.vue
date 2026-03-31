@@ -120,7 +120,7 @@ const props = defineProps({
   },
   acceptHint: {
     type: String,
-    default: 'PNG, JPG, GIF, MP4, WEBM up to 500MB',
+    default: 'PNG, JPG, GIF, MP4, WEBM up to 5GB',
   },
   contentType: {
     type: String,

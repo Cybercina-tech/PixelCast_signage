@@ -1,5 +1,5 @@
 <template>
-  <div class="flex h-screen starry-background relative">
+  <div :class="['flex h-screen starry-background relative', { 'editor-layout': isEditorRoute }]">
     <!-- Animated Blob Background -->
     <div class="starry-blobs">
       <div class="starry-blob starry-blob-1"></div>
@@ -92,5 +92,29 @@ onUnmounted(() => {
 
 .main-content-wrapper.p-0 {
   padding-bottom: 30px;
+}
+
+/* Keep global navigation visible but compact in editor mode. */
+.editor-layout :deep(.space-sidebar) {
+  width: 5rem !important;
+}
+
+.editor-layout :deep(.logo-text),
+.editor-layout :deep(.menu-text),
+.editor-layout :deep(.error-dashboard-text),
+.editor-layout :deep(.submenu-list),
+.editor-layout :deep(.chevron-icon),
+.editor-layout :deep(.menu-badge),
+.editor-layout :deep(.submenu-badge) {
+  display: none !important;
+}
+
+.editor-layout :deep(.menu-item) {
+  justify-content: center;
+  padding: 0.875rem 0.5rem;
+}
+
+.editor-layout :deep(.nav-content) {
+  padding: 0 0.4rem;
 }
 </style>

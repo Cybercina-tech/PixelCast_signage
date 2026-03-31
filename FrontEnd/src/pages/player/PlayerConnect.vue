@@ -14,10 +14,10 @@ const route = useRoute()
 onMounted(() => {
   const screenId = route.query.screenId || route.query.screen_id || route.params.screenId
   if (screenId) {
-    router.replace(`/player/${screenId}?pair=1`)
+    router.replace(`/player/${screenId}`)
     return
   }
-  router.replace('/player?pair=1')
+  router.replace('/player/connect')
 })
 </script>
 

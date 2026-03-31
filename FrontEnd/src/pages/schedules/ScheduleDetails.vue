@@ -121,10 +121,6 @@
               <dd class="mt-1 text-sm text-primary capitalize">{{ schedule.repeat_type || 'none' }}</dd>
             </div>
             <div>
-              <dt class="text-sm font-medium text-muted">Priority</dt>
-              <dd class="mt-1 text-sm text-primary">{{ schedule.priority }}</dd>
-            </div>
-            <div>
               <dt class="text-sm font-medium text-muted">Status</dt>
               <dd class="mt-1">
                 <span
@@ -164,6 +160,7 @@ import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { useSchedulesStore } from '@/stores/schedules'
 import { useNotification } from '@/composables/useNotification'
+import { normalizeApiError } from '@/utils/apiError'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import Card from '@/components/common/Card.vue'
 
@@ -299,7 +296,8 @@ const handleDrop = async (event, hour) => {
     })
     notify.success('Schedule updated')
   } catch (error) {
-    notify.error('Failed to update schedule')
+    const parsed = error.apiError || normalizeApiError(error)
+    notify.error(parsed.userMessage || 'Failed to update schedule')
   }
   
   isDragging.value = false
@@ -316,7 +314,8 @@ const handleExecute = async () => {
     await schedulesStore.executeSchedule(schedule.value.id)
     notify.success('Schedule executed successfully')
   } catch (error) {
-    notify.error('Failed to execute schedule')
+    const parsed = error.apiError || normalizeApiError(error)
+    notify.error(parsed.userMessage || 'Failed to execute schedule')
   }
 }
 
@@ -327,7 +326,8 @@ const handleToggleActive = async () => {
     })
     notify.success(`Schedule ${schedule.value.is_active ? 'deactivated' : 'activated'}`)
   } catch (error) {
-    notify.error('Failed to update schedule')
+    const parsed = error.apiError || normalizeApiError(error)
+    notify.error(parsed.userMessage || 'Failed to update schedule')
   }
 }
 

@@ -4,19 +4,19 @@
       v-if="safeUrl"
       :src="safeUrl"
       class="webview-frame"
-      sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
+      sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-modals allow-downloads"
       referrerpolicy="no-referrer"
       loading="lazy"
     />
     <div v-else class="webview-error">
-      Invalid webview URL
+      <p>Webview URL is invalid.</p>
+      <p class="error-hint">Use a full URL like https://example.com</p>
     </div>
   </div>
 </template>
 
 <script setup>
 import { computed } from 'vue'
-import { ensureAbsoluteUrl } from '@/utils/url'
 
 const props = defineProps({
   widget: {
@@ -37,13 +37,19 @@ const rawUrl = computed(() => {
   )
 })
 
+function normalizeWebviewUrl(value) {
+  const input = String(value || '').trim()
+  if (!input) return null
+  const withProtocol = /^https?:\/\//i.test(input) ? input : `https://${input}`
+  const parsed = new URL(withProtocol)
+  if (!['http:', 'https:'].includes(parsed.protocol)) return null
+  return parsed.toString()
+}
+
 const safeUrl = computed(() => {
   if (!rawUrl.value) return null
   try {
-    const absolute = ensureAbsoluteUrl(rawUrl.value)
-    const parsed = new URL(absolute, window.location.origin)
-    if (!['http:', 'https:'].includes(parsed.protocol)) return null
-    return parsed.toString()
+    return normalizeWebviewUrl(rawUrl.value)
   } catch {
     return null
   }
@@ -71,5 +77,14 @@ const safeUrl = computed(() => {
   justify-content: center;
   color: #fff;
   font-size: 14px;
+  flex-direction: column;
+  gap: 6px;
+  text-align: center;
+  padding: 12px;
+}
+
+.error-hint {
+  opacity: 0.75;
+  font-size: 12px;
 }
 </style>

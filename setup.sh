@@ -1,4 +1,9 @@
 #!/bin/bash
+set -e
+
+echo "setup.sh is kept for backward compatibility."
+exec ./install.sh
+#!/bin/bash
 
 # PixelCast Signage - Fix & Setup Script (macOS, Linux)
 # Run from project root: ./setup.sh

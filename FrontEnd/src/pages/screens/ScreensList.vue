@@ -388,7 +388,10 @@ const handleIdentify = async (screen) => {
     await commandsStore.createCommand({
       screen_id: screen.id,
       type: 'display_message',
-      payload: { message: `Screen: ${screen.name || screen.id}` },
+      payload: {
+        message: `Screen: ${screen.name || screen.id}`,
+        duration: 15,
+      },
       priority: 5,
     })
     notify.success(`Identify command sent to ${screen.name || 'screen'}`)

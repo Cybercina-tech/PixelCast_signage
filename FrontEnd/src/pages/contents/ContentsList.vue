@@ -315,6 +315,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useContentStore } from '@/stores/content'
 import { useNotification } from '@/composables/useNotification'
+import { useDeleteConfirmation } from '@/composables/useDeleteConfirmation'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import MediaLibraryModal from '@/components/common/MediaLibraryModal.vue'
 import SmartMediaPreview from '@/components/common/SmartMediaPreview.vue'
@@ -322,6 +323,7 @@ import FullScreenPreviewModal from '@/components/common/FullScreenPreviewModal.v
 
 const contentStore = useContentStore()
 const notify = useNotification()
+const { confirmDelete } = useDeleteConfirmation()
 
 // State
 const showUploadModal = ref(false)
@@ -444,17 +446,27 @@ const handlePreview = (content) => {
 }
 
 const handleDelete = async (content) => {
-  if (!confirm(`Are you sure you want to delete "${content.name}"?`)) {
-    return
-  }
-
   try {
-    await contentStore.deleteContent(content.id)
+    await confirmDelete(
+      content.id,
+      async () => {
+        await contentStore.deleteContent(content.id)
+      },
+      {
+        title: 'Delete Media?',
+        message: 'This media will be permanently deleted from your library and cannot be recovered.',
+        itemName: content.name || 'Untitled media',
+        confirmText: 'Yes, Delete Media',
+        loadingText: 'Deleting media...'
+      }
+    )
+
     notify.success('Content deleted successfully')
     if (selectedItems.value.includes(content.id)) {
       selectedItems.value = selectedItems.value.filter(id => id !== content.id)
     }
   } catch (error) {
+    if (error.message === 'Delete cancelled') return
     notify.error('Failed to delete content')
   }
 }

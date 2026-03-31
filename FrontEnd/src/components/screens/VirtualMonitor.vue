@@ -4,22 +4,24 @@
     <div class="relative bg-gray-900 rounded-lg p-4 border-2 border-gray-700 shadow-2xl">
       <!-- Monitor Screen -->
       <div
+        ref="monitorScreenRef"
         class="relative bg-black rounded overflow-hidden aspect-video flex items-center justify-center"
         :class="{ 'border-2 border-green-500': isOnline, 'border-2 border-gray-600': !isOnline }"
       >
         <!-- Active Template Preview -->
-        <div v-if="activeTemplate" class="w-full h-full relative">
-          <div class="absolute inset-0 flex flex-col items-center justify-center p-4">
-            <div class="text-white text-center">
-              <h3 class="text-lg font-semibold mb-2">{{ activeTemplate.name }}</h3>
-              <p class="text-sm text-gray-400">Active Template</p>
-            </div>
-            <!-- Template Thumbnail Placeholder -->
-            <div class="mt-4 w-24 h-16 bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded border border-white/10 flex items-center justify-center">
-              <svg class="w-8 h-8 text-white/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
-              </svg>
-            </div>
+        <div v-if="hasRenderableTemplate" class="w-full h-full relative preview-canvas">
+          <LayerRenderer
+            v-for="layer in sortedLayers"
+            :key="layer.id"
+            :layer="layer"
+            :template-width="templateWidth"
+            :template-height="templateHeight"
+          />
+        </div>
+        <div v-else-if="activeTemplate" class="w-full h-full relative">
+          <div class="absolute inset-0 flex flex-col items-center justify-center p-4 text-center text-gray-300">
+            <h3 class="text-sm font-semibold mb-1">{{ activeTemplate.name }}</h3>
+            <p class="text-xs text-gray-500">Template has no visible layers</p>
           </div>
         </div>
         <!-- No Template State -->
@@ -75,7 +77,10 @@
 </template>
 
 <script setup>
-defineProps({
+import { computed, ref } from 'vue'
+import LayerRenderer from '@/components/player/LayerRenderer.vue'
+
+const props = defineProps({
   activeTemplate: {
     type: Object,
     default: null,
@@ -91,5 +96,37 @@ defineProps({
 })
 
 defineEmits(['take-screenshot'])
+const monitorScreenRef = ref(null)
+
+const templateWidth = computed(() => Number(props.activeTemplate?.width) || 1920)
+const templateHeight = computed(() => Number(props.activeTemplate?.height) || 1080)
+
+const sortedLayers = computed(() => {
+  if (!Array.isArray(props.activeTemplate?.layers)) return []
+  return [...props.activeTemplate.layers]
+    .filter((layer) => layer && layer.is_active !== false)
+    .sort((a, b) => {
+      const zA = a.z_index || 0
+      const zB = b.z_index || 0
+      if (zA !== zB) return zA - zB
+      return (a.name || '').localeCompare(b.name || '')
+    })
+})
+
+const hasRenderableTemplate = computed(() => !!props.activeTemplate && sortedLayers.value.length > 0)
+
+function getCaptureElement() {
+  return monitorScreenRef.value
+}
+
+defineExpose({
+  getCaptureElement,
+})
 </script>
+
+<style scoped>
+.preview-canvas {
+  isolation: isolate;
+}
+</style>
 

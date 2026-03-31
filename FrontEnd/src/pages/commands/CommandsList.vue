@@ -104,6 +104,9 @@
       <!-- Create Modal -->
       <Modal :show="showCreateModal" title="Create Command" @close="showCreateModal = false">
         <div class="space-y-4">
+          <div v-if="formError" class="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">
+            {{ formError }}
+          </div>
           <div>
             <label class="label-base block text-sm mb-1">Screen</label>
             <select v-model="form.screen" required class="select-base w-full px-3 py-2 rounded-lg">
@@ -112,6 +115,7 @@
                 {{ screen.name }} ({{ screen.device_id }})
               </option>
             </select>
+            <p v-if="fieldErrors.screen_id || fieldErrors.screen" class="mt-1 text-xs text-red-400">{{ (fieldErrors.screen_id || fieldErrors.screen)[0] }}</p>
           </div>
           <div>
             <label class="label-base block text-sm mb-1">Command Type</label>
@@ -123,6 +127,7 @@
               <option value="sync_content">Sync Content</option>
               <option value="custom">Custom</option>
             </select>
+            <p v-if="fieldErrors.type" class="mt-1 text-xs text-red-400">{{ fieldErrors.type[0] }}</p>
           </div>
           <div>
             <label class="label-base block text-sm mb-1">Payload (JSON)</label>
@@ -132,10 +137,12 @@
               class="textarea-base w-full px-3 py-2 rounded-lg font-mono text-sm"
               placeholder='{"key": "value"}'
             ></textarea>
+            <p v-if="fieldErrors.payload" class="mt-1 text-xs text-red-400">{{ fieldErrors.payload[0] }}</p>
           </div>
           <div>
             <label class="label-base block text-sm mb-1">Priority</label>
             <input v-model.number="form.priority" type="number" min="1" max="10" value="5" class="input-base w-full px-3 py-2 rounded-lg" />
+            <p v-if="fieldErrors.priority" class="mt-1 text-xs text-red-400">{{ fieldErrors.priority[0] }}</p>
           </div>
         </div>
         <template #footer>
@@ -159,6 +166,7 @@ import { useCommandsStore } from '@/stores/commands'
 import { useScreensStore } from '@/stores/screens'
 import { useNotification } from '@/composables/useNotification'
 import { useDeleteConfirmation } from '@/composables/useDeleteConfirmation'
+import { normalizeApiError } from '@/utils/apiError'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import Card from '@/components/common/Card.vue'
 import Table from '@/components/common/Table.vue'
@@ -171,6 +179,8 @@ const notify = useNotification()
 
 const showCreateModal = ref(false)
 const screens = computed(() => screensStore.screens)
+const formError = ref('')
+const fieldErrors = ref({})
 
 const form = ref({
   screen: '',
@@ -195,8 +205,8 @@ const handleRetry = async (row) => {
     await commandsStore.retryCommand(row.id)
     notify.success('Command retry initiated')
   } catch (error) {
-    const errorMsg = error.response?.data?.detail || error.response?.data?.message || error.message || 'Failed to retry command'
-    notify.error(errorMsg)
+    const parsed = error.apiError || normalizeApiError(error)
+    notify.error(parsed.userMessage || 'Failed to retry command')
   }
 }
 
@@ -219,13 +229,15 @@ const handleDelete = async (row) => {
     notify.success('Command deleted successfully')
   } catch (error) {
     if (error.message !== 'Delete cancelled') {
-      const errorMsg = error.response?.data?.detail || error.response?.data?.message || error.message || 'Failed to delete command'
-      notify.error(errorMsg)
+      const parsed = error.apiError || normalizeApiError(error)
+      notify.error(parsed.userMessage || 'Failed to delete command')
     }
   }
 }
 
 const handleSubmit = async () => {
+  formError.value = ''
+  fieldErrors.value = {}
   try {
     let payload = {}
     try {
@@ -245,8 +257,12 @@ const handleSubmit = async () => {
     showCreateModal.value = false
     form.value = { screen: '', type: 'restart', payload: '{}', priority: 5 }
   } catch (error) {
-    const errorMsg = error.response?.data?.detail || error.response?.data?.message || error.message || 'Failed to create command'
-    notify.error(errorMsg)
+    const parsed = error.apiError || normalizeApiError(error)
+    formError.value = parsed.formError
+    fieldErrors.value = parsed.fieldErrors || {}
+    if (!parsed.isValidation || !Object.keys(fieldErrors.value).length) {
+      notify.error(parsed.userMessage || 'Failed to create command')
+    }
   }
 }
 

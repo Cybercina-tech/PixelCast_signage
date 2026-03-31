@@ -582,6 +582,18 @@
     outline: none;
     box-shadow: var(--shadow-medium), 0 0 0 3px var(--input-focus-ring);
   }
+
+  /* Keep browser autofill visually consistent with app theme (all forms). */
+  .input-base:-webkit-autofill,
+  .input-base:-webkit-autofill:hover,
+  .input-base:-webkit-autofill:focus,
+  .input-base:-webkit-autofill:active {
+    -webkit-text-fill-color: var(--text-main) !important;
+    box-shadow: 0 0 0 1000px var(--input-bg) inset !important;
+    -webkit-box-shadow: 0 0 0 1000px var(--input-bg) inset !important;
+    caret-color: var(--text-main) !important;
+    transition: background-color 9999s ease-in-out 0s;
+  }
   
   /* Checkboxes - Theme-aware */
   .checkbox-base {

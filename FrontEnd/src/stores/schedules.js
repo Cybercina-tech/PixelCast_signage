@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { schedulesAPI } from '../services/api'
+import { normalizeApiError } from '../utils/apiError'
 
 export const useSchedulesStore = defineStore('schedules', {
   state: () => ({
@@ -42,7 +43,7 @@ export const useSchedulesStore = defineStore('schedules', {
         this.schedules = response.data.results || response.data || []
         return response.data
       } catch (error) {
-        this.error = error.response?.data?.detail || error.response?.data?.message || error.message
+        this.error = normalizeApiError(error).userMessage
         throw error
       } finally {
         this.loading = false
@@ -61,7 +62,7 @@ export const useSchedulesStore = defineStore('schedules', {
         }
         return response.data
       } catch (error) {
-        this.error = error.response?.data?.detail || error.response?.data?.message || error.message
+        this.error = normalizeApiError(error).userMessage
         throw error
       } finally {
         this.loading = false
@@ -75,7 +76,7 @@ export const useSchedulesStore = defineStore('schedules', {
         this.schedules.push(response.data)
         return response.data
       } catch (error) {
-        this.error = error.response?.data?.detail || error.response?.data?.message || error.message
+        this.error = normalizeApiError(error).userMessage
         throw error
       } finally {
         this.loading = false
@@ -95,7 +96,7 @@ export const useSchedulesStore = defineStore('schedules', {
         }
         return response.data
       } catch (error) {
-        this.error = error.response?.data?.detail || error.response?.data?.message || error.message
+        this.error = normalizeApiError(error).userMessage
         throw error
       } finally {
         this.loading = false
@@ -111,7 +112,7 @@ export const useSchedulesStore = defineStore('schedules', {
           this.currentSchedule = null
         }
       } catch (error) {
-        this.error = error.response?.data?.detail || error.response?.data?.message || error.message
+        this.error = normalizeApiError(error).userMessage
         throw error
       } finally {
         this.loading = false
@@ -132,7 +133,7 @@ export const useSchedulesStore = defineStore('schedules', {
         }
         return response.data
       } catch (error) {
-        this.error = error.response?.data?.detail || error.response?.data?.message || error.message
+        this.error = normalizeApiError(error).userMessage
         throw error
       } finally {
         this.loading = false
@@ -145,7 +146,7 @@ export const useSchedulesStore = defineStore('schedules', {
         const response = await schedulesAPI.dueSchedules(params)
         return response.data
       } catch (error) {
-        this.error = error.response?.data?.detail || error.response?.data?.message || error.message
+        this.error = normalizeApiError(error).userMessage
         throw error
       } finally {
         this.loading = false
@@ -158,7 +159,7 @@ export const useSchedulesStore = defineStore('schedules', {
         const response = await schedulesAPI.conflicting(params)
         return response.data
       } catch (error) {
-        this.error = error.response?.data?.detail || error.response?.data?.message || error.message
+        this.error = normalizeApiError(error).userMessage
         throw error
       } finally {
         this.loading = false

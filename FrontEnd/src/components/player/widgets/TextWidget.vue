@@ -30,26 +30,12 @@ const props = defineProps({
 // Sort contents by order
 // Filter only active content (safety check - backend should already filter)
 const sortedContents = computed(() => {
-  if (!props.widget.contents) {
-    console.warn(`[TextWidget] Widget ${props.widget.id} has no contents array`)
-    return []
-  }
+  if (!props.widget.contents) return []
   
   // Filter active content and sort by order
   const contents = [...props.widget.contents]
     .filter(content => content.is_active !== false) // Only render active content
     .sort((a, b) => (a.order || 0) - (b.order || 0))
-  
-  if (contents.length === 0) {
-    console.warn(`[TextWidget] Widget ${props.widget.id} has no active contents`, {
-      totalContents: props.widget.contents.length,
-      contents: props.widget.contents.map(c => ({ id: c.id, name: c.name, is_active: c.is_active }))
-    })
-  } else {
-    console.log(`[TextWidget] Widget ${props.widget.id} rendering ${contents.length} contents`, {
-      contents: contents.map(c => ({ id: c.id, name: c.name, hasText: !!(c.text_content || c.content_json?.text) }))
-    })
-  }
   
   return contents
 })
@@ -65,7 +51,6 @@ const displayText = (content) => {
   }
   // If file_url exists, it might be a text file URL, but we can't load it here
   // The backend should provide the text content in text_content or content_json
-  console.warn(`[TextWidget] Content ${content.id} has no text content`, content)
   return '[No text content]'
 }
 
@@ -83,10 +68,22 @@ const contentStyle = computed(() => {
 /**
  * Text style based on widget configuration
  */
+const normalizeFontSize = (fontSize) => {
+  if (fontSize === undefined || fontSize === null || fontSize === '') return '24px'
+  if (typeof fontSize === 'number') return `${fontSize}px`
+  const value = String(fontSize).trim()
+  if (!value) return '24px'
+  if (value.endsWith('px') || value.endsWith('rem') || value.endsWith('em') || value.endsWith('%')) {
+    return value
+  }
+  const parsed = Number.parseFloat(value)
+  return Number.isFinite(parsed) ? `${parsed}px` : '24px'
+}
+
 const textStyle = computed(() => {
   const widgetJson = props.widget.content_json || {}
   const fontFamily = widgetJson.fontFamily || 'Arial, sans-serif'
-  const fontSize = widgetJson.fontSize || props.widget.font_size || 16
+  const fontSize = normalizeFontSize(widgetJson.fontSize || props.widget.font_size)
   const color = widgetJson.color || props.widget.color || '#000000'
   const textAlign = widgetJson.textAlign || props.widget.alignment || 'left'
   const fontWeight = widgetJson.fontWeight || 'normal'
@@ -96,7 +93,7 @@ const textStyle = computed(() => {
     width: '100%',
     height: '100%',
     fontFamily: fontFamily,
-    fontSize: `${fontSize}px`,
+    fontSize: fontSize,
     color: color,
     textAlign: textAlign,
     fontWeight: fontWeight,

@@ -85,6 +85,7 @@ import { computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useCommandsStore } from '@/stores/commands'
 import { useNotification } from '@/composables/useNotification'
+import { normalizeApiError } from '@/utils/apiError'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import Card from '@/components/common/Card.vue'
 
@@ -105,7 +106,8 @@ const handleRetry = async () => {
     notify.success('Command retry initiated')
     await commandsStore.fetchCommand(command.value.id)
   } catch (error) {
-    notify.error('Failed to retry command')
+    const parsed = error.apiError || normalizeApiError(error)
+    notify.error(parsed.userMessage || 'Failed to retry command')
   }
 }
 

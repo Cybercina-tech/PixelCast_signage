@@ -29,18 +29,34 @@
             </span>
           </router-link>
           <div class="flex items-center gap-2 sm:gap-2.5 shrink-0">
-            <router-link
-              to="/login"
+            <a
+              href="/documentation/index.html"
               class="px-2 py-1.5 text-xs sm:text-sm text-white/80 hover:text-white transition-colors"
             >
-              Login
-            </router-link>
-            <router-link
-              to="/signup"
-              class="neon-button px-3.5 sm:px-5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold text-white transition-all duration-300"
-            >
-              Get Started
-            </router-link>
+              Docs
+            </a>
+            <template v-if="isInstalled">
+              <router-link
+                to="/login"
+                class="px-2 py-1.5 text-xs sm:text-sm text-white/80 hover:text-white transition-colors"
+              >
+                Login
+              </router-link>
+              <router-link
+                to="/signup"
+                class="neon-button px-3.5 sm:px-5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold text-white transition-all duration-300"
+              >
+                Get Started
+              </router-link>
+            </template>
+            <template v-else>
+              <router-link
+                to="/install"
+                class="neon-button px-3.5 sm:px-5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold text-white transition-all duration-300"
+              >
+                Install
+              </router-link>
+            </template>
           </div>
         </div>
       </div>
@@ -85,19 +101,25 @@
                   <span class="text-white">From Deep Space</span>
                 </h1>
                 <p class="text-lg md:text-xl text-white/70 leading-relaxed max-w-xl mx-auto lg:mx-0">
-                  The most advanced digital signage platform for professional networks.
+                  Real-time digital signage with secure setup wizard, remote screen control, and enterprise-grade monitoring.
                 </p>
-                <div class="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center lg:justify-start pt-1">
-                  <router-link 
-                    to="/signup" 
-                    class="neon-button-large px-8 py-4 rounded-lg font-semibold text-lg text-white transition-all duration-300 text-center"
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 justify-center lg:justify-start pt-1 w-full max-w-3xl lg:max-w-none">
+                  <router-link
+                    :to="isInstalled ? '/signup' : '/install'"
+                    class="neon-button-large h-14 px-6 rounded-lg font-semibold text-lg text-white transition-all duration-300 text-center inline-flex items-center justify-center whitespace-nowrap"
                   >
-                    Start Free Trial
+                    {{ isInstalled ? 'Start Free Trial' : 'Start Installation' }}
                   </router-link>
+                  <a
+                    href="/documentation/index.html"
+                    class="glass-card h-14 px-6 rounded-lg font-semibold text-lg text-white border border-white/20 hover:border-white/40 transition-all duration-300 text-center inline-flex items-center justify-center whitespace-nowrap"
+                  >
+                    Documentation
+                  </a>
                   <button 
                     type="button"
                     @click="scrollToSection(1)" 
-                    class="glass-card px-8 py-4 rounded-lg font-semibold text-lg text-white border border-white/20 hover:border-white/40 transition-all duration-300 text-center"
+                    class="glass-card h-14 px-6 rounded-lg font-semibold text-lg text-white border border-white/20 hover:border-white/40 transition-all duration-300 text-center inline-flex items-center justify-center whitespace-nowrap"
                   >
                     Explore Features
                   </button>
@@ -187,7 +209,7 @@
         <div class="section-content">
           <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
             <div class="text-center mb-8 lg:mb-12 section-fade-in">
-              <h2 class="text-3xl md:text-4xl lg:text-5xl font-bold mb-4 text-white">
+              <h2 class="text-2xl md:text-3xl lg:text-4xl font-bold mb-4 text-white">
                 Powerful <span class="bg-gradient-to-r from-cyan-400 to-purple-500 bg-clip-text text-transparent">Features</span>
               </h2>
               <p class="text-lg md:text-xl text-white/60 max-w-2xl mx-auto">
@@ -206,8 +228,8 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="feature.iconPath" />
                   </svg>
                 </div>
-                <h3 class="text-xl lg:text-2xl font-bold text-white mb-2 lg:mb-3">{{ feature.title }}</h3>
-                <p class="text-white leading-relaxed text-sm lg:text-base">{{ feature.description }}</p>
+                <h3 class="text-xl lg:text-2xl font-bold !text-slate-100 mb-2 lg:mb-3">{{ feature.title }}</h3>
+                <p class="!text-slate-300 leading-relaxed text-sm lg:text-base">{{ feature.description }}</p>
               </div>
             </div>
           </div>
@@ -284,7 +306,7 @@
         <div class="section-content">
           <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
             <div class="text-center mb-8 lg:mb-12 section-fade-in">
-              <h2 class="text-3xl md:text-4xl lg:text-5xl font-bold mb-4 text-white">
+              <h2 class="text-2xl md:text-3xl lg:text-4xl font-bold mb-4 text-white">
                 Built for <span class="bg-gradient-to-r from-cyan-400 to-purple-500 bg-clip-text text-transparent">Every Industry</span>
               </h2>
               <p class="text-lg md:text-xl text-white/60 max-w-2xl mx-auto">
@@ -300,8 +322,8 @@
                   @click="activeTab = index"
                   class="px-4 lg:px-6 py-2 lg:py-3 rounded-lg font-semibold text-sm lg:text-base transition-all duration-300"
                   :class="activeTab === index 
-                    ? 'bg-gradient-to-r from-cyan-400 to-purple-500 text-white' 
-                    : 'text-white/60 hover:text-white hover:bg-white/5'"
+                    ? 'bg-gradient-to-r from-cyan-400 to-purple-500 !text-white shadow-[0_0_16px_rgba(6,182,212,0.25)]' 
+                    : '!text-slate-300 hover:!text-slate-100 hover:bg-white/5'"
                 >
                   {{ industry.name }}
                 </button>
@@ -309,8 +331,8 @@
               <!-- Tab Content -->
               <div class="grid md:grid-cols-2 gap-6 lg:gap-8 items-center">
                 <div class="text-white">
-                  <h3 class="text-2xl lg:text-3xl font-bold text-white mb-3 lg:mb-4">{{ industries[activeTab].title }}</h3>
-                  <p class="text-white mb-4 lg:mb-6 leading-relaxed text-sm lg:text-base">{{ industries[activeTab].description }}</p>
+                  <h3 class="text-2xl lg:text-3xl font-bold !text-slate-100 mb-3 lg:mb-4">{{ industries[activeTab].title }}</h3>
+                  <p class="!text-slate-300 mb-4 lg:mb-6 leading-relaxed text-sm lg:text-base">{{ industries[activeTab].description }}</p>
                   <ul class="space-y-2 lg:space-y-3">
                     <li 
                       v-for="(benefit, idx) in industries[activeTab].benefits" 
@@ -320,7 +342,7 @@
                       <svg class="w-5 lg:w-6 h-5 lg:h-6 text-cyan-400 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
                         <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
                       </svg>
-                      <span class="text-white text-sm lg:text-base">{{ benefit }}</span>
+                      <span class="!text-slate-200 text-sm lg:text-base">{{ benefit }}</span>
                     </li>
                   </ul>
                 </div>
@@ -352,21 +374,21 @@
           <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
             <!-- Tech Stack -->
             <div class="glass-card rounded-xl p-5 lg:p-6 text-center mb-6 lg:mb-8 section-fade-in">
-              <p class="text-white/60 mb-3 lg:mb-4 text-sm lg:text-base">Powered by</p>
+              <p class="!text-slate-300 mb-3 lg:mb-4 text-sm lg:text-base">Powered by</p>
               <div class="flex flex-wrap justify-center items-center gap-4 lg:gap-6">
-                <div class="flex items-center space-x-2 text-white/80 text-sm lg:text-base">
+                <div class="flex items-center space-x-2 !text-slate-200 text-sm lg:text-base">
                   <svg class="w-5 lg:w-6 h-5 lg:h-6 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
                   </svg>
                   <span class="font-semibold">IoT</span>
                 </div>
-                <div class="flex items-center space-x-2 text-white/80 text-sm lg:text-base">
+                <div class="flex items-center space-x-2 !text-slate-200 text-sm lg:text-base">
                   <svg class="w-5 lg:w-6 h-5 lg:h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
                   </svg>
                   <span class="font-semibold">Real-time Sync</span>
                 </div>
-                <div class="flex items-center space-x-2 text-white/80 text-sm lg:text-base">
+                <div class="flex items-center space-x-2 !text-slate-200 text-sm lg:text-base">
                   <svg class="w-5 lg:w-6 h-5 lg:h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" />
                   </svg>
@@ -380,17 +402,24 @@
                 Ready to Launch Your Digital Network?
               </h2>
               <p class="text-lg lg:text-xl text-white/70 mb-6 lg:mb-8 max-w-2xl mx-auto">
-                Join thousands of organizations managing their screens from deep space
+                Deploy quickly with guided installation, then manage all screens from one control center.
               </p>
               <div class="flex flex-col sm:flex-row gap-4 justify-center">
-                <router-link 
-                  to="/signup" 
+                <router-link
+                  :to="isInstalled ? '/signup' : '/install'"
                   class="neon-button-large px-8 py-4 rounded-lg font-semibold text-lg text-white transition-all duration-300 text-center"
                 >
-                  Start Free Trial
+                  {{ isInstalled ? 'Start Free Trial' : 'Install Now' }}
                 </router-link>
-                <router-link 
-                  to="/login" 
+                <a
+                  href="/documentation/index.html"
+                  class="glass-card px-8 py-4 rounded-lg font-semibold text-lg text-white border border-white/20 hover:border-white/40 transition-all duration-300 text-center"
+                >
+                  View Docs
+                </a>
+                <router-link
+                  v-if="isInstalled"
+                  to="/login"
                   class="glass-card px-8 py-4 rounded-lg font-semibold text-lg text-white border border-white/20 hover:border-white/40 transition-all duration-300 text-center"
                 >
                   Sign In
@@ -406,11 +435,13 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
+import { setupAPI } from '@/services/api'
 
 const scrollProgress = ref(0)
 const activeTab = ref(0)
 const activeSection = ref(0)
 const sectionRefs = ref([])
+const isInstalled = ref(true)
 
 const sections = ref([
   { name: 'Hero', id: 'hero' },
@@ -599,6 +630,16 @@ onMounted(() => {
       observer.observe(section)
     })
   }
+
+  // Landing behavior: show Install CTA when setup is not completed.
+  setupAPI.status()
+    .then((response) => {
+      isInstalled.value = Boolean(response?.data?.installed)
+    })
+    .catch(() => {
+      // Default to installed mode on network/API issues.
+      isInstalled.value = true
+    })
 })
 
 onUnmounted(() => {
@@ -802,6 +843,15 @@ onUnmounted(() => {
 .feature-card {
   opacity: 0;
   animation: fadeInUp 0.6s ease-out forwards;
+}
+
+/* Fullscreen stability:
+   Features/Industries are content-heavy; top-align them on large screens
+   to prevent heading clipping with fixed nav + snap sections. */
+.features-section .section-content,
+.industries-section .section-content {
+  justify-content: flex-start;
+  padding-top: 1rem;
 }
 
 /* Bullet Navigation */

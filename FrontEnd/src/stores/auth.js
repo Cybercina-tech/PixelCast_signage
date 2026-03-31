@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { authAPI, usersAPI } from '../services/api'
+import { normalizeApiError } from '../utils/apiError'
 
 export const useAuthStore = defineStore('auth', {
   state: () => {
@@ -40,13 +41,7 @@ export const useAuthStore = defineStore('auth', {
         this.isAuthenticated = true
         return response.data
       } catch (error) {
-        // Extract error message from various possible locations
-        const errorData = error.response?.data
-        this.error = errorData?.detail || 
-                    errorData?.error || 
-                    errorData?.message || 
-                    error.message || 
-                    'Login failed. Please check your credentials.'
+        this.error = normalizeApiError(error).userMessage || 'Login failed. Please check your credentials.'
         throw error
       } finally {
         this.loading = false

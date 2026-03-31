@@ -68,6 +68,7 @@
                     <p class="text-3xl font-bold text-primary">
                       {{ stats.totalScreens }}
                     </p>
+                    <p class="text-xs text-muted mt-1">{{ stats.onlineScreens }} online / {{ stats.offlineScreens }} offline</p>
                   </div>
                   <div class="w-12 h-12 rounded-xl bg-card flex items-center justify-center transition-colors">
                     <TvIcon class="w-6 h-6 text-accent-color" style="color: var(--accent-color);" />
@@ -99,6 +100,7 @@
                     <p class="text-3xl font-bold text-primary">
                       {{ stats.onlineScreens }}
                     </p>
+                    <p class="text-xs text-muted mt-1">{{ onlinePercentage }}% availability</p>
                   </div>
                   <div class="w-12 h-12 rounded-xl bg-card flex items-center justify-center transition-colors">
                     <div class="w-3 h-3 rounded-full bg-forest-green animate-pulse"></div>
@@ -137,7 +139,7 @@
                         :style="{ width: `${storagePercentage}%` }"
                       ></div>
                     </div>
-                    <p class="text-xs text-muted mt-1">{{ storageUsedMB }} MB / {{ storageLimitMB }} MB</p>
+                    <p class="text-xs text-muted mt-1">{{ storageUsageText }}</p>
                   </div>
                   <div class="w-12 h-12 rounded-xl bg-card flex items-center justify-center transition-colors ml-4">
                     <ServerIcon class="w-6 h-6 text-accent-color" style="color: var(--accent-color);" />
@@ -155,6 +157,7 @@
                     <p class="text-3xl font-bold text-primary">
                       {{ stats.activeTemplates }}
                     </p>
+                    <p class="text-xs text-muted mt-1">{{ activeTemplatesRatioText }}</p>
                   </div>
                   <div class="w-12 h-12 rounded-xl bg-card flex items-center justify-center transition-colors">
                     <DocumentTextIcon class="w-6 h-6 text-accent-color" style="color: var(--accent-color);" />
@@ -242,7 +245,7 @@
             </div>
 
             <!-- Recent Activities Card -->
-            <div class="card-base rounded-2xl p-6 flex flex-col h-full">
+            <div class="card-base rounded-2xl p-6 flex flex-col recent-activities-card">
               <div class="flex items-center justify-between mb-6 flex-shrink-0">
                 <h3 class="text-lg font-semibold text-primary">Recent Activities</h3>
                 <button
@@ -254,7 +257,7 @@
                   {{ loading ? 'Loading...' : 'Refresh' }}
                 </button>
               </div>
-              <div class="space-y-4 flex-1 overflow-y-auto custom-scrollbar min-h-0">
+              <div class="space-y-4 flex-1 overflow-y-auto custom-scrollbar min-h-0 pr-1">
                 <div v-if="activities.length === 0 && !loading" class="text-center py-8 text-muted">
                   No recent activities
                 </div>
@@ -419,8 +422,7 @@
 </template>
 
 <script setup>
-import { computed, ref, onMounted, onUnmounted, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useDashboardStore } from '@/stores/dashboard'
 import { useTemplatesStore } from '@/stores/templates'
 import { useScreensStore } from '@/stores/screens'
@@ -430,14 +432,12 @@ import AppLayout from '@/components/layout/AppLayout.vue'
 import Chart from '@/components/common/Chart.vue'
 import {
   TvIcon,
-  CheckCircleIcon,
   ServerIcon,
   DocumentTextIcon,
   PlusIcon,
   ExclamationTriangleIcon,
 } from '@heroicons/vue/24/outline'
 
-const router = useRouter()
 const dashboardStore = useDashboardStore()
 const templatesStore = useTemplatesStore()
 const screensStore = useScreensStore()
@@ -457,15 +457,24 @@ const stats = computed(() => ({
   offlineScreens: dashboardStore.stats?.offline_screens || 0,
   activeTemplates: templatesStore.activeTemplates?.length || 0,
 }))
+const totalTemplates = computed(() => templatesStore.templates?.length || 0)
+const activeTemplatesRatioText = computed(() => {
+  if (!totalTemplates.value) return '0% active'
+  const ratio = Math.round((stats.value.activeTemplates / totalTemplates.value) * 100)
+  return `${ratio}% active (${stats.value.activeTemplates}/${totalTemplates.value})`
+})
 
-// Storage stats (mock for now - can be enhanced with real API)
-const storageUsedMB = ref(0)
-const storageLimitMB = ref(500) // 500 MB default
+// Storage stats
+const storageUsedBytes = ref(0)
+const storageLimitBytes = ref(5 * 1024 * 1024 * 1024)
+const storageUsedMB = computed(() => Math.round(storageUsedBytes.value / (1024 * 1024)))
+const storageLimitMB = computed(() => Math.round(storageLimitBytes.value / (1024 * 1024)))
 const storagePercentage = computed(() => {
-  if (storageLimitMB.value === 0) return 0
-  return Math.min(100, Math.round((storageUsedMB.value / storageLimitMB.value) * 100))
+  if (storageLimitBytes.value === 0) return 0
+  return Math.min(100, Math.round((storageUsedBytes.value / storageLimitBytes.value) * 100))
 })
 const storageUsedFormatted = computed(() => `${storagePercentage.value}%`)
+const storageUsageText = computed(() => `${formatBytes(storageUsedBytes.value)} / ${formatBytes(storageLimitBytes.value)}`)
 
 // Activities
 const activities = computed(() => {
@@ -537,33 +546,65 @@ const hasData = computed(() => {
   return stats.value.totalScreens > 0 || activities.value.length > 0 || recentTemplates.value.length > 0
 })
 
-// Trend data (simplified - can be enhanced with real historical data)
+const MAX_TREND_POINTS = 12
+const trendHistory = ref({
+  totalScreens: [],
+  onlineScreens: [],
+  activeTemplates: [],
+  storagePercentage: [],
+})
+
+const pushTrendPoint = () => {
+  const nextPoint = {
+    totalScreens: Math.max(0, Number(stats.value.totalScreens || 0)),
+    onlineScreens: Math.max(0, Number(stats.value.onlineScreens || 0)),
+    activeTemplates: Math.max(0, Number(stats.value.activeTemplates || 0)),
+    storagePercentage: Math.max(0, Math.min(100, Number(storagePercentage.value || 0))),
+  }
+
+  Object.keys(nextPoint).forEach((key) => {
+    const series = trendHistory.value[key]
+    if (!Array.isArray(series)) return
+    series.push(nextPoint[key])
+    if (series.length > MAX_TREND_POINTS) {
+      series.shift()
+    }
+  })
+}
+
 const screenTrend = computed(() => {
-  const base = stats.value.totalScreens
-  return [base - 2, base - 1, base, base, base, base, base]
+  const history = trendHistory.value.totalScreens
+  if (history.length >= 2) return history
+  const base = Math.max(0, Number(stats.value.totalScreens || 0))
+  return [base, base, base]
 })
 
 const onlineTrend = computed(() => {
-  const base = stats.value.onlineScreens
-  return [base - 2, base - 1, base, base, base, base, base]
+  const history = trendHistory.value.onlineScreens
+  if (history.length >= 2) return history
+  const base = Math.max(0, Number(stats.value.onlineScreens || 0))
+  return [base, base, base]
 })
 
 const templateTrend = computed(() => {
-  const base = stats.value.activeTemplates
-  return [base - 1, base, base, base, base, base, base]
+  const history = trendHistory.value.activeTemplates
+  if (history.length >= 2) return history
+  const base = Math.max(0, Number(stats.value.activeTemplates || 0))
+  return [base, base, base]
 })
 
 // Helper functions
 const generateSparklinePoints = (data) => {
   if (!data || data.length === 0) return ''
-  const max = Math.max(...data)
-  const min = Math.min(...data)
+  const safeData = data.map((value) => Math.max(0, Number(value || 0)))
+  const max = Math.max(...safeData)
+  const min = Math.min(...safeData)
   const range = max - min || 1
   const width = 100
   const height = 40
-  const stepX = width / (data.length - 1)
+  const stepX = safeData.length > 1 ? width / (safeData.length - 1) : width
   
-  return data.map((value, index) => {
+  return safeData.map((value, index) => {
     const x = index * stepX
     const y = height - ((value - min) / range) * height
     return `${x},${y}`
@@ -582,6 +623,14 @@ const formatTime = (date) => {
   if (minutes < 60) return `${minutes}m ago`
   if (hours < 24) return `${hours}h ago`
   return `${days}d ago`
+}
+
+const formatBytes = (bytes) => {
+  if (!Number.isFinite(bytes) || bytes <= 0) return '0 MB'
+  const gb = bytes / (1024 * 1024 * 1024)
+  if (gb >= 1) return `${gb.toFixed(2)} GB`
+  const mb = bytes / (1024 * 1024)
+  return `${mb.toFixed(2)} MB`
 }
 
 const getActivityColor = (type) => {
@@ -614,6 +663,22 @@ const updateClock = () => {
 
 const refreshActivities = async () => {
   await dashboardStore.fetchActivities()
+}
+
+const fetchStorageStats = async () => {
+  try {
+    const response = await contentsAPI.storageStats()
+    const data = response.data || {}
+    storageUsedBytes.value = Number(data.used_bytes || 0)
+    storageLimitBytes.value = Number(data.limit_bytes || (5 * 1024 * 1024 * 1024))
+  } catch (error) {
+    if (error?.response?.data?.message?.includes('screen_id') ||
+        error?.response?.data?.error?.includes('screen_id')) {
+      console.debug('Suppressed screen_id error in storage stats')
+      return
+    }
+    console.warn('Could not fetch storage stats:', error)
+  }
 }
 
 const handleEmergencyAlert = async () => {
@@ -682,25 +747,8 @@ onMounted(async () => {
       }
     })
     
-    // Calculate storage from content files (global endpoint)
-    try {
-      const contentsResponse = await contentsAPI.list({ page_size: 1000 })
-      const contents = contentsResponse.data?.results || contentsResponse.data || []
-      // Sum up file sizes from contents
-      const totalBytes = contents.reduce((sum, content) => {
-        return sum + (content.file_size || 0)
-      }, 0)
-      storageUsedMB.value = Math.round(totalBytes / (1024 * 1024))
-    } catch (error) {
-      // Suppress screen_id errors
-      if (error?.response?.data?.message?.includes('screen_id') || 
-          error?.response?.data?.error?.includes('screen_id')) {
-        console.debug('Suppressed screen_id error in storage calculation')
-      } else {
-        console.warn('Could not fetch storage data:', error)
-      }
-      // Keep default value
-    }
+    await fetchStorageStats()
+    pushTrendPoint()
   } catch (error) {
     // Suppress screen_id errors
     if (error?.response?.data?.message?.includes('screen_id') || 
@@ -720,7 +768,9 @@ onMounted(async () => {
       await Promise.allSettled([
         dashboardStore.fetchStats(),
         dashboardStore.fetchActivities(),
+        fetchStorageStats(),
       ])
+      pushTrendPoint()
     } catch (error) {
       // Suppress screen_id errors and network errors
       if (error?.response?.data?.message?.includes('screen_id') || 
@@ -785,6 +835,14 @@ onUnmounted(() => {
     0 8px 18px -8px rgba(15, 23, 42, 0.2),
     0 3px 8px -4px rgba(15, 23, 42, 0.12),
     0 0 0 1px rgba(30, 41, 59, 0.08);
+}
+
+/* Keep Recent Activities card height stable; scroll list inside */
+.recent-activities-card {
+  height: 28rem;
+  min-height: 28rem;
+  max-height: 28rem;
+  overflow: hidden;
 }
 
 .dark .screen-stat-card {

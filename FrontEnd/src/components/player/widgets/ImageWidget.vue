@@ -44,26 +44,12 @@ const failedImages = ref(new Set())
 // Sort contents by order
 // Filter only active content (safety check - backend should already filter)
 const sortedContents = computed(() => {
-  if (!props.widget.contents) {
-    console.warn(`[ImageWidget] Widget ${props.widget.id} has no contents array`)
-    return []
-  }
+  if (!props.widget.contents) return []
   
   // Filter active content and sort by order
   const contents = [...props.widget.contents]
     .filter(content => content.is_active !== false) // Only render active content
     .sort((a, b) => (a.order || 0) - (b.order || 0))
-  
-  if (contents.length === 0) {
-    console.warn(`[ImageWidget] Widget ${props.widget.id} has no active contents`, {
-      totalContents: props.widget.contents.length,
-      contents: props.widget.contents.map(c => ({ id: c.id, name: c.name, is_active: c.is_active, secure_url: c.secure_url }))
-    })
-  } else {
-    console.log(`[ImageWidget] Widget ${props.widget.id} rendering ${contents.length} contents`, {
-      contents: contents.map(c => ({ id: c.id, name: c.name, secure_url: c.secure_url ? `${c.secure_url.substring(0, 50)}...` : 'NO URL' }))
-    })
-  }
   
   return contents
 })
@@ -118,11 +104,6 @@ const onImageLoad = (event) => {
   if (contentId) {
     loadedImages.value.add(contentId)
     failedImages.value.delete(contentId)
-    console.log(`[ImageWidget] Image loaded successfully for content: ${contentId}`, {
-      src: img.src.substring(0, 100),
-      naturalWidth: img.naturalWidth,
-      naturalHeight: img.naturalHeight
-    })
   }
 }
 
@@ -134,27 +115,7 @@ const onImageError = (event) => {
     // Hide failed image gracefully without breaking layout
     img.style.display = 'none'
     
-    // Enhanced error logging with full details
-    const errorDetails = {
-      contentId: contentId,
-      attemptedUrl: img.src,
-      widgetId: props.widget.id,
-      widgetName: props.widget.name,
-      widgetType: props.widget.type,
-      content: props.widget.contents?.find(c => c.id === contentId),
-      error: event.type,
-      timestamp: new Date().toISOString()
-    }
-    
-    console.error(`[ImageWidget] Failed to load image for content: ${contentId}`, errorDetails)
-    
-    // Log the full URL that failed
-    console.error(`[ImageWidget] Broken image URL: ${img.src}`)
-    
-    // Check if URL is relative vs absolute
-    if (!img.src.startsWith('http://') && !img.src.startsWith('https://')) {
-      console.warn(`[ImageWidget] Image URL is relative, might need absolute URL: ${img.src}`)
-    }
+    console.error(`[ImageWidget] Failed to load image content: ${contentId}`)
   }
 }
 </script>
@@ -208,7 +169,6 @@ const onImageError = (event) => {
   -khtml-user-drag: none;
   -moz-user-drag: none;
   -o-user-drag: none;
-  user-drag: none;
   pointer-events: auto;
   /* Image rendering optimization */
   image-rendering: auto;

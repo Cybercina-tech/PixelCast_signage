@@ -313,6 +313,7 @@ import { useRouter } from 'vue-router'
 import { authAPI } from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
 import { useNotification } from '@/composables/useNotification'
+import { normalizeApiError } from '@/utils/apiError'
 import {
   UserIcon,
   EnvelopeIcon,
@@ -447,22 +448,12 @@ async function handleSignup() {
     notify.success('Account created successfully!')
     router.push('/dashboard')
   } catch (err) {
-    const data = err.response?.data
-    if (data && typeof data === 'object') {
-      const firstMessage = data.detail || data.message || data.error
-      if (firstMessage && typeof firstMessage === 'string') {
-        setError(firstMessage)
-      } else {
-        setFieldErrors(data)
-        const first = Object.values(data).flat().find(Boolean)
-        if (Array.isArray(first)) setError(first[0])
-        else if (typeof first === 'string') setError(first)
-        else setError('Failed to create account. Please check the form.')
-      }
-    } else {
-      setError(err.message || 'Failed to create account.')
+    const parsed = err.apiError || normalizeApiError(err)
+    setFieldErrors(parsed.fieldErrors || {})
+    setError(parsed.userMessage || 'Failed to create account.')
+    if (!parsed.isValidation) {
+      notify.error(error.value || 'Sign up failed.')
     }
-    notify.error(error.value || 'Sign up failed.')
   } finally {
     loading.value = false
   }
@@ -612,21 +603,39 @@ onMounted(() => {
   position: relative;
 }
 .input-wrap .input-group {
-  margin-top: 1.5rem;
+  margin-top: 0;
 }
 .floating-label {
   position: absolute;
-  left: 2.75rem;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 1rem;
+  left: 0.75rem;
+  top: -0.55rem;
+  transform: none;
+  font-size: 0.72rem;
+  font-weight: 600;
   pointer-events: none;
-  transition: transform 0.2s ease, font-size 0.2s ease, color 0.2s ease, top 0.2s ease;
+  transition: color 0.2s ease;
+  z-index: 2;
+  padding: 0 0.35rem;
+  border-radius: 999px;
+  background: rgba(11, 14, 20, 0.92);
+  line-height: 1.2;
 }
 .floating-label--active {
-  top: -1.5rem;
-  transform: translateY(0);
-  font-size: 0.75rem;
-  font-weight: 500;
+  top: -0.55rem;
+}
+
+.floating-label--active.cosmic-floating-label {
+  color: rgb(165 180 252);
+}
+
+.cosmic-input:-webkit-autofill,
+.cosmic-input:-webkit-autofill:hover,
+.cosmic-input:-webkit-autofill:focus,
+.cosmic-input:-webkit-autofill:active {
+  -webkit-text-fill-color: #e2e8f0 !important;
+  box-shadow: 0 0 0 1000px rgba(2, 6, 23, 0.55) inset !important;
+  -webkit-box-shadow: 0 0 0 1000px rgba(2, 6, 23, 0.55) inset !important;
+  caret-color: #e2e8f0 !important;
+  transition: background-color 9999s ease-in-out 0s;
 }
 </style>

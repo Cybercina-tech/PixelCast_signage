@@ -66,6 +66,15 @@
                 <PlayIcon class="w-4 h-4" />
               </button>
               <button
+                @click="handleToggleActive(row)"
+                :class="row.is_active ? 'action-btn-delete' : 'action-btn-edit'"
+                :title="row.is_active ? 'Deactivate' : 'Activate'"
+              >
+                <span class="text-xs font-semibold">
+                  {{ row.is_active ? 'Off' : 'On' }}
+                </span>
+              </button>
+              <button
                 @click="handleDelete(row)"
                 class="action-btn-delete"
                 title="Delete"
@@ -83,9 +92,13 @@
         @close="closeModal"
       >
         <div class="space-y-4">
+          <div v-if="formError" class="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">
+            {{ formError }}
+          </div>
           <div>
             <label class="label-base block text-sm mb-1">Name</label>
             <input v-model="form.name" type="text" required class="input-base w-full px-3 py-2 rounded-lg" />
+            <p v-if="fieldErrors.name" class="mt-1 text-xs text-red-400">{{ fieldErrors.name[0] }}</p>
           </div>
           <div>
             <label class="label-base block text-sm mb-1">Template</label>
@@ -95,15 +108,18 @@
                 {{ template.name }}
               </option>
             </select>
+            <p v-if="fieldErrors.template" class="mt-1 text-xs text-red-400">{{ fieldErrors.template[0] }}</p>
           </div>
           <div class="grid grid-cols-2 gap-4">
             <div>
               <label class="label-base block text-sm mb-1">Start Time</label>
               <input v-model="form.start_time" type="datetime-local" required class="input-base w-full px-3 py-2 rounded-lg" />
+              <p v-if="fieldErrors.start_time" class="mt-1 text-xs text-red-400">{{ fieldErrors.start_time[0] }}</p>
             </div>
             <div>
               <label class="label-base block text-sm mb-1">End Time</label>
               <input v-model="form.end_time" type="datetime-local" required class="input-base w-full px-3 py-2 rounded-lg" />
+              <p v-if="fieldErrors.end_time" class="mt-1 text-xs text-red-400">{{ fieldErrors.end_time[0] }}</p>
             </div>
           </div>
           <div>
@@ -114,16 +130,7 @@
               <option value="weekly">Weekly</option>
               <option value="monthly">Monthly</option>
             </select>
-          </div>
-          <div>
-            <label class="label-base block text-sm mb-1">Priority</label>
-            <input v-model.number="form.priority" type="number" min="1" max="10" value="5" class="input-base w-full px-3 py-2 rounded-lg" />
-          </div>
-          <div>
-            <label class="flex items-center">
-              <input v-model="form.is_active" type="checkbox" class="mr-2 h-4 w-4 text-emerald-600 dark:text-emerald-400 border-gray-300 dark:border-gray-600 rounded focus:ring-emerald-500 dark:focus:ring-emerald-400 bg-white dark:bg-slate-800" />
-              <span class="text-sm text-secondary">Active</span>
-            </label>
+            <p v-if="fieldErrors.repeat_type" class="mt-1 text-xs text-red-400">{{ fieldErrors.repeat_type[0] }}</p>
           </div>
         </div>
         <template #footer>
@@ -147,6 +154,7 @@ import { useSchedulesStore } from '@/stores/schedules'
 import { useTemplatesStore } from '@/stores/templates'
 import { useNotification } from '@/composables/useNotification'
 import { useDeleteConfirmation } from '@/composables/useDeleteConfirmation'
+import { normalizeApiError } from '@/utils/apiError'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import Card from '@/components/common/Card.vue'
 import Table from '@/components/common/Table.vue'
@@ -161,6 +169,8 @@ const showCreateModal = ref(false)
 const showEditModal = ref(false)
 const editingSchedule = ref(null)
 const templates = computed(() => templatesStore.templates)
+const formError = ref('')
+const fieldErrors = ref({})
 
 const form = ref({
   name: '',
@@ -168,8 +178,6 @@ const form = ref({
   start_time: '',
   end_time: '',
   repeat_type: 'none',
-  priority: 5,
-  is_active: true,
 })
 
 const columns = [
@@ -186,6 +194,8 @@ const handleView = (row) => {
 }
 
 const handleEdit = (row) => {
+  formError.value = ''
+  fieldErrors.value = {}
   editingSchedule.value = row
   form.value = {
     name: row.name || '',
@@ -193,8 +203,6 @@ const handleEdit = (row) => {
     start_time: row.start_time ? new Date(row.start_time).toISOString().slice(0, 16) : '',
     end_time: row.end_time ? new Date(row.end_time).toISOString().slice(0, 16) : '',
     repeat_type: row.repeat_type || 'none',
-    priority: row.priority || 5,
-    is_active: row.is_active ?? true,
   }
   showEditModal.value = true
 }
@@ -204,8 +212,8 @@ const handleExecute = async (row) => {
     await schedulesStore.executeSchedule(row.id)
     notify.success('Schedule executed')
   } catch (error) {
-    const errorMsg = error.response?.data?.detail || error.response?.data?.message || error.message || 'Failed to execute schedule'
-    notify.error(errorMsg)
+    const parsed = error.apiError || normalizeApiError(error)
+    notify.error(parsed.userMessage || 'Failed to execute schedule')
   }
 }
 
@@ -228,25 +236,41 @@ const handleDelete = async (row) => {
     notify.success('Schedule deleted successfully')
   } catch (error) {
     if (error.message !== 'Delete cancelled') {
-      const errorMsg = error.response?.data?.detail || error.response?.data?.message || error.message || 'Failed to delete schedule'
-      notify.error(errorMsg)
+      const parsed = error.apiError || normalizeApiError(error)
+      notify.error(parsed.userMessage || 'Failed to delete schedule')
     }
   }
 }
 
+const handleToggleActive = async (row) => {
+  try {
+    await schedulesStore.updateSchedule(row.id, { is_active: !row.is_active })
+    notify.success(`Schedule ${row.is_active ? 'deactivated' : 'activated'}`)
+  } catch (error) {
+    const parsed = error.apiError || normalizeApiError(error)
+    notify.error(parsed.userMessage || 'Failed to update status')
+  }
+}
+
 const handleSubmit = async () => {
+  formError.value = ''
+  fieldErrors.value = {}
   try {
     if (showEditModal.value) {
       await schedulesStore.updateSchedule(editingSchedule.value.id, form.value)
       notify.success('Schedule updated')
     } else {
-      await schedulesStore.createSchedule(form.value)
+      await schedulesStore.createSchedule({ ...form.value, is_active: true })
       notify.success('Schedule created')
     }
     closeModal()
   } catch (error) {
-    const errorMsg = error.response?.data?.detail || error.response?.data?.message || error.message || 'Operation failed'
-    notify.error(errorMsg)
+    const parsed = error.apiError || normalizeApiError(error)
+    formError.value = parsed.formError
+    fieldErrors.value = parsed.fieldErrors || {}
+    if (!parsed.isValidation || !Object.keys(fieldErrors.value).length) {
+      notify.error(parsed.userMessage || 'Operation failed')
+    }
   }
 }
 
@@ -254,14 +278,14 @@ const closeModal = () => {
   showCreateModal.value = false
   showEditModal.value = false
   editingSchedule.value = null
+  formError.value = ''
+  fieldErrors.value = {}
   form.value = {
     name: '',
     template: '',
     start_time: '',
     end_time: '',
     repeat_type: 'none',
-    priority: 5,
-    is_active: true,
   }
 }
 

@@ -18,10 +18,14 @@
       :widget="playerWidget"
     />
 
-    <WebviewWidget
+    <div
       v-else-if="widget.type === 'webview'"
-      :widget="playerWidget"
-    />
+      class="w-full h-full bg-slate-900 text-slate-200 border border-slate-700 rounded p-3 flex flex-col justify-center"
+    >
+      <div class="text-xs uppercase tracking-wide text-slate-400 mb-2">Webview Preview</div>
+      <div class="text-sm break-all">{{ webviewPreviewUrl || 'No URL set' }}</div>
+      <div class="text-[11px] text-slate-500 mt-2">Live iframe is disabled in editor preview to avoid browser cross-origin focus warnings.</div>
+    </div>
 
     <ChartWidget
       v-else-if="widget.type === 'chart'"
@@ -50,8 +54,8 @@ import { computed, ref, onMounted, onUnmounted } from 'vue'
 import TextWidget from '@/components/player/widgets/TextWidget.vue'
 import ImageWidget from '@/components/player/widgets/ImageWidget.vue'
 import VideoWidget from '@/components/player/widgets/VideoWidget.vue'
-import WebviewWidget from '@/components/player/widgets/WebviewWidget.vue'
 import ChartWidget from '@/components/player/widgets/ChartWidget.vue'
+import { fromWidgetChartPayload } from '@/utils/chartConfig'
 
 const props = defineProps({
   widget: {
@@ -64,19 +68,21 @@ const currentTime = ref(new Date().toLocaleTimeString())
 const currentDate = ref(new Date().toLocaleDateString())
 let timeInterval = null
 
+const normalizeFontSize = (value, fallbackPx) => {
+  if (value === undefined || value === null || value === '') return `${fallbackPx}px`
+  if (typeof value === 'number') return `${value}px`
+  const raw = String(value).trim()
+  if (!raw) return `${fallbackPx}px`
+  if (raw.endsWith('px') || raw.endsWith('rem') || raw.endsWith('em') || raw.endsWith('%')) return raw
+  const parsed = Number.parseFloat(raw)
+  return Number.isFinite(parsed) ? `${parsed}px` : `${fallbackPx}px`
+}
+
 // Convert editor widget format to player widget format
 const playerWidget = computed(() => {
   const widget = props.widget
   const style = widget.style || {}
-  let parsedChart = null
-
-  if (widget.type === 'chart' && widget.content) {
-    try {
-      parsedChart = JSON.parse(widget.content)
-    } catch {
-      parsedChart = null
-    }
-  }
+  const normalizedChart = widget.type === 'chart' ? fromWidgetChartPayload(widget) : null
   
   // Create a player-compatible widget object
   // Player widgets expect: widget.content_json (for styles) and widget.contents[] (for content data)
@@ -97,7 +103,7 @@ const playerWidget = computed(() => {
       // Image/Video widget style properties
       objectFit: style.objectFit,
       // Chart config is passed to player chart renderer
-      chart: parsedChart,
+      chart: normalizedChart,
     },
     // contents array contains the actual content items
     contents: widget.content ? [{
@@ -114,12 +120,17 @@ const playerWidget = computed(() => {
       // Content-level JSON (can override widget-level styles)
       content_json: {
         ...style,
-        chart: parsedChart
+        chart: normalizedChart
       }
     }] : []
   }
   
   return playerFormat
+})
+
+const webviewPreviewUrl = computed(() => {
+  if (props.widget.type !== 'webview') return ''
+  return props.widget.content || ''
 })
 
 // Clock widget style
@@ -131,11 +142,11 @@ const clockStyle = computed(() => {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    color: style.color || '#000000',
-    fontSize: style.fontSize || '48px',
+    color: style.color || '#ffffff',
+    fontSize: normalizeFontSize(style.fontSize, 56),
     fontFamily: style.fontFamily || 'Arial, sans-serif',
     textAlign: style.textAlign || 'center',
-    backgroundColor: style.backgroundColor || 'transparent',
+    backgroundColor: style.backgroundColor || '#000000',
     padding: '10px',
     boxSizing: 'border-box'
   }
@@ -150,11 +161,11 @@ const dateStyle = computed(() => {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    color: style.color || '#000000',
-    fontSize: style.fontSize || '32px',
+    color: style.color || '#ffffff',
+    fontSize: normalizeFontSize(style.fontSize, 40),
     fontFamily: style.fontFamily || 'Arial, sans-serif',
     textAlign: style.textAlign || 'center',
-    backgroundColor: style.backgroundColor || 'transparent',
+    backgroundColor: style.backgroundColor || '#000000',
     padding: '10px',
     boxSizing: 'border-box'
   }
@@ -164,12 +175,23 @@ const dateStyle = computed(() => {
 const updateTime = () => {
   if (props.widget.type === 'clock') {
     const format = props.widget.content || 'HH:mm:ss'
+    const timeZone = props.widget.style?.timeZone || 'UTC'
     const now = new Date()
-    
-    if (format.includes('HH')) {
+
+    try {
+      if (format.includes('HH')) {
+        currentTime.value = now.toLocaleTimeString('en-US', {
+          hour12: false,
+          timeZone,
+        })
+      } else {
+        currentTime.value = now.toLocaleTimeString('en-US', {
+          timeZone,
+        })
+      }
+    } catch {
+      // Fallback if an invalid timezone is provided.
       currentTime.value = now.toLocaleTimeString('en-US', { hour12: false })
-    } else {
-      currentTime.value = now.toLocaleTimeString()
     }
   }
 }

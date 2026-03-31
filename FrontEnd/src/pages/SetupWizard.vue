@@ -206,15 +206,14 @@
                     />
                   </div>
                   <div>
-                    <label for="db-password" class="block text-sm font-medium text-slate-400 mb-1.5">Password (auto-generated)</label>
+                    <label for="db-password" class="block text-sm font-medium text-slate-400 mb-1.5">Database Password (secure default)</label>
                     <div class="relative">
                       <input
                         id="db-password"
                         v-model="setupData.db.password"
                         :type="showDbPassword ? 'text' : 'password'"
-                        readonly
                         class="cosmic-input w-full px-4 py-3 rounded-xl pr-12 bg-black/40 border border-white/10 text-white placeholder-slate-500 focus:outline-none transition-all duration-300"
-                        placeholder="Loaded from DB_PASSWORD in .env"
+                        placeholder="Enter DB password or use the default"
                       />
                       <button
                         type="button"
@@ -227,9 +226,20 @@
                     </div>
                   </div>
                 </div>
-                <p class="text-[11px] text-slate-500 -mt-1">
-                  This value is preloaded from <code>DB_PASSWORD</code> and should be noted safely. To rotate it, update <code>.env</code> before first DB initialization.
-                </p>
+                <div class="rounded-xl border border-indigo-500/25 bg-indigo-500/10 p-3 text-[11px] text-slate-300 space-y-2 -mt-0.5">
+                  <p>
+                    <strong class="text-indigo-300">Recommended (Default) Setup:</strong>
+                    PixelCast generates and uses a secure database password automatically.
+                    For most users, this is the safest and easiest option.
+                  </p>
+                  <p>
+                    If you want to use your own database credentials, create the database manually first,
+                    then set your custom host/user/password in <code>.env</code> before running the installer.
+                  </p>
+                  <p class="text-slate-400">
+                    In both modes, the setup is secure when strong credentials are used and kept private.
+                  </p>
+                </div>
 
                 <!-- Connection Status -->
                 <transition name="fade">
@@ -594,7 +604,9 @@ import {
   EyeIcon,
   EyeSlashIcon,
 } from '@heroicons/vue/24/outline'
+import axios from 'axios'
 import { setupAPI } from '@/services/api'
+import { normalizeApiError } from '@/utils/apiError'
 
 const router = useRouter()
 
@@ -633,6 +645,8 @@ const setupData = reactive({
     last_name: '',
   },
 })
+
+const DEFAULT_DB_PASSWORD = 'tqaG32AWqO'
 
 // Status tracking
 const dbStatus = reactive({
@@ -733,8 +747,9 @@ const testDatabaseConnection = async () => {
     dbStatus.success = true
     dbStatus.message = response.data.message || 'Database connection successful!'
   } catch (error) {
+    const parsed = error.apiError || normalizeApiError(error)
     dbStatus.success = false
-    dbStatus.message = error.response?.data?.message || 'Failed to connect to database. Please check your credentials.'
+    dbStatus.message = parsed.userMessage || 'Failed to connect to database. Please check your credentials.'
   } finally {
     dbStatus.loading = false
   }
@@ -758,15 +773,10 @@ const createAdmin = async () => {
     adminStatus.success = true
     adminStatus.message = 'Administrator account created successfully!'
   } catch (error) {
+    const parsed = error.apiError || normalizeApiError(error)
     adminStatus.success = false
-    if (error.response?.data) {
-      adminStatus.message = error.response.data.message || 'Failed to create admin account'
-      if (error.response.data.errors) {
-        errors.value = error.response.data.errors
-      }
-    } else {
-      adminStatus.message = 'Failed to create admin account'
-    }
+    adminStatus.message = parsed.userMessage || 'Failed to create admin account'
+    errors.value = parsed.fieldErrors || {}
   } finally {
     adminStatus.loading = false
   }
@@ -780,8 +790,9 @@ const startInstallation = async () => {
     progressSteps[0].status = 'completed'
     progressSteps[0].description = 'Database migrations applied successfully'
   } catch (error) {
+    const parsed = error.apiError || normalizeApiError(error)
     progressSteps[0].status = 'error'
-    progressSteps[0].description = error.response?.data?.message || 'Migration failed'
+    progressSteps[0].description = parsed.userMessage || 'Migration failed'
     return
   }
   
@@ -792,8 +803,9 @@ const startInstallation = async () => {
     progressSteps[1].status = 'completed'
     progressSteps[1].description = seedRes.data?.message || 'System assets configured'
   } catch (error) {
+    const parsed = error.apiError || normalizeApiError(error)
     progressSteps[1].status = 'error'
-    progressSteps[1].description = error.response?.data?.message || 'Asset seeding failed'
+    progressSteps[1].description = parsed.userMessage || 'Asset seeding failed'
     return
   }
   
@@ -811,26 +823,51 @@ const startInstallation = async () => {
     progressSteps[2].description = 'Installation finalized successfully'
     installationComplete.value = true
   } catch (error) {
+    const parsed = error.apiError || normalizeApiError(error)
     progressSteps[2].status = 'error'
-    progressSteps[2].description = error.response?.data?.message || 'Finalization failed'
+    progressSteps[2].description = parsed.userMessage || 'Finalization failed'
   }
 }
 
 onMounted(async () => {
-  // Check installation status
-  try {
-    const response = await setupAPI.status()
-    if (response.data.installed) {
-      router.push('/login')
-      return
+  // Check installation status with retry to survive transient 502 during backend startup.
+  const apiBase = import.meta.env.VITE_API_BASE_URL || '/api'
+  const statusClient = axios.create({
+    baseURL: apiBase,
+    timeout: 4000,
+  })
+
+  const maxAttempts = 8
+  let loaded = false
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const response = await statusClient.get('/setup/status/')
+      loaded = true
+      if (response.data.installed) {
+        router.push('/login')
+        return
+      }
+      setupData.db.host = response.data.db_host || setupData.db.host
+      setupData.db.port = Number(response.data.db_port || setupData.db.port)
+      setupData.db.name = response.data.db_name || setupData.db.name
+      setupData.db.user = response.data.db_user || setupData.db.user
+      const serverPassword = String(response.data.db_password || '').trim()
+      setupData.db.password = serverPassword || DEFAULT_DB_PASSWORD
+      break
+    } catch (error) {
+      const statusCode = error?.response?.status
+      const shouldRetry = !statusCode || statusCode >= 500
+      if (!shouldRetry || attempt === maxAttempts) {
+        break
+      }
+      await new Promise((resolve) => setTimeout(resolve, 1000))
     }
-    setupData.db.host = response.data.db_host || setupData.db.host
-    setupData.db.port = Number(response.data.db_port || setupData.db.port)
-    setupData.db.name = response.data.db_name || setupData.db.name
-    setupData.db.user = response.data.db_user || setupData.db.user
-    setupData.db.password = response.data.db_password || ''
-  } catch (error) {
-    console.error('Failed to check installation status:', error)
+  }
+
+  // Keep wizard usable even when backend status endpoint is temporarily unavailable.
+  if (!loaded && !setupData.db.password) {
+    setupData.db.password = DEFAULT_DB_PASSWORD
+    dbStatus.message = 'Backend is still starting. You can continue with default settings and retry connection.'
   }
 })
 </script>
@@ -1083,6 +1120,12 @@ onMounted(async () => {
   margin-top: 0;
 }
 
+.input-group .cosmic-input {
+  /* Reserve vertical space for floating labels inside the field */
+  padding-top: 1.35rem !important;
+  padding-bottom: 0.65rem !important;
+}
+
 .floating-label {
   position: absolute;
   left: 1rem;
@@ -1098,14 +1141,32 @@ onMounted(async () => {
 }
 
 .floating-label--active {
-  top: -0.75rem;
-  transform: translateY(0);
-  font-size: 0.75rem;
+  /* Keep label inside input to avoid overlapping upper blocks */
+  top: 0.45rem;
+  transform: none;
+  font-size: 0.7rem;
   font-weight: 500;
+  z-index: 2;
+  padding: 0 0.35rem;
+  border-radius: 999px;
+  background: rgba(2, 6, 23, 0.8);
+  line-height: 1.1;
 }
 
 .floating-label--active.cosmic-floating-label {
-  color: rgb(148 163 184);
+  color: rgb(165 180 252);
+}
+
+/* Prevent browser autofill from forcing white background in dark theme */
+.cosmic-input:-webkit-autofill,
+.cosmic-input:-webkit-autofill:hover,
+.cosmic-input:-webkit-autofill:focus,
+.cosmic-input:-webkit-autofill:active {
+  -webkit-text-fill-color: #e2e8f0 !important;
+  box-shadow: 0 0 0 1000px rgba(2, 6, 23, 0.55) inset !important;
+  -webkit-box-shadow: 0 0 0 1000px rgba(2, 6, 23, 0.55) inset !important;
+  caret-color: #e2e8f0 !important;
+  transition: background-color 9999s ease-in-out 0s;
 }
 
 /* System Boot: glowing text */

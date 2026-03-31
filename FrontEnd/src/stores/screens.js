@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { screensAPI } from '../services/api'
 import { smartUpdateArray, smartUpdateObject, deepEqual } from '../utils/deepCompare'
+import { normalizeApiError } from '../utils/apiError'
 
 export const useScreensStore = defineStore('screens', {
   state: () => ({
@@ -95,7 +96,7 @@ export const useScreensStore = defineStore('screens', {
         
         return response.data
       } catch (error) {
-        this.error = error.response?.data?.detail || error.message
+        this.error = normalizeApiError(error).userMessage
         throw error
       } finally {
         this.loading = false
@@ -121,7 +122,7 @@ export const useScreensStore = defineStore('screens', {
         }
         return response.data
       } catch (error) {
-        this.error = error.response?.data?.detail || error.message
+        this.error = normalizeApiError(error).userMessage
         throw error
       } finally {
         this.loading = false
@@ -153,7 +154,7 @@ export const useScreensStore = defineStore('screens', {
         
         return response.data
       } catch (error) {
-        this.error = error.response?.data?.detail || error.message
+        this.error = normalizeApiError(error).userMessage
         throw error
       } finally {
         this.loading = false
@@ -219,7 +220,7 @@ export const useScreensStore = defineStore('screens', {
         }
         return response.data
       } catch (error) {
-        this.error = error.response?.data?.detail || error.message
+        this.error = normalizeApiError(error).userMessage
         throw error
       } finally {
         this.loading = false
@@ -235,7 +236,7 @@ export const useScreensStore = defineStore('screens', {
           this.currentScreen = null
         }
       } catch (error) {
-        this.error = error.response?.data?.detail || error.message
+        this.error = normalizeApiError(error).userMessage
         throw error
       } finally {
         this.loading = false
@@ -266,7 +267,7 @@ export const useScreensStore = defineStore('screens', {
         }
         return response.data
       } catch (error) {
-        this.error = error.response?.data?.detail || error.response?.data?.message || error.message
+        this.error = normalizeApiError(error).userMessage
         throw error
       } finally {
         this.loading = false

@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { getBackendOrigin } from '@/utils/mediaUrl'
+import { normalizeApiError } from '@/utils/apiError'
 
 function defaultIotBaseUrl() {
   const apiBase = import.meta.env.VITE_API_BASE_URL
@@ -70,10 +71,13 @@ function resolveIdentity(override = {}) {
 
 function wrapError(error) {
   if (error.response) {
-    const status = error.response.status
-    const msg = error.response.data?.error || error.response.data?.message || `HTTP ${status}`
+    const normalized = normalizeApiError(error)
+    const status = normalized.status
+    const msg = normalized.userMessage || `HTTP ${status}`
     const wrapped = new Error(msg)
     wrapped.status = status
+    wrapped.apiError = normalized
+    wrapped.fieldErrors = normalized.fieldErrors
     if (status === 401) wrapped.code = 'DEVICE_AUTH_FAILED'
     throw wrapped
   }

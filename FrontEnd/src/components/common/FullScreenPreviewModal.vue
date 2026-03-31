@@ -41,27 +41,31 @@
             </div>
 
             <!-- Media Container -->
-            <div class="relative bg-black flex items-center justify-center min-h-[60vh] max-h-[calc(90vh-120px)] overflow-auto">
+            <div class="relative bg-black flex items-center justify-center h-[calc(90vh-120px)] overflow-hidden">
               <!-- Image Preview -->
-              <div v-if="mediaType === 'image' && fileUrl" class="w-full h-full flex items-center justify-center p-8">
+              <div v-if="mediaType === 'image' && fileUrl" class="w-full h-full flex items-center justify-center p-4">
                 <img
                   :src="resolvedUrl"
                   :alt="mediaName || 'Image preview'"
-                  class="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+                  class="w-full h-full object-contain rounded-lg shadow-2xl"
                   @load="handleLoad"
                   @error="handleError"
                 />
               </div>
 
               <!-- Video Preview -->
-              <div v-else-if="mediaType === 'video' && fileUrl" class="w-full h-full flex items-center justify-center p-8">
-                <div class="relative w-full max-w-5xl">
+              <div v-else-if="mediaType === 'video' && fileUrl" class="w-full h-full flex items-center justify-center p-4">
+                <div class="relative w-full h-full">
                   <video
                     ref="videoRef"
                     :src="resolvedUrl"
                     :poster="posterUrl"
                     controls
-                    class="w-full h-auto rounded-lg shadow-2xl"
+                    autoplay
+                    loop
+                    muted
+                    playsinline
+                    class="w-full h-full object-contain rounded-lg shadow-2xl"
                     @loadedmetadata="handleVideoMetadata"
                     @error="handleError"
                   />

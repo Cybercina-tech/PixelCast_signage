@@ -66,7 +66,6 @@ import ServerError from '../pages/errors/ServerError.vue'
 
 // Web Player
 import WebPlayer from '../pages/player/WebPlayer.vue'
-import PlayerConnect from '../pages/player/PlayerConnect.vue'
 
 // Installation
 import Install from '../pages/Install.vue'
@@ -111,19 +110,31 @@ const routes = [
   {
     path: '/player',
     name: 'player',
-    component: WebPlayer,
+    redirect: (to) => {
+      const screenId = to.query.screenId || to.query.screen_id
+      if (screenId) {
+        return { name: 'player-screen', params: { screenId: String(screenId) } }
+      }
+      return { name: 'player-connect' }
+    },
     meta: { public: true }, // Player uses its own authentication via URL params
   },
   {
     path: '/player/connect',
     name: 'player-connect',
-    component: PlayerConnect,
+    component: WebPlayer,
     meta: { public: true }, // Public pairing route
   },
   {
     path: '/player/:screenId',
     name: 'player-screen',
     component: WebPlayer,
+    beforeEnter: (to) => {
+      if (to.query.pair === '1') {
+        return { name: 'player-screen', params: to.params }
+      }
+      return true
+    },
     meta: { public: true },
   },
   {

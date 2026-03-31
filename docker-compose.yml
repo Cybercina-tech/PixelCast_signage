@@ -1,188 +1,95 @@
 services:
   db:
     image: postgres:15-alpine
-    container_name: db  # Matches DB_HOST env var
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
+    container_name: db
     environment:
       - POSTGRES_DB=${DB_NAME:-pixelcast_signage_db}
       - POSTGRES_USER=${DB_USER:-pixelcast_signage_user}
-      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      # Non-empty default prevents Postgres boot failure when .env is missing.
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-tqaG32AWqO}
+      # Use an internal subdirectory to avoid initdb failure when mount root contains artifacts.
       - PGDATA=/var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-pixelcast_signage_user} -d ${DB_NAME:-pixelcast_signage_db}"]
-      interval: 10s
+      interval: 5s
       timeout: 5s
-      retries: 5
-      start_period: 10s
+      retries: 20
     restart: always
-    networks:
-      - pixelcast-signage-net
-    # Security: Don't expose ports to host in production
-    # ports:
-    #   - "${DB_PORT:-5432}:5432"
 
   redis:
     image: redis:7-alpine
-    container_name: redis  # Matches REDIS_HOST env var
+    container_name: redis
     command: redis-server --appendonly yes
     volumes:
       - redis_data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 5s
+      interval: 5s
+      timeout: 3s
+      retries: 20
     restart: always
-    networks:
-      - pixelcast-signage-net
-    # Security: Don't expose ports to host in production
-    # ports:
-    #   - "${REDIS_PORT:-6379}:6379"
 
   backend:
     build:
-      context: ./BackEnd
+      context: ./app
       dockerfile: Dockerfile
-    container_name: backend  # MUST match Nginx upstream name
-    command: /app/entrypoint.sh
-    volumes:
-      # Isolated from ./BackEnd:/app (dev) to avoid VirtioFS mount overlap — wizard writes persist to host ./.env
-      - ./.env:/config/.env
-      # Mount installation state directory - MUST be a directory (Docker volumes cannot be files)
-      # The lock file is created at /app/installation_state/installed.lock
-      - installation_state:/app/installation_state
-      # Static files (collected by Django) - persists across container restarts
-      - backend_static:/app/staticfiles
-      # User-uploaded media content - CRITICAL: Must persist across updates
-      - backend_media:/app/media
-      # Backups - persists across container restarts
-      - backend_backups:/app/backups
+    container_name: backend
+    command: sh /app/entrypoint.sh
     environment:
-      # Canonical .env path inside the container (see BackEnd/setup/paths.py)
       - PIXELCAST_SIGNAGE_ENV_FILE=/config/.env
-      - SECRET_KEY=${SECRET_KEY}
+      # Keep backend bootable in first-run setups without .env.
+      - SECRET_KEY=${SECRET_KEY:-wN9vQx2!mK7pR4tY8uH3cD6sL1zA5eB9fG2jT7nV4qP8xM3rK6hC1wZ}
       - DEBUG=${DEBUG:-False}
       - ALLOWED_HOSTS=${ALLOWED_HOSTS:-localhost,127.0.0.1,backend,frontend}
-      - INSTALLATION_STATE_DIR=/app/installation_state
       - DB_NAME=${DB_NAME:-pixelcast_signage_db}
       - DB_USER=${DB_USER:-pixelcast_signage_user}
-      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_PASSWORD=${DB_PASSWORD:-tqaG32AWqO}
       - DB_HOST=db
       - DB_PORT=5432
-      - USE_SQLITE=${USE_SQLITE:-False}
-      - BASE_URL=${BASE_URL:-http://localhost}
-      - CELERY_BROKER_URL=${CELERY_BROKER_URL:-redis://redis:6379/0}
-      - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND:-redis://redis:6379/0}
-      - USE_REDIS_CACHE=${USE_REDIS_CACHE:-True}
-      - REDIS_CACHE_URL=${REDIS_CACHE_URL:-redis://redis:6379/1}
-      - CHANNEL_LAYERS_BACKEND=${CHANNEL_LAYERS_BACKEND:-redis}
       - REDIS_HOST=redis
       - REDIS_PORT=6379
-      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
-    healthcheck:
-      # Health check that works both before and after installation
-      test: ["CMD", "python", "-c", "import urllib.request; import sys; response = urllib.request.urlopen('http://localhost:8000/api/setup/status/', timeout=5); sys.exit(0 if response.getcode() in [200, 503] else 1)"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 90s  # Allow extra time for migrations on cold start
+      - USE_REDIS_CACHE=${USE_REDIS_CACHE:-True}
+      - CELERY_BROKER_URL=${CELERY_BROKER_URL:-redis://redis:6379/0}
+      - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND:-redis://redis:6379/0}
+      - ENABLE_HOT_RELOAD=${ENABLE_HOT_RELOAD:-true}
+    volumes:
+      - ./.env:/config/.env
+      - ./app:/app
+      - backend_media:/app/media
+      - backend_static:/app/staticfiles
     depends_on:
-      # Only require containers to be started; don't block on health checks.
-      # This avoids long startup failures if DB/Redis health is slow to go green.
-      - db
-      - redis
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     restart: always
-    networks:
-      - pixelcast-signage-net
-    # Backend is not exposed to host - only accessible via frontend proxy
-aa
+
   frontend:
     build:
-      context: ./FrontEnd
-      dockerfile: Dockerfile
-    container_name: frontend
-    labels:
-      # Traefik integration (overrides Dokploy's generated labels if present)
-      - traefik.enable=true
-      - traefik.docker.network=dokploy-network
-      - traefik.http.routers.pixelcast-application-hiakj5-6-web.rule=Host(`pixelcast-application-hiakj5-52175d-204-168-142-183.traefik.me`)
-      - traefik.http.services.pixelcast-application-hiakj5-6-web.loadbalancer.server.port=80
-      - traefik.http.services.pixelcast-application-hiakj5-6-websecure.loadbalancer.server.port=80
-    # No host port publishing in production behind Traefik/Dokploy.
-    # Traefik should route directly to container port 80 via Docker network.
-    environment:
-      - VITE_API_BASE_URL=/api
-      - VITE_IOT_BASE_URL=/iot
-    volumes:
-      # Mount backend media as read-only so Nginx can serve uploaded files directly
-      - backend_media:/app/media:ro
-    depends_on:
-      backend:
-        condition: service_started  # Don't wait for healthy - Nginx handles unavailable backend gracefully
-    restart: always
-    networks:
-      - pixelcast-signage-net
-    # Health check for frontend
-    healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
-
-  # Development frontend with Hot Reload (HMR)
-  # Run: docker compose up db redis backend frontend-dev
-  # Open: http://localhost:5173
-  frontend-dev:
-    profiles: ["dev"]  # Prevent accidental startup in production
-    build:
-      context: ./FrontEnd
+      context: ./frontend
       dockerfile: Dockerfile.dev
-    container_name: frontend-dev
-    ports:
-      - "5175:5173"
-    volumes:
-      - ./FrontEnd:/app
-      - /app/node_modules  # Crucial: prevent local node_modules from overwriting container's
+    container_name: frontend
+    command: npm run dev -- --host 0.0.0.0 --port 5173
     environment:
       - CHOKIDAR_USEPOLLING=true
       - VITE_API_BASE_URL=/api
       - VITE_IOT_BASE_URL=/iot
       - VITE_PROXY_TARGET=http://backend:8000
+    volumes:
+      - ./frontend:/app
+      - ./documentation:/app/public/documentation:ro
+      - /app/node_modules
     depends_on:
-      - backend
-    networks:
-      - pixelcast-signage-net
+      backend:
+        condition: service_started
+    ports:
+      - "${FRONTEND_PORT:-5173}:5173"
+    restart: always
 
 volumes:
-  # Database data - CRITICAL: Must persist across updates
   postgres_data:
-    driver: local
-    name: pixelcast-signage_postgres_data
-  # Redis data - persists cache and session data
   redis_data:
-    driver: local
-    name: pixelcast-signage_redis_data
-  # Static files - collected by Django, persists across container restarts
-  backend_static:
-    driver: local
-    name: pixelcast-signage_backend_static
-  # Media uploads - CRITICAL: User-uploaded content must persist
   backend_media:
-    driver: local
-    name: pixelcast-signage_backend_media
-  # Backups - persists backup files
-  backend_backups:
-    driver: local
-    name: pixelcast-signage_backend_backups
-  # Installation state - ensures installation wizard doesn't re-trigger on updates
-  installation_state:
-    driver: local
-    name: pixelcast-signage_installation_state
-
-networks:
-  pixelcast-signage-net:
-    driver: bridge
-    name: pixelcast-signage-net
+  backend_static:

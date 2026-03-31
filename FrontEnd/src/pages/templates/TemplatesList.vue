@@ -250,6 +250,7 @@ import { useTemplatesStore } from '@/stores/templates'
 import { useScreensStore } from '@/stores/screens'
 import { useNotification } from '@/composables/useNotification'
 import { useDeleteConfirmation } from '@/composables/useDeleteConfirmation'
+import { normalizeApiError } from '@/utils/apiError'
 import {
   DocumentTextIcon,
   PlusIcon,
@@ -320,8 +321,8 @@ const handleDuplicate = async (template) => {
     // Refresh templates list
     await templatesStore.fetchTemplates()
   } catch (error) {
-    const errorMsg = error.response?.data?.detail || error.response?.data?.message || error.message || 'Failed to duplicate template'
-    notify.error(errorMsg)
+    const parsed = error.apiError || normalizeApiError(error)
+    notify.error(parsed.userMessage || 'Failed to duplicate template')
   }
 }
 
@@ -366,8 +367,8 @@ const handlePushToScreen = async (screen) => {
     // Refresh templates to update screen counts
     await templatesStore.fetchTemplates()
   } catch (error) {
-    const errorMsg = error.response?.data?.detail || error.response?.data?.message || error.message || 'Failed to push template to screen'
-    notify.error(errorMsg)
+    const parsed = error.apiError || normalizeApiError(error)
+    notify.error(parsed.userMessage || 'Failed to push template to screen')
   } finally {
     pushLoading.value = false
   }
@@ -392,7 +393,8 @@ const handleDelete = async (template) => {
     notify.success('Template deleted successfully')
   } catch (error) {
     if (error.message !== 'Delete cancelled') {
-      notify.error('Failed to delete template')
+      const parsed = error.apiError || normalizeApiError(error)
+      notify.error(parsed.userMessage || 'Failed to delete template')
     }
   }
 }
@@ -415,7 +417,8 @@ const handleSubmit = async () => {
       notify.success('Template updated')
       closeModal()
     } catch (error) {
-      notify.error('Operation failed')
+      const parsed = error.apiError || normalizeApiError(error)
+      notify.error(parsed.userMessage || 'Operation failed')
     }
   } else {
     // Create mode: Navigate to editor with query params

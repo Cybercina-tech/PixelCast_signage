@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { templatesAPI, layersAPI, widgetsAPI } from '../services/api'
 import { smartUpdateObject } from '../utils/deepCompare'
+import { normalizeApiError } from '../utils/apiError'
 
 export const useTemplatesStore = defineStore('templates', {
   state: () => ({
@@ -41,7 +42,7 @@ export const useTemplatesStore = defineStore('templates', {
         this.templates = response.data.results || response.data || []
         return response.data
       } catch (error) {
-        this.error = error.response?.data?.detail || error.response?.data?.message || error.message
+        this.error = normalizeApiError(error).userMessage
         throw error
       } finally {
         this.loading = false
@@ -60,7 +61,7 @@ export const useTemplatesStore = defineStore('templates', {
         }
         return response.data
       } catch (error) {
-        this.error = error.response?.data?.detail || error.response?.data?.message || error.message
+        this.error = normalizeApiError(error).userMessage
         throw error
       } finally {
         this.loading = false
@@ -74,7 +75,7 @@ export const useTemplatesStore = defineStore('templates', {
         this.templates.push(response.data)
         return response.data
       } catch (error) {
-        this.error = error.response?.data?.detail || error.response?.data?.message || error.message
+        this.error = normalizeApiError(error).userMessage
         throw error
       } finally {
         this.loading = false
@@ -109,7 +110,7 @@ export const useTemplatesStore = defineStore('templates', {
         
         return newTemplate
       } catch (error) {
-        this.error = error.response?.data?.detail || error.response?.data?.message || error.message
+        this.error = normalizeApiError(error).userMessage
         throw error
       } finally {
         this.loading = false
@@ -129,7 +130,7 @@ export const useTemplatesStore = defineStore('templates', {
         }
         return response.data
       } catch (error) {
-        this.error = error.response?.data?.detail || error.response?.data?.message || error.message
+        this.error = normalizeApiError(error).userMessage
         throw error
       } finally {
         this.loading = false
@@ -145,7 +146,7 @@ export const useTemplatesStore = defineStore('templates', {
           this.currentTemplate = null
         }
       } catch (error) {
-        this.error = error.response?.data?.detail || error.response?.data?.message || error.message
+        this.error = normalizeApiError(error).userMessage
         throw error
       } finally {
         this.loading = false
@@ -155,24 +156,14 @@ export const useTemplatesStore = defineStore('templates', {
       this.loading = true
       this.error = null
       try {
-        console.log(`DEBUG [activateOnScreen]: Starting activation - templateId: ${templateId}, screenId: ${screenId}, syncContent: ${syncContent}`)
-        
         const response = await templatesAPI.activateOnScreen(templateId, {
           screen_id: screenId,
           sync_content: syncContent,
         })
-        
-        // DEBUG: Log activation response
-        console.log('DEBUG [activateOnScreen]: Activation Response:', response.data)
-        console.log('DEBUG [activateOnScreen]: Response screen data:', response.data?.screen)
-        console.log('DEBUG [activateOnScreen]: Response screen.active_template:', response.data?.screen?.active_template)
-        
+
         // CRITICAL: Update screen in screens store immediately if response includes screen data
         // This ensures UI updates without waiting for next fetch
         if (response.data && response.data.screen) {
-          console.log('DEBUG [activateOnScreen]: Updating Screen Store with:', response.data.screen)
-          console.log('DEBUG [activateOnScreen]: Screen active_template in response:', response.data.screen.active_template)
-          
           // Import screens store to update screen data (lazy import to avoid circular dependency)
           const { useScreensStore } = await import('@/stores/screens')
           const screensStore = useScreensStore()
@@ -180,37 +171,25 @@ export const useTemplatesStore = defineStore('templates', {
           // Update screen in store with returned data
           const updatedScreen = response.data.screen
           const index = screensStore.screens.findIndex(s => s.id === screenId)
-          
-          console.log('DEBUG [activateOnScreen]: Screen index in store:', index)
-          console.log('DEBUG [activateOnScreen]: Current screen in store:', index !== -1 ? screensStore.screens[index] : 'NOT FOUND')
-          console.log('DEBUG [activateOnScreen]: Current screen.active_template in store:', index !== -1 ? screensStore.screens[index]?.active_template : 'N/A')
-          
+
           if (index !== -1) {
             // Use smart update to preserve references if unchanged
             const oldScreen = screensStore.screens[index]
             screensStore.screens[index] = smartUpdateObject(oldScreen, updatedScreen)
-            console.log('DEBUG [activateOnScreen]: Screen updated in store. New active_template:', screensStore.screens[index]?.active_template)
           } else {
             // Screen not in list, add it
             screensStore.screens.push(updatedScreen)
-            console.log('DEBUG [activateOnScreen]: Screen added to store')
           }
-          
+
           // Update currentScreen if it's the one being updated
           if (screensStore.currentScreen?.id === screenId) {
-            console.log('DEBUG [activateOnScreen]: Updating currentScreen')
-            console.log('DEBUG [activateOnScreen]: currentScreen.active_template BEFORE:', screensStore.currentScreen?.active_template)
             screensStore.currentScreen = smartUpdateObject(screensStore.currentScreen, updatedScreen)
-            console.log('DEBUG [activateOnScreen]: currentScreen.active_template AFTER:', screensStore.currentScreen?.active_template)
           }
-        } else {
-          console.warn('DEBUG [activateOnScreen]: Response does not include screen data!')
         }
         
         return response.data
       } catch (error) {
-        console.error('DEBUG [activateOnScreen]: Activation error:', error)
-        this.error = error.response?.data?.detail || error.response?.data?.message || error.message
+        this.error = normalizeApiError(error).userMessage
         throw error
       } finally {
         this.loading = false
@@ -228,7 +207,7 @@ export const useTemplatesStore = defineStore('templates', {
         this.layers = layers.filter(layer => layer.template === templateId || layer.template?.id === templateId)
         return response.data
       } catch (error) {
-        this.error = error.response?.data?.detail || error.response?.data?.message || error.message
+        this.error = normalizeApiError(error).userMessage
         throw error
       } finally {
         this.loading = false
@@ -254,7 +233,7 @@ export const useTemplatesStore = defineStore('templates', {
         }
         return response.data
       } catch (error) {
-        this.error = error.response?.data?.detail || error.response?.data?.message || error.message
+        this.error = normalizeApiError(error).userMessage
         throw error
       } finally {
         this.loading = false
@@ -271,7 +250,7 @@ export const useTemplatesStore = defineStore('templates', {
         }
         return response.data
       } catch (error) {
-        this.error = error.response?.data?.detail || error.response?.data?.message || error.message
+        this.error = normalizeApiError(error).userMessage
         throw error
       } finally {
         this.loading = false
@@ -284,7 +263,7 @@ export const useTemplatesStore = defineStore('templates', {
         await layersAPI.delete(id)
         this.layers = this.layers.filter(l => l.id !== id)
       } catch (error) {
-        this.error = error.response?.data?.detail || error.response?.data?.message || error.message
+        this.error = normalizeApiError(error).userMessage
         throw error
       } finally {
         this.loading = false
@@ -301,7 +280,7 @@ export const useTemplatesStore = defineStore('templates', {
         this.widgets = widgets.filter(widget => widget.layer === layerId || widget.layer?.id === layerId)
         return response.data
       } catch (error) {
-        this.error = error.response?.data?.detail || error.response?.data?.message || error.message
+        this.error = normalizeApiError(error).userMessage
         throw error
       } finally {
         this.loading = false
@@ -327,7 +306,7 @@ export const useTemplatesStore = defineStore('templates', {
         }
         return response.data
       } catch (error) {
-        this.error = error.response?.data?.detail || error.response?.data?.message || error.message
+        this.error = normalizeApiError(error).userMessage
         throw error
       } finally {
         this.loading = false
@@ -344,7 +323,7 @@ export const useTemplatesStore = defineStore('templates', {
         }
         return response.data
       } catch (error) {
-        this.error = error.response?.data?.detail || error.response?.data?.message || error.message
+        this.error = normalizeApiError(error).userMessage
         throw error
       } finally {
         this.loading = false
@@ -357,7 +336,7 @@ export const useTemplatesStore = defineStore('templates', {
         await widgetsAPI.delete(id)
         this.widgets = this.widgets.filter(w => w.id !== id)
       } catch (error) {
-        this.error = error.response?.data?.detail || error.response?.data?.message || error.message
+        this.error = normalizeApiError(error).userMessage
         throw error
       } finally {
         this.loading = false

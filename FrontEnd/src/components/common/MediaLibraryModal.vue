@@ -441,6 +441,7 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import { useContentStore } from '@/stores/content'
 import { useNotification } from '@/composables/useNotification'
+import { useDeleteConfirmation } from '@/composables/useDeleteConfirmation'
 import SmartMediaPreview from './SmartMediaPreview.vue'
 
 const props = defineProps({
@@ -463,6 +464,7 @@ const emit = defineEmits(['close', 'select'])
 
 const contentStore = useContentStore()
 const notify = useNotification()
+const { confirmDelete } = useDeleteConfirmation()
 
 // Tab state
 const activeTab = ref('gallery')
@@ -977,12 +979,21 @@ const selectUploadedFile = (file) => {
 
 // Handle delete content
 const handleDeleteContent = async (content) => {
-  if (!confirm(`Are you sure you want to delete "${content.name}"?`)) {
-    return
-  }
-
   try {
-    await contentStore.deleteContent(content.id)
+    await confirmDelete(
+      content.id,
+      async () => {
+        await contentStore.deleteContent(content.id)
+      },
+      {
+        title: 'Delete Media?',
+        message: 'This media will be permanently deleted from your library and cannot be recovered.',
+        itemName: content.name || 'Untitled media',
+        confirmText: 'Yes, Delete Media',
+        loadingText: 'Deleting media...'
+      }
+    )
+
     notify.success('Content deleted successfully')
     
     // Refresh gallery
@@ -993,6 +1004,7 @@ const handleDeleteContent = async (content) => {
       selectedContentId.value = null
     }
   } catch (error) {
+    if (error.message === 'Delete cancelled') return
     const errorMessage = error.response?.data?.detail || 
                          error.response?.data?.message || 
                          error.message || 

@@ -81,9 +81,11 @@ export const usePlayerStore = defineStore('player', {
       return this.activeScreenId
     },
 
-    resolveScreenId(screenId) {
+    resolveScreenId(screenId, options = {}) {
+      const { allowFallback = true } = options
       const normalized = this.normalizeScreenId(screenId)
       if (normalized) return normalized
+      if (!allowFallback) return null
       if (this.activeScreenId) return this.activeScreenId
       const legacyScreenId = this.normalizeScreenId(localStorage.getItem(STORAGE_KEYS.screenId))
       if (legacyScreenId) return legacyScreenId
@@ -111,9 +113,9 @@ export const usePlayerStore = defineStore('player', {
       playerAPI.setDeviceIdentity({ screenId: normalizedScreenId, deviceToken })
     },
 
-    loadDeviceIdentity(screenId = null) {
+    loadDeviceIdentity(screenId = null, options = {}) {
       this.migrateLegacyIdentity()
-      const resolvedScreenId = this.resolveScreenId(screenId)
+      const resolvedScreenId = this.resolveScreenId(screenId, options)
       if (!resolvedScreenId) return false
 
       const identities = this.getStoredIdentities()
@@ -130,17 +132,17 @@ export const usePlayerStore = defineStore('player', {
       return false
     },
 
-    hasDeviceIdentity(screenId = null) {
+    hasDeviceIdentity(screenId = null, options = {}) {
       this.migrateLegacyIdentity()
-      const resolvedScreenId = this.resolveScreenId(screenId)
+      const resolvedScreenId = this.resolveScreenId(screenId, options)
       if (!resolvedScreenId) return false
 
       const identities = this.getStoredIdentities()
       return !!identities[resolvedScreenId]
     },
 
-    clearDeviceIdentity(screenId = null) {
-      const resolvedScreenId = this.resolveScreenId(screenId)
+    clearDeviceIdentity(screenId = null, options = {}) {
+      const resolvedScreenId = this.resolveScreenId(screenId, options)
       if (resolvedScreenId) {
         const identities = this.getStoredIdentities()
         delete identities[resolvedScreenId]
@@ -179,14 +181,15 @@ export const usePlayerStore = defineStore('player', {
 
     // ── Initialization ─────────────────────────────────────────────
 
-    async initialize(screenId = null) {
+    async initialize(screenId = null, options = {}) {
+      const { allowFallback = true } = options
       try {
-        const resolvedScreenId = this.resolveScreenId(screenId)
+        const resolvedScreenId = this.resolveScreenId(screenId, { allowFallback })
         if (resolvedScreenId) {
           this.setActiveScreen(resolvedScreenId)
         }
 
-        if (!this.loadDeviceIdentity(this.activeScreenId)) {
+        if (!this.loadDeviceIdentity(this.activeScreenId, { allowFallback })) {
           const error = new Error('Screen not paired. Please pair your screen first.')
           error.code = 'SCREEN_NOT_PAIRED'
           error.screenId = this.activeScreenId

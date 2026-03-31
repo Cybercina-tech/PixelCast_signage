@@ -1,17 +1,7 @@
-# Development overrides: live-reload backend + bind-mount source.
-# Base compose already defines `frontend-dev` with ./FrontEnd:/app, CHOKIDAR_USEPOLLING, and 5173:5173.
-#
-# Usage:
-#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up db redis backend frontend-dev
-#
-# Open Vite at http://localhost:5173 (proxies /api to backend). Backend: http://localhost:8000
-#
-# Set PIXELCAST_SIGNAGE_INSTALLED=true in .env to skip the wizard (see BackEnd/setup/utils.py).
-
 services:
   backend:
     volumes:
-      - ./BackEnd:/app
+      - ./app:/app
     ports:
       - "8000:8000"
     command:
@@ -20,13 +10,18 @@ services:
       - python manage.py migrate --noinput && python manage.py runserver 0.0.0.0:8000
 
   frontend-dev:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: frontend-dev
     ports:
       - "5173:5173"
     volumes:
-      - ./FrontEnd:/app
+      - ./frontend:/app
       - /app/node_modules
     environment:
-      # Full block so merge does not drop base vars (CHOKIDAR, VITE_API_BASE_URL)
       CHOKIDAR_USEPOLLING: "true"
       VITE_API_BASE_URL: /api
       VITE_PROXY_TARGET: http://backend:8000
+    depends_on:
+      - backend

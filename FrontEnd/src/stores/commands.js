@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { commandsAPI } from '../services/api'
 import { smartUpdateArray, smartUpdateObject, deepEqual } from '../utils/deepCompare'
+import { normalizeApiError } from '../utils/apiError'
 
 export const useCommandsStore = defineStore('commands', {
   state: () => ({
@@ -54,7 +55,7 @@ export const useCommandsStore = defineStore('commands', {
         
         return response.data
       } catch (error) {
-        this.error = error.response?.data?.detail || error.response?.data?.message || error.message
+        this.error = normalizeApiError(error).userMessage
         throw error
       } finally {
         this.loading = false
@@ -80,7 +81,7 @@ export const useCommandsStore = defineStore('commands', {
         }
         return response.data
       } catch (error) {
-        this.error = error.response?.data?.detail || error.response?.data?.message || error.message
+        this.error = normalizeApiError(error).userMessage
         throw error
       } finally {
         this.loading = false
@@ -94,7 +95,7 @@ export const useCommandsStore = defineStore('commands', {
         this.commands.push(response.data)
         return response.data
       } catch (error) {
-        this.error = error.response?.data?.detail || error.response?.data?.message || error.message
+        this.error = normalizeApiError(error).userMessage
         throw error
       } finally {
         this.loading = false
@@ -120,7 +121,7 @@ export const useCommandsStore = defineStore('commands', {
         }
         return response.data
       } catch (error) {
-        this.error = error.response?.data?.detail || error.response?.data?.message || error.message
+        this.error = normalizeApiError(error).userMessage
         throw error
       } finally {
         this.loading = false
@@ -136,7 +137,7 @@ export const useCommandsStore = defineStore('commands', {
           this.currentCommand = null
         }
       } catch (error) {
-        this.error = error.response?.data?.detail || error.response?.data?.message || error.message
+        this.error = normalizeApiError(error).userMessage
         throw error
       } finally {
         this.loading = false
@@ -165,7 +166,7 @@ export const useCommandsStore = defineStore('commands', {
         }
         return response.data
       } catch (error) {
-        this.error = error.response?.data?.detail || error.response?.data?.message || error.message
+        this.error = normalizeApiError(error).userMessage
         throw error
       } finally {
         this.loading = false
@@ -186,7 +187,7 @@ export const useCommandsStore = defineStore('commands', {
         }
         return response.data
       } catch (error) {
-        this.error = error.response?.data?.detail || error.response?.data?.message || error.message
+        this.error = normalizeApiError(error).userMessage
         throw error
       } finally {
         this.loading = false
@@ -201,7 +202,7 @@ export const useCommandsStore = defineStore('commands', {
         const commands = response.data.commands || response.data.results || response.data || []
         return commands
       } catch (error) {
-        this.error = error.response?.data?.detail || error.response?.data?.message || error.message
+        this.error = normalizeApiError(error).userMessage
         throw error
       } finally {
         this.loading = false
@@ -214,7 +215,7 @@ export const useCommandsStore = defineStore('commands', {
         const response = await commandsAPI.status(params)
         return response.data
       } catch (error) {
-        this.error = error.response?.data?.detail || error.response?.data?.message || error.message
+        this.error = normalizeApiError(error).userMessage
         throw error
       } finally {
         this.loading = false

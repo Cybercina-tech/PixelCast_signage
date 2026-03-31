@@ -113,7 +113,8 @@
           <div class="card-base rounded-2xl p-6">
             <h2 class="text-lg font-semibold text-primary mb-4">Live Preview</h2>
             <VirtualMonitor
-              :active-template="screen.active_template"
+              ref="virtualMonitorRef"
+              :active-template="activeTemplatePreview"
               :is-online="isOnline"
               :loading="screenshotLoading"
               @take-screenshot="handleTakeScreenshot"
@@ -260,6 +261,9 @@
       <!-- Modals -->
       <Modal :show="showCommandModal" title="Send Command" @close="showCommandModal = false">
         <div class="space-y-4">
+          <div v-if="commandFormError" class="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">
+            {{ commandFormError }}
+          </div>
           <div>
             <label class="label-base block text-sm mb-1">Command Type</label>
             <select v-model="commandForm.type" required class="select-base w-full px-3 py-2 rounded-lg">
@@ -270,6 +274,7 @@
               <option value="sync_content">Sync Content</option>
               <option value="custom">Custom</option>
             </select>
+            <p v-if="commandFieldErrors.type" class="mt-1 text-xs text-red-400">{{ commandFieldErrors.type[0] }}</p>
           </div>
           <div>
             <label class="label-base block text-sm mb-1">Payload (JSON)</label>
@@ -279,6 +284,7 @@
               class="textarea-base w-full px-3 py-2 rounded-lg font-mono text-sm"
               placeholder='{"key": "value"}'
             ></textarea>
+            <p v-if="commandFieldErrors.payload" class="mt-1 text-xs text-red-400">{{ commandFieldErrors.payload[0] }}</p>
           </div>
           <div>
             <label class="label-base block text-sm mb-1">Priority</label>
@@ -290,6 +296,7 @@
               value="5"
               class="input-base w-full px-3 py-2 rounded-lg"
             />
+            <p v-if="commandFieldErrors.priority" class="mt-1 text-xs text-red-400">{{ commandFieldErrors.priority[0] }}</p>
           </div>
         </div>
         <template #footer>
@@ -304,6 +311,9 @@
 
       <Modal :show="showTemplateModal" title="Activate Template" @close="showTemplateModal = false">
         <div class="space-y-4">
+          <div v-if="templateFormError" class="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-300">
+            {{ templateFormError }}
+          </div>
           <div>
             <label class="label-base block text-sm mb-1">Template</label>
             <select v-model="templateForm.template_id" required class="select-base w-full px-3 py-2 rounded-lg">
@@ -312,12 +322,7 @@
                 {{ template.name }}
               </option>
             </select>
-          </div>
-          <div>
-            <label class="flex items-center">
-              <input v-model="templateForm.sync_content" type="checkbox" class="checkbox-base mr-2" />
-              <span class="text-sm text-primary dark:text-slate-300">Sync content automatically</span>
-            </label>
+            <p v-if="templateFieldErrors.template_id || templateFieldErrors.template" class="mt-1 text-xs text-red-400">{{ (templateFieldErrors.template_id || templateFieldErrors.template)[0] }}</p>
           </div>
         </div>
         <template #footer>
@@ -337,7 +342,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, nextTick, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { smartUpdateArray } from '@/utils/deepCompare'
 import { useScreensStore } from '@/stores/screens'
@@ -347,6 +352,7 @@ import { useLogsStore } from '@/stores/logs'
 import { screensAPI } from '@/services/api'
 import { useNotification } from '@/composables/useNotification'
 import { useDeleteConfirmation } from '@/composables/useDeleteConfirmation'
+import { normalizeApiError } from '@/utils/apiError'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import Modal from '@/components/common/Modal.vue'
 import DeleteConfirmation from '@/components/common/DeleteConfirmation.vue'
@@ -366,6 +372,14 @@ const { confirmDelete } = useDeleteConfirmation()
 const screen = computed(() => screensStore.currentScreen)
 const templates = computed(() => templatesStore.templates)
 const isOnline = computed(() => screensStore.getScreenStatus(screen.value) === 'online')
+const activeTemplateId = computed(() => screen.value?.active_template?.id || null)
+const activeTemplatePreview = computed(() => {
+  if (!activeTemplateId.value) return null
+  const fromList = templatesStore.templates.find(t => t.id === activeTemplateId.value)
+  if (fromList?.layers) return fromList
+  if (templatesStore.currentTemplate?.id === activeTemplateId.value) return templatesStore.currentTemplate
+  return screen.value?.active_template || null
+})
 const playerUrl = computed(() => {
   const screenId = screen.value?.id || getScreenId()
   if (!screenId) return ''
@@ -389,16 +403,20 @@ const editableName = ref('')
 const actionLoading = ref(false)
 const screenshotLoading = ref(false)
 const revokingToken = ref(false)
+const virtualMonitorRef = ref(null)
 
 const commandForm = ref({
   type: 'restart',
   payload: '{}',
   priority: 5,
 })
+const commandFormError = ref('')
+const templateFormError = ref('')
+const commandFieldErrors = ref({})
+const templateFieldErrors = ref({})
 
 const templateForm = ref({
   template_id: '',
-  sync_content: true,
 })
 
 // Combine pending and recent commands for timeline
@@ -466,6 +484,11 @@ const cancelEditName = () => {
   editableName.value = ''
 }
 
+const getErrorMessage = (error, fallback) => {
+  const parsed = error?.apiError || normalizeApiError(error)
+  return parsed.userMessage || fallback
+}
+
 const handleSaveName = async () => {
   if (!editableName.value.trim()) {
     cancelEditName()
@@ -477,12 +500,13 @@ const handleSaveName = async () => {
     editingName.value = false
     notify.success('Screen name updated')
   } catch (error) {
-    const errorMsg = error.response?.data?.detail || error.response?.data?.message || error.message || 'Failed to update name'
-    notify.error(errorMsg)
+    notify.error(getErrorMessage(error, 'Failed to update name'))
   }
 }
 
 const handleSendCommand = async () => {
+  commandFormError.value = ''
+  commandFieldErrors.value = {}
   try {
     let payload = {}
     try {
@@ -503,28 +527,41 @@ const handleSendCommand = async () => {
     commandForm.value = { type: 'restart', payload: '{}', priority: 5 }
     await loadCommands()
   } catch (error) {
-    const errorMsg = error.response?.data?.detail || error.response?.data?.message || error.message || 'Failed to send command'
-    notify.error(errorMsg)
+    const parsed = error.apiError || normalizeApiError(error)
+    commandFormError.value = parsed.formError
+    commandFieldErrors.value = parsed.fieldErrors || {}
+    if (!parsed.isValidation || !Object.keys(commandFieldErrors.value).length) {
+      notify.error(parsed.userMessage || 'Failed to send command')
+    }
   }
 }
 
 const handleActivateTemplate = async () => {
+  templateFormError.value = ''
+  templateFieldErrors.value = {}
   try {
     await templatesStore.activateOnScreen(
       templateForm.value.template_id,
       screen.value.id,
-      templateForm.value.sync_content
+      true
     )
     
     notify.success('Template activated successfully')
     showTemplateModal.value = false
-    templateForm.value = { template_id: '', sync_content: true }
+    templateForm.value = { template_id: '' }
     
     // Refresh screen data
     await screensStore.fetchScreen(screen.value.id)
+    if (activeTemplateId.value) {
+      await templatesStore.fetchTemplate(activeTemplateId.value)
+    }
   } catch (error) {
-    const errorMsg = error.response?.data?.detail || error.response?.data?.message || error.message || 'Failed to activate template'
-    notify.error(errorMsg)
+    const parsed = error.apiError || normalizeApiError(error)
+    templateFormError.value = parsed.formError
+    templateFieldErrors.value = parsed.fieldErrors || {}
+    if (!parsed.isValidation || !Object.keys(templateFieldErrors.value).length) {
+      notify.error(parsed.userMessage || 'Failed to activate template')
+    }
   }
 }
 
@@ -540,8 +577,7 @@ const handleRefresh = async () => {
     notify.success('Refresh command sent')
     await loadCommands()
   } catch (error) {
-    const errorMsg = error.response?.data?.detail || error.response?.data?.message || error.message || 'Failed to send refresh command'
-    notify.error(errorMsg)
+    notify.error(getErrorMessage(error, 'Failed to send refresh command'))
   } finally {
     actionLoading.value = false
   }
@@ -559,8 +595,7 @@ const handleReboot = async () => {
     notify.success('Reboot command sent')
     await loadCommands()
   } catch (error) {
-    const errorMsg = error.response?.data?.detail || error.response?.data?.message || error.message || 'Failed to send reboot command'
-    notify.error(errorMsg)
+    notify.error(getErrorMessage(error, 'Failed to send reboot command'))
   } finally {
     actionLoading.value = false
   }
@@ -572,14 +607,16 @@ const handleIdentify = async () => {
     await commandsStore.createCommand({
       screen_id: screen.value.id,
       type: 'display_message',
-      payload: { message: 'This screen is being identified' },
+      payload: {
+        message: 'This screen is being identified',
+        duration: 15,
+      },
       priority: 7,
     })
     notify.success('Identify command sent')
     await loadCommands()
   } catch (error) {
-    const errorMsg = error.response?.data?.detail || error.response?.data?.message || error.message || 'Failed to send identify command'
-    notify.error(errorMsg)
+    notify.error(getErrorMessage(error, 'Failed to send identify command'))
   } finally {
     actionLoading.value = false
   }
@@ -588,17 +625,58 @@ const handleIdentify = async () => {
 const handleTakeScreenshot = async () => {
   screenshotLoading.value = true
   try {
-    await commandsStore.createCommand({
-      screen_id: screen.value.id,
-      type: 'custom',
-      payload: { action: 'screenshot' },
-      priority: 6,
+    await nextTick()
+    if (document.fonts?.ready) {
+      await document.fonts.ready
+    }
+
+    const captureElement = virtualMonitorRef.value?.getCaptureElement?.()
+    if (!captureElement) {
+      throw new Error('Preview surface not available for capture')
+    }
+
+    const html2canvas = window.html2canvas
+    if (typeof html2canvas !== 'function') {
+      throw new Error('Screenshot library is not loaded yet')
+    }
+
+    const canvas = await html2canvas(captureElement, {
+      backgroundColor: '#000000',
+      useCORS: true,
+      allowTaint: false,
+      scale: Math.max(2, window.devicePixelRatio || 1),
+      logging: false,
     })
-    notify.success('Screenshot command sent')
-    await loadCommands()
+
+    const blob = await new Promise((resolve, reject) => {
+      canvas.toBlob((outputBlob) => {
+        if (!outputBlob) {
+          reject(new Error('Failed to generate image blob'))
+          return
+        }
+        resolve(outputBlob)
+      }, 'image/png', 1)
+    })
+
+    const safeName = (screen.value?.name || `screen-${screen.value?.id || 'preview'}`)
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '') || 'screen-preview'
+    const fileName = `${safeName}-${new Date().toISOString().replace(/[:.]/g, '-')}.png`
+
+    const downloadUrl = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = downloadUrl
+    link.download = fileName
+    link.rel = 'noopener'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(downloadUrl)
+
+    notify.success('Screenshot captured and downloaded')
   } catch (error) {
-    const errorMsg = error.response?.data?.detail || error.response?.data?.message || error.message || 'Failed to send screenshot command'
-    notify.error(errorMsg)
+    notify.error(getErrorMessage(error, 'Failed to capture screenshot'))
   } finally {
     screenshotLoading.value = false
   }
@@ -613,8 +691,7 @@ const handleRevokeToken = async () => {
     notify.success('Device token revoked. The TV will return to pairing mode.')
     await loadScreenData()
   } catch (error) {
-    const msg = error.response?.data?.error || error.message || 'Failed to revoke token'
-    notify.error(msg)
+    notify.error(getErrorMessage(error, 'Failed to revoke token'))
   } finally {
     revokingToken.value = false
   }
@@ -695,6 +772,9 @@ const loadScreenData = async () => {
   try {
     await screensStore.fetchScreen(screenId)
     await templatesStore.fetchTemplates()
+    if (screensStore.currentScreen?.active_template?.id) {
+      await templatesStore.fetchTemplate(screensStore.currentScreen.active_template.id)
+    }
     await loadCommands()
     await loadLogs()
   } catch (error) {
@@ -729,6 +809,15 @@ watch(() => route.params.id, async (newId) => {
     startPolling()
   }
 }, { immediate: false })
+
+watch(activeTemplateId, async (newTemplateId, oldTemplateId) => {
+  if (!newTemplateId || newTemplateId === oldTemplateId) return
+  try {
+    await templatesStore.fetchTemplate(newTemplateId)
+  } catch (error) {
+    console.error('Failed to fetch active template preview:', error)
+  }
+})
 
 onMounted(async () => {
   await loadScreenData()

@@ -9,7 +9,7 @@
     <div v-else class="template-editor h-screen w-full flex flex-col bg-gray-900 text-white overflow-hidden">
       <!-- Top Toolbar -->
       <div class="flex items-center justify-between px-4 py-3 bg-card border-b border-border-color">
-        <div class="flex items-center gap-4">
+        <div class="flex items-center gap-3">
           <button
             @click="goBack"
             class="btn-outline px-3 py-2 active:scale-95 rounded-lg text-sm font-medium transition-all duration-400 flex items-center gap-2"
@@ -30,9 +30,17 @@
           </button>
           <button
             @click="exportJSON"
-            class="btn-success px-4 py-2 active:scale-95 rounded-lg text-sm font-medium transition-all duration-400"
+            class="btn-outline px-4 py-2 active:scale-95 rounded-lg text-sm font-medium transition-all duration-400"
           >
             Export JSON
+          </button>
+          <button
+            @click="deleteSelectedWidget"
+            :disabled="!selectedWidgetId"
+            class="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-400 border border-red-500/60 text-red-300 hover:bg-red-500/10 disabled:opacity-40 disabled:cursor-not-allowed"
+            title="Delete selected object"
+          >
+            Delete Object
           </button>
           <button
             v-if="templateId"
@@ -48,181 +56,107 @@
           </button>
         </div>
         <div class="flex items-center gap-2 text-sm text-muted">
-          <span>Canvas: {{ canvasWidth }}×{{ canvasHeight }}</span>
-          <span>|</span>
-          <span>Scale: {{ Math.round(scale * 100) }}%</span>
-          <span class="text-xs opacity-70">(Auto-fit)</span>
+          <button
+            @click="leftPanelCollapsed = !leftPanelCollapsed"
+            class="btn-outline px-2 py-1 rounded text-xs"
+            :title="leftPanelCollapsed ? 'Expand widget panel' : 'Collapse widget panel'"
+          >
+            {{ leftPanelCollapsed ? 'Show Tools' : 'Hide Tools' }}
+          </button>
+          <button
+            @click="rightPanelCollapsed = !rightPanelCollapsed"
+            class="btn-outline px-2 py-1 rounded text-xs"
+            :title="rightPanelCollapsed ? 'Expand inspector panel' : 'Collapse inspector panel'"
+          >
+            {{ rightPanelCollapsed ? 'Show Inspector' : 'Hide Inspector' }}
+          </button>
         </div>
       </div>
 
       <!-- Main Editor Area -->
       <div class="flex-1 flex overflow-hidden">
         <!-- Left Sidebar: Widget Library -->
-        <div class="hidden lg:block w-64 bg-card border-r border-border-color overflow-y-auto custom-scrollbar scroll-container">
+        <div
+          class="hidden lg:block bg-card border-r border-border-color overflow-y-auto custom-scrollbar scroll-container transition-all duration-200"
+          :class="leftPanelCollapsed ? 'w-16' : 'w-56'"
+        >
           <div class="bg-card border-b border-border-color px-4 py-3 sticky top-0 z-10 backdrop-blur-sm">
-            <h2 class="text-lg font-semibold text-primary">Widget Library</h2>
+            <h2 v-if="!leftPanelCollapsed" class="text-lg font-semibold text-primary">Widget Library</h2>
+            <h2 v-else class="text-xs font-semibold text-primary uppercase tracking-wide">Tools</h2>
           </div>
-          <div class="p-4">
+          <div class="p-2" :class="leftPanelCollapsed ? 'space-y-1' : 'p-4'">
             <div class="space-y-2">
               <button
                 @click="addWidget('text')"
                 class="w-full px-4 py-3 bg-card hover:bg-card active:scale-95 rounded-lg text-left text-primary transition-all duration-400 flex items-center gap-2 font-medium border border-border-color hover:border-accent-color/50"
                 style="--accent-color: var(--accent-color);"
+                :title="leftPanelCollapsed ? 'Add Text' : ''"
               >
                 <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7" />
                 </svg>
-                <span>Add Text</span>
+                <span v-if="!leftPanelCollapsed">Add Text</span>
               </button>
               <button
                 @click="addWidget('image')"
                 class="w-full px-4 py-3 bg-gray-700 hover:bg-gray-600 active:scale-95 rounded-lg text-left text-white transition-all duration-200 flex items-center gap-2 font-medium"
+                :title="leftPanelCollapsed ? 'Add Image' : ''"
               >
                 <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
-                <span>Add Image</span>
+                <span v-if="!leftPanelCollapsed">Add Image</span>
               </button>
               <button
                 @click="addWidget('video')"
                 class="w-full px-4 py-3 bg-gray-700 hover:bg-gray-600 active:scale-95 rounded-lg text-left text-white transition-all duration-200 flex items-center gap-2 font-medium"
+                :title="leftPanelCollapsed ? 'Add Video' : ''"
               >
                 <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                 </svg>
-                <span>Add Video</span>
+                <span v-if="!leftPanelCollapsed">Add Video</span>
               </button>
               <button
                 @click="addWidget('clock')"
                 class="w-full px-4 py-3 bg-gray-700 hover:bg-gray-600 active:scale-95 rounded-lg text-left text-white transition-all duration-200 flex items-center gap-2 font-medium"
+                :title="leftPanelCollapsed ? 'Add Clock' : ''"
               >
                 <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                <span>Add Clock</span>
+                <span v-if="!leftPanelCollapsed">Add Clock</span>
               </button>
               <button
                 @click="addWidget('date')"
                 class="w-full px-4 py-3 bg-gray-700 hover:bg-gray-600 active:scale-95 rounded-lg text-left text-white transition-all duration-200 flex items-center gap-2 font-medium"
+                :title="leftPanelCollapsed ? 'Add Date' : ''"
               >
                 <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
-                <span>Add Date</span>
+                <span v-if="!leftPanelCollapsed">Add Date</span>
               </button>
               <button
                 @click="addWidget('webview')"
                 class="w-full px-4 py-3 bg-gray-700 hover:bg-gray-600 active:scale-95 rounded-lg text-left text-white transition-all duration-200 flex items-center gap-2 font-medium"
+                :title="leftPanelCollapsed ? 'Add Webview' : ''"
               >
                 <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12H3m0 0l4-4m-4 4l4 4m14-4l-4-4m4 4l-4 4" />
                 </svg>
-                <span>Add Webview</span>
+                <span v-if="!leftPanelCollapsed">Add Webview</span>
               </button>
               <button
                 @click="addWidget('chart')"
                 class="w-full px-4 py-3 bg-gray-700 hover:bg-gray-600 active:scale-95 rounded-lg text-left text-white transition-all duration-200 flex items-center gap-2 font-medium"
+                :title="leftPanelCollapsed ? 'Add Chart' : ''"
               >
                 <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3v18h18M8 13l3-3 3 2 4-5" />
                 </svg>
-                <span>Add Chart</span>
+                <span v-if="!leftPanelCollapsed">Add Chart</span>
               </button>
-            </div>
-
-            <!-- Widget List (Layers) -->
-            <div class="mt-6">
-              <h3 class="text-sm font-semibold mb-3 text-gray-400 uppercase tracking-wide">Layers ({{ widgets.length }})</h3>
-              <div v-if="widgets.length === 0" class="text-center py-8">
-                <svg class="w-12 h-12 mx-auto text-gray-600 mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-                <p class="text-sm text-gray-400">No widgets yet</p>
-                <p class="text-xs text-gray-500 mt-1">Add widgets to get started</p>
-              </div>
-              <div v-else class="space-y-2" ref="layersList">
-                <div
-                  v-for="widget in sortedWidgetsByZIndex"
-                  :key="widget.id"
-                  :data-widget-id="widget.id"
-                  :draggable="true"
-                  @dragstart="handleDragStart($event, widget.id)"
-                  @dragover.prevent="handleDragOver($event)"
-                  @drop="handleDrop($event, widget.id)"
-                  @dragenter.prevent
-                  @click="selectWidget(widget.id)"
-                  :class="[
-                    'px-3 py-2.5 rounded-lg cursor-pointer transition-all duration-200 text-sm border',
-                    selectedWidgetId === widget.id
-                      ? 'bg-accent-color text-white border-accent-color shadow-lg'
-                      : 'bg-card hover:bg-card border-border-color text-primary',
-                    'dark:bg-gray-700/50 dark:hover:bg-gray-700 dark:border-gray-600 dark:text-gray-300',
-                    draggingWidgetId === widget.id ? 'opacity-50' : '',
-                    dragOverWidgetId === widget.id ? 'ring-2 ring-blue-400' : ''
-                  ]"
-                >
-                  <div class="flex items-center justify-between gap-2">
-                    <div class="flex items-center gap-2 flex-1 min-w-0">
-                      <!-- Drag Handle -->
-                      <div class="cursor-move flex-shrink-0 text-gray-400 hover:text-gray-300" title="Drag to reorder">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16" />
-                        </svg>
-                      </div>
-                      <!-- Visibility Icon (Eye) -->
-                      <button
-                        @click.stop="toggleWidgetVisibility(widget.id)"
-                        :class="[
-                          'transition-colors duration-200 flex-shrink-0',
-                          widget.visible !== false ? 'text-gray-400 hover:text-gray-300' : 'text-gray-600 opacity-50'
-                        ]"
-                        :title="widget.visible !== false ? 'Hide Widget' : 'Show Widget'"
-                      >
-                        <svg v-if="widget.visible !== false" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                        </svg>
-                        <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.29 3.29m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.736m-7.101 2.101l-3.29-3.29" />
-                        </svg>
-                      </button>
-                      <!-- Widget Name (Editable) -->
-                      <span
-                        v-if="editingWidgetId !== widget.id"
-                        @dblclick.stop="startEditingWidgetName(widget.id)"
-                        class="font-medium truncate cursor-text"
-                        :title="widget.visible === false ? 'Hidden' : 'Double-click to rename'"
-                      >
-                        {{ widget.name }}
-                      </span>
-                      <input
-                        v-else
-                        v-model="editingWidgetName"
-                        @blur="finishEditingWidgetName(widget.id)"
-                        @keyup.enter="finishEditingWidgetName(widget.id)"
-                        @keyup.esc="cancelEditingWidgetName"
-                        class="font-medium bg-gray-800 border border-blue-500 rounded px-1 py-0.5 text-sm flex-1 min-w-0"
-                        @click.stop
-                        ref="widgetNameInput"
-                      />
-                      <span class="text-xs text-gray-400 flex-shrink-0 ml-auto">Z:{{ widget.zIndex }}</span>
-                    </div>
-                    <button
-                      @click.stop="deleteWidget(widget.id)"
-                      class="text-red-400 hover:text-red-300 active:scale-95 transition-all duration-200 flex-shrink-0 ml-2"
-                      title="Delete Widget"
-                    >
-                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                    </button>
-                  </div>
-                  <div class="text-xs text-gray-400 mt-1.5 flex items-center gap-2">
-                    <span class="px-1.5 py-0.5 bg-gray-600/50 rounded text-[10px] uppercase">{{ widget.type }}</span>
-                    <span class="text-gray-500">{{ Math.round(widget.width) }}×{{ Math.round(widget.height) }}</span>
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
         </div>
@@ -231,7 +165,7 @@
         <div class="flex-1 flex flex-col bg-gray-900 overflow-hidden">
           <div
             ref="canvasContainer"
-            class="flex-1 overflow-hidden bg-gray-700 flex items-center justify-center"
+            class="relative flex-1 overflow-hidden bg-gray-700 flex items-center justify-center"
             @wheel.prevent="handleWheel"
           >
             <!-- Monitor Frame (Wall-Mounted Display) -->
@@ -313,8 +247,10 @@
                   :throttleDrag="0"
                   :throttleResize="1"
                   :throttleRotate="0"
+                  @dragStart="handleDragMoveableStart"
                   @drag="handleDrag"
                   @dragEnd="handleDragEnd"
+                  @resizeStart="handleResizeStart"
                   @resize="handleResize"
                   @resizeEnd="handleResizeEnd"
                   @rotate="handleRotate"
@@ -322,17 +258,45 @@
                 />
               </div>
             </div>
+            <div class="absolute bottom-4 right-4 z-20 flex items-center gap-2 rounded-lg border border-border-color bg-card/95 px-3 py-2 text-xs text-muted">
+              <span>{{ canvasWidth }}×{{ canvasHeight }}</span>
+              <span>|</span>
+              <button class="btn-outline px-2 py-1 rounded" @click="zoomOut">-</button>
+              <span class="w-10 text-center">{{ Math.round(scale * 100) }}%</span>
+              <button class="btn-outline px-2 py-1 rounded" @click="zoomIn">+</button>
+              <button class="btn-outline px-2 py-1 rounded" @click="calculateScale">Fit</button>
+            </div>
           </div>
         </div>
 
         <!-- Right Sidebar: Properties Panel -->
-        <div class="hidden lg:block w-80 bg-card border-l border-border-color overflow-y-auto custom-scrollbar scroll-container">
+        <div
+          class="hidden lg:block bg-card border-l border-border-color overflow-y-auto custom-scrollbar scroll-container transition-all duration-200"
+          :class="rightPanelCollapsed ? 'w-14' : 'w-80'"
+        >
           <div class="bg-card border-b border-border-color px-4 py-3 sticky top-0 z-10 backdrop-blur-sm">
-            <h2 class="text-lg font-semibold text-primary">Properties</h2>
+            <h2 v-if="!rightPanelCollapsed" class="text-lg font-semibold text-primary">Inspector</h2>
+            <h2 v-else class="text-xs font-semibold text-primary uppercase tracking-wide">Panel</h2>
           </div>
-          <div class="p-4">
-            
-            <div v-if="selectedWidget" class="space-y-6">
+          <div v-if="!rightPanelCollapsed" class="p-4">
+            <div class="mb-4 grid grid-cols-2 rounded-lg bg-gray-800/50 p-1">
+              <button
+                @click="rightPanelTab = 'properties'"
+                :class="rightPanelTab === 'properties' ? 'bg-accent-color text-white' : 'text-muted hover:text-primary'"
+                class="rounded-md px-3 py-1.5 text-xs font-medium transition-colors"
+              >
+                Properties
+              </button>
+              <button
+                @click="rightPanelTab = 'layers'"
+                :class="rightPanelTab === 'layers' ? 'bg-accent-color text-white' : 'text-muted hover:text-primary'"
+                class="rounded-md px-3 py-1.5 text-xs font-medium transition-colors"
+              >
+                Layers
+              </button>
+            </div>
+
+            <div v-if="rightPanelTab === 'properties' && selectedWidget" class="space-y-6">
               <!-- Common Properties -->
               <div>
                 <h3 class="text-sm font-semibold mb-3 text-muted uppercase">Position & Size</h3>
@@ -429,12 +393,25 @@
                   </div>
                   <div>
                     <label class="block text-xs font-medium text-gray-400 mb-1.5">Font Size (px)</label>
-                    <input
-                      v-model="selectedWidget.style.fontSize"
-                      type="text"
-                      class="w-full px-3 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
-                      @input="updateWidgetStyle('fontSize', $event.target.value)"
-                    />
+                    <div class="grid grid-cols-[1fr_auto] gap-2 items-center">
+                      <input
+                        type="range"
+                        min="8"
+                        max="240"
+                        step="1"
+                        :value="getFontSizeNumber(selectedWidget.style?.fontSize, 24)"
+                        class="w-full"
+                        @input="updateWidgetStyle('fontSize', `${$event.target.value}px`)"
+                      />
+                      <input
+                        type="number"
+                        min="8"
+                        max="240"
+                        :value="getFontSizeNumber(selectedWidget.style?.fontSize, 24)"
+                        class="input-base w-20 px-2 py-1 text-sm"
+                        @input="updateWidgetStyle('fontSize', `${$event.target.value || 24}px`)"
+                      />
+                    </div>
                   </div>
                   <div>
                     <label class="block text-xs font-medium text-gray-400 mb-1.5">Color</label>
@@ -443,6 +420,15 @@
                       type="color"
                       class="w-full h-10 bg-slate-800/50 border border-slate-700 rounded-lg cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
                       @input="updateWidgetStyle('color', $event.target.value)"
+                    />
+                  </div>
+                  <div>
+                    <label class="block text-xs font-medium text-gray-400 mb-1.5">Background Color</label>
+                    <input
+                      :value="getBackgroundHex(selectedWidget.style?.backgroundColor, '#000000')"
+                      type="color"
+                      class="w-full h-10 bg-slate-800/50 border border-slate-700 rounded-lg cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                      @input="updateWidgetStyle('backgroundColor', $event.target.value)"
                     />
                   </div>
                   <div>
@@ -457,15 +443,6 @@
                       <option value="right">Right</option>
                       <option value="justify">Justify</option>
                     </select>
-                  </div>
-                  <div>
-                    <label class="block text-xs text-gray-400 mb-1">Background Color</label>
-                    <input
-                      v-model="selectedWidget.style.backgroundColor"
-                      type="color"
-                      class="w-full h-10 bg-gray-700 border border-gray-600 rounded cursor-pointer"
-                      @input="updateWidgetStyle('backgroundColor', $event.target.value)"
-                    />
                   </div>
                 </div>
               </div>
@@ -556,6 +533,89 @@
                       @input="updateWidgetProperty('content', $event.target.value)"
                     />
                   </div>
+                  <div v-if="selectedWidget.type === 'clock'">
+                    <label class="block text-xs font-medium text-gray-400 mb-1.5">Time Zone</label>
+                    <select
+                      :value="selectedWidget.style?.timeZone || defaultTimeZone"
+                      class="select-base w-full px-3 py-2 text-sm"
+                      @change="updateWidgetStyle('timeZone', $event.target.value)"
+                    >
+                      <option
+                        v-for="zone in worldTimeZones"
+                        :key="zone.value"
+                        :value="zone.value"
+                      >
+                        {{ zone.label }}
+                      </option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="block text-xs font-medium text-gray-400 mb-1.5">Font Size (px)</label>
+                    <div class="grid grid-cols-[1fr_auto] gap-2 items-center">
+                      <input
+                        type="range"
+                        min="12"
+                        max="220"
+                        step="1"
+                        :value="getFontSizeNumber(selectedWidget.style?.fontSize, selectedWidget.type === 'clock' ? 56 : 40)"
+                        class="w-full"
+                        @input="updateWidgetStyle('fontSize', `${$event.target.value}px`)"
+                      />
+                      <input
+                        type="number"
+                        min="12"
+                        max="220"
+                        :value="getFontSizeNumber(selectedWidget.style?.fontSize, selectedWidget.type === 'clock' ? 56 : 40)"
+                        class="input-base w-20 px-2 py-1 text-sm"
+                        @input="updateWidgetStyle('fontSize', `${$event.target.value || (selectedWidget.type === 'clock' ? 56 : 40)}px`)"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label class="block text-xs font-medium text-gray-400 mb-1.5">Text Color</label>
+                    <input
+                      :value="selectedWidget.style?.color || '#ffffff'"
+                      type="color"
+                      class="w-full h-10 bg-slate-800/50 border border-slate-700 rounded-lg cursor-pointer"
+                      @input="updateWidgetStyle('color', $event.target.value)"
+                    />
+                  </div>
+                  <div>
+                    <label class="block text-xs font-medium text-gray-400 mb-1.5">Background Color</label>
+                    <input
+                      :value="getBackgroundHex(selectedWidget.style?.backgroundColor, '#000000')"
+                      type="color"
+                      class="w-full h-10 bg-slate-800/50 border border-slate-700 rounded-lg cursor-pointer"
+                      @input="updateWidgetStyle('backgroundColor', $event.target.value)"
+                    />
+                  </div>
+                  <div>
+                    <label class="block text-xs font-medium text-gray-400 mb-1.5">Font Family</label>
+                    <select
+                      :value="selectedWidget.style?.fontFamily || 'Arial, sans-serif'"
+                      class="select-base w-full px-3 py-2 text-sm"
+                      @change="updateWidgetStyle('fontFamily', $event.target.value)"
+                    >
+                      <option value="Arial, sans-serif">Arial</option>
+                      <option value="Helvetica, sans-serif">Helvetica</option>
+                      <option value="'Segoe UI', sans-serif">Segoe UI</option>
+                      <option value="Roboto, sans-serif">Roboto</option>
+                      <option value="Verdana, sans-serif">Verdana</option>
+                      <option value="Georgia, serif">Georgia</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="block text-xs font-medium text-gray-400 mb-1.5">Text Align</label>
+                    <select
+                      :value="selectedWidget.style?.textAlign || 'center'"
+                      class="select-base w-full px-3 py-2 text-sm"
+                      @change="updateWidgetStyle('textAlign', $event.target.value)"
+                    >
+                      <option value="left">Left</option>
+                      <option value="center">Center</option>
+                      <option value="right">Right</option>
+                    </select>
+                  </div>
                 </div>
               </div>
 
@@ -576,23 +636,14 @@
               </div>
 
               <div v-if="selectedWidget.type === 'chart'">
-                <h3 class="text-sm font-semibold mb-3 text-gray-400 uppercase">Chart Properties</h3>
-                <div class="space-y-3">
-                  <div>
-                    <label class="block text-xs font-medium text-gray-400 mb-1.5">Chart Config (JSON)</label>
-                    <textarea
-                      v-model="selectedWidget.content"
-                      rows="8"
-                      placeholder='{"type":"bar","data":{"labels":["A","B"],"datasets":[{"label":"Series","data":[1,2]}]}}'
-                      class="w-full px-3 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 font-mono"
-                      @input="updateWidgetProperty('content', $event.target.value)"
-                    />
-                  </div>
-                </div>
+                <ChartEditorPanel
+                  :widget="selectedWidget"
+                  @update="handleChartWidgetUpdate"
+                />
               </div>
             </div>
 
-            <div v-else class="text-center py-12">
+            <div v-else-if="rightPanelTab === 'properties'" class="text-center py-12">
               <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-700/50 mb-4">
                 <svg class="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -600,6 +651,77 @@
               </div>
               <h3 class="text-sm font-medium text-slate-300 mb-2">No widget selected</h3>
               <p class="text-xs text-slate-400">Select a widget from the canvas to edit its properties</p>
+            </div>
+
+            <div v-if="rightPanelTab === 'layers'">
+              <h3 class="text-sm font-semibold mb-3 text-gray-400 uppercase tracking-wide">Layers ({{ widgets.length }})</h3>
+              <div v-if="widgets.length === 0" class="text-center py-8">
+                <svg class="w-12 h-12 mx-auto text-gray-600 mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <p class="text-sm text-gray-400">No widgets yet</p>
+                <p class="text-xs text-gray-500 mt-1">Add widgets to get started</p>
+              </div>
+              <div v-else class="space-y-2">
+                <div
+                  v-for="widget in sortedWidgetsByZIndex"
+                  :key="widget.id"
+                  :draggable="true"
+                  @dragstart="handleDragStart($event, widget.id)"
+                  @dragover.prevent="handleDragOver($event)"
+                  @drop="handleDrop($event, widget.id)"
+                  @dragenter.prevent
+                  @click="selectWidget(widget.id)"
+                  :class="[
+                    'px-3 py-2.5 rounded-lg cursor-pointer transition-all duration-200 text-sm border',
+                    selectedWidgetId === widget.id ? 'bg-accent-color text-white border-accent-color shadow-lg' : 'bg-card hover:bg-card border-border-color text-primary',
+                    draggingWidgetId === widget.id ? 'opacity-50' : '',
+                    dragOverWidgetId === widget.id ? 'ring-2 ring-blue-400' : ''
+                  ]"
+                >
+                  <div class="flex items-center justify-between gap-2">
+                    <div class="flex items-center gap-2 flex-1 min-w-0">
+                      <button
+                        @click.stop="toggleWidgetVisibility(widget.id)"
+                        :class="[
+                          'transition-colors duration-200 flex-shrink-0',
+                          widget.visible !== false ? 'text-gray-400 hover:text-gray-300' : 'text-gray-600 opacity-50'
+                        ]"
+                        :title="widget.visible !== false ? 'Hide Widget' : 'Show Widget'"
+                      >
+                        <svg v-if="widget.visible !== false" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                        <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.29 3.29m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.736m-7.101 2.101l-3.29-3.29" />
+                        </svg>
+                      </button>
+                      <span v-if="editingWidgetId !== widget.id" @dblclick.stop="startEditingWidgetName(widget.id)" class="font-medium truncate cursor-text">{{ widget.name }}</span>
+                      <input
+                        v-else
+                        v-model="editingWidgetName"
+                        @blur="finishEditingWidgetName(widget.id)"
+                        @keyup.enter="finishEditingWidgetName(widget.id)"
+                        @keyup.esc="cancelEditingWidgetName"
+                        class="font-medium bg-gray-800 border border-blue-500 rounded px-1 py-0.5 text-sm flex-1 min-w-0"
+                        @click.stop
+                        ref="widgetNameInput"
+                      />
+                      <span class="text-xs text-gray-400 flex-shrink-0 ml-auto">Z:{{ widget.zIndex }}</span>
+                    </div>
+                    <button @click.stop="deleteWidget(widget.id)" class="text-red-400 hover:text-red-300 active:scale-95 transition-all duration-200 flex-shrink-0 ml-2" title="Delete Widget">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  </div>
+                  <div class="text-xs text-gray-400 mt-1.5 flex items-center gap-2">
+                    <span class="px-1.5 py-0.5 bg-gray-600/50 rounded text-[10px] uppercase">{{ widget.type }}</span>
+                    <span class="text-gray-500">{{ Math.round(widget.width) }}×{{ Math.round(widget.height) }}</span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -632,9 +754,11 @@ import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useTemplatesStore } from '@/stores/templates'
 import { useNotification } from '@/composables/useNotification'
+import { normalizeApiError } from '@/utils/apiError'
 import Moveable from 'vue3-moveable'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import WidgetPreview from './components/WidgetPreview.vue'
+import ChartEditorPanel from './components/chart/ChartEditorPanel.vue'
 import MediaLibraryModal from '@/components/common/MediaLibraryModal.vue'
 import PushToScreenModal from '@/components/templates/PushToScreenModal.vue'
 import { useScreensStore } from '@/stores/screens'
@@ -688,6 +812,30 @@ const widgetNameInput = ref(null)
 // Media Library Modal state
 const showMediaLibrary = ref(false)
 const mediaLibraryFilterType = ref(null)
+const leftPanelCollapsed = ref(false)
+const rightPanelCollapsed = ref(false)
+const rightPanelTab = ref('properties')
+const defaultTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
+const worldTimeZones = [
+  { value: 'UTC', label: 'UTC (Coordinated Universal Time)' },
+  { value: 'Asia/Tehran', label: 'Tehran (Asia/Tehran)' },
+  { value: 'Asia/Dubai', label: 'Dubai (Asia/Dubai)' },
+  { value: 'Europe/London', label: 'London (Europe/London)' },
+  { value: 'Europe/Paris', label: 'Paris (Europe/Paris)' },
+  { value: 'Europe/Berlin', label: 'Berlin (Europe/Berlin)' },
+  { value: 'America/New_York', label: 'New York (America/New_York)' },
+  { value: 'America/Chicago', label: 'Chicago (America/Chicago)' },
+  { value: 'America/Los_Angeles', label: 'Los Angeles (America/Los_Angeles)' },
+  { value: 'America/Toronto', label: 'Toronto (America/Toronto)' },
+  { value: 'America/Sao_Paulo', label: 'Sao Paulo (America/Sao_Paulo)' },
+  { value: 'Africa/Johannesburg', label: 'Johannesburg (Africa/Johannesburg)' },
+  { value: 'Asia/Kolkata', label: 'India (Asia/Kolkata)' },
+  { value: 'Asia/Bangkok', label: 'Bangkok (Asia/Bangkok)' },
+  { value: 'Asia/Singapore', label: 'Singapore (Asia/Singapore)' },
+  { value: 'Asia/Shanghai', label: 'Shanghai (Asia/Shanghai)' },
+  { value: 'Asia/Tokyo', label: 'Tokyo (Asia/Tokyo)' },
+  { value: 'Australia/Sydney', label: 'Sydney (Australia/Sydney)' },
+]
 
 // Sort widgets by z-index for display
 const sortedWidgetsByZIndex = computed(() => {
@@ -711,6 +859,8 @@ const scale = ref(0.5)
 const moveableRef = ref(null)
 const selectedWidgetElement = ref(null)
 const widgetRefs = ref({})
+const dragStartState = ref(null)
+const resizeStartState = ref(null)
 
 // Generate unique ID
 const generateId = () => {
@@ -778,6 +928,14 @@ const handleWheel = (e) => {
   }
 }
 
+const zoomIn = () => {
+  scale.value = Math.min(2, scale.value + 0.1)
+}
+
+const zoomOut = () => {
+  scale.value = Math.max(0.1, scale.value - 0.1)
+}
+
 // Add widget
 const addWidget = (type) => {
   const defaultWidth = type === 'text' ? 300 : type === 'image' || type === 'video' || type === 'webview' ? 400 : type === 'chart' ? 500 : 200
@@ -811,7 +969,8 @@ const addWidget = (type) => {
       fontSize: type === 'text' || type === 'clock' || type === 'date' ? '24px' : undefined,
       fontFamily: type === 'text' || type === 'clock' || type === 'date' ? 'Arial, sans-serif' : undefined,
       textAlign: type === 'text' ? 'left' : undefined,
-      backgroundColor: type === 'text' ? 'transparent' : undefined,
+      backgroundColor: type === 'text' ? 'transparent' : (type === 'clock' || type === 'date' ? '#000000' : undefined),
+      timeZone: type === 'clock' ? defaultTimeZone : undefined,
       objectFit: type === 'image' || type === 'video' ? 'cover' : undefined,
     }
   }
@@ -873,17 +1032,26 @@ const deleteWidget = (widgetId) => {
   }
 }
 
+const deleteSelectedWidget = () => {
+  if (!selectedWidgetId.value) return
+  deleteWidget(selectedWidgetId.value)
+}
+
 // Get widget style for rendering
 const getWidgetStyle = (widget) => {
-  // Round all values to avoid sub-pixel rendering issues and prevent blurring
-  const x = Math.round(widget.x)
-  const y = Math.round(widget.y)
-  const width = Math.round(widget.width)
-  const height = Math.round(widget.height)
+  // Keep sub-pixel precision during move/resize to avoid jitter.
+  const x = Number(widget.x || 0)
+  const y = Number(widget.y || 0)
+  const width = Number(widget.width || 0)
+  const height = Number(widget.height || 0)
   const rotation = Math.round(widget.rotation * 100) / 100 // Round to 2 decimal places for rotation
   
   // Check visibility
   const isVisible = widget.visible !== false
+  const widgetBg =
+    (widget.type === 'text' || widget.type === 'clock' || widget.type === 'date')
+      ? (widget.style?.backgroundColor || 'transparent')
+      : 'transparent'
   
   return {
     left: `${x}px`,
@@ -894,6 +1062,7 @@ const getWidgetStyle = (widget) => {
     zIndex: widget.zIndex,
     display: isVisible ? 'block' : 'none',
     opacity: isVisible ? 1 : 0,
+    backgroundColor: widgetBg,
     // Enable GPU acceleration to prevent flickering during movement
     willChange: 'transform, top, left',
   }
@@ -1026,24 +1195,31 @@ const handleDrop = (event, targetWidgetId) => {
   draggingWidgetId.value = null
 }
 
+const handleDragMoveableStart = () => {
+  if (!selectedWidget.value) return
+  dragStartState.value = {
+    x: Number(selectedWidget.value.x || 0),
+    y: Number(selectedWidget.value.y || 0),
+  }
+}
+
 // Handle drag
-const handleDrag = ({ target, beforeDelta }) => {
+const handleDrag = ({ beforeTranslate, beforeDelta }) => {
   if (!selectedWidget.value) return
 
-  // Use beforeDelta for stable delta-based movement instead of recalculating from getBoundingClientRect
-  // beforeDelta is [dx, dy] in viewport coordinates, divide by scale to get canvas coordinates
-  const deltaX = beforeDelta[0] / scale.value
-  const deltaY = beforeDelta[1] / scale.value
+  const start = dragStartState.value || {
+    x: Number(selectedWidget.value.x || 0),
+    y: Number(selectedWidget.value.y || 0),
+  }
 
-  // Calculate new position by adding delta
-  let newX = selectedWidget.value.x + deltaX
-  let newY = selectedWidget.value.y + deltaY
+  // Prefer absolute translate from drag start to avoid cumulative delta drift.
+  const translate = beforeTranslate || beforeDelta || [0, 0]
+  const deltaX = translate[0] / scale.value
+  const deltaY = translate[1] / scale.value
 
-  // Round to nearest integer to avoid decimal precision issues
-  newX = Math.round(newX)
-  newY = Math.round(newY)
+  let newX = start.x + deltaX
+  let newY = start.y + deltaY
 
-  // Clamp to canvas boundaries AFTER delta movement
   const maxX = canvasWidth.value - selectedWidget.value.width
   const maxY = canvasHeight.value - selectedWidget.value.height
   
@@ -1052,60 +1228,51 @@ const handleDrag = ({ target, beforeDelta }) => {
 }
 
 const handleDragEnd = () => {
-  // Optional: Save state or trigger update
+  dragStartState.value = null
 }
 
 // Handle resize
+const handleResizeStart = () => {
+  if (!selectedWidget.value) return
+  resizeStartState.value = {
+    x: Number(selectedWidget.value.x || 0),
+    y: Number(selectedWidget.value.y || 0),
+  }
+}
+
 const handleResize = (event) => {
   if (!selectedWidget.value || !event.target) return
 
-  const { target, delta, drag } = event
+  const { target, width, height, drag } = event
 
-  // CRITICAL: Use ONLY delta values to prevent feedback loop with absolute width/height
-  // Delta represents "how much the mouse moved" - the only stable value
-  if (delta && delta.length >= 2) {
-    // Convert delta from viewport coordinates to canvas coordinates
-    const widthDelta = delta[0] / scale.value
-    const heightDelta = delta[1] / scale.value
+  // Use Moveable's resolved width/height directly.
+  // Dividing by scale can cause sudden jump-to-fit at low zoom levels.
+  const newWidth = Math.max(50, Number(width) || 0)
+  const newHeight = Math.max(50, Number(height) || 0)
+  target.style.width = `${newWidth}px`
+  target.style.height = `${newHeight}px`
+  selectedWidget.value.width = newWidth
+  selectedWidget.value.height = newHeight
 
-    // Update dimensions by adding delta (incremental change only)
-    let newWidth = selectedWidget.value.width + widthDelta
-    let newHeight = selectedWidget.value.height + heightDelta
-
-    // Only enforce minimum size - let bounds handle maximum constraints
-    newWidth = Math.max(50, newWidth)
-    newHeight = Math.max(50, newHeight)
-
-    // Sync Moveable's target element style first to prevent visual lag
-    target.style.width = `${newWidth}px`
-    target.style.height = `${newHeight}px`
-
-    // Update reactive state (rounded for pixel-perfect rendering)
-    selectedWidget.value.width = Math.round(newWidth)
-    selectedWidget.value.height = Math.round(newHeight)
-  }
-
-  // Update position if drag.beforeDelta is provided (for corner resizing)
-  if (drag && drag.beforeDelta) {
-    // Use drag.beforeDelta for stable position updates
-    const deltaX = drag.beforeDelta[0] / scale.value
-    const deltaY = drag.beforeDelta[1] / scale.value
-
-    let newX = selectedWidget.value.x + deltaX
-    let newY = selectedWidget.value.y + deltaY
-    
-    // Sync Moveable's target element style first
+  // Position shift while resizing from left/top handles.
+  if (drag && drag.beforeTranslate) {
+    const start = resizeStartState.value || {
+      x: Number(selectedWidget.value.x || 0),
+      y: Number(selectedWidget.value.y || 0),
+    }
+    const dx = drag.beforeTranslate[0]
+    const dy = drag.beforeTranslate[1]
+    const newX = start.x + dx
+    const newY = start.y + dy
     target.style.left = `${newX}px`
     target.style.top = `${newY}px`
-    
-    // Update reactive state (rounded for pixel-perfect rendering)
-    // NO manual clamping - let bounds handle constraints
-    selectedWidget.value.x = Math.round(newX)
-    selectedWidget.value.y = Math.round(newY)
+    selectedWidget.value.x = newX
+    selectedWidget.value.y = newY
   }
 }
 
 const handleResizeEnd = () => {
+  resizeStartState.value = null
   // Sync Moveable's internal state after resize ends
   nextTick(() => {
     if (moveableRef.value) {
@@ -1160,8 +1327,27 @@ const updateWidgetStyle = (property, value) => {
   selectedWidget.value.style[property] = value
 }
 
+const handleChartWidgetUpdate = ({ content, stylePatch }) => {
+  if (!selectedWidget.value || selectedWidget.value.type !== 'chart') return
+  selectedWidget.value.content = content
+  if (!selectedWidget.value.style) {
+    selectedWidget.value.style = {}
+  }
+  selectedWidget.value.style = {
+    ...selectedWidget.value.style,
+    ...(stylePatch || {}),
+  }
+}
+
 // Keyboard shortcuts
 const handleKeyDown = (e) => {
+  const activeElement = document.activeElement
+  const isEditingField = activeElement && (
+    ['INPUT', 'TEXTAREA', 'SELECT'].includes(activeElement.tagName) ||
+    activeElement.isContentEditable
+  )
+  if (isEditingField || editingWidgetId.value) return
+
   if (e.key === 'Delete' && selectedWidgetId.value) {
     deleteWidget(selectedWidgetId.value)
   } else if (e.key.startsWith('Arrow') && selectedWidgetId.value) {
@@ -1196,6 +1382,31 @@ const parsePercentage = (value) => {
   }
   return typeof value === 'number' ? value : parseFloat(value) || 0
 }
+
+const getFontSizeNumber = (value, fallback = 24) => {
+  if (value === undefined || value === null || value === '') return fallback
+  if (typeof value === 'number') return value
+  const parsed = Number.parseFloat(String(value).replace('px', '').trim())
+  return Number.isFinite(parsed) ? parsed : fallback
+}
+
+const getBackgroundHex = (value, fallback = '#000000') => {
+  if (!value || typeof value !== 'string') return fallback
+  const v = value.trim()
+  if (v.startsWith('#')) {
+    if (v.length === 4) {
+      return `#${v[1]}${v[1]}${v[2]}${v[2]}${v[3]}${v[3]}`
+    }
+    return v.slice(0, 7)
+  }
+  const rgbaMatch = v.match(/rgba?\(([^)]+)\)/i)
+  if (!rgbaMatch) return fallback
+  const parts = rgbaMatch[1].split(',').map(p => Number.parseFloat(p.trim()))
+  if (parts.length < 3 || parts.some(n => !Number.isFinite(n))) return fallback
+  const toHex = (n) => Math.max(0, Math.min(255, Math.round(n))).toString(16).padStart(2, '0')
+  return `#${toHex(parts[0])}${toHex(parts[1])}${toHex(parts[2])}`
+}
+
 
 // Load template data from API
 const loadTemplateData = async () => {
@@ -1276,7 +1487,8 @@ const loadTemplateData = async () => {
     
   } catch (error) {
     console.error('Failed to load template:', error)
-    notify.error('Failed to load template data')
+    const parsed = error.apiError || normalizeApiError(error)
+    notify.error(parsed.userMessage || 'Failed to load template data')
   } finally {
     loading.value = false
   }
@@ -1324,9 +1536,6 @@ const saveTemplate = async () => {
       }
     }
     
-    // DEBUG: Log payload before sending
-    console.log('Payload to be saved:', JSON.stringify(templateData, null, 2))
-    
     // Add description if available from query params
     if (route.query.description) {
       templateData.description = route.query.description
@@ -1361,9 +1570,8 @@ const saveTemplate = async () => {
     return savedTemplate
   } catch (error) {
     console.error('Failed to save template:', error)
-    const errorMessage = error.response?.data?.detail || 
-                         error.response?.data?.message || 
-                         'Failed to save template'
+    const parsed = error.apiError || normalizeApiError(error)
+    const errorMessage = parsed.userMessage || 'Failed to save template'
     notify.error(errorMessage)
     throw error
   } finally {
@@ -1395,7 +1603,8 @@ const handlePushToScreen = async () => {
     currentTemplate.value = template
     showPushModal.value = true
   } catch (error) {
-    notify.error('Failed to load screens')
+    const parsed = error.apiError || normalizeApiError(error)
+    notify.error(parsed.userMessage || 'Failed to load screens')
   }
 }
 
@@ -1430,17 +1639,17 @@ const handlePushToScreenSelect = async (screen) => {
     // Refresh templates to update screen counts
     await templatesStore.fetchTemplates()
   } catch (error) {
-    const errorMsg = error.response?.data?.detail || error.response?.data?.message || error.message || 'Failed to push template to screen'
-    notify.error(errorMsg)
+    const parsed = error.apiError || normalizeApiError(error)
+    notify.error(parsed.userMessage || 'Failed to push template to screen')
   } finally {
     pushing.value = false
   }
 }
 
 // Export JSON
-const exportJSON = () => {
-  const json = saveTemplate()
-  const blob = new Blob([JSON.stringify(json, null, 2)], { type: 'application/json' })
+const exportJSON = async () => {
+  const savedTemplate = await saveTemplate()
+  const blob = new Blob([JSON.stringify(savedTemplate, null, 2)], { type: 'application/json' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
@@ -1505,6 +1714,8 @@ onMounted(async () => {
 onUnmounted(() => {
   window.removeEventListener('resize', calculateScale)
   window.removeEventListener('keydown', handleKeyDown)
+  window.removeEventListener('online', handleOnline)
+  window.removeEventListener('offline', handleOffline)
 })
 </script>
 

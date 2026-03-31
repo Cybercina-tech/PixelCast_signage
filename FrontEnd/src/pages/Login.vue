@@ -209,6 +209,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useNotification } from '@/composables/useNotification'
+import { normalizeApiError } from '@/utils/apiError'
 import {
   UserIcon,
   LockClosedIcon,
@@ -244,19 +245,11 @@ async function handleLogin() {
     const redirect = route.query.redirect || '/dashboard'
     router.push(redirect)
   } catch (error) {
-    const data = error.response?.data
-    let message = 'Login failed. Please check your credentials.'
-
-    if (data?.error) message = data.error
-    else if (data?.detail) message = typeof data.detail === 'string' ? data.detail : data.detail[0]
-    else if (data?.non_field_errors?.[0]) message = data.non_field_errors[0]
-    else if (data?.username?.[0]) message = data.username[0]
-    else if (data?.password?.[0]) message = data.password[0]
-    else if (data?.message) message = data.message
-    else if (error.message) message = error.message
-
-    authStore.error = message
-    notify.error(message)
+    const parsed = error.apiError || normalizeApiError(error)
+    authStore.error = parsed.userMessage || 'Login failed. Please check your credentials.'
+    if (!parsed.isValidation) {
+      notify.error(authStore.error)
+    }
   }
 }
 
@@ -404,21 +397,39 @@ onMounted(() => {
   position: relative;
 }
 .input-wrap .input-group {
-  margin-top: 1.5rem;
+  margin-top: 0;
 }
 .floating-label {
   position: absolute;
-  left: 2.75rem;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 1rem;
+  left: 0.75rem;
+  top: -0.55rem;
+  transform: none;
+  font-size: 0.72rem;
+  font-weight: 600;
   pointer-events: none;
-  transition: transform 0.2s ease, font-size 0.2s ease, color 0.2s ease, top 0.2s ease;
+  transition: color 0.2s ease;
+  z-index: 2;
+  padding: 0 0.35rem;
+  border-radius: 999px;
+  background: rgba(11, 14, 20, 0.92);
+  line-height: 1.2;
 }
 .floating-label--active {
-  top: -1.5rem;
-  transform: translateY(0);
-  font-size: 0.75rem;
-  font-weight: 500;
+  top: -0.55rem;
+}
+
+.floating-label--active.cosmic-floating-label {
+  color: rgb(165 180 252);
+}
+
+.cosmic-input:-webkit-autofill,
+.cosmic-input:-webkit-autofill:hover,
+.cosmic-input:-webkit-autofill:focus,
+.cosmic-input:-webkit-autofill:active {
+  -webkit-text-fill-color: #e2e8f0 !important;
+  box-shadow: 0 0 0 1000px rgba(2, 6, 23, 0.55) inset !important;
+  -webkit-box-shadow: 0 0 0 1000px rgba(2, 6, 23, 0.55) inset !important;
+  caret-color: #e2e8f0 !important;
+  transition: background-color 9999s ease-in-out 0s;
 }
 </style>

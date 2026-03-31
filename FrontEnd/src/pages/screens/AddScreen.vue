@@ -198,6 +198,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { pairingAPI } from '@/services/api'
 import { useScreensStore } from '@/stores/screens'
+import { normalizeApiError } from '@/utils/apiError'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import Card from '@/components/common/Card.vue'
 
@@ -360,38 +361,14 @@ async function pairScreen() {
     }
   } catch (error) {
     console.error('Pairing error:', error)
-    
-    // Extract error message from various possible locations
-    let errorMsg = 'Failed to pair screen. Please try again.'
-    
-    if (error.response?.data) {
-      const data = error.response.data
-      
-      // Check for non_field_errors first (general errors)
-      if (data.non_field_errors && data.non_field_errors.length > 0) {
-        errorMsg = data.non_field_errors[0]
-      }
-      // Check for specific field errors
-      else if (data.pairing_code && Array.isArray(data.pairing_code)) {
-        errorMsg = data.pairing_code[0]
-        codeError.value = data.pairing_code[0]
-      }
-      else if (data.pairing_token && Array.isArray(data.pairing_token)) {
-        errorMsg = data.pairing_token[0]
-        qrUrlError.value = data.pairing_token[0]
-      }
-      // Check for error field
-      else if (data.error) {
-        errorMsg = data.error
-      }
-      // Check for detail field (DRF default)
-      else if (data.detail) {
-        errorMsg = data.detail
-      }
-    } else if (error.message) {
-      errorMsg = error.message
+    const parsed = error.apiError || normalizeApiError(error)
+    const errorMsg = parsed.userMessage || 'Failed to pair screen. Please try again.'
+    if (parsed.fieldErrors?.pairing_code?.length) {
+      codeError.value = parsed.fieldErrors.pairing_code[0]
     }
-    
+    if (parsed.fieldErrors?.pairing_token?.length) {
+      qrUrlError.value = parsed.fieldErrors.pairing_token[0]
+    }
     statusMessage.value = errorMsg
     statusMessageClass.value = 'bg-red-50 text-red-800'
   } finally {

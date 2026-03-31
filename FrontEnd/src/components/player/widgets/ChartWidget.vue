@@ -8,6 +8,7 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { Chart, registerables } from 'chart.js'
+import { normalizeChartConfig, validateChartConfig } from '@/utils/chartConfig'
 
 Chart.register(...registerables)
 
@@ -25,29 +26,33 @@ let chartInstance = null
 const chartConfig = computed(() => {
   const content = props.widget?.contents?.[0]
   const rawConfig = content?.content_json?.chart || props.widget?.content_json?.chart
-  if (rawConfig && typeof rawConfig === 'object') return rawConfig
-
+  const normalized = normalizeChartConfig(rawConfig)
   return {
-    type: 'bar',
-    data: {
-      labels: ['A', 'B', 'C'],
-      datasets: [
-        {
-          label: props.widget?.name || 'Chart',
-          data: [12, 19, 7],
-          backgroundColor: ['#3b82f6', '#14b8a6', '#f59e0b']
-        }
-      ]
-    },
+    ...normalized,
     options: {
+      ...normalized.options,
       responsive: true,
       maintainAspectRatio: false,
-      plugins: { legend: { labels: { color: '#fff' } } },
-      scales: {
-        x: { ticks: { color: '#cbd5e1' }, grid: { color: 'rgba(255,255,255,0.08)' } },
-        y: { ticks: { color: '#cbd5e1' }, grid: { color: 'rgba(255,255,255,0.08)' } }
-      }
-    }
+      plugins: {
+        ...(normalized.options?.plugins || {}),
+        legend: {
+          labels: { color: '#fff' },
+          ...(normalized.options?.plugins?.legend || {}),
+        },
+      },
+      scales: normalized.options?.scales
+        ? Object.fromEntries(
+            Object.entries(normalized.options.scales).map(([key, value]) => [
+              key,
+              {
+                ticks: { color: '#cbd5e1' },
+                grid: { color: 'rgba(255,255,255,0.08)' },
+                ...value,
+              },
+            ]),
+          )
+        : {},
+    },
   }
 })
 
@@ -64,6 +69,11 @@ const renderChart = () => {
   if (!canvasEl.value) return
 
   try {
+    const validation = validateChartConfig(chartConfig.value)
+    if (!validation.isValid) {
+      hasError.value = true
+      return
+    }
     chartInstance = new Chart(canvasEl.value, chartConfig.value)
   } catch {
     hasError.value = true

@@ -17,8 +17,21 @@
       </div>
     </div>
 
-    <!-- Black screen when no template -->
-    <div v-if="!showPairing && status === 'no_template'" class="no-template-screen" />
+    <!-- Empty state when screen has no assigned content -->
+    <div v-if="showNoTemplateState" class="no-template-screen">
+      <div class="no-template-content">
+        <div class="status-signal" aria-hidden="true">
+          <span class="signal-pulse"></span>
+        </div>
+        <h2 class="no-template-title">No content assigned</h2>
+        <p class="no-template-description">
+          This screen is paired and online, but nothing is assigned to display yet.
+        </p>
+        <p class="no-template-hint">
+          Assign a template or schedule from the dashboard to start playback.
+        </p>
+      </div>
+    </div>
 
     <!-- Unpaired / revoked state -->
     <UnpairMessage v-if="!showPairing && status === 'unpaired'" @return-to-pairing="enterPairing" />
@@ -55,7 +68,7 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { usePlayerStore } from '@/stores/player'
 import { useResponsiveScaling } from '@/composables/useResponsiveScaling'
 import LayerRenderer from '@/components/player/LayerRenderer.vue'
@@ -64,6 +77,7 @@ import PairingFlow from '@/components/player/PairingFlow.vue'
 
 const playerStore = usePlayerStore()
 const route = useRoute()
+const router = useRouter()
 const playerContainer = ref(null)
 const templateContainer = ref(null)
 
@@ -72,7 +86,7 @@ const routeScreenId = computed(() => {
   const raw = route.params.screenId
   return raw ? String(raw).trim() : null
 })
-const forcePairing = computed(() => route.query.pair === '1')
+const isConnectRoute = computed(() => route.name === 'player-connect')
 
 const status = computed(() => playerStore.status)
 const template = computed(() => playerStore.template)
@@ -80,6 +94,15 @@ const errorMessage = computed(() => playerStore.errorMessage)
 const retryCountdown = computed(() => playerStore.retryCountdown)
 const overlayVisible = computed(() => playerStore.overlayVisible)
 const overlayMessage = computed(() => playerStore.overlayMessage)
+const showNoTemplateState = ref(false)
+let noTemplateTimer = null
+
+function clearNoTemplateTimer() {
+  if (noTemplateTimer) {
+    clearTimeout(noTemplateTimer)
+    noTemplateTimer = null
+  }
+}
 
 // When status becomes 'unpaired' and we have no device identity, show pairing
 watch(status, (s) => {
@@ -88,11 +111,30 @@ watch(status, (s) => {
   }
 })
 
-watch(routeScreenId, async (newScreenId, oldScreenId) => {
-  if (newScreenId === oldScreenId) return
-  playerStore.stopPolling()
-  playerStore.setActiveScreen(newScreenId)
+watch(showPairing, (isPairing) => {
+  if (!isPairing) return
+  clearNoTemplateTimer()
+  showNoTemplateState.value = false
+})
 
+watch([routeScreenId, isConnectRoute], async ([newScreenId, connectMode], [oldScreenId, oldConnectMode]) => {
+  if (newScreenId === oldScreenId && connectMode === oldConnectMode) return
+  playerStore.stopPolling()
+  clearNoTemplateTimer()
+  showNoTemplateState.value = false
+
+  if (connectMode) {
+    playerStore.setActiveScreen(null)
+    showPairing.value = true
+    return
+  }
+
+  if (!newScreenId) {
+    await router.replace({ name: 'player-connect' })
+    return
+  }
+
+  playerStore.setActiveScreen(newScreenId)
   if (!playerStore.hasDeviceIdentity(newScreenId)) {
     showPairing.value = true
     return
@@ -100,7 +142,7 @@ watch(routeScreenId, async (newScreenId, oldScreenId) => {
 
   showPairing.value = false
   try {
-    await playerStore.initialize(newScreenId)
+    await playerStore.initialize(newScreenId, { allowFallback: false })
     if (playerStore.status !== 'unpaired') {
       playerStore.startPolling()
     }
@@ -109,11 +151,27 @@ watch(routeScreenId, async (newScreenId, oldScreenId) => {
   }
 })
 
-watch(forcePairing, async (isForced) => {
-  if (!isForced) return
-  playerStore.stopPolling()
-  playerStore.setActiveScreen(routeScreenId.value)
-  showPairing.value = true
+watch(status, (newStatus) => {
+  clearNoTemplateTimer()
+
+  if (showPairing.value) {
+    showNoTemplateState.value = false
+    return
+  }
+
+  if (newStatus === 'no_template') {
+    // Wait briefly after connection before showing empty-state UI.
+    showNoTemplateState.value = false
+    noTemplateTimer = setTimeout(() => {
+      if (!showPairing.value && status.value === 'no_template') {
+        showNoTemplateState.value = true
+      }
+      noTemplateTimer = null
+    }, 3000)
+    return
+  }
+
+  showNoTemplateState.value = false
 })
 
 function enterPairing() {
@@ -132,10 +190,22 @@ function handlePaired({ screenId, deviceToken }) {
   }
 
   const targetScreenId = expectedScreenId || screenId
+  if (!targetScreenId) {
+    playerStore.status = 'error'
+    playerStore.errorMessage = 'Pairing completed without a valid screen ID.'
+    showPairing.value = true
+    return
+  }
   playerStore.saveDeviceIdentity(targetScreenId, deviceToken)
   showPairing.value = false
+
+  if (isConnectRoute.value) {
+    router.replace({ name: 'player-screen', params: { screenId: String(targetScreenId) } })
+    return
+  }
+
   // Re-initialize the player with the new identity
-  playerStore.initialize(targetScreenId).then(() => {
+  playerStore.initialize(targetScreenId, { allowFallback: false }).then(() => {
     playerStore.startPolling()
   }).catch((err) => {
     console.error('[WebPlayer] Post-pairing init failed:', err)
@@ -211,12 +281,18 @@ onMounted(async () => {
   document.addEventListener('selectstart', (e) => e.preventDefault())
   document.addEventListener('dragstart', (e) => e.preventDefault())
 
-  playerStore.setActiveScreen(routeScreenId.value)
-
-  if (forcePairing.value) {
+  if (isConnectRoute.value) {
+    playerStore.setActiveScreen(null)
     showPairing.value = true
     return
   }
+
+  if (!routeScreenId.value) {
+    await router.replace({ name: 'player-connect' })
+    return
+  }
+
+  playerStore.setActiveScreen(routeScreenId.value)
 
   // Decide: pair or play
   if (!playerStore.hasDeviceIdentity(routeScreenId.value)) {
@@ -225,7 +301,7 @@ onMounted(async () => {
   }
 
   try {
-    await playerStore.initialize(routeScreenId.value)
+    await playerStore.initialize(routeScreenId.value, { allowFallback: false })
 
     if (playerStore.status === 'unpaired') {
       showPairing.value = true
@@ -253,6 +329,7 @@ onUnmounted(() => {
   document.body.style.overflow = ''
   if (contextMenuHandler) document.removeEventListener('contextmenu', contextMenuHandler)
   if (keydownHandler) document.removeEventListener('keydown', keydownHandler, true)
+  clearNoTemplateTimer()
   cleanupResizeListener()
   playerStore.stopPolling()
 })
@@ -278,6 +355,72 @@ onUnmounted(() => {
   width: 100%;
   height: 100%;
   background-color: #000000;
+}
+
+.no-template-screen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #f3f4f6;
+  padding: 24px;
+}
+
+.no-template-content {
+  max-width: 720px;
+  text-align: center;
+  background: rgba(17, 24, 39, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  padding: 28px 32px;
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.35);
+}
+
+.status-signal {
+  margin: 0 auto 14px;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: #f59e0b;
+  position: relative;
+}
+
+.signal-pulse {
+  position: absolute;
+  inset: -8px;
+  border-radius: 999px;
+  border: 2px solid rgba(245, 158, 11, 0.7);
+  animation: pulseSignal 1.8s ease-out infinite;
+}
+
+.no-template-title {
+  margin: 0;
+  font-size: clamp(26px, 3vw, 40px);
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.no-template-description {
+  margin: 14px 0 0;
+  font-size: clamp(14px, 1.5vw, 22px);
+  color: #e5e7eb;
+  line-height: 1.55;
+}
+
+.no-template-hint {
+  margin: 10px 0 0;
+  font-size: clamp(12px, 1.2vw, 18px);
+  color: #9ca3af;
+}
+
+@keyframes pulseSignal {
+  0% {
+    transform: scale(0.65);
+    opacity: 0.95;
+  }
+  100% {
+    transform: scale(1.25);
+    opacity: 0;
+  }
 }
 
 .message-overlay {

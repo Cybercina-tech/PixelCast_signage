@@ -1,16 +1,5 @@
 <template>
   <div class="relative w-full h-full overflow-hidden bg-slate-100 dark:bg-gray-900">
-    <!-- Skeleton Loader -->
-    <div
-      v-if="loading"
-      class="absolute inset-0 flex items-center justify-center bg-slate-200 dark:bg-gray-800 animate-pulse"
-    >
-      <div class="flex flex-col items-center gap-2">
-        <div class="w-12 h-12 border-4 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin"></div>
-        <span class="text-xs text-slate-500 dark:text-gray-400">Loading...</span>
-      </div>
-    </div>
-
     <!-- Image Preview -->
     <img
       v-if="mediaType === 'image' && resolvedUrl"
@@ -143,10 +132,9 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['load', 'error', 'play', 'pause'])
+const emit = defineEmits(['load', 'error', 'play', 'pause', 'duration'])
 
 // State
-const loading = ref(true)
 const error = ref(false)
 const videoRef = ref(null)
 const isVideoPlaying = ref(false)
@@ -155,7 +143,9 @@ const hoverTimeout = ref(null)
 // Computed
 const mediaType = computed(() => {
   if (props.fileType) {
-    return props.fileType
+    const explicitType = String(props.fileType).toLowerCase().trim()
+    if (explicitType.startsWith('image')) return 'image'
+    if (explicitType.startsWith('video')) return 'video'
   }
   // Infer from URL
   if (props.fileUrl) {
@@ -184,19 +174,16 @@ const resolvedUrl = computed(() => {
 
 // Methods
 const handleLoad = () => {
-  loading.value = false
   error.value = false
   emit('load')
 }
 
 const handleError = (event) => {
-  loading.value = false
   error.value = true
   emit('error', event)
 }
 
 const handleVideoMetadata = () => {
-  loading.value = false
   if (videoRef.value) {
     // Get duration if not provided
     if (!props.videoDuration && videoRef.value.duration) {
@@ -261,7 +248,6 @@ const formatDuration = (seconds) => {
 
 // Watch for URL changes
 watch(() => props.fileUrl, () => {
-  loading.value = true
   error.value = false
   isVideoPlaying.value = false
 }, { immediate: true })
