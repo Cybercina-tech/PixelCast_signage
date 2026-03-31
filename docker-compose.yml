@@ -103,10 +103,15 @@ services:
       context: ./FrontEnd
       dockerfile: Dockerfile
     container_name: frontend
-    ports:
-      - "${FRONTEND_PORT:-80}:80"
-      # Uncomment for HTTPS
-      # - "${FRONTEND_HTTPS_PORT:-443}:443"
+    labels:
+      # Traefik integration (overrides Dokploy's generated labels if present)
+      - traefik.enable=true
+      - traefik.docker.network=dokploy-network
+      - traefik.http.routers.pixelcast-application-hiakj5-6-web.rule=Host(`pixelcast-application-hiakj5-52175d-204-168-142-183.traefik.me`)
+      - traefik.http.services.pixelcast-application-hiakj5-6-web.loadbalancer.server.port=80
+      - traefik.http.services.pixelcast-application-hiakj5-6-websecure.loadbalancer.server.port=80
+    # No host port publishing in production behind Traefik/Dokploy.
+    # Traefik should route directly to container port 80 via Docker network.
     depends_on:
       backend:
         condition: service_started  # Don't wait for healthy - Nginx handles unavailable backend gracefully
