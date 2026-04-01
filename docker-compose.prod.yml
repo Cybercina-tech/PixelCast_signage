@@ -26,8 +26,9 @@ services:
       - PGDATA=/var/lib/postgresql/data/pgdata
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    # Probe `postgres` DB only — app DB may be created later by backend (ensure_postgres_db).
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-pixelcast_signage_user} -d ${DB_NAME:-pixelcast_signage_db}"]
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d postgres"]
       interval: 5s
       timeout: 5s
       retries: 20

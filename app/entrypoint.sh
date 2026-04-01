@@ -34,9 +34,10 @@ wait_for_postgres() {
     
     log_info "Waiting for PostgreSQL to be ready..."
     log_info "Host: ${DB_HOST:-db}, Port: ${DB_PORT:-5432}, User: ${DB_USER:-pixelcast_signage_user}"
-    
+    # libpq defaults the DB name to the username if -d is omitted — that DB may not exist. Use maintenance DB `postgres`.
+    export PGPASSWORD="${DB_PASSWORD:-}"
     while [ $attempt -le $max_attempts ]; do
-        if pg_isready -h "${DB_HOST:-db}" -p "${DB_PORT:-5432}" -U "${DB_USER:-pixelcast_signage_user}" > /dev/null 2>&1; then
+        if pg_isready -h "${DB_HOST:-db}" -p "${DB_PORT:-5432}" -U "${DB_USER:-pixelcast_signage_user}" -d postgres > /dev/null 2>&1; then
             log_success "PostgreSQL is ready!"
             return 0
         fi
