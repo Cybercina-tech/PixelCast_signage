@@ -10,13 +10,15 @@
 # Published host port defaults to 8080 (container still listens on 80). Port 80 on the host is
 # often taken by Traefik/reverse proxy — set HTTP_PORT=80 only if nothing else binds :80.
 #
-# Database: copy .env.example → .env; DB_PASSWORD default safpewri234aca. `db` + `backend` use env_file: .env.
+# Database: committed `.env.example` supplies defaults; optional `.env` overrides. Dokploy: set DB_* or rely on defaults.
 
 services:
-  # db + backend: single source — DB_NAME, DB_USER, DB_PASSWORD (see .env.example).
+  # db + backend: same DB_PASSWORD / POSTGRES_PASSWORD interpolation (see .env.example).
   db:
     image: postgres:15-alpine
     env_file:
+      - path: .env.example
+        required: true
       - path: .env
         required: false
     environment:
@@ -52,6 +54,8 @@ services:
       dockerfile: Dockerfile
     command: sh /app/entrypoint.sh
     env_file:
+      - path: .env.example
+        required: true
       - path: .env
         required: false
     environment:

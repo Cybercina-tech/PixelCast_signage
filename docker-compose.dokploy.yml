@@ -3,8 +3,9 @@
 # Compose path: docker-compose.dokploy.yml
 #
 # Prefer this over docker-compose.yml (Vite dev). Production = Nginx + built Vue + Gunicorn.
-# Set secrets in Dokploy env or repo `.env` (DB_PASSWORD default safpewri234aca; see .env.example).
-# `db` + `backend` load env_file: .env from docker-compose.prod.yml.
+# Env: committed `.env.example` is loaded first (required), then optional `.env`.
+# Set DB_NAME / DB_USER / DB_PASSWORD in Dokploy UI or `.env` (defaults match .env.example).
+# If Postgres was already initialized with a different password, reset the `postgres_data` volume or reuse that password.
 #
 # Database troubleshooting (Dokploy):
 # - Set DB_NAME, DB_USER, DB_PASSWORD consistently (same values for `db` + `backend`).
