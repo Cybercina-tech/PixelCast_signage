@@ -646,7 +646,7 @@ const setupData = reactive({
   },
 })
 
-const DEFAULT_DB_PASSWORD = 'tqaG32AWqO'
+const DEFAULT_DB_PASSWORD = 'safpewri234aca'
 
 // Status tracking
 const dbStatus = reactive({

@@ -23,7 +23,7 @@ if [ ! -f .env ]; then
     exit 1
   else
     echo "   Creating minimal .env..."
-    echo "DB_PASSWORD=change-me-please" > .env
+    echo "DB_PASSWORD=safpewri234aca" > .env
     echo "SECRET_KEY=$(openssl rand -hex 32)" >> .env
     echo "DB_NAME=pixelcast_signage_db" >> .env
     echo "DB_USER=pixelcast_signage_user" >> .env

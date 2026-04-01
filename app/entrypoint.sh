@@ -192,6 +192,14 @@ main() {
     # 1. Wait for PostgreSQL FIRST (required before migrations/installation)
     if wait_for_postgres; then
         log_success "PostgreSQL is ready"
+
+        # Create DB_NAME if missing (e.g. Postgres data volume initialized with another name, or DB_NAME changed later).
+        log_info "Ensuring application database exists..."
+        if python /app/ensure_postgres_db.py; then
+            log_success "PostgreSQL application database is ready"
+        else
+            log_warning "Could not ensure application database exists — migrations may fail (check DB_* in .env)."
+        fi
         
         # Run migrations (only if database is available)
         run_migrations || log_warning "Migrations skipped or failed, but continuing..."

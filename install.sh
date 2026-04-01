@@ -10,7 +10,7 @@ if [ ! -f .env ]; then
     echo ".env created from .env.example. Review values before running again."
     exit 1
   fi
-  echo "DB_PASSWORD=change-me" > .env
+  echo "DB_PASSWORD=safpewri234aca" > .env
   echo "SECRET_KEY=$(openssl rand -hex 32)" >> .env
   echo "DB_NAME=pixelcast_signage_db" >> .env
   echo "DB_USER=pixelcast_signage_user" >> .env

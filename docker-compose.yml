@@ -10,7 +10,7 @@ services:
       - POSTGRES_DB=${DB_NAME:-pixelcast_signage_db}
       - POSTGRES_USER=${DB_USER:-pixelcast_signage_user}
       # Must match backend's DB_PASSWORD (same variable).
-      - POSTGRES_PASSWORD=${DB_PASSWORD:-tqaG32AWqO}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-safpewri234aca}
       # Use an internal subdirectory to avoid initdb failure when mount root contains artifacts.
       - PGDATA=/var/lib/postgresql/data/pgdata
     volumes:
@@ -49,7 +49,7 @@ services:
       # Same DB_* as service `db` above (one password in .env → both containers).
       - DB_NAME=${DB_NAME:-pixelcast_signage_db}
       - DB_USER=${DB_USER:-pixelcast_signage_user}
-      - DB_PASSWORD=${DB_PASSWORD:-tqaG32AWqO}
+      - DB_PASSWORD=${DB_PASSWORD:-safpewri234aca}
       - DB_HOST=db
       - DB_PORT=5432
       - REDIS_HOST=redis

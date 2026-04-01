@@ -17,7 +17,7 @@ services:
     environment:
       - POSTGRES_DB=${DB_NAME:-pixelcast_signage_db}
       - POSTGRES_USER=${DB_USER:-pixelcast_signage_user}
-      - POSTGRES_PASSWORD=${DB_PASSWORD:-tqaG32AWqO}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-safpewri234aca}
       - PGDATA=/var/lib/postgresql/data/pgdata
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -54,7 +54,7 @@ services:
       - DB_NAME=${DB_NAME:-pixelcast_signage_db}
       - DB_USER=${DB_USER:-pixelcast_signage_user}
       # Same DB_PASSWORD as service `db` (POSTGRES_PASSWORD).
-      - DB_PASSWORD=${DB_PASSWORD:-tqaG32AWqO}
+      - DB_PASSWORD=${DB_PASSWORD:-safpewri234aca}
       - DB_HOST=db
       - DB_PORT=5432
       - REDIS_HOST=redis
