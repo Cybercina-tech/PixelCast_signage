@@ -8,11 +8,23 @@ from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from django.http import HttpResponseNotFound
 from django.conf import settings
 from django.utils import timezone
+from django.db import connection
 from django.db.models import Q, Sum
 from django.core.exceptions import PermissionDenied
 import logging
 
 logger = logging.getLogger(__name__)
+
+
+def _qr_action_tables_exist():
+    """True when QR action tables exist (migrate templates app through 0007+)."""
+    try:
+        with connection.cursor() as cursor:
+            names = connection.introspection.table_names(cursor)
+        return 'templates_qr_action_link' in names
+    except Exception:
+        return False
+
 
 from .models import (
     Template,
@@ -469,7 +481,13 @@ class TemplateViewSet(viewsets.ModelViewSet):
             if widget_type == 'qr_action':
                 style_data = widget_data.get('style', {}) if isinstance(widget_data.get('style', {}), dict) else {}
                 default_url = (style_data.get('defaultUrl') or content_value or '').strip()
-                if default_url:
+                if default_url and not _qr_action_tables_exist():
+                    logger.warning(
+                        "[SYNC] Missing DB table templates_qr_action_link; run "
+                        "`python manage.py migrate templates`. Skipping QR sync for widget %s",
+                        widget.id,
+                    )
+                elif default_url:
                     slug = str(style_data.get('slug') or f"w{str(widget.id).replace('-', '')[:12]}")
                     qr_link, _ = QRActionLink.objects.update_or_create(
                         widget=widget,

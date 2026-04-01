@@ -195,6 +195,22 @@ main() {
         
         # Run migrations (only if database is available)
         run_migrations || log_warning "Migrations skipped or failed, but continuing..."
+
+        # Ensure core app migrations apply (TV catalog tables); helps if a partial migrate state left gaps
+        log_info "Applying core app migrations explicitly..."
+        if python manage.py migrate core --noinput; then
+            log_success "Core migrations OK"
+        else
+            log_warning "Explicit core migrate failed (check logs)."
+        fi
+
+        # Idempotent seed so Data Center has rows after fresh migrate
+        log_info "Seeding TV catalog (safe to repeat)..."
+        if python manage.py seed_tv_catalog; then
+            log_success "TV catalog seed completed"
+        else
+            log_warning "TV catalog seed failed or skipped (tables may be missing)."
+        fi
     else
         log_warning "PostgreSQL is not available. Skipping database operations."
         log_warning "The container will start, but database features will not work."
