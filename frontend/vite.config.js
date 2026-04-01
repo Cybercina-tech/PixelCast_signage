@@ -39,6 +39,30 @@ function getGitVersion() {
 
 const gitVersion = getGitVersion()
 
+/**
+ * Vite HMR behind HTTPS reverse proxy (Traefik / Dokploy):
+ * Browser loads https://host/ but default HMR used ws://host:5173 — wrong port behind TLS.
+ * Set VITE_HMR_PROTOCOL=wss and VITE_HMR_CLIENT_PORT=443 (or leave port unset when using wss).
+ */
+function getHmrConfig() {
+  const useWss =
+    process.env.VITE_HMR_PROTOCOL === 'wss' ||
+    process.env.VITE_HMR_CLIENT_PORT === '443'
+  const clientPort = Number(
+    process.env.VITE_HMR_CLIENT_PORT || (useWss ? 443 : 5173)
+  )
+  const protocol = useWss ? 'wss' : 'ws'
+  const cfg = {
+    path: '/vite-hmr',
+    protocol,
+    clientPort,
+  }
+  if (process.env.VITE_HMR_HOST) {
+    cfg.host = process.env.VITE_HMR_HOST
+  }
+  return cfg
+}
+
 export default defineConfig({
   plugins: [vue()],
   server: {
@@ -52,14 +76,13 @@ export default defineConfig({
     watch: {
       usePolling: true,
     },
-    hmr: {
-      clientPort: 5173,
-      path: '/vite-hmr',
-    },
+    hmr: getHmrConfig(),
     proxy: {
       '/api': {
         target: backendProxyTarget,
         changeOrigin: true,
+        secure: false,
+        timeout: 120_000,
       },
       '/admin': {
         target: backendProxyTarget,
