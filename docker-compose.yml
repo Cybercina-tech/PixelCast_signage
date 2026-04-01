@@ -87,7 +87,9 @@ services:
       - VITE_API_BASE_URL=/api
       - VITE_IOT_BASE_URL=/iot
       - VITE_PROXY_TARGET=http://backend:8000
-      # HTTPS preview URL (Traefik/Dokploy): HMR must use wss://host:443 not :5173
+      # HTTPS (Traefik/Dokploy): set VITE_TRAEFIK_HTTPS=1 so HMR uses wss://…:443 (avoids Mixed Content).
+      # For local http://localhost:5173 set VITE_TRAEFIK_HTTPS=0 in .env
+      - VITE_TRAEFIK_HTTPS=${VITE_TRAEFIK_HTTPS:-1}
       - VITE_HMR_PROTOCOL=${VITE_HMR_PROTOCOL:-}
       - VITE_HMR_CLIENT_PORT=${VITE_HMR_CLIENT_PORT:-}
       - VITE_HMR_HOST=${VITE_HMR_HOST:-}
