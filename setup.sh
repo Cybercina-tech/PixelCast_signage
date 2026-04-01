@@ -44,11 +44,11 @@ if [ -z "${SECRET_KEY}" ] && ! grep -q "^SECRET_KEY=.\+" .env 2>/dev/null; then
 fi
 
 # 3. Verify LogsReports.vue exists (case-sensitive for Linux/Docker)
-FILE_PATH="FrontEnd/src/pages/logs/LogsReports.vue"
+FILE_PATH="frontend/src/pages/logs/LogsReports.vue"
 if [ ! -f "$FILE_PATH" ]; then
   echo "❌ Error: $FILE_PATH not found!"
   echo "   Searching for similar files..."
-  find FrontEnd -iname "*.vue" 2>/dev/null | head -20
+  find frontend -iname "*.vue" 2>/dev/null | head -20
   exit 1
 fi
 echo "✓ LogsReports.vue found"

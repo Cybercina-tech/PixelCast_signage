@@ -1,0 +1,8 @@
+{
+  "eslint.workingDirectories": ["frontend"],
+  "vue.server.includeLanguages": ["vue", "javascript"],
+  "vetur.enable": false,
+  "vetur.validation.template": false,
+  "vetur.validation.script": false,
+  "vetur.validation.style": false
+}

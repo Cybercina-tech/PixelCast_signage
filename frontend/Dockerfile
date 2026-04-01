@@ -1,4 +1,4 @@
-# FrontEnd Dockerfile - Multi-stage build for Vue.js application
+# Frontend Dockerfile - Multi-stage build for Vue.js application
 # Stage 1: Build the Vue.js application
 FROM node:20-alpine AS builder
 

@@ -1,5 +1,5 @@
 # -----------------------------------------------------------------------------
-# Use a leading "/" so patterns apply only under FrontEnd/ (this file's root).
+# Use a leading "/" so patterns apply only under frontend/ (this file's root).
 # A bare name like "logs" matches every path segment named logs — including
 # src/pages/logs/ and would drop source files from git / Docker builds.
 # -----------------------------------------------------------------------------

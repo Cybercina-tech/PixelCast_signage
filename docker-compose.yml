@@ -66,10 +66,9 @@ services:
         condition: service_healthy
     restart: always
 
-  # Git tracks this directory as FrontEnd/ — use the same casing for Linux deploys (Dokploy, CI).
   frontend:
     build:
-      context: ./FrontEnd
+      context: ./frontend
       dockerfile: Dockerfile.dev
     container_name: frontend
     command:
@@ -89,7 +88,7 @@ services:
       - VITE_IOT_BASE_URL=/iot
       - VITE_PROXY_TARGET=http://backend:8000
     volumes:
-      - ./FrontEnd:/app
+      - ./frontend:/app
       - ./documentation:/app/public/documentation:ro
       - /app/node_modules
     depends_on:
