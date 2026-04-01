@@ -8,7 +8,7 @@
     >
       <img
         v-if="content.secure_url"
-        :src="ensureAbsoluteUrl(content.secure_url)"
+        :src="getImageSrc(content)"
         :alt="content.name || 'Content'"
         :data-content-id="content.id"
         class="content-image"
@@ -117,6 +117,23 @@ const onImageError = (event) => {
     
     console.error(`[ImageWidget] Failed to load image content: ${contentId}`)
   }
+}
+
+const getImageSrc = (content) => {
+  const absoluteUrl = ensureAbsoluteUrl(content?.secure_url || '')
+  if (!absoluteUrl) return absoluteUrl
+
+  // Cache-busting token priority:
+  // 1) backend content fingerprint (file_hash)
+  // 2) backend content update timestamp
+  // 3) explicit widget version flag (set by editor on URL change/select)
+  // 4) content id (stable fallback per item)
+  const widgetJson = props.widget?.content_json || {}
+  const token = content?.file_hash || content?.updated_at || widgetJson?.imageVersion || content?.id
+  if (!token) return absoluteUrl
+
+  const separator = absoluteUrl.includes('?') ? '&' : '?'
+  return `${absoluteUrl}${separator}v=${encodeURIComponent(String(token))}`
 }
 </script>
 

@@ -30,13 +30,27 @@ const props = defineProps({
 // Sort contents by order
 // Filter only active content (safety check - backend should already filter)
 const sortedContents = computed(() => {
-  if (!props.widget.contents) return []
+  const baseContents = Array.isArray(props.widget.contents) ? props.widget.contents : []
   
   // Filter active content and sort by order
-  const contents = [...props.widget.contents]
+  const contents = [...baseContents]
     .filter(content => content.is_active !== false) // Only render active content
     .sort((a, b) => (a.order || 0) - (b.order || 0))
-  
+
+  if (contents.length > 0) return contents
+
+  // Fallback when backend content rows are temporarily missing:
+  // render text from widget JSON so signage does not appear blank.
+  const fallbackText = props.widget?.content_json?.text
+  if (typeof fallbackText === 'string' && fallbackText.trim()) {
+    return [{
+      id: `fallback-text-${props.widget.id || 'widget'}`,
+      text_content: fallbackText,
+      is_active: true,
+      order: 0,
+    }]
+  }
+
   return contents
 })
 
@@ -86,6 +100,7 @@ const textStyle = computed(() => {
   const fontSize = normalizeFontSize(widgetJson.fontSize || props.widget.font_size)
   const color = widgetJson.color || props.widget.color || '#000000'
   const textAlign = widgetJson.textAlign || props.widget.alignment || 'left'
+  const backgroundColor = widgetJson.backgroundColor || 'transparent'
   const fontWeight = widgetJson.fontWeight || 'normal'
   const lineHeight = widgetJson.lineHeight || 1.5
   
@@ -95,6 +110,7 @@ const textStyle = computed(() => {
     fontFamily: fontFamily,
     fontSize: fontSize,
     color: color,
+    backgroundColor: backgroundColor,
     textAlign: textAlign,
     fontWeight: fontWeight,
     lineHeight: lineHeight,

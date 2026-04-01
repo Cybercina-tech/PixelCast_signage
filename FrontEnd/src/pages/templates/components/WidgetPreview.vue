@@ -6,6 +6,11 @@
       :widget="playerWidget"
     />
 
+    <MarqueeWidget
+      v-else-if="widget.type === 'marquee'"
+      :widget="playerWidget"
+    />
+
     <!-- Image Widget -->
     <ImageWidget
       v-else-if="widget.type === 'image'"
@@ -52,6 +57,7 @@
 <script setup>
 import { computed, ref, onMounted, onUnmounted } from 'vue'
 import TextWidget from '@/components/player/widgets/TextWidget.vue'
+import MarqueeWidget from '@/components/player/widgets/MarqueeWidget.vue'
 import ImageWidget from '@/components/player/widgets/ImageWidget.vue'
 import VideoWidget from '@/components/player/widgets/VideoWidget.vue'
 import ChartWidget from '@/components/player/widgets/ChartWidget.vue'
@@ -78,11 +84,18 @@ const normalizeFontSize = (value, fallbackPx) => {
   return Number.isFinite(parsed) ? `${parsed}px` : `${fallbackPx}px`
 }
 
+const getPreviewText = (widget, style) => {
+  if (widget.type !== 'text' && widget.type !== 'marquee') return ''
+  const raw = widget.content || style.text || ''
+  return typeof raw === 'string' ? raw : ''
+}
+
 // Convert editor widget format to player widget format
 const playerWidget = computed(() => {
   const widget = props.widget
   const style = widget.style || {}
   const normalizedChart = widget.type === 'chart' ? fromWidgetChartPayload(widget) : null
+  const previewText = getPreviewText(widget, style)
   
   // Create a player-compatible widget object
   // Player widgets expect: widget.content_json (for styles) and widget.contents[] (for content data)
@@ -104,15 +117,17 @@ const playerWidget = computed(() => {
       objectFit: style.objectFit,
       // Chart config is passed to player chart renderer
       chart: normalizedChart,
+      // Ensure marquee settings are fully forwarded.
+      ...style,
     },
     // contents array contains the actual content items
-    contents: widget.content ? [{
+    contents: previewText || (widget.type !== 'text' && widget.type !== 'marquee' && widget.content) ? [{
       id: `preview-content-${widget.id}`,
       name: widget.name || 'Preview Content',
       is_active: true,
       order: 0,
       // Text content
-      text_content: widget.type === 'text' ? widget.content : undefined,
+      text_content: (widget.type === 'text' || widget.type === 'marquee') ? previewText : undefined,
       // Image/Video content URL
       secure_url: (widget.type === 'image' || widget.type === 'video') ? widget.content : undefined,
       // Webview URL

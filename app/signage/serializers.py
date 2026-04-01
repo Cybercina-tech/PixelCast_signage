@@ -290,9 +290,26 @@ class PlayerContentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Content
         fields = [
-            'id', 'name', 'type', 'secure_url', 'content_json',
+            'id', 'name', 'type', 'secure_url', 'content_json', 'text_content',
             'duration', 'autoplay', 'order', 'file_size', 'file_hash', 'is_active'
         ]
+
+    def to_representation(self, instance):
+        """
+        Ensure text payload is always available for player clients.
+        Some widgets rely on content_json.text while others read text_content directly.
+        """
+        data = super().to_representation(instance)
+
+        if instance.type in {'text', 'marquee'}:
+            text_value = (instance.text_content or '').strip()
+            if text_value:
+                if not isinstance(data.get('content_json'), dict):
+                    data['content_json'] = {}
+                data['content_json']['text'] = text_value
+                data['text_content'] = text_value
+
+        return data
     
     def get_secure_url(self, obj):
         """Get secure URL with appropriate expiration and make it absolute"""

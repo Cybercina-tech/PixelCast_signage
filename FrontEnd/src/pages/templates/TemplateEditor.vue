@@ -98,6 +98,17 @@
                 <span v-if="!leftPanelCollapsed">Add Text</span>
               </button>
               <button
+                @click="addWidget('marquee')"
+                class="w-full px-4 py-3 bg-card hover:bg-card active:scale-95 rounded-lg text-left text-primary transition-all duration-400 flex items-center gap-2 font-medium border border-border-color hover:border-accent-color/50"
+                style="--accent-color: var(--accent-color);"
+                :title="leftPanelCollapsed ? 'Add Marquee' : ''"
+              >
+                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 12h16M4 7h7m6 0h3M4 17h5m8 0h3" />
+                </svg>
+                <span v-if="!leftPanelCollapsed">Add Marquee</span>
+              </button>
+              <button
                 @click="addWidget('image')"
                 class="w-full px-4 py-3 bg-gray-700 hover:bg-gray-600 active:scale-95 rounded-lg text-left text-white transition-all duration-200 flex items-center gap-2 font-medium"
                 :title="leftPanelCollapsed ? 'Add Image' : ''"
@@ -443,6 +454,229 @@
                       <option value="right">Right</option>
                       <option value="justify">Justify</option>
                     </select>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Marquee Widget Properties -->
+              <div v-if="selectedWidget.type === 'marquee'">
+                <h3 class="text-sm font-semibold mb-3 text-muted uppercase">Marquee Properties</h3>
+                <div class="space-y-3">
+                  <div>
+                    <label class="block text-xs font-medium text-muted mb-1.5">Content</label>
+                    <textarea
+                      v-model="selectedWidget.content"
+                      rows="3"
+                      class="textarea-base w-full px-3 py-2 text-sm"
+                      @input="updateWidgetProperty('content', $event.target.value)"
+                    />
+                  </div>
+                  <div>
+                    <label class="block text-xs font-medium text-muted mb-1.5">Built-in Style</label>
+                    <select
+                      :value="selectedWidget.style?.preset || 'breakingNews'"
+                      class="select-base w-full px-3 py-2 text-sm"
+                      @change="applyMarqueePreset($event.target.value)"
+                    >
+                      <option
+                        v-for="preset in marqueePresets"
+                        :key="preset.id"
+                        :value="preset.id"
+                      >
+                        {{ preset.label }}
+                      </option>
+                    </select>
+                  </div>
+                  <div class="grid grid-cols-2 gap-3">
+                    <div>
+                      <label class="block text-xs font-medium text-muted mb-1.5">Mode</label>
+                      <select
+                        :value="selectedWidget.style?.mode || 'continuous'"
+                        class="select-base w-full px-3 py-2 text-sm"
+                        @change="updateWidgetStyle('mode', $event.target.value)"
+                      >
+                        <option value="continuous">Continuous</option>
+                        <option value="step">Step</option>
+                        <option value="bounce">Bounce</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label class="block text-xs font-medium text-muted mb-1.5">Direction</label>
+                      <select
+                        :value="selectedWidget.style?.direction || 'left'"
+                        class="select-base w-full px-3 py-2 text-sm"
+                        @change="updateWidgetStyle('direction', $event.target.value)"
+                      >
+                        <option value="left">Left</option>
+                        <option value="right">Right</option>
+                        <option value="up">Up</option>
+                        <option value="down">Down</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="grid grid-cols-2 gap-3">
+                    <div>
+                      <label class="block text-xs font-medium text-muted mb-1.5">Speed (px/s)</label>
+                      <input
+                        type="number"
+                        min="20"
+                        max="800"
+                        :value="normalizeRange(selectedWidget.style?.speed, 120, 20, 800)"
+                        class="input-base w-full px-3 py-2 text-sm"
+                        @input="updateWidgetStyle('speed', normalizeRange($event.target.value, 120, 20, 800))"
+                      />
+                    </div>
+                    <div>
+                      <label class="block text-xs font-medium text-muted mb-1.5">Gap (px)</label>
+                      <input
+                        type="number"
+                        min="16"
+                        max="500"
+                        :value="normalizeRange(selectedWidget.style?.gap, 80, 16, 500)"
+                        class="input-base w-full px-3 py-2 text-sm"
+                        @input="updateWidgetStyle('gap', normalizeRange($event.target.value, 80, 16, 500))"
+                      />
+                    </div>
+                  </div>
+                  <div class="grid grid-cols-2 gap-3">
+                    <div>
+                      <label class="block text-xs font-medium text-muted mb-1.5">Step Hold (s)</label>
+                      <input
+                        type="number"
+                        min="0.2"
+                        max="12"
+                        step="0.1"
+                        :value="normalizeRange(selectedWidget.style?.stepHold, 1.5, 0.2, 12)"
+                        class="input-base w-full px-3 py-2 text-sm"
+                        @input="updateWidgetStyle('stepHold', normalizeRange($event.target.value, 1.5, 0.2, 12))"
+                      />
+                    </div>
+                    <div>
+                      <label class="block text-xs font-medium text-muted mb-1.5">Bounce Hold (s)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="5"
+                        step="0.1"
+                        :value="normalizeRange(selectedWidget.style?.bounceHold, 0.8, 0, 5)"
+                        class="input-base w-full px-3 py-2 text-sm"
+                        @input="updateWidgetStyle('bounceHold', normalizeRange($event.target.value, 0.8, 0, 5))"
+                      />
+                    </div>
+                  </div>
+                  <div class="grid grid-cols-2 gap-3">
+                    <label class="marquee-switch-row">
+                      <span class="text-sm text-primary">Loop</span>
+                      <span class="marquee-switch">
+                        <input
+                          type="checkbox"
+                          class="sr-only peer"
+                          :checked="selectedWidget.style?.loop !== false"
+                          @change="updateWidgetStyle('loop', $event.target.checked)"
+                        />
+                        <span class="marquee-switch-track">
+                          <span class="marquee-switch-thumb"></span>
+                        </span>
+                      </span>
+                    </label>
+                    <label class="marquee-switch-row">
+                      <span class="text-sm text-primary">Fade Edge</span>
+                      <span class="marquee-switch">
+                        <input
+                          type="checkbox"
+                          class="sr-only peer"
+                          :checked="selectedWidget.style?.fadeEdge !== false"
+                          @change="updateWidgetStyle('fadeEdge', $event.target.checked)"
+                        />
+                        <span class="marquee-switch-track">
+                          <span class="marquee-switch-thumb"></span>
+                        </span>
+                      </span>
+                    </label>
+                    <label class="marquee-switch-row">
+                      <span class="text-sm text-primary">Uppercase</span>
+                      <span class="marquee-switch">
+                        <input
+                          type="checkbox"
+                          class="sr-only peer"
+                          :checked="selectedWidget.style?.uppercase === true"
+                          @change="updateWidgetStyle('uppercase', $event.target.checked)"
+                        />
+                        <span class="marquee-switch-track">
+                          <span class="marquee-switch-thumb"></span>
+                        </span>
+                      </span>
+                    </label>
+                    <label class="marquee-switch-row">
+                      <span class="text-sm text-primary">Reverse</span>
+                      <span class="marquee-switch">
+                        <input
+                          type="checkbox"
+                          class="sr-only peer"
+                          :checked="selectedWidget.style?.reverse === true"
+                          @change="updateWidgetStyle('reverse', $event.target.checked)"
+                        />
+                        <span class="marquee-switch-track">
+                          <span class="marquee-switch-thumb"></span>
+                        </span>
+                      </span>
+                    </label>
+                  </div>
+                  <div>
+                    <label class="block text-xs font-medium text-muted mb-1.5">Separator</label>
+                    <input
+                      :value="selectedWidget.style?.separator || ' • '"
+                      type="text"
+                      class="input-base w-full px-3 py-2 text-sm"
+                      @input="updateWidgetStyle('separator', $event.target.value || ' • ')"
+                    />
+                  </div>
+                  <div class="grid grid-cols-2 gap-3">
+                    <div>
+                      <label class="block text-xs font-medium text-muted mb-1.5">Font Size (px)</label>
+                      <input
+                        type="number"
+                        min="12"
+                        max="220"
+                        :value="getFontSizeNumber(selectedWidget.style?.fontSize, 42)"
+                        class="input-base w-full px-3 py-2 text-sm"
+                        @input="updateWidgetStyle('fontSize', `${normalizeRange($event.target.value, 42, 12, 220)}px`)"
+                      />
+                    </div>
+                    <div>
+                      <label class="block text-xs font-medium text-muted mb-1.5">Font Weight</label>
+                      <select
+                        :value="selectedWidget.style?.fontWeight || '700'"
+                        class="select-base w-full px-3 py-2 text-sm"
+                        @change="updateWidgetStyle('fontWeight', $event.target.value)"
+                      >
+                        <option value="400">Regular</option>
+                        <option value="500">Medium</option>
+                        <option value="600">Semibold</option>
+                        <option value="700">Bold</option>
+                        <option value="800">Extra Bold</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="grid grid-cols-2 gap-3">
+                    <div>
+                      <label class="block text-xs font-medium text-muted mb-1.5">Text Color</label>
+                      <input
+                        :value="selectedWidget.style?.color || '#ffffff'"
+                        type="color"
+                        class="w-full h-10 bg-slate-800/50 border border-slate-700 rounded-lg cursor-pointer"
+                        @input="updateWidgetStyle('color', $event.target.value)"
+                      />
+                    </div>
+                    <div>
+                      <label class="block text-xs font-medium text-muted mb-1.5">Background</label>
+                      <input
+                        :value="getBackgroundHex(selectedWidget.style?.backgroundColor, '#111111')"
+                        type="color"
+                        class="w-full h-10 bg-slate-800/50 border border-slate-700 rounded-lg cursor-pointer"
+                        @input="updateWidgetStyle('backgroundColor', $event.target.value)"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -837,6 +1071,41 @@ const worldTimeZones = [
   { value: 'Australia/Sydney', label: 'Sydney (Australia/Sydney)' },
 ]
 
+const marqueePresets = [
+  { id: 'breakingNews', label: 'Breaking News', style: { color: '#ffffff', backgroundColor: '#b91c1c', fontSize: '42px', fontWeight: '800', fadeEdge: true, mode: 'continuous', direction: 'left' } },
+  { id: 'stockTape', label: 'Stock Tape', style: { color: '#22c55e', backgroundColor: '#0f172a', fontSize: '32px', fontWeight: '700', separator: '  ▲  ', mode: 'continuous', direction: 'left' } },
+  { id: 'sports', label: 'Sports Bar', style: { color: '#fde047', backgroundColor: '#1f2937', fontSize: '36px', fontWeight: '700', separator: '  |  ', mode: 'step', direction: 'left' } },
+  { id: 'gold', label: 'Golden Luxury', style: { color: '#fbbf24', backgroundColor: '#111827', fontSize: '40px', fontWeight: '700', textShadow: '0 0 16px rgba(251,191,36,0.45)', mode: 'continuous', direction: 'left' } },
+  { id: 'neon', label: 'Neon Glow', style: { color: '#22d3ee', backgroundColor: '#020617', fontSize: '40px', fontWeight: '700', textShadow: '0 0 12px rgba(34,211,238,0.9)', mode: 'bounce', direction: 'left' } },
+  { id: 'minimalLight', label: 'Minimal Light', style: { color: '#111827', backgroundColor: '#f8fafc', fontSize: '34px', fontWeight: '600', mode: 'continuous', direction: 'left' } },
+  { id: 'alerts', label: 'Alert Banner', style: { color: '#ffffff', backgroundColor: '#dc2626', fontSize: '38px', fontWeight: '800', uppercase: true, mode: 'continuous', direction: 'left' } },
+  { id: 'calmBlue', label: 'Calm Blue', style: { color: '#dbeafe', backgroundColor: '#1d4ed8', fontSize: '34px', fontWeight: '600', mode: 'step', direction: 'right' } },
+  { id: 'matrix', label: 'Matrix', style: { color: '#4ade80', backgroundColor: '#052e16', fontSize: '30px', fontWeight: '600', letterSpacing: '0.08em', mode: 'continuous', direction: 'left' } },
+  { id: 'darkGlass', label: 'Dark Glass', style: { color: '#e5e7eb', backgroundColor: 'rgba(15,23,42,0.85)', fontSize: '36px', fontWeight: '700', mode: 'bounce', direction: 'left' } },
+]
+
+const getMarqueeDefaultStyle = () => ({
+  preset: 'breakingNews',
+  mode: 'continuous',
+  direction: 'left',
+  speed: 120,
+  gap: 80,
+  stepHold: 1.5,
+  bounceHold: 0.8,
+  loop: true,
+  reverse: false,
+  fadeEdge: true,
+  separator: ' • ',
+  uppercase: false,
+  fontFamily: "'Segoe UI', Arial, sans-serif",
+  fontSize: '42px',
+  fontWeight: '700',
+  color: '#ffffff',
+  backgroundColor: '#b91c1c',
+  lineHeight: 1.2,
+  letterSpacing: '0.01em',
+})
+
 // Sort widgets by z-index for display
 const sortedWidgetsByZIndex = computed(() => {
   return [...widgets.value].sort((a, b) => {
@@ -938,8 +1207,8 @@ const zoomOut = () => {
 
 // Add widget
 const addWidget = (type) => {
-  const defaultWidth = type === 'text' ? 300 : type === 'image' || type === 'video' || type === 'webview' ? 400 : type === 'chart' ? 500 : 200
-  const defaultHeight = type === 'text' ? 100 : type === 'image' || type === 'video' || type === 'webview' ? 300 : type === 'chart' ? 300 : 100
+  const defaultWidth = type === 'text' ? 300 : type === 'marquee' ? 720 : type === 'image' || type === 'video' || type === 'webview' ? 400 : type === 'chart' ? 500 : 200
+  const defaultHeight = type === 'text' ? 100 : type === 'marquee' ? 110 : type === 'image' || type === 'video' || type === 'webview' ? 300 : type === 'chart' ? 300 : 100
 
   const widget = {
     id: generateId(),
@@ -955,6 +1224,8 @@ const addWidget = (type) => {
     content:
       type === 'text'
         ? 'Sample Text'
+        : type === 'marquee'
+        ? 'Breaking News: New promotions are now live • Visit the help desk for details • Stay tuned for more updates'
         : type === 'clock'
         ? 'HH:mm:ss'
         : type === 'date'
@@ -965,6 +1236,7 @@ const addWidget = (type) => {
         ? '{"type":"bar","data":{"labels":["A","B","C"],"datasets":[{"label":"Series","data":[12,19,7]}]}}'
         : '',
     style: {
+      ...(type === 'marquee' ? getMarqueeDefaultStyle() : {}),
       color: type === 'text' || type === 'clock' || type === 'date' ? '#000000' : undefined,
       fontSize: type === 'text' || type === 'clock' || type === 'date' ? '24px' : undefined,
       fontFamily: type === 'text' || type === 'clock' || type === 'date' ? 'Arial, sans-serif' : undefined,
@@ -1049,7 +1321,7 @@ const getWidgetStyle = (widget) => {
   // Check visibility
   const isVisible = widget.visible !== false
   const widgetBg =
-    (widget.type === 'text' || widget.type === 'clock' || widget.type === 'date')
+    (widget.type === 'text' || widget.type === 'marquee' || widget.type === 'clock' || widget.type === 'date')
       ? (widget.style?.backgroundColor || 'transparent')
       : 'transparent'
   
@@ -1123,6 +1395,10 @@ const handleMediaSelect = async (data) => {
   
   // Update widget content with selected URL
   updateWidgetProperty('content', data.url)
+  if (!selectedWidget.value.style) {
+    selectedWidget.value.style = {}
+  }
+  selectedWidget.value.style.imageVersion = Date.now()
   
   // CRITICAL: Store content_id in widget object for saving
   if (data.content && data.content.id) {
@@ -1311,6 +1587,13 @@ const updateWidgetProperty = (property, value) => {
 
   selectedWidget.value[property] = numValue
 
+  if (property === 'content' && (selectedWidget.value.type === 'image' || selectedWidget.value.type === 'video')) {
+    if (!selectedWidget.value.style) {
+      selectedWidget.value.style = {}
+    }
+    selectedWidget.value.style.imageVersion = Date.now()
+  }
+
   nextTick(() => {
     if (moveableRef.value) {
       moveableRef.value.updateRect()
@@ -1407,6 +1690,27 @@ const getBackgroundHex = (value, fallback = '#000000') => {
   return `#${toHex(parts[0])}${toHex(parts[1])}${toHex(parts[2])}`
 }
 
+const normalizeRange = (value, fallback, min, max) => {
+  const parsed = Number.parseFloat(String(value ?? '').trim())
+  if (!Number.isFinite(parsed)) return fallback
+  return Math.max(min, Math.min(max, parsed))
+}
+
+const applyMarqueePreset = (presetId) => {
+  if (!selectedWidget.value || selectedWidget.value.type !== 'marquee') return
+  const preset = marqueePresets.find(item => item.id === presetId)
+  if (!preset) return
+  if (!selectedWidget.value.style) {
+    selectedWidget.value.style = {}
+  }
+  selectedWidget.value.style = {
+    ...getMarqueeDefaultStyle(),
+    ...selectedWidget.value.style,
+    ...preset.style,
+    preset: preset.id,
+  }
+}
+
 
 // Load template data from API
 const loadTemplateData = async () => {
@@ -1469,7 +1773,9 @@ const loadTemplateData = async () => {
           visible: widget.visible !== undefined ? widget.visible : true, // Default to visible
           content: widget.content || '',
           content_id: widget.content_id || null, // Preserve content_id when loading
-          style: widget.style || {}
+          style: widget.type === 'marquee'
+            ? { ...getMarqueeDefaultStyle(), ...(widget.style || {}) }
+            : (widget.style || {})
         }
         
         widgets.value.push(editorWidget)
@@ -1822,6 +2128,60 @@ onUnmounted(() => {
 
 .dark .canvas-area > * {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.marquee-switch-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.375rem 0.5rem;
+  border-radius: 0.5rem;
+  background: rgba(30, 41, 59, 0.28);
+  border: 1px solid rgba(100, 116, 139, 0.35);
+}
+
+.marquee-switch {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.marquee-switch-track {
+  width: 2.5rem;
+  height: 1.35rem;
+  border-radius: 9999px;
+  border: 1px solid rgba(100, 116, 139, 0.5);
+  background: rgba(51, 65, 85, 0.7);
+  display: inline-flex;
+  align-items: center;
+  padding: 0 2px;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.marquee-switch-thumb {
+  width: 1rem;
+  height: 1rem;
+  border-radius: 9999px;
+  background: #f8fafc;
+  transform: translateX(0);
+  transition: transform 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+
+.peer:checked + .marquee-switch-track {
+  background: rgba(16, 185, 129, 0.35);
+  border-color: rgba(16, 185, 129, 0.9);
+}
+
+.peer:checked + .marquee-switch-track .marquee-switch-thumb {
+  transform: translateX(1.1rem);
+  background: #ffffff;
+}
+
+.peer:focus-visible + .marquee-switch-track {
+  outline: 2px solid rgba(59, 130, 246, 0.9);
+  outline-offset: 2px;
 }
 </style>
 

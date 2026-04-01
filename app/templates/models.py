@@ -367,6 +367,7 @@ class Widget(models.Model):
     # Content Type & Configuration
     WIDGET_TYPE_CHOICES = [
         ('text', 'Text'),
+        ('marquee', 'Marquee'),
         ('image', 'Image'),
         ('video', 'Video'),
         ('clock', 'Clock'),

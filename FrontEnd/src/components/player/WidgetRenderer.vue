@@ -19,6 +19,11 @@
       v-if="widget.type === 'text'"
       :widget="widget"
     />
+
+    <MarqueeWidget
+      v-if="widget.type === 'marquee'"
+      :widget="widget"
+    />
     
     <!-- Video Widget -->
     <VideoWidget
@@ -42,7 +47,7 @@
     />
     
     <!-- Warn if widget type is not recognized -->
-    <div v-if="!['image','text','video','clock','webview','chart'].includes(widget.type)" class="widget-error" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,0,0,0.3); display: flex; align-items: center; justify-content: center; color: white; font-size: 12px;">
+    <div v-if="!['image','text','marquee','video','clock','webview','chart'].includes(widget.type)" class="widget-error" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,0,0,0.3); display: flex; align-items: center; justify-content: center; color: white; font-size: 12px;">
       Unknown widget type: {{ widget.type }}
     </div>
   </div>
@@ -52,6 +57,7 @@
 import { computed, onMounted } from 'vue'
 import ImageWidget from './widgets/ImageWidget.vue'
 import TextWidget from './widgets/TextWidget.vue'
+import MarqueeWidget from './widgets/MarqueeWidget.vue'
 import VideoWidget from './widgets/VideoWidget.vue'
 import ClockWidget from './widgets/ClockWidget.vue'
 import WebviewWidget from './widgets/WebviewWidget.vue'

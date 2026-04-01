@@ -308,6 +308,52 @@ class TemplateViewSet(viewsets.ModelViewSet):
                         logger.warning(f"[SYNC] Content {content_id} not found, cannot link to widget {widget.id}")
                 except (ValueError, TypeError) as e:
                     logger.warning(f"[SYNC] Invalid content_id {content_id} for widget {widget.id}: {e}")
+
+            # Keep text widgets in sync with a real Content record so Player can render text.
+            if widget_type in {'text', 'marquee'}:
+                style_data = widget_data.get('style', {}) if isinstance(widget_data.get('style', {}), dict) else {}
+                style_text_value = style_data.get('text') or style_data.get('content') or ''
+                text_value = (content_value or style_text_value or '').strip()
+                if text_value:
+                    text_content = Content.objects.filter(
+                        widget=widget,
+                        type='text',
+                    ).order_by('order', 'created_at').first()
+
+                    if text_content:
+                        text_content.text_content = text_value
+                        text_content.is_active = True
+                        text_content.order = 0
+                        text_content.save(update_fields=['text_content', 'is_active', 'order', 'updated_at'])
+                    else:
+                        Content.objects.create(
+                            name=f"{widget.name} - Text",
+                            type='text',
+                            text_content=text_value,
+                            widget=widget,
+                            order=0,
+                            is_active=True,
+                        )
+
+                    # Mirror text in widget JSON as extra fallback for clients.
+                    if not isinstance(widget.content_json, dict):
+                        widget.content_json = {}
+                    if widget.content_json.get('text') != text_value:
+                        widget.content_json['text'] = text_value
+                        widget.save(update_fields=['content_json', 'updated_at'])
+                elif widget_type == 'marquee' and isinstance(widget.content_json, dict):
+                    # Keep marquee text fallback stable if db content exists but editor content is temporarily empty.
+                    existing_text = (widget.content_json.get('text') or '').strip()
+                    if not existing_text:
+                        existing_item = Content.objects.filter(
+                            widget=widget,
+                            type='text',
+                            is_active=True,
+                        ).order_by('order', 'created_at').first()
+                        recovered_text = (getattr(existing_item, 'text_content', '') or '').strip()
+                        if recovered_text:
+                            widget.content_json['text'] = recovered_text
+                            widget.save(update_fields=['content_json', 'updated_at'])
             
             # CRITICAL: If widget has content_url but no Content record, create one
             # This ensures widgets with direct URLs (from config_json.content) have Content records
@@ -325,6 +371,7 @@ class TemplateViewSet(viewsets.ModelViewSet):
                         'image': 'image',
                         'video': 'video',
                         'text': 'text',
+                        'marquee': 'text',
                         'clock': 'clock',
                         'webview': 'webview',
                         'chart': 'chart',
