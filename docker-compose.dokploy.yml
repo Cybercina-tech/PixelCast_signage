@@ -2,10 +2,10 @@
 # Dokploy / production on the server — USE THIS FILE in the Dokploy UI.
 # Compose path: docker-compose.dokploy.yml
 #
-# Do NOT deploy docker-compose.yml on the server: that stack is for local dev (Vite +
-# bind mounts) and is the wrong fit for Traefik.
+# Prefer this over docker-compose.yml (Vite dev). Production = Nginx + built Vue + Gunicorn.
 #
-# This file includes the production stack (Nginx + Vue build + Gunicorn, no source mounts).
+# If you must run the Vite dev stack behind https:// (Traefik), use docker-compose.yml +
+# docker-compose.https.yml and set VITE_BEHIND_HTTPS_PROXY=1 (see .env.example).
 # =============================================================================
 include:
   - path: docker-compose.prod.yml

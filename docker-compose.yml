@@ -87,9 +87,8 @@ services:
       - VITE_API_BASE_URL=/api
       - VITE_IOT_BASE_URL=/iot
       - VITE_PROXY_TARGET=http://backend:8000
-      # HTTPS (Traefik/Dokploy): set VITE_TRAEFIK_HTTPS=1 so HMR uses wss://…:443 (avoids Mixed Content).
-      # For local http://localhost:5173 set VITE_TRAEFIK_HTTPS=0 in .env
-      - VITE_TRAEFIK_HTTPS=${VITE_TRAEFIK_HTTPS:-1}
+      # Traefik HTTPS: set VITE_BEHIND_HTTPS_PROXY=1 (or use docker-compose.https.yml). See .env.example.
+      - VITE_BEHIND_HTTPS_PROXY=${VITE_BEHIND_HTTPS_PROXY:-0}
       - VITE_HMR_PROTOCOL=${VITE_HMR_PROTOCOL:-}
       - VITE_HMR_CLIENT_PORT=${VITE_HMR_CLIENT_PORT:-}
       - VITE_HMR_HOST=${VITE_HMR_HOST:-}
