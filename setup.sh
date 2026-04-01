@@ -67,4 +67,4 @@ echo "🆙 Starting PixelCast Signage..."
 docker compose up -d
 
 echo "✅ Done! Use 'docker compose logs -f' to see the logs."
-echo "   Frontend: http://localhost (or FRONTEND_PORT from .env)"
+echo "   Frontend: http://localhost:5173 (set FRONTEND_HOST_PORT in .env to change host port)"

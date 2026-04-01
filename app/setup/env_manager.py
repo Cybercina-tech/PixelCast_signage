@@ -289,7 +289,7 @@ def update_env_file(
                     'Redis Configuration': ['REDIS_HOST', 'REDIS_PORT', 'USE_REDIS_CACHE', 'REDIS_CACHE_URL', 'REDIS_PASSWORD'],
                     'Celery Configuration': ['CELERY_BROKER_URL', 'CELERY_RESULT_BACKEND'],
                     'Channel Layers': ['CHANNEL_LAYERS_BACKEND'],
-                    'Port Mappings': ['BACKEND_PORT', 'FRONTEND_PORT'],
+                    'Port Mappings': ['BACKEND_PORT', 'FRONTEND_HOST_PORT', 'HTTP_PORT'],
                 }
                 
                 # Write categorized variables
