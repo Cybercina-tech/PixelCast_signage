@@ -3,81 +3,62 @@
     class="widget"
     :style="widgetStyle"
   >
-    <!-- Debug overlay (remove in production) -->
-    <div v-if="false" class="debug-widget-overlay" style="position: absolute; top: 0; left: 0; z-index: 10000; background: rgba(0,255,0,0.1); border: 1px solid green; pointer-events: none; padding: 2px; font-size: 10px; color: white;">
-      {{ widget.type }}: {{ widget.name }}
-    </div>
-    
-    <!-- Image Widget -->
     <ImageWidget
       v-if="widget.type === 'image'"
       :widget="widget"
     />
-    
-    <!-- Text Widget -->
     <TextWidget
-      v-if="widget.type === 'text'"
+      v-else-if="widget.type === 'text'"
       :widget="widget"
     />
-
     <MarqueeWidget
-      v-if="widget.type === 'marquee'"
+      v-else-if="widget.type === 'marquee'"
       :widget="widget"
     />
-
     <WeatherWidget
-      v-if="widget.type === 'weather'"
+      v-else-if="widget.type === 'weather'"
       :widget="widget"
     />
-    
-    <!-- Video Widget -->
     <VideoWidget
-      v-if="widget.type === 'video'"
+      v-else-if="widget.type === 'video'"
       :widget="widget"
     />
-
     <AlbumWidget
-      v-if="widget.type === 'album'"
+      v-else-if="widget.type === 'album'"
       :widget="widget"
     />
-
     <ClockWidget
-      v-if="widget.type === 'clock'"
+      v-else-if="widget.type === 'clock'"
       :widget="widget"
     />
-
     <DateWidget
-      v-if="widget.type === 'date'"
+      v-else-if="widget.type === 'date'"
       :widget="widget"
     />
-
     <WeekdayWidget
-      v-if="widget.type === 'weekday'"
+      v-else-if="widget.type === 'weekday'"
       :widget="widget"
     />
-
     <WebviewWidget
-      v-if="widget.type === 'webview'"
+      v-else-if="widget.type === 'webview'"
       :widget="widget"
     />
-
     <ChartWidget
-      v-if="widget.type === 'chart'"
+      v-else-if="widget.type === 'chart'"
       :widget="widget"
     />
-
     <QRActionWidget
-      v-if="widget.type === 'qr_action'"
+      v-else-if="widget.type === 'qr_action'"
       :widget="widget"
     />
-
     <CountdownWidget
-      v-if="widget.type === 'countdown'"
+      v-else-if="widget.type === 'countdown'"
       :widget="widget"
     />
-    
-    <!-- Warn if widget type is not recognized -->
-    <div v-if="!['image','text','marquee','weather','video','album','clock','date','weekday','webview','chart','qr_action','countdown'].includes(widget.type)" class="widget-error" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,0,0,0.3); display: flex; align-items: center; justify-content: center; color: white; font-size: 12px;">
+    <div
+      v-else
+      class="widget-error"
+    >
       Unknown widget type: {{ widget.type }}
     </div>
   </div>
@@ -115,6 +96,7 @@ const props = defineProps({
 })
 
 onMounted(() => {
+  if (!import.meta.env.DEV) return
   console.log(`[WidgetRenderer] Widget ${props.widget.id} (${props.widget.name}) mounted`, {
     type: props.widget.type,
     x: props.widget.x,
@@ -168,5 +150,15 @@ const widgetStyle = computed(() => {
   backface-visibility: hidden;
   overflow: hidden;
 }
-</style>
 
+.widget-error {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 0, 0, 0.3);
+  color: white;
+  font-size: 12px;
+}
+</style>
