@@ -2,7 +2,10 @@ from rest_framework import viewsets, status, permissions, serializers
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from django.shortcuts import redirect
+from django.db.models import Count
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
+from django.http import HttpResponseNotFound
 from django.conf import settings
 from django.utils import timezone
 from django.db.models import Q, Sum
@@ -11,12 +14,22 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-from .models import Template, Layer, Widget, Content, Schedule
+from .models import (
+    Template,
+    Layer,
+    Widget,
+    Content,
+    Schedule,
+    QRActionLink,
+    QRActionRule,
+    QRScanEvent,
+)
 from .serializers import (
     TemplateSerializer, TemplateListSerializer, LayerSerializer,
     WidgetSerializer, ContentSerializer, ScheduleSerializer,
     ScheduleListSerializer, TemplateActivationSerializer,
-    ScheduleExecutionSerializer
+    ScheduleExecutionSerializer, QRActionLinkSerializer,
+    QRActionRuleSerializer, QRScanEventSerializer
 )
 from accounts.permissions import RolePermissions
 from log.models import ContentDownloadLog
@@ -192,7 +205,7 @@ class TemplateViewSet(viewsets.ModelViewSet):
         logger.info(f"[SYNC] Syncing {len(widgets_data)} widgets for Template {template.id} ({template.name})")
         
         # Get or create a default layer for this template
-        from .models import Layer, Widget, Content
+        from .models import Layer, Widget, Content, QRActionLink, QRActionRule
         default_layer, layer_created = Layer.objects.get_or_create(
             template=template,
             defaults={
@@ -234,6 +247,17 @@ class TemplateViewSet(viewsets.ModelViewSet):
 
             widget_type = widget_data.get('type', 'text')
             content_value = widget_data.get('content', '')
+            if widget_type == 'weather':
+                style_payload = widget_data.get('style', {}) if isinstance(widget_data.get('style', {}), dict) else {}
+                # Keep weather widgets JSON-driven; map plain content text as a location fallback.
+                if content_value and not style_payload.get('location'):
+                    style_payload['location'] = str(content_value).strip()
+                widget_data['style'] = style_payload
+            if widget_type == 'qr_action':
+                style_payload = widget_data.get('style', {}) if isinstance(widget_data.get('style', {}), dict) else {}
+                if content_value and not style_payload.get('defaultUrl'):
+                    style_payload['defaultUrl'] = str(content_value).strip()
+                widget_data['style'] = style_payload
             url_widget_types = {'image', 'video', 'webview'}
             content_url_value = (content_value or None) if widget_type in url_widget_types else None
             
@@ -292,22 +316,70 @@ class TemplateViewSet(viewsets.ModelViewSet):
                 created_count += 1
                 logger.debug(f"[SYNC] Created widget {widget.id} ({widget.name})")
             
-            # Link Content to Widget if content_id is provided
+            # Link Content records to this widget.
+            # Supports both legacy single `content_id` and playlist-style `content_ids`.
             content_id = widget_data.get('content_id')
-            if content_id:
-                try:
-                    import uuid
-                    content_uuid = uuid.UUID(content_id) if isinstance(content_id, str) else content_id
-                    content = Content.objects.filter(id=content_uuid).first()
-                    if content:
-                        # Link content to widget
+            content_ids = widget_data.get('content_ids')
+            if not isinstance(content_ids, list):
+                content_ids = []
+            if content_id and content_id not in content_ids:
+                content_ids.append(content_id)
+
+            # Optional playlist item overrides:
+            # - widget.playlist_items: [{content_id, durationSec, transition}]
+            # - widget.style.playlist: [{content_id, durationSec, transition}]
+            playlist_items = widget_data.get('playlist_items')
+            if not isinstance(playlist_items, list):
+                style_payload = widget_data.get('style', {}) if isinstance(widget_data.get('style', {}), dict) else {}
+                playlist_items = style_payload.get('playlist', []) if isinstance(style_payload.get('playlist'), list) else []
+            playlist_by_id = {}
+            for item in playlist_items:
+                if not isinstance(item, dict):
+                    continue
+                item_content_id = str(item.get('content_id') or '').strip()
+                if item_content_id:
+                    playlist_by_id[item_content_id] = item
+                    if item_content_id not in content_ids:
+                        content_ids.append(item_content_id)
+
+            if content_ids:
+                for index, linked_content_id in enumerate(content_ids):
+                    try:
+                        import uuid
+                        content_uuid = uuid.UUID(linked_content_id) if isinstance(linked_content_id, str) else linked_content_id
+                        content = Content.objects.filter(id=content_uuid).first()
+                        if not content:
+                            logger.warning(f"[SYNC] Content {linked_content_id} not found, cannot link to widget {widget.id}")
+                            continue
+
+                        playlist_meta = playlist_by_id.get(str(content.id), {})
+                        content_order = int(playlist_meta.get('order', index))
+                        duration_override = playlist_meta.get('durationSec')
+                        transition_override = playlist_meta.get('transition')
+                        content_json_patch = content.content_json if isinstance(content.content_json, dict) else {}
+                        content_json_updated = False
+
+                        if duration_override is not None:
+                            try:
+                                content.duration = float(duration_override)
+                            except (TypeError, ValueError):
+                                pass
+                        if transition_override:
+                            content_json_patch['transition'] = transition_override
+                            content_json_updated = True
+
                         content.widget = widget
-                        content.save(update_fields=['widget'])
-                        logger.debug(f"[SYNC] Linked content {content.id} to widget {widget.id}")
-                    else:
-                        logger.warning(f"[SYNC] Content {content_id} not found, cannot link to widget {widget.id}")
-                except (ValueError, TypeError) as e:
-                    logger.warning(f"[SYNC] Invalid content_id {content_id} for widget {widget.id}: {e}")
+                        content.order = max(0, content_order)
+                        update_fields = ['widget', 'order']
+                        if duration_override is not None:
+                            update_fields.append('duration')
+                        if content_json_updated:
+                            content.content_json = content_json_patch
+                            update_fields.append('content_json')
+                        content.save(update_fields=update_fields)
+                        logger.debug(f"[SYNC] Linked content {content.id} to widget {widget.id} (order={content.order})")
+                    except (ValueError, TypeError) as e:
+                        logger.warning(f"[SYNC] Invalid content_id {linked_content_id} for widget {widget.id}: {e}")
 
             # Keep text widgets in sync with a real Content record so Player can render text.
             if widget_type in {'text', 'marquee'}:
@@ -373,8 +445,12 @@ class TemplateViewSet(viewsets.ModelViewSet):
                         'text': 'text',
                         'marquee': 'text',
                         'clock': 'clock',
+                        'date': 'text',
+                        'weekday': 'text',
                         'webview': 'webview',
                         'chart': 'chart',
+                        'qr_action': 'json',
+                        'countdown': 'json',
                     }
                     content_type = content_type_map.get(widget_type, 'image')
                     
@@ -389,6 +465,53 @@ class TemplateViewSet(viewsets.ModelViewSet):
                     logger.info(f"[SYNC] Created Content {new_content.id} from widget {widget.id} content_url")
                 else:
                     logger.debug(f"[SYNC] Content already exists for widget {widget.id} with URL {widget_content_url}")
+
+            if widget_type == 'qr_action':
+                style_data = widget_data.get('style', {}) if isinstance(widget_data.get('style', {}), dict) else {}
+                default_url = (style_data.get('defaultUrl') or content_value or '').strip()
+                if default_url:
+                    slug = str(style_data.get('slug') or f"w{str(widget.id).replace('-', '')[:12]}")
+                    qr_link, _ = QRActionLink.objects.update_or_create(
+                        widget=widget,
+                        defaults={
+                            'slug': slug,
+                            'default_url': default_url,
+                            'campaign_id': style_data.get('campaignId') or None,
+                            'is_active': bool(style_data.get('isActive', True)),
+                            'error_correction_level': style_data.get('errorCorrectionLevel', 'H'),
+                            'settings_json': {
+                                'ctaText': style_data.get('ctaText', ''),
+                                'logoUrl': style_data.get('logoUrl', ''),
+                                'foregroundColor': style_data.get('foregroundColor', '#000000'),
+                                'backgroundColor': style_data.get('backgroundColor', '#ffffff'),
+                                'quietZone': style_data.get('quietZone', 4),
+                            },
+                        },
+                    )
+                    rules = style_data.get('rules', []) if isinstance(style_data.get('rules', []), list) else []
+                    qr_link.rules.all().delete()
+                    for idx, rule in enumerate(rules):
+                        if not isinstance(rule, dict):
+                            continue
+                        target_url = str(rule.get('targetUrl') or '').strip()
+                        if not target_url:
+                            continue
+                        QRActionRule.objects.create(
+                            link=qr_link,
+                            name=rule.get('name') or f'Rule {idx + 1}',
+                            priority=int(rule.get('priority', idx + 1)),
+                            target_url=target_url,
+                            start_hour=rule.get('startHour'),
+                            end_hour=rule.get('endHour'),
+                            days_of_week=rule.get('daysOfWeek') or [],
+                            is_active=bool(rule.get('isActive', True)),
+                            condition_json=rule.get('conditionJson') or {},
+                        )
+                    widget_data['style']['slug'] = qr_link.slug
+                    widget_data['style']['redirectPath'] = f"/qr/{qr_link.slug}/"
+                    widget_data['style']['displayUrl'] = default_url
+                    widget.content_json = widget_data['style']
+                    widget.save(update_fields=['content_json', 'updated_at'])
             
             # Update config_json with the actual widget UUID
             widget_data['id'] = str(widget.id)
@@ -1835,3 +1958,114 @@ class ScheduleViewSet(viewsets.ModelViewSet):
             'count': len(conflicts),
             'conflicts': conflicts
         }, status=status.HTTP_200_OK)
+
+
+class QRActionLinkViewSet(viewsets.ModelViewSet):
+    queryset = QRActionLink.objects.select_related('widget', 'widget__layer', 'widget__layer__template')
+    serializer_class = QRActionLinkSerializer
+    permission_classes = [IsAuthenticated]
+    lookup_field = 'id'
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        user = self.request.user
+        if user.has_full_access():
+            return queryset
+        if user.can_manage_own_resources():
+            org_users = user.get_organization_users()
+            accessible_templates = Template.objects.filter(
+                Q(created_by=user) | Q(created_by__in=org_users)
+            )
+        else:
+            accessible_templates = Template.objects.filter(created_by=user)
+        return queryset.filter(widget__layer__template__in=accessible_templates)
+
+    @action(detail=False, methods=['get'])
+    def analytics(self, request):
+        link_id = request.query_params.get('link_id')
+        campaign_id = request.query_params.get('campaign_id')
+        queryset = QRScanEvent.objects.all()
+        if link_id:
+            queryset = queryset.filter(link_id=link_id)
+        if campaign_id:
+            queryset = queryset.filter(campaign_id=campaign_id)
+
+        daily_rows = (
+            queryset.extra(select={'day': "date(created_at)"})
+            .values('day')
+            .annotate(scans=Count('id'))
+            .order_by('-day')[:30]
+        )
+        return Response({
+            'total_scans': queryset.count(),
+            'daily': list(daily_rows),
+        }, status=status.HTTP_200_OK)
+
+
+class QRActionRuleViewSet(viewsets.ModelViewSet):
+    queryset = QRActionRule.objects.select_related('link', 'link__widget', 'link__widget__layer', 'link__widget__layer__template')
+    serializer_class = QRActionRuleSerializer
+    permission_classes = [IsAuthenticated]
+    lookup_field = 'id'
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        user = self.request.user
+        if user.has_full_access():
+            return queryset
+        if user.can_manage_own_resources():
+            org_users = user.get_organization_users()
+            accessible_templates = Template.objects.filter(
+                Q(created_by=user) | Q(created_by__in=org_users)
+            )
+        else:
+            accessible_templates = Template.objects.filter(created_by=user)
+        return queryset.filter(link__widget__layer__template__in=accessible_templates)
+
+
+class QRScanEventViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = QRScanEvent.objects.select_related('link', 'matched_rule')
+    serializer_class = QRScanEventSerializer
+    permission_classes = [IsAuthenticated]
+    lookup_field = 'id'
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        user = self.request.user
+        if user.has_full_access():
+            return queryset
+        if user.can_manage_own_resources():
+            org_users = user.get_organization_users()
+            accessible_templates = Template.objects.filter(
+                Q(created_by=user) | Q(created_by__in=org_users)
+            )
+        else:
+            accessible_templates = Template.objects.filter(created_by=user)
+        return queryset.filter(link__widget__layer__template__in=accessible_templates)
+
+
+def _extract_request_ip(request):
+    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    if x_forwarded_for:
+        return x_forwarded_for.split(',')[0].strip()
+    return request.META.get('REMOTE_ADDR')
+
+
+def qr_action_redirect(request, slug):
+    link = QRActionLink.objects.filter(slug=slug, is_active=True).first()
+    if not link:
+        return HttpResponseNotFound('QR link not found')
+
+    resolved_url, matched_rule = link.resolve_destination()
+    QRScanEvent.objects.create(
+        link=link,
+        matched_rule=matched_rule,
+        campaign_id=link.campaign_id,
+        resolved_url=resolved_url,
+        request_ip=_extract_request_ip(request),
+        user_agent=request.META.get('HTTP_USER_AGENT'),
+        referrer=request.META.get('HTTP_REFERER'),
+        query_params=dict(request.GET.items()),
+        source_screen=request.GET.get('screen'),
+    )
+    return redirect(resolved_url)

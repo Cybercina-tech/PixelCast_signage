@@ -113,13 +113,22 @@
               >
                 <div class="dropdown-header">
                   <h3 class="dropdown-title">Notifications</h3>
-                  <button
-                    v-if="unreadNotifications > 0"
-                    @click="markAllAsRead"
-                    class="dropdown-action space-action"
-                  >
-                    Mark all read
-                  </button>
+                  <div class="flex items-center gap-2">
+                    <button
+                      v-if="unreadNotifications > 0"
+                      @click="markAllAsRead"
+                      class="dropdown-action space-action"
+                    >
+                      Mark all read
+                    </button>
+                    <button
+                      v-if="notifications.length > 0"
+                      @click="clearNotifications"
+                      class="dropdown-action space-action"
+                    >
+                      Clear all
+                    </button>
+                  </div>
                 </div>
                 <div class="dropdown-content">
                   <div
@@ -150,6 +159,13 @@
                       <p class="notification-message">{{ notification.message }}</p>
                       <p class="notification-time">{{ formatTime(notification.created_at) }}</p>
                     </div>
+                    <button
+                      class="notification-dismiss"
+                      aria-label="Dismiss notification"
+                      @click.stop="dismissNotification(notification.id)"
+                    >
+                      <XMarkIcon class="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
               </div>
@@ -360,6 +376,14 @@ const handleNotificationClick = async (notification) => {
 
 const markAllAsRead = async () => {
   await notificationsStore.markAllAsRead()
+}
+
+const clearNotifications = async () => {
+  await notificationsStore.clearAll()
+}
+
+const dismissNotification = async (notificationId) => {
+  await notificationsStore.dismiss(notificationId)
 }
 
 // Get icon component for notification type
@@ -1068,6 +1092,24 @@ onUnmounted(() => {
 .notification-content {
   flex: 1;
   min-width: 0;
+}
+
+.notification-dismiss {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.notification-dismiss:hover {
+  background: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
 }
 
 .notification-title {

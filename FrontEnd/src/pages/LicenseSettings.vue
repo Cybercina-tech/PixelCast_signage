@@ -4,6 +4,13 @@
       <div>
         <h1 class="text-2xl font-bold text-primary">License Settings</h1>
         <p class="text-muted mt-1">Manage activation and revalidation for your installation.</p>
+        <button
+          type="button"
+          class="btn-outline mt-3 px-4 py-2 rounded-lg text-sm"
+          @click="goToSettings"
+        >
+          Back to Settings
+        </button>
       </div>
 
       <Card title="Current License Status">
@@ -61,11 +68,13 @@
 
 <script setup>
 import { onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import Card from '@/components/common/Card.vue'
 import { useNotification } from '@/composables/useNotification'
 import { licenseAPI } from '@/services/api'
 
+const router = useRouter()
 const notify = useNotification()
 const loading = ref(false)
 const statusData = ref({})
@@ -129,6 +138,10 @@ async function activate() {
   } finally {
     loading.value = false
   }
+}
+
+function goToSettings() {
+  router.push('/settings')
 }
 
 onMounted(loadStatus)

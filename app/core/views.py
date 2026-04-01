@@ -4,14 +4,20 @@ Views for backup management and audit log access.
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated, BasePermission
+from rest_framework.permissions import IsAuthenticated, BasePermission, AllowAny
 from django.utils import timezone
 from django.db.models import Q
 from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter, OpenApiExample
 from drf_spectacular.types import OpenApiTypes
-from core.models import AuditLog, SystemBackup, Notification
+from core.models import AuditLog, SystemBackup, Notification, NotificationPreference, TVBrand
 from core.backup import backup_manager
-from core.serializers import AuditLogSerializer, SystemBackupSerializer, NotificationSerializer
+from core.serializers import (
+    AuditLogSerializer,
+    SystemBackupSerializer,
+    NotificationSerializer,
+    NotificationPreferenceSerializer,
+    TVBrandWithModelsSerializer,
+)
 from core.audit import AuditLogger
 import logging
 
@@ -635,3 +641,118 @@ class NotificationViewSet(viewsets.ReadOnlyModelViewSet):
                 {'error': 'An error occurred while marking all notifications as read'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+    @extend_schema(
+        summary='Dismiss notification',
+        description='Delete a specific notification for the current user.',
+        tags=['Notifications'],
+    )
+    @action(detail=True, methods=['delete'])
+    def dismiss(self, request, pk=None):
+        """Delete a notification owned by current user."""
+        try:
+            notification = self.get_object()
+            if notification.user != request.user:
+                return Response(
+                    {'error': 'Permission denied'},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            notification.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except Exception:
+            return Response(
+                {'error': 'An error occurred while dismissing notification'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    @extend_schema(
+        summary='Clear notifications',
+        description='Delete all notifications for the current user.',
+        tags=['Notifications'],
+    )
+    @action(detail=False, methods=['delete'])
+    def clear(self, request):
+        """Delete all notifications for current user."""
+        try:
+            deleted_count, _ = Notification.objects.filter(user=request.user).delete()
+            return Response({
+                'status': 'success',
+                'deleted_count': deleted_count,
+            })
+        except Exception:
+            return Response(
+                {'error': 'An error occurred while clearing notifications'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+class NotificationPreferenceViewSet(viewsets.ViewSet):
+    """
+    ViewSet for current user's notification preferences.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def _get_or_create_preferences(self, user):
+        defaults = {
+            'notification_email': user.email or '',
+        }
+        return NotificationPreference.objects.get_or_create(user=user, defaults=defaults)
+
+    @action(detail=False, methods=['get', 'put', 'patch'])
+    def me(self, request):
+        preferences, _ = self._get_or_create_preferences(request.user)
+
+        if request.method == 'GET':
+            serializer = NotificationPreferenceSerializer(preferences)
+            return Response(serializer.data)
+
+        serializer = NotificationPreferenceSerializer(
+            preferences,
+            data=request.data,
+            partial=(request.method == 'PATCH'),
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
+
+
+class TVBrandViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    Public read-only TV catalog endpoint for Data Center page.
+    """
+
+    serializer_class = TVBrandWithModelsSerializer
+    permission_classes = [AllowAny]
+
+    def get_queryset(self):
+        queryset = TVBrand.objects.filter(is_active=True).prefetch_related('models')
+
+        search = (self.request.query_params.get('search') or '').strip()
+        if search:
+            queryset = queryset.filter(
+                Q(name__icontains=search)
+                | Q(description__icontains=search)
+                | Q(models__name__icontains=search)
+                | Q(models__model_code__icontains=search)
+                | Q(models__series__icontains=search)
+            )
+
+        brand = (self.request.query_params.get('brand') or '').strip()
+        if brand:
+            queryset = queryset.filter(
+                Q(slug__iexact=brand) | Q(name__iexact=brand)
+            )
+
+        platform = (self.request.query_params.get('platform') or '').strip()
+        if platform:
+            queryset = queryset.filter(models__platform=platform)
+
+        operation_time = (self.request.query_params.get('operation_time') or '').strip()
+        if operation_time:
+            queryset = queryset.filter(models__operation_time=operation_time)
+
+        brightness_class = (self.request.query_params.get('brightness_class') or '').strip()
+        if brightness_class:
+            queryset = queryset.filter(models__brightness_class=brightness_class)
+
+        return queryset.distinct().order_by('sort_order', 'name')

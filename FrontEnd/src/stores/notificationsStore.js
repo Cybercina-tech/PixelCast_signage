@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import api from '@/services/api'
+import { notificationCenterAPI } from '@/services/api'
 
 export const useNotificationsStore = defineStore('notifications', {
   state: () => ({
@@ -33,9 +33,7 @@ export const useNotificationsStore = defineStore('notifications', {
       this.error = null
       
       try {
-        const response = await api.get('/core/notifications/', {
-          params: { limit }
-        })
+        const response = await notificationCenterAPI.list({ limit })
         
         if (response.data.status === 'success' && Array.isArray(response.data.notifications)) {
           this.notifications = response.data.notifications
@@ -61,7 +59,7 @@ export const useNotificationsStore = defineStore('notifications', {
      */
     async markAsRead(notificationId) {
       try {
-        const response = await api.post(`/core/notifications/${notificationId}/mark_as_read/`)
+        const response = await notificationCenterAPI.markAsRead(notificationId)
         
         // Update local state
         const notification = this.notifications.find(n => n.id === notificationId)
@@ -86,7 +84,7 @@ export const useNotificationsStore = defineStore('notifications', {
      */
     async markAllAsRead() {
       try {
-        const response = await api.post('/core/notifications/mark_all_as_read/')
+        const response = await notificationCenterAPI.markAllAsRead()
         
         // Update local state
         this.notifications.forEach(n => {
@@ -102,6 +100,22 @@ export const useNotificationsStore = defineStore('notifications', {
         })
         throw error
       }
+    },
+
+    /**
+     * Dismiss a single notification
+     */
+    async dismiss(notificationId) {
+      await notificationCenterAPI.dismiss(notificationId)
+      this.notifications = this.notifications.filter((n) => n.id !== notificationId)
+    },
+
+    /**
+     * Clear all notifications
+     */
+    async clearAll() {
+      await notificationCenterAPI.clear()
+      this.notifications = []
     },
 
     /**

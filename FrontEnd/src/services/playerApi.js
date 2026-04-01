@@ -93,7 +93,18 @@ export const fetchTemplate = async (override = {}) => {
     const response = await playerApi.get('/player/template/', {
       params: { screen_id: identity.screenId },
     })
-    return response.data
+    const data = response.data || {}
+    const dateHeader = response.headers?.date
+    let serverNowMs = null
+    if (dateHeader) {
+      const parsed = Date.parse(dateHeader)
+      if (!Number.isNaN(parsed)) serverNowMs = parsed
+    }
+    const clientNowMs = Date.now()
+    return {
+      ...data,
+      _timeSync: serverNowMs != null ? { serverNowMs, clientNowMs } : null,
+    }
   } catch (error) {
     wrapError(error)
   }

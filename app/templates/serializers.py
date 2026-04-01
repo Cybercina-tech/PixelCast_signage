@@ -2,7 +2,16 @@ from rest_framework import serializers
 from django.utils import timezone
 from django.conf import settings
 from django.core.files.storage import default_storage
-from .models import Template, Layer, Widget, Content, Schedule
+from .models import (
+    Template,
+    Layer,
+    Widget,
+    Content,
+    Schedule,
+    QRActionLink,
+    QRActionRule,
+    QRScanEvent,
+)
 from accounts.permissions import RolePermissions
 
 
@@ -160,6 +169,91 @@ class WidgetSerializer(serializers.ModelSerializer):
     def get_total_contents_count(self, obj):
         """Get total count of contents"""
         return obj.get_contents_count()
+
+
+class QRActionRuleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = QRActionRule
+        fields = [
+            'id',
+            'link',
+            'name',
+            'priority',
+            'target_url',
+            'start_hour',
+            'end_hour',
+            'days_of_week',
+            'is_active',
+            'condition_json',
+            'created_at',
+            'updated_at',
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+    def validate(self, attrs):
+        start_hour = attrs.get('start_hour', getattr(self.instance, 'start_hour', None))
+        end_hour = attrs.get('end_hour', getattr(self.instance, 'end_hour', None))
+        for value, name in ((start_hour, 'start_hour'), (end_hour, 'end_hour')):
+            if value is not None and (value < 0 or value > 23):
+                raise serializers.ValidationError({name: 'Hour must be between 0 and 23.'})
+        days_of_week = attrs.get('days_of_week', getattr(self.instance, 'days_of_week', []))
+        if days_of_week:
+            try:
+                normalized = sorted({int(item) for item in days_of_week})
+            except (TypeError, ValueError):
+                raise serializers.ValidationError({'days_of_week': 'Use weekday indexes 0..6.'})
+            if any(item < 0 or item > 6 for item in normalized):
+                raise serializers.ValidationError({'days_of_week': 'Use weekday indexes 0..6.'})
+            attrs['days_of_week'] = normalized
+        return attrs
+
+
+class QRActionLinkSerializer(serializers.ModelSerializer):
+    rules = QRActionRuleSerializer(many=True, read_only=True)
+    redirect_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = QRActionLink
+        fields = [
+            'id',
+            'widget',
+            'slug',
+            'default_url',
+            'campaign_id',
+            'is_active',
+            'error_correction_level',
+            'settings_json',
+            'redirect_url',
+            'rules',
+            'created_at',
+            'updated_at',
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+    def get_redirect_url(self, obj):
+        request = self.context.get('request')
+        if request:
+            return request.build_absolute_uri(f"/qr/{obj.slug}/")
+        return f"/qr/{obj.slug}/"
+
+
+class QRScanEventSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = QRScanEvent
+        fields = [
+            'id',
+            'link',
+            'matched_rule',
+            'campaign_id',
+            'resolved_url',
+            'request_ip',
+            'user_agent',
+            'referrer',
+            'query_params',
+            'source_screen',
+            'created_at',
+        ]
+        read_only_fields = fields
 
 
 class LayerSerializer(serializers.ModelSerializer):

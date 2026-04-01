@@ -266,6 +266,8 @@
             <router-link to="/privacy" class="hover:text-slate-900 transition-colors font-medium">Privacy Policy</router-link>
             <span class="text-slate-300">•</span>
             <router-link to="/terms" class="hover:text-slate-900 transition-colors font-medium">Terms of Service</router-link>
+            <span class="text-slate-300">•</span>
+            <router-link to="/data-center" class="hover:text-slate-900 transition-colors font-medium">Data Center</router-link>
           </div>
         </div>
       </div>

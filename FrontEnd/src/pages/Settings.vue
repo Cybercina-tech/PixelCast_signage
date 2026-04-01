@@ -407,6 +407,7 @@ import { ref, computed, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useThemeStore } from '@/stores/theme'
 import { useNotification } from '@/composables/useNotification'
+import { notificationCenterAPI } from '@/services/api'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import Card from '@/components/common/Card.vue'
 import NeonToggle from '@/components/common/NeonToggle.vue'
@@ -609,7 +610,13 @@ const saveChanges = async () => {
     }
 
     if (activeTab.value === 'notifications') {
-      localStorage.setItem('notificationSettings', JSON.stringify(notificationSettings.value))
+      await notificationCenterAPI.savePreferences({
+        screen_offline: notificationSettings.value.screenOffline,
+        template_push: notificationSettings.value.templatePush,
+        system_updates: notificationSettings.value.systemUpdates,
+        email_enabled: notificationSettings.value.email,
+        notification_email: notificationSettings.value.notificationEmail,
+      })
       originalSettings.value.notifications = JSON.parse(JSON.stringify(notificationSettings.value))
     }
 
@@ -658,14 +665,26 @@ const loadSettings = () => {
     displaySettings.value = { ...displaySettings.value, ...JSON.parse(savedDisplay) }
   }
 
-  const savedNotifications = localStorage.getItem('notificationSettings')
-  if (savedNotifications) {
-    notificationSettings.value = { ...notificationSettings.value, ...JSON.parse(savedNotifications) }
-  }
-
   const savedSystem = localStorage.getItem('systemSettings')
   if (savedSystem) {
     systemSettings.value = { ...systemSettings.value, ...JSON.parse(savedSystem) }
+  }
+}
+
+const loadNotificationPreferences = async () => {
+  try {
+    const { data } = await notificationCenterAPI.getPreferences()
+    notificationSettings.value = {
+      ...notificationSettings.value,
+      screenOffline: Boolean(data?.screen_offline),
+      templatePush: Boolean(data?.template_push),
+      systemUpdates: Boolean(data?.system_updates),
+      email: Boolean(data?.email_enabled),
+      notificationEmail: data?.notification_email || notificationSettings.value.notificationEmail || '',
+    }
+    originalSettings.value.notifications = JSON.parse(JSON.stringify(notificationSettings.value))
+  } catch (error) {
+    console.error('Failed to load notification preferences:', error)
   }
 }
 
@@ -674,4 +693,5 @@ watch(activeTab, () => {
 })
 
 loadSettings()
+loadNotificationPreferences()
 </script>

@@ -1,17 +1,33 @@
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed } from 'vue'
+
+/**
+ * Use the same pixel box for scaling math as for the player clip rect.
+ * `100vh`/`100vw` often differ from `innerWidth`/`innerHeight` (scrollbars, mobile UI).
+ * `visualViewport` matches what is actually visible when available.
+ */
+function readViewportSize() {
+  if (typeof window === 'undefined') return { width: 1920, height: 1080 }
+  const vv = window.visualViewport
+  if (vv && vv.width >= 1 && vv.height >= 1) {
+    return { width: vv.width, height: vv.height }
+  }
+  return { width: window.innerWidth, height: window.innerHeight }
+}
 
 /**
  * Composable for responsive scaling calculations
  * Handles template scaling to fit any screen size while maintaining aspect ratio
  */
 export function useResponsiveScaling(template) {
-  const viewportWidth = ref(window.innerWidth)
-  const viewportHeight = ref(window.innerHeight)
+  const initial = readViewportSize()
+  const viewportWidth = ref(initial.width)
+  const viewportHeight = ref(initial.height)
   
   // Update viewport dimensions on resize
   const updateViewport = () => {
-    viewportWidth.value = window.innerWidth
-    viewportHeight.value = window.innerHeight
+    const { width, height } = readViewportSize()
+    viewportWidth.value = width
+    viewportHeight.value = height
   }
   
   // Debounced resize handler for performance
@@ -26,16 +42,10 @@ export function useResponsiveScaling(template) {
   }
   
   /**
-   * Calculate scale factor to cover entire viewport (no black bars)
-   * CRITICAL FIX: Changed from "fit" to "cover" mode
-   * This ensures template always fills 100% of viewport, eliminating black borders
-   * 
-   * IMPORTANT: This scale is used when template-container is 100vw x 100vh
-   * Scale is applied to template's natural dimensions (e.g. 1920x1080)
-   * to make it cover the entire viewport container
-   * 
-   * Uses larger scale to cover entire viewport (may crop edges if aspect ratios differ)
-   * All nested elements (layers → widgets → content) scale proportionally via CSS transform
+   * Horizontal-fit mode:
+   * - Always fill viewport width completely.
+   * - Keep aspect ratio.
+   * - Height may letterbox (if shorter) or crop (if taller).
    */
   const scaleFactor = computed(() => {
     if (!template.value) return 1
@@ -55,38 +65,17 @@ export function useResponsiveScaling(template) {
       return 1
     }
     
-    const templateAspectRatio = templateWidth / templateHeight
-    const viewportAspectRatio = viewportWidth.value / viewportHeight.value
+    const scaleX = viewportWidth.value / templateWidth
+    let scale = scaleX
+    // Tiny shrink so float math never places the scaled rect 1px past the clip edge.
+    scale *= 1 - 1e-6
     
-    // CRITICAL FIX: Calculate scale to COVER viewport (not fit)
-    // Container is 100vw x 100vh, template needs to scale to cover it completely
-    // This uses the larger scale factor to ensure 100% of viewport is filled
-    // Similar to CSS object-fit: cover - fills entire container, may crop edges
-    let scale
-    
-    if (templateAspectRatio > viewportAspectRatio) {
-      // Template is wider than viewport - cover by height
-      // Scale template height to match viewport height
-      // May crop left/right edges (no black bars top/bottom)
-      scale = viewportHeight.value / templateHeight
-    } else {
-      // Template is taller than viewport - cover by width  
-      // Scale template width to match viewport width
-      // May crop top/bottom edges (no black bars left/right)
-      scale = viewportWidth.value / templateWidth
-    }
-    
-    // Ensure scale is never negative, zero, or excessively large
-    // Clamp between 0.01 (very small) and 10 (very large) for safety
     const finalScale = Math.max(0.01, Math.min(scale, 10))
     
-    console.log('[useResponsiveScaling] Scale calculated:', {
+    console.log('[useResponsiveScaling] Scale calculated (fit-width):', {
       templateSize: `${templateWidth}x${templateHeight}`,
       viewportSize: `${viewportWidth.value}x${viewportHeight.value}`,
-      templateAspectRatio: templateAspectRatio.toFixed(3),
-      viewportAspectRatio: viewportAspectRatio.toFixed(3),
       scale: finalScale.toFixed(6),
-      mode: templateAspectRatio > viewportAspectRatio ? 'cover-by-height' : 'cover-by-width'
     })
     
     return finalScale
@@ -103,28 +92,40 @@ export function useResponsiveScaling(template) {
     return (template.value.height || 1080) * scaleFactor.value
   })
   
-  // Calculate offset to center template
+  // In fit-width mode, X is always anchored to the left edge.
   const offsetX = computed(() => {
-    if (!template.value) return 0
-    return (viewportWidth.value - scaledWidth.value) / 2
+    return 0
   })
   
+  // Y is centered only when there is extra vertical room; otherwise top-anchored.
   const offsetY = computed(() => {
     if (!template.value) return 0
-    return (viewportHeight.value - scaledHeight.value) / 2
+    const gap = viewportHeight.value - scaledHeight.value
+    return Math.max(0, Math.floor(gap * 0.5 * 1000) / 1000)
   })
   
   // Setup resize listener (call from component's onMounted)
   const setupResizeListener = () => {
+    updateViewport()
     window.addEventListener('resize', handleResize)
     // Also listen to orientation change for mobile devices
     window.addEventListener('orientationchange', handleResize)
+    const vv = window.visualViewport
+    if (vv) {
+      vv.addEventListener('resize', handleResize)
+      vv.addEventListener('scroll', handleResize)
+    }
   }
   
   // Cleanup (call from component's onUnmounted)
   const cleanupResizeListener = () => {
     window.removeEventListener('resize', handleResize)
     window.removeEventListener('orientationchange', handleResize)
+    const vv = window.visualViewport
+    if (vv) {
+      vv.removeEventListener('resize', handleResize)
+      vv.removeEventListener('scroll', handleResize)
+    }
     if (resizeTimeout) {
       clearTimeout(resizeTimeout)
       resizeTimeout = null

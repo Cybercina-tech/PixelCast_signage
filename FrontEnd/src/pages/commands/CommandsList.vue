@@ -1,8 +1,13 @@
 <template>
   <AppLayout>
     <div class="space-y-6">
-      <div class="flex justify-between items-center">
-        <h1 class="text-2xl font-bold text-primary">Commands</h1>
+      <div class="flex justify-between items-start gap-4">
+        <div>
+          <h1 class="text-2xl font-bold text-primary">Commands</h1>
+          <p class="text-sm text-muted mt-1">
+            در این بخش می‌توانید دستورها را برای نمایشگرها ارسال و وضعیت اجرای آن‌ها را پیگیری کنید.
+          </p>
+        </div>
         <button
           @click="showCreateModal = true"
           class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"

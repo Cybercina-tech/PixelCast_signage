@@ -1,5 +1,6 @@
 import json
 from datetime import timedelta
+from unittest.mock import patch
 
 from django.test import TestCase, override_settings
 from django.utils import timezone
@@ -7,6 +8,7 @@ from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
 
 from .models import Screen, PairingSession
+from templates.models import Template, Layer, Widget
 
 User = get_user_model()
 
@@ -197,6 +199,73 @@ class DeviceAuthEndpointTests(TestCase):
     def test_template_without_token_rejected(self):
         resp = self.client.get(f'/iot/player/template/?screen_id={self.screen.id}')
         self.assertEqual(resp.status_code, 401)
+
+    def test_template_response_includes_weather_style_payload(self):
+        template = Template.objects.create(
+            name='Weather Template',
+            width=1920,
+            height=1080,
+            config_json={
+                'widgets': [
+                    {
+                        'id': 'weather-widget-local',
+                        'type': 'weather',
+                        'name': 'Weather Widget',
+                        'x': '5%',
+                        'y': '5%',
+                        'width': '25%',
+                        'height': '20%',
+                        'style': {'location': 'Tehran,IR', 'units': 'celsius'},
+                    }
+                ]
+            },
+        )
+        layer = Layer.objects.create(
+            template=template,
+            name='Default Layer',
+            x=0,
+            y=0,
+            width=1920,
+            height=1080,
+            z_index=0,
+            is_active=True,
+        )
+        Widget.objects.create(
+            name='Weather Widget',
+            type='weather',
+            layer=layer,
+            x=100,
+            y=100,
+            width=480,
+            height=200,
+            z_index=1,
+            content_json={'location': 'Tehran,IR', 'units': 'celsius'},
+            is_active=True,
+        )
+        self.screen.active_template = template
+        self.screen.save(update_fields=['active_template'])
+
+        with patch(
+            'signage.serializers.enrich_weather_style',
+            return_value={
+                'location': 'Tehran,IR',
+                'units': 'celsius',
+                'weatherData': {'current': {'temp': 24}, 'updated_at': timezone.now().isoformat()},
+                'weatherMeta': {'source': 'live', 'stale': False},
+            },
+        ):
+            resp = self.client.get(
+                f'/iot/player/template/?screen_id={self.screen.id}',
+                **self._auth_headers(),
+            )
+
+        self.assertEqual(resp.status_code, 200)
+        payload = resp.json()
+        self.assertEqual(payload.get('status'), 'success')
+        widgets = payload['template']['config_json']['widgets']
+        weather_widget = next((w for w in widgets if w.get('type') == 'weather'), None)
+        self.assertIsNotNone(weather_widget)
+        self.assertIn('weatherData', weather_widget.get('style', {}))
 
     def test_command_pull_without_token_rejected(self):
         resp = self.client.get(f'/iot/commands/pending/?screen_id={self.screen.id}')

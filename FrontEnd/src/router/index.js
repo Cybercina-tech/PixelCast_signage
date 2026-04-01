@@ -57,6 +57,7 @@ import Sessions from '../pages/Sessions.vue'
 // Legal Pages
 import PrivacyPolicy from '../pages/PrivacyPolicy.vue'
 import TermsOfService from '../pages/TermsOfService.vue'
+import DataCenter from '../pages/DataCenter.vue'
 
 // Error Pages
 import NotFound from '../pages/errors/NotFound.vue'
@@ -105,6 +106,12 @@ const routes = [
     path: '/terms',
     name: 'terms',
     component: TermsOfService,
+    meta: { public: true },
+  },
+  {
+    path: '/data-center',
+    name: 'data-center',
+    component: DataCenter,
     meta: { public: true },
   },
   {

@@ -319,6 +319,16 @@ MEDIA_URL = '/media/'
 # In production, set this to your domain (e.g., 'https://yourdomain.com')
 BASE_URL = env('BASE_URL', default='http://localhost:8000')
 
+# OpenWeather integration (Weather widget backend fetch/cache)
+OPENWEATHER_API_KEY = env('OPENWEATHER_API_KEY', default='')
+OPENWEATHER_BASE_URL = env('OPENWEATHER_BASE_URL', default='https://api.openweathermap.org')
+WEATHER_WIDGET = {
+    'REFRESH_INTERVAL_SECONDS': env('WEATHER_REFRESH_INTERVAL_SECONDS', default=900, cast=int),
+    'STALE_TTL_SECONDS': env('WEATHER_STALE_TTL_SECONDS', default=21600, cast=int),
+    'HTTP_TIMEOUT_SECONDS': env('WEATHER_HTTP_TIMEOUT_SECONDS', default=5, cast=int),
+    'FORECAST_DAYS': env('WEATHER_FORECAST_DAYS', default=5, cast=int),
+}
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 

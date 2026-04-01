@@ -26,6 +26,8 @@ export const usePlayerStore = defineStore('player', {
     lastSuccessfulHeartbeat: null,
     connectionLostTimer: null,
     activeScreenId: null,
+    /** Difference serverNow - deviceNow from HTTP Date header on template fetch (ms). */
+    serverTimeOffsetMs: 0,
   }),
 
   actions: {
@@ -225,15 +227,21 @@ export const usePlayerStore = defineStore('player', {
         this.status = 'loading'
         this.errorMessage = null
         const response = await playerAPI.fetchTemplate()
+        const { _timeSync, ...payload } = response
+        if (_timeSync) {
+          this.serverTimeOffsetMs = _timeSync.serverNowMs - _timeSync.clientNowMs
+        } else {
+          this.serverTimeOffsetMs = 0
+        }
 
-        if (response.status === 'success') {
-          this.template = response.template
+        if (payload.status === 'success') {
+          this.template = payload.template
           this.status = 'success'
-        } else if (response.status === 'no_template') {
+        } else if (payload.status === 'no_template') {
           this.template = null
           this.status = 'no_template'
         } else {
-          throw new Error(response.message || 'Unknown response status')
+          throw new Error(payload.message || 'Unknown response status')
         }
       } catch (error) {
         console.error('Template fetch error:', error)
@@ -363,13 +371,14 @@ export const usePlayerStore = defineStore('player', {
         this.fetchAndExecuteCommands().catch(() => {})
       }, 5000)
 
-      // Template polling
+      // Template polling fallback:
+      // keep this frequent enough so screens update automatically even if a command is delayed.
       const poll = () => {
-        const interval = this.status === 'no_template' ? 30000 : 300000
+        const interval = this.status === 'no_template' ? 10000 : 15000
         this.pollingInterval = setInterval(() => {
           this.fetchTemplate().then(() => {
             if (this.pollingInterval) {
-              const newInterval = this.status === 'no_template' ? 30000 : 300000
+              const newInterval = this.status === 'no_template' ? 10000 : 15000
               if (newInterval !== interval) {
                 clearInterval(this.pollingInterval)
                 this.pollingInterval = null

@@ -15,11 +15,11 @@
       :style="trackStyle"
     >
       <template v-if="safeMode === 'continuous'">
-        <span class="marquee-item" :style="itemStyle">{{ resolvedText }}</span>
-        <span class="marquee-item" :style="itemStyle">{{ resolvedText }}</span>
+        <span class="marquee-item" dir="auto" :style="itemStyle">{{ resolvedText }}</span>
+        <span class="marquee-item" dir="auto" :style="itemStyle">{{ resolvedText }}</span>
       </template>
       <template v-else>
-        <span class="marquee-item single" :style="itemStyle">{{ resolvedText }}</span>
+        <span class="marquee-item single" dir="auto" :style="itemStyle">{{ resolvedText }}</span>
       </template>
     </div>
   </div>
@@ -102,6 +102,9 @@ const containerStyle = computed(() => ({
   '--marquee-bg': styleJson.value.backgroundColor || '#111827',
   width: '100%',
   height: '100%',
+  boxSizing: 'border-box',
+  paddingTop: '3px',
+  paddingBottom: '6px',
   overflow: 'hidden',
   backgroundColor: styleJson.value.backgroundColor || '#111827',
   position: 'relative',
@@ -123,13 +126,40 @@ const textVisualStyle = computed(() => ({
   WebkitTextStroke: styleJson.value.strokeWidth ? `${clamp(styleJson.value.strokeWidth, 1, 0, 10)}px ${styleJson.value.strokeColor || '#000000'}` : undefined,
 }))
 
-const trackStyle = computed(() => ({
-  width: '100%',
-  height: '100%',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'flex-start',
-}))
+/**
+ * Continuous marquee must size the track to the duplicated content width/height so that
+ * translate(-50%) in keyframes equals exactly one copy (classic ticker). A track forced
+ * to 100% width made -50% = half the viewport, not half the strip — broken loop + clipping.
+ */
+const trackStyle = computed(() => {
+  const flexRow = {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+  }
+  if (safeMode.value === 'continuous') {
+    if (isVertical.value) {
+      return {
+        ...flexRow,
+        flexDirection: 'column',
+        width: '100%',
+        height: 'max-content',
+      }
+    }
+    return {
+      ...flexRow,
+      width: 'max-content',
+      maxWidth: 'none',
+      height: '100%',
+      direction: 'ltr',
+    }
+  }
+  return {
+    ...flexRow,
+    width: '100%',
+    height: '100%',
+  }
+})
 
 const itemStyle = computed(() => ({
   ...textVisualStyle.value,
@@ -141,7 +171,9 @@ const itemStyle = computed(() => ({
   width: 100%;
   height: 100%;
   user-select: none;
-  contain: layout style paint;
+  contain: layout style;
+  position: relative;
+  z-index: 0;
 }
 
 .marquee-fallback {
@@ -158,7 +190,6 @@ const itemStyle = computed(() => ({
 .marquee-track {
   will-change: transform;
   position: relative;
-  overflow: hidden;
 }
 
 .marquee-item {
@@ -167,6 +198,8 @@ const itemStyle = computed(() => ({
   white-space: nowrap;
   flex: 0 0 auto;
   padding-right: var(--marquee-gap, 80px);
+  position: relative;
+  z-index: 2;
 }
 
 .marquee-track.is-vertical {
@@ -305,14 +338,14 @@ const itemStyle = computed(() => ({
   content: '';
   position: absolute;
   pointer-events: none;
-  z-index: 3;
+  z-index: 1;
 }
 
 .marquee-track.fade-enabled:not(.is-vertical)::before,
 .marquee-track.fade-enabled:not(.is-vertical)::after {
   top: 0;
   bottom: 0;
-  width: 10%;
+  width: 6%;
 }
 
 .marquee-track.fade-enabled:not(.is-vertical)::before {

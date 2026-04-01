@@ -38,3 +38,18 @@ test('template editor keyboard shortcuts do not interfere with input editing', a
   const after = await xInput.inputValue()
   expect(after).toBe(before)
 })
+
+test('template editor can configure qr action widget fields', async ({ page }) => {
+  test.setTimeout(120000)
+  await login(page)
+
+  await page.goto('/templates/new/edit?name=QR%20Widget%20E2E&width=1280&height=720')
+  await page.getByRole('button', { name: /add qr action/i }).click()
+
+  await expect(page.getByText('QR Action Properties')).toBeVisible()
+  await page.getByPlaceholder('Scan for discount').fill('Scan for discount')
+  await page.getByPlaceholder('branch-x-morning').fill('branch-x-morning')
+  await page.getByPlaceholder('https://example.com/menu').fill('https://example.com/morning-menu')
+
+  await expect(page.getByText(/Readable contrast|Low contrast|Quiet zone/i)).toBeVisible()
+})

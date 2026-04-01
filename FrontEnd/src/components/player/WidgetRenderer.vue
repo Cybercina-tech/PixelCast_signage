@@ -24,6 +24,11 @@
       v-if="widget.type === 'marquee'"
       :widget="widget"
     />
+
+    <WeatherWidget
+      v-if="widget.type === 'weather'"
+      :widget="widget"
+    />
     
     <!-- Video Widget -->
     <VideoWidget
@@ -31,8 +36,23 @@
       :widget="widget"
     />
 
+    <AlbumWidget
+      v-if="widget.type === 'album'"
+      :widget="widget"
+    />
+
     <ClockWidget
       v-if="widget.type === 'clock'"
+      :widget="widget"
+    />
+
+    <DateWidget
+      v-if="widget.type === 'date'"
+      :widget="widget"
+    />
+
+    <WeekdayWidget
+      v-if="widget.type === 'weekday'"
       :widget="widget"
     />
 
@@ -45,9 +65,19 @@
       v-if="widget.type === 'chart'"
       :widget="widget"
     />
+
+    <QRActionWidget
+      v-if="widget.type === 'qr_action'"
+      :widget="widget"
+    />
+
+    <CountdownWidget
+      v-if="widget.type === 'countdown'"
+      :widget="widget"
+    />
     
     <!-- Warn if widget type is not recognized -->
-    <div v-if="!['image','text','marquee','video','clock','webview','chart'].includes(widget.type)" class="widget-error" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,0,0,0.3); display: flex; align-items: center; justify-content: center; color: white; font-size: 12px;">
+    <div v-if="!['image','text','marquee','weather','video','album','clock','date','weekday','webview','chart','qr_action','countdown'].includes(widget.type)" class="widget-error" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,0,0,0.3); display: flex; align-items: center; justify-content: center; color: white; font-size: 12px;">
       Unknown widget type: {{ widget.type }}
     </div>
   </div>
@@ -58,10 +88,16 @@ import { computed, onMounted } from 'vue'
 import ImageWidget from './widgets/ImageWidget.vue'
 import TextWidget from './widgets/TextWidget.vue'
 import MarqueeWidget from './widgets/MarqueeWidget.vue'
+import WeatherWidget from './widgets/WeatherWidget.vue'
 import VideoWidget from './widgets/VideoWidget.vue'
+import AlbumWidget from './widgets/AlbumWidget.vue'
 import ClockWidget from './widgets/ClockWidget.vue'
+import DateWidget from './widgets/DateWidget.vue'
+import WeekdayWidget from './widgets/WeekdayWidget.vue'
 import WebviewWidget from './widgets/WebviewWidget.vue'
 import ChartWidget from './widgets/ChartWidget.vue'
+import QRActionWidget from './widgets/QRActionWidget.vue'
+import CountdownWidget from './widgets/CountdownWidget.vue'
 
 const props = defineProps({
   widget: {

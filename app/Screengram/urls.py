@@ -22,6 +22,7 @@ from django.views.static import serve
 from django.http import JsonResponse
 from rest_framework.routers import DefaultRouter
 from log.views import ErrorLogViewSet
+from templates.views import qr_action_redirect
 
 # Create router for admin endpoints
 admin_router = DefaultRouter()
@@ -29,6 +30,7 @@ admin_router.register(r'errors', ErrorLogViewSet, basename='error-log')
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('qr/<slug:slug>/', qr_action_redirect, name='qr-action-redirect'),
     
     # Setup/Installation endpoints (must be before other API routes)
     path('api/setup/', include('setup.urls')),

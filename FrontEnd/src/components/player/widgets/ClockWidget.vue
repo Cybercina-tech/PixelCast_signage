@@ -1,11 +1,16 @@
 <template>
   <div class="clock-widget" :style="clockStyle">
-    {{ formattedValue }}
+    <div v-if="displayMode === 'stacked'" class="clock-stacked">
+      <span class="clock-time">{{ formattedTime }}</span>
+      <span v-if="showWeekday" class="clock-weekday">{{ formattedWeekday }}</span>
+    </div>
+    <span v-else>{{ inlineValue }}</span>
   </div>
 </template>
 
 <script setup>
 import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { formatClockValue, formatWeekdayValue } from '@/utils/dateTimeFormatters'
 
 const props = defineProps({
   widget: {
@@ -17,13 +22,10 @@ const props = defineProps({
 const now = ref(new Date())
 let timerId = null
 
-const formatPattern = computed(() => {
-  const raw = props.widget?.content_json?.format || props.widget?.content || 'HH:mm:ss'
-  return typeof raw === 'string' && raw.trim() ? raw.trim() : 'HH:mm:ss'
-})
+const styleJson = computed(() => props.widget?.content_json || {})
 
 const clockStyle = computed(() => {
-  const style = props.widget?.content_json || {}
+  const style = styleJson.value
   const resolvedFontSize = typeof style.fontSize === 'number'
     ? `${style.fontSize}px`
     : (typeof style.fontSize === 'string' && style.fontSize.trim() ? style.fontSize : '48px')
@@ -36,30 +38,47 @@ const clockStyle = computed(() => {
     color: style.color || '#ffffff',
     fontSize: resolvedFontSize,
     fontFamily: style.fontFamily || 'Arial, sans-serif',
+    fontWeight: style.fontWeight || '700',
+    lineHeight: style.lineHeight || 1.1,
+    letterSpacing: style.letterSpacing || '0',
     backgroundColor: style.backgroundColor || 'transparent',
     padding: '12px',
     boxSizing: 'border-box',
-    textAlign: style.textAlign || 'center'
+    textAlign: style.textAlign || 'center',
+    borderRadius: style.borderRadius || '0',
+    textShadow: style.textShadow || 'none'
   }
 })
 
-const pad2 = (n) => String(n).padStart(2, '0')
+const displayMode = computed(() => {
+  const raw = styleJson.value?.displayMode
+  if (raw === 'stacked' || raw === 'timePlusWeekday') return raw
+  return 'timeOnly'
+})
 
-const formattedValue = computed(() => {
+const showWeekday = computed(() => {
+  if (styleJson.value?.showWeekday === true) return true
+  return displayMode.value !== 'timeOnly'
+})
+
+const formattedTime = computed(() => {
   const d = now.value
-  const tokenMap = {
-    YYYY: String(d.getFullYear()),
-    MM: pad2(d.getMonth() + 1),
-    DD: pad2(d.getDate()),
-    HH: pad2(d.getHours()),
-    mm: pad2(d.getMinutes()),
-    ss: pad2(d.getSeconds())
+  return formatClockValue(d, {
+    ...styleJson.value,
+    format: styleJson.value?.format || props.widget?.content || props.widget?.content_url || 'HH:mm:ss'
+  }, 'HH:mm:ss')
+})
+
+const formattedWeekday = computed(() => {
+  return formatWeekdayValue(now.value, styleJson.value || {})
+})
+
+const inlineValue = computed(() => {
+  if (!showWeekday.value) return formattedTime.value
+  if (displayMode.value === 'timePlusWeekday') {
+    return `${formattedWeekday.value} | ${formattedTime.value}`
   }
-  let value = formatPattern.value
-  Object.entries(tokenMap).forEach(([k, v]) => {
-    value = value.replaceAll(k, v)
-  })
-  return value
+  return formattedTime.value
 })
 
 onMounted(() => {
@@ -78,5 +97,22 @@ onUnmounted(() => {
   user-select: none;
   overflow: hidden;
   white-space: nowrap;
+}
+
+.clock-stacked {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  line-height: 1.1;
+}
+
+.clock-time {
+  font-size: inherit;
+}
+
+.clock-weekday {
+  margin-top: 0.2em;
+  font-size: 0.45em;
+  opacity: 0.95;
 }
 </style>

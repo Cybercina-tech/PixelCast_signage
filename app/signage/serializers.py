@@ -7,6 +7,7 @@ from .models import Screen, PairingSession
 from commands.models import Command
 from templates.models import Template, Content, Layer, Widget
 from log.models import CommandExecutionLog, ScreenStatusLog, ContentDownloadLog
+from .weather_service import enrich_weather_style
 
 logger = logging.getLogger(__name__)
 
@@ -511,6 +512,8 @@ class PlayerTemplateSerializer(serializers.ModelSerializer):
                     widget['style']['backgroundImage'] = make_absolute_url(widget['style']['backgroundImage'])
                 if 'background-image' in widget['style']:
                     widget['style']['background-image'] = make_absolute_url(widget['style']['background-image'])
+                if widget.get('type') == 'weather':
+                    widget['style'] = enrich_weather_style(widget['style'])
             
             # Process any other URL-like fields
             url_fields = ['image_url', 'file_url', 'file_path', 'src', 'url', 'media_url']

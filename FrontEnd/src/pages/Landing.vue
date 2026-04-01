@@ -28,13 +28,19 @@
               PixelCast
             </span>
           </router-link>
-          <div class="flex items-center gap-2 sm:gap-2.5 shrink-0">
+          <div class="flex flex-wrap items-center justify-end gap-x-2 gap-y-1 sm:gap-2.5 shrink-0 max-w-[min(100%,28rem)] sm:max-w-none">
             <a
               href="/documentation/index.html"
-              class="px-2 py-1.5 text-xs sm:text-sm text-white/80 hover:text-white transition-colors"
+              class="px-2 py-1.5 text-xs sm:text-sm text-white/80 hover:text-white transition-colors whitespace-nowrap"
             >
               Docs
             </a>
+            <router-link
+              to="/data-center"
+              class="px-2 py-1.5 text-xs sm:text-sm text-white/80 hover:text-white transition-colors whitespace-nowrap"
+            >
+              Data Center
+            </router-link>
             <template v-if="isInstalled">
               <router-link
                 to="/login"
@@ -103,23 +109,31 @@
                 <p class="text-lg md:text-xl text-white/70 leading-relaxed max-w-xl mx-auto lg:mx-0">
                   Real-time digital signage with secure setup wizard, remote screen control, and enterprise-grade monitoring.
                 </p>
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 justify-center lg:justify-start pt-1 w-full max-w-3xl lg:max-w-none">
+                <div
+                  class="grid grid-cols-1 min-[420px]:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4 justify-center lg:justify-start pt-1 w-full max-w-3xl min-[420px]:max-w-none lg:max-w-none [&>a]:min-h-14 [&>button]:min-h-14"
+                >
                   <router-link
                     :to="isInstalled ? '/signup' : '/install'"
-                    class="neon-button-large h-14 px-6 rounded-lg font-semibold text-lg text-white transition-all duration-300 text-center inline-flex items-center justify-center whitespace-nowrap"
+                    class="neon-button-large px-4 sm:px-6 py-3 rounded-lg font-semibold text-base sm:text-lg text-white transition-all duration-300 text-center inline-flex items-center justify-center w-full"
                   >
                     {{ isInstalled ? 'Start Free Trial' : 'Start Installation' }}
                   </router-link>
                   <a
                     href="/documentation/index.html"
-                    class="glass-card h-14 px-6 rounded-lg font-semibold text-lg text-white border border-white/20 hover:border-white/40 transition-all duration-300 text-center inline-flex items-center justify-center whitespace-nowrap"
+                    class="glass-card px-4 sm:px-6 py-3 rounded-lg font-semibold text-base sm:text-lg text-white border border-white/20 hover:border-white/40 transition-all duration-300 text-center inline-flex items-center justify-center w-full"
                   >
                     Documentation
                   </a>
+                  <router-link
+                    to="/data-center"
+                    class="glass-card px-4 sm:px-6 py-3 rounded-lg font-semibold text-base sm:text-lg text-white border border-white/20 hover:border-white/40 transition-all duration-300 text-center inline-flex items-center justify-center w-full"
+                  >
+                    Data Center
+                  </router-link>
                   <button 
                     type="button"
                     @click="scrollToSection(1)" 
-                    class="glass-card h-14 px-6 rounded-lg font-semibold text-lg text-white border border-white/20 hover:border-white/40 transition-all duration-300 text-center inline-flex items-center justify-center whitespace-nowrap"
+                    class="glass-card px-4 sm:px-6 py-3 rounded-lg font-semibold text-base sm:text-lg text-white border border-white/20 hover:border-white/40 transition-all duration-300 text-center inline-flex items-center justify-center w-full"
                   >
                     Explore Features
                   </button>
@@ -404,23 +418,31 @@
               <p class="text-lg lg:text-xl text-white/70 mb-6 lg:mb-8 max-w-2xl mx-auto">
                 Deploy quickly with guided installation, then manage all screens from one control center.
               </p>
-              <div class="flex flex-col sm:flex-row gap-4 justify-center">
+              <div
+                class="grid grid-cols-1 min-[420px]:grid-cols-2 xl:grid-cols-4 gap-4 justify-items-stretch max-w-4xl mx-auto w-full"
+              >
                 <router-link
                   :to="isInstalled ? '/signup' : '/install'"
-                  class="neon-button-large px-8 py-4 rounded-lg font-semibold text-lg text-white transition-all duration-300 text-center"
+                  class="neon-button-large px-6 py-4 rounded-lg font-semibold text-base sm:text-lg text-white transition-all duration-300 text-center inline-flex items-center justify-center w-full min-h-[3.25rem]"
                 >
                   {{ isInstalled ? 'Start Free Trial' : 'Install Now' }}
                 </router-link>
                 <a
                   href="/documentation/index.html"
-                  class="glass-card px-8 py-4 rounded-lg font-semibold text-lg text-white border border-white/20 hover:border-white/40 transition-all duration-300 text-center"
+                  class="glass-card px-6 py-4 rounded-lg font-semibold text-base sm:text-lg text-white border border-white/20 hover:border-white/40 transition-all duration-300 text-center inline-flex items-center justify-center w-full min-h-[3.25rem]"
                 >
                   View Docs
                 </a>
                 <router-link
+                  to="/data-center"
+                  class="glass-card px-6 py-4 rounded-lg font-semibold text-base sm:text-lg text-white border border-white/20 hover:border-white/40 transition-all duration-300 text-center inline-flex items-center justify-center w-full min-h-[3.25rem]"
+                >
+                  Data Center
+                </router-link>
+                <router-link
                   v-if="isInstalled"
                   to="/login"
-                  class="glass-card px-8 py-4 rounded-lg font-semibold text-lg text-white border border-white/20 hover:border-white/40 transition-all duration-300 text-center"
+                  class="glass-card px-6 py-4 rounded-lg font-semibold text-base sm:text-lg text-white border border-white/20 hover:border-white/40 transition-all duration-300 text-center inline-flex items-center justify-center w-full min-h-[3.25rem]"
                 >
                   Sign In
                 </router-link>

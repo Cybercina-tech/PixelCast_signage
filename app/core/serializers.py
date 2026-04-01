@@ -2,7 +2,14 @@
 Serializers for core models.
 """
 from rest_framework import serializers
-from core.models import AuditLog, SystemBackup, Notification
+from core.models import (
+    AuditLog,
+    SystemBackup,
+    Notification,
+    NotificationPreference,
+    TVBrand,
+    TVModel,
+)
 
 
 class AuditLogSerializer(serializers.ModelSerializer):
@@ -112,3 +119,81 @@ class NotificationSerializer(serializers.ModelSerializer):
             'created_at',
         ]
         read_only_fields = ['id', 'created_at']
+
+
+class NotificationPreferenceSerializer(serializers.ModelSerializer):
+    """Serializer for user notification preferences."""
+
+    class Meta:
+        model = NotificationPreference
+        fields = [
+            'screen_offline',
+            'template_push',
+            'system_updates',
+            'email_enabled',
+            'notification_email',
+            'updated_at',
+        ]
+        read_only_fields = ['updated_at']
+
+
+class TVModelSerializer(serializers.ModelSerializer):
+    """Serializer for TV model entries in Data Center."""
+
+    platform_display = serializers.CharField(source='get_platform_display', read_only=True)
+    operation_time_display = serializers.CharField(source='get_operation_time_display', read_only=True)
+    brightness_class_display = serializers.CharField(source='get_brightness_class_display', read_only=True)
+    download_available = serializers.SerializerMethodField()
+
+    class Meta:
+        model = TVModel
+        fields = [
+            'id',
+            'name',
+            'model_code',
+            'series',
+            'platform',
+            'platform_display',
+            'operation_time',
+            'operation_time_display',
+            'brightness_class',
+            'brightness_class_display',
+            'control_ports',
+            'notes',
+            'is_download_enabled',
+            'download_url',
+            'download_available',
+            'sort_order',
+        ]
+        read_only_fields = fields
+
+    def get_download_available(self, obj):
+        return bool(obj.is_download_enabled and obj.download_url)
+
+
+class TVBrandWithModelsSerializer(serializers.ModelSerializer):
+    """Serializer for TV brand entries with nested model list."""
+
+    models = TVModelSerializer(many=True, read_only=True)
+    models_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = TVBrand
+        fields = [
+            'id',
+            'name',
+            'slug',
+            'logo_text',
+            'logo_url',
+            'description',
+            'sort_order',
+            'models_count',
+            'models',
+        ]
+        read_only_fields = fields
+
+    def get_models_count(self, obj):
+        models_qs = getattr(obj, 'models', None)
+        if hasattr(models_qs, 'all'):
+            return models_qs.all().count()
+        return 0

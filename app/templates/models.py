@@ -368,9 +368,15 @@ class Widget(models.Model):
     WIDGET_TYPE_CHOICES = [
         ('text', 'Text'),
         ('marquee', 'Marquee'),
+        ('weather', 'Weather'),
+        ('qr_action', 'QR Action'),
         ('image', 'Image'),
         ('video', 'Video'),
+        ('album', 'Album Playlist'),
         ('clock', 'Clock'),
+        ('date', 'Date'),
+        ('weekday', 'Weekday'),
+        ('countdown', 'Countdown'),
         ('webview', 'Web View'),
         ('chart', 'Chart'),
     ]
@@ -491,6 +497,142 @@ class Widget(models.Model):
     def get_contents_count(self):
         """Get total count of contents for this widget"""
         return self.contents.count()
+
+
+class QRActionLink(models.Model):
+    """Stable short-link record for QR Action widgets."""
+
+    ERROR_CORRECTION_CHOICES = [
+        ('L', 'Low'),
+        ('M', 'Medium'),
+        ('Q', 'Quartile'),
+        ('H', 'High'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    widget = models.OneToOneField(
+        Widget,
+        on_delete=models.CASCADE,
+        related_name='qr_action_link',
+    )
+    slug = models.SlugField(max_length=64, unique=True, db_index=True)
+    default_url = models.URLField(max_length=1000)
+    campaign_id = models.CharField(max_length=120, blank=True, null=True, db_index=True)
+    is_active = models.BooleanField(default=True)
+    error_correction_level = models.CharField(
+        max_length=1,
+        choices=ERROR_CORRECTION_CHOICES,
+        default='H',
+    )
+    settings_json = models.JSONField(default=default_json_dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'templates_qr_action_link'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['is_active', 'created_at']),
+            models.Index(fields=['campaign_id', 'created_at']),
+        ]
+
+    def __str__(self):
+        return f"{self.slug} ({self.widget_id})"
+
+    def resolve_destination(self, now=None):
+        check_time = now or timezone.localtime()
+        for rule in self.rules.filter(is_active=True).order_by('priority', 'created_at'):
+            if rule.matches(check_time):
+                return rule.target_url, rule
+        return self.default_url, None
+
+
+class QRActionRule(models.Model):
+    """Time-window based destination rule for a QR Action link."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    link = models.ForeignKey(
+        QRActionLink,
+        on_delete=models.CASCADE,
+        related_name='rules',
+    )
+    name = models.CharField(max_length=120, blank=True, null=True)
+    priority = models.PositiveIntegerField(default=100)
+    target_url = models.URLField(max_length=1000)
+    start_hour = models.PositiveSmallIntegerField(blank=True, null=True)
+    end_hour = models.PositiveSmallIntegerField(blank=True, null=True)
+    days_of_week = models.JSONField(default=list, blank=True)
+    is_active = models.BooleanField(default=True)
+    condition_json = models.JSONField(default=default_json_dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'templates_qr_action_rule'
+        ordering = ['priority', 'created_at']
+        indexes = [
+            models.Index(fields=['link', 'is_active', 'priority']),
+        ]
+
+    def __str__(self):
+        return f"{self.link.slug} rule #{self.priority}"
+
+    def matches(self, at_time):
+        hour = at_time.hour
+        weekday = at_time.weekday()
+
+        if self.days_of_week:
+            try:
+                allowed_days = {int(day) for day in self.days_of_week}
+            except (TypeError, ValueError):
+                return False
+            if weekday not in allowed_days:
+                return False
+
+        if self.start_hour is None and self.end_hour is None:
+            return True
+        if self.start_hour is None:
+            return hour < self.end_hour
+        if self.end_hour is None:
+            return hour >= self.start_hour
+        if self.start_hour <= self.end_hour:
+            return self.start_hour <= hour < self.end_hour
+        return hour >= self.start_hour or hour < self.end_hour
+
+
+class QRScanEvent(models.Model):
+    """Immutable scan event log for reporting and attribution."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    link = models.ForeignKey(
+        QRActionLink,
+        on_delete=models.CASCADE,
+        related_name='scan_events',
+    )
+    matched_rule = models.ForeignKey(
+        QRActionRule,
+        on_delete=models.SET_NULL,
+        related_name='scan_events',
+        blank=True,
+        null=True,
+    )
+    campaign_id = models.CharField(max_length=120, blank=True, null=True, db_index=True)
+    resolved_url = models.URLField(max_length=1000)
+    request_ip = models.GenericIPAddressField(blank=True, null=True)
+    user_agent = models.TextField(blank=True, null=True)
+    referrer = models.TextField(blank=True, null=True)
+    query_params = models.JSONField(default=default_json_dict, blank=True)
+    source_screen = models.CharField(max_length=120, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'templates_qr_scan_event'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['link', 'created_at']),
+            models.Index(fields=['campaign_id', 'created_at']),
+            models.Index(fields=['created_at']),
+        ]
 
 
 class Content(models.Model):

@@ -467,3 +467,134 @@ class Notification(models.Model):
             notification.object_id = str(related_object.id)
         notification.save()
         return notification
+
+
+class NotificationPreference(models.Model):
+    """
+    Per-user notification preferences used by Notification Center.
+    """
+
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name='notification_preferences',
+        help_text="User that owns these notification preferences",
+    )
+    screen_offline = models.BooleanField(
+        default=True,
+        help_text="Notify when a screen goes offline",
+    )
+    template_push = models.BooleanField(
+        default=True,
+        help_text="Notify when template push succeeds",
+    )
+    system_updates = models.BooleanField(
+        default=False,
+        help_text="Notify about system updates",
+    )
+    email_enabled = models.BooleanField(
+        default=False,
+        help_text="Enable email delivery for notifications",
+    )
+    notification_email = models.EmailField(
+        blank=True,
+        default='',
+        help_text="Destination email for notifications when email delivery is enabled",
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'core_notification_preference'
+        verbose_name = 'Notification Preference'
+        verbose_name_plural = 'Notification Preferences'
+
+    def __str__(self):
+        return f"Notification preferences for {self.user.username}"
+
+
+class TVBrand(models.Model):
+    """TV brand catalog entry for Data Center."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=120, unique=True, db_index=True)
+    slug = models.SlugField(max_length=140, unique=True, db_index=True)
+    logo_text = models.CharField(
+        max_length=32,
+        default='TV',
+        help_text="Short brand mark rendered as logo fallback in UI",
+    )
+    logo_url = models.URLField(blank=True, default='')
+    description = models.TextField(blank=True, default='')
+    sort_order = models.PositiveIntegerField(default=0, db_index=True)
+    is_active = models.BooleanField(default=True, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'core_tv_brand'
+        verbose_name = 'TV Brand'
+        verbose_name_plural = 'TV Brands'
+        ordering = ['sort_order', 'name']
+
+    def __str__(self):
+        return self.name
+
+
+class TVModel(models.Model):
+    """TV model family catalog entry for Data Center."""
+
+    PLATFORM_CHOICES = [
+        ('android_tv', 'Android TV'),
+        ('google_tv', 'Google TV'),
+        ('tizen', 'Tizen'),
+        ('webos', 'webOS'),
+        ('android_soc', 'Android SoC'),
+        ('other', 'Other'),
+    ]
+
+    OPERATION_TIME_CHOICES = [
+        ('16_7', '16/7'),
+        ('18_7', '18/7'),
+        ('24_7', '24/7'),
+    ]
+
+    BRIGHTNESS_CLASS_CHOICES = [
+        ('indoor', 'Indoor (300-350 nits)'),
+        ('high_bright', 'High Bright (500-700 nits)'),
+        ('window', 'Window Facing (2500+ nits)'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    brand = models.ForeignKey(TVBrand, on_delete=models.CASCADE, related_name='models')
+    name = models.CharField(max_length=180)
+    model_code = models.CharField(max_length=120, blank=True, default='')
+    series = models.CharField(max_length=120, blank=True, default='')
+    platform = models.CharField(max_length=32, choices=PLATFORM_CHOICES, default='other', db_index=True)
+    operation_time = models.CharField(max_length=16, choices=OPERATION_TIME_CHOICES, default='16_7', db_index=True)
+    brightness_class = models.CharField(max_length=32, choices=BRIGHTNESS_CLASS_CHOICES, default='indoor', db_index=True)
+    control_ports = models.JSONField(default=list, blank=True)
+    notes = models.TextField(blank=True, default='')
+    is_download_enabled = models.BooleanField(default=False)
+    download_url = models.URLField(blank=True, null=True)
+    sort_order = models.PositiveIntegerField(default=0, db_index=True)
+    is_active = models.BooleanField(default=True, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'core_tv_model'
+        verbose_name = 'TV Model'
+        verbose_name_plural = 'TV Models'
+        ordering = ['sort_order', 'name']
+        indexes = [
+            models.Index(fields=['brand', 'is_active']),
+            models.Index(fields=['platform', 'operation_time']),
+            models.Index(fields=['brightness_class', 'operation_time']),
+        ]
+        constraints = [
+            models.UniqueConstraint(fields=['brand', 'name'], name='core_tv_model_brand_name_unique'),
+        ]
+
+    def __str__(self):
+        return f"{self.brand.name} - {self.name}"

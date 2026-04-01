@@ -77,97 +77,61 @@
       <div class="flex-1 flex overflow-hidden">
         <!-- Left Sidebar: Widget Library -->
         <div
-          class="hidden lg:block bg-card border-r border-border-color overflow-y-auto custom-scrollbar scroll-container transition-all duration-200"
+          class="hidden lg:flex lg:flex-col h-full bg-card border-r border-border-color transition-all duration-200"
           :class="leftPanelCollapsed ? 'w-16' : 'w-56'"
         >
-          <div class="bg-card border-b border-border-color px-4 py-3 sticky top-0 z-10 backdrop-blur-sm">
+          <div class="bg-card border-b border-border-color px-4 py-3 shrink-0">
             <h2 v-if="!leftPanelCollapsed" class="text-lg font-semibold text-primary">Widget Library</h2>
             <h2 v-else class="text-xs font-semibold text-primary uppercase tracking-wide">Tools</h2>
           </div>
-          <div class="p-2" :class="leftPanelCollapsed ? 'space-y-1' : 'p-4'">
-            <div class="space-y-2">
-              <button
-                @click="addWidget('text')"
-                class="w-full px-4 py-3 bg-card hover:bg-card active:scale-95 rounded-lg text-left text-primary transition-all duration-400 flex items-center gap-2 font-medium border border-border-color hover:border-accent-color/50"
-                style="--accent-color: var(--accent-color);"
-                :title="leftPanelCollapsed ? 'Add Text' : ''"
+          <div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar scroll-container p-2" :class="leftPanelCollapsed ? 'space-y-1' : 'p-4'">
+            <div class="space-y-3">
+              <div
+                v-for="section in widgetLibrarySections"
+                :key="section.id"
+                class="rounded-xl border border-border-color/80 bg-card/60 backdrop-blur-sm"
               >
-                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7" />
-                </svg>
-                <span v-if="!leftPanelCollapsed">Add Text</span>
-              </button>
-              <button
-                @click="addWidget('marquee')"
-                class="w-full px-4 py-3 bg-card hover:bg-card active:scale-95 rounded-lg text-left text-primary transition-all duration-400 flex items-center gap-2 font-medium border border-border-color hover:border-accent-color/50"
-                style="--accent-color: var(--accent-color);"
-                :title="leftPanelCollapsed ? 'Add Marquee' : ''"
-              >
-                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 12h16M4 7h7m6 0h3M4 17h5m8 0h3" />
-                </svg>
-                <span v-if="!leftPanelCollapsed">Add Marquee</span>
-              </button>
-              <button
-                @click="addWidget('image')"
-                class="w-full px-4 py-3 bg-gray-700 hover:bg-gray-600 active:scale-95 rounded-lg text-left text-white transition-all duration-200 flex items-center gap-2 font-medium"
-                :title="leftPanelCollapsed ? 'Add Image' : ''"
-              >
-                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-                <span v-if="!leftPanelCollapsed">Add Image</span>
-              </button>
-              <button
-                @click="addWidget('video')"
-                class="w-full px-4 py-3 bg-gray-700 hover:bg-gray-600 active:scale-95 rounded-lg text-left text-white transition-all duration-200 flex items-center gap-2 font-medium"
-                :title="leftPanelCollapsed ? 'Add Video' : ''"
-              >
-                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                </svg>
-                <span v-if="!leftPanelCollapsed">Add Video</span>
-              </button>
-              <button
-                @click="addWidget('clock')"
-                class="w-full px-4 py-3 bg-gray-700 hover:bg-gray-600 active:scale-95 rounded-lg text-left text-white transition-all duration-200 flex items-center gap-2 font-medium"
-                :title="leftPanelCollapsed ? 'Add Clock' : ''"
-              >
-                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span v-if="!leftPanelCollapsed">Add Clock</span>
-              </button>
-              <button
-                @click="addWidget('date')"
-                class="w-full px-4 py-3 bg-gray-700 hover:bg-gray-600 active:scale-95 rounded-lg text-left text-white transition-all duration-200 flex items-center gap-2 font-medium"
-                :title="leftPanelCollapsed ? 'Add Date' : ''"
-              >
-                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-                <span v-if="!leftPanelCollapsed">Add Date</span>
-              </button>
-              <button
-                @click="addWidget('webview')"
-                class="w-full px-4 py-3 bg-gray-700 hover:bg-gray-600 active:scale-95 rounded-lg text-left text-white transition-all duration-200 flex items-center gap-2 font-medium"
-                :title="leftPanelCollapsed ? 'Add Webview' : ''"
-              >
-                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12H3m0 0l4-4m-4 4l4 4m14-4l-4-4m4 4l-4 4" />
-                </svg>
-                <span v-if="!leftPanelCollapsed">Add Webview</span>
-              </button>
-              <button
-                @click="addWidget('chart')"
-                class="w-full px-4 py-3 bg-gray-700 hover:bg-gray-600 active:scale-95 rounded-lg text-left text-white transition-all duration-200 flex items-center gap-2 font-medium"
-                :title="leftPanelCollapsed ? 'Add Chart' : ''"
-              >
-                <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3v18h18M8 13l3-3 3 2 4-5" />
-                </svg>
-                <span v-if="!leftPanelCollapsed">Add Chart</span>
-              </button>
+                <button
+                  v-if="!leftPanelCollapsed"
+                  class="w-full px-3 py-2.5 flex items-center justify-between text-left"
+                  @click="toggleWidgetSection(section.id)"
+                >
+                  <span class="text-[11px] uppercase tracking-wide text-gray-300 font-semibold">
+                    {{ section.label }}
+                  </span>
+                  <svg
+                    class="w-4 h-4 text-gray-400 transition-transform duration-200"
+                    :class="{ 'rotate-180': isWidgetSectionOpen(section.id) }"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+
+                <transition name="widget-accordion">
+                  <div
+                    v-show="isWidgetSectionOpen(section.id)"
+                    class="space-y-2 p-2"
+                    :class="leftPanelCollapsed ? '' : 'pt-0'"
+                  >
+                    <button
+                      v-for="item in section.items"
+                      :key="item.type"
+                      @click="addWidget(item.type)"
+                      class="w-full px-4 py-3 bg-card hover:bg-card active:scale-95 rounded-lg text-left text-primary transition-all duration-300 flex items-center gap-2 font-medium border border-border-color hover:border-accent-color/50"
+                      style="--accent-color: var(--accent-color);"
+                      :title="leftPanelCollapsed ? item.label : ''"
+                    >
+                      <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="item.iconPath" />
+                      </svg>
+                      <span v-if="!leftPanelCollapsed">{{ item.label }}</span>
+                    </button>
+                  </div>
+                </transition>
+              </div>
             </div>
           </div>
         </div>
@@ -282,14 +246,14 @@
 
         <!-- Right Sidebar: Properties Panel -->
         <div
-          class="hidden lg:block bg-card border-l border-border-color overflow-y-auto custom-scrollbar scroll-container transition-all duration-200"
+          class="hidden lg:flex lg:flex-col h-full bg-card border-l border-border-color transition-all duration-200"
           :class="rightPanelCollapsed ? 'w-14' : 'w-80'"
         >
-          <div class="bg-card border-b border-border-color px-4 py-3 sticky top-0 z-10 backdrop-blur-sm">
+          <div class="bg-card border-b border-border-color px-4 py-3 shrink-0">
             <h2 v-if="!rightPanelCollapsed" class="text-lg font-semibold text-primary">Inspector</h2>
             <h2 v-else class="text-xs font-semibold text-primary uppercase tracking-wide">Panel</h2>
           </div>
-          <div v-if="!rightPanelCollapsed" class="p-4">
+          <div v-if="!rightPanelCollapsed" class="flex-1 min-h-0 overflow-y-auto custom-scrollbar scroll-container p-4">
             <div class="mb-4 grid grid-cols-2 rounded-lg bg-gray-800/50 p-1">
               <button
                 @click="rightPanelTab = 'properties'"
@@ -681,6 +645,311 @@
                 </div>
               </div>
 
+              <!-- Weather Widget Properties -->
+              <div v-if="selectedWidget.type === 'weather'">
+                <h3 class="text-sm font-semibold mb-3 text-muted uppercase">Weather Properties</h3>
+                <div class="space-y-3">
+                  <div>
+                    <label class="block text-xs font-medium text-muted mb-1.5">Location (City or City,CountryCode)</label>
+                    <input
+                      :value="selectedWidget.style?.location || selectedWidget.content || ''"
+                      type="text"
+                      class="input-base w-full px-3 py-2 text-sm"
+                      placeholder="e.g. Tehran,IR"
+                      @input="updateWidgetStyle('location', $event.target.value); updateWidgetProperty('content', $event.target.value)"
+                    />
+                  </div>
+                  <div class="grid grid-cols-2 gap-3">
+                    <div>
+                      <label class="block text-xs font-medium text-muted mb-1.5">Units</label>
+                      <select
+                        :value="selectedWidget.style?.units || 'celsius'"
+                        class="select-base w-full px-3 py-2 text-sm"
+                        @change="updateWidgetStyle('units', $event.target.value)"
+                      >
+                        <option value="celsius">Celsius (C)</option>
+                        <option value="fahrenheit">Fahrenheit (F)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label class="block text-xs font-medium text-muted mb-1.5">Layout</label>
+                      <select
+                        :value="selectedWidget.style?.layout || 'compact'"
+                        class="select-base w-full px-3 py-2 text-sm"
+                        @change="updateWidgetStyle('layout', $event.target.value)"
+                      >
+                        <option value="compact">Compact</option>
+                        <option value="extended">Extended</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="grid grid-cols-2 gap-3">
+                    <div>
+                      <label class="block text-xs font-medium text-muted mb-1.5">Forecast Days</label>
+                      <input
+                        type="number"
+                        min="3"
+                        max="5"
+                        :value="normalizeRange(selectedWidget.style?.forecastDays, 3, 3, 5)"
+                        class="input-base w-full px-3 py-2 text-sm"
+                        @input="updateWidgetStyle('forecastDays', normalizeRange($event.target.value, 3, 3, 5))"
+                      />
+                    </div>
+                    <div>
+                      <label class="block text-xs font-medium text-muted mb-1.5">Hide After Stale (h)</label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="24"
+                        :value="normalizeRange(selectedWidget.style?.hideAfterHours, 6, 1, 24)"
+                        class="input-base w-full px-3 py-2 text-sm"
+                        @input="updateWidgetStyle('hideAfterHours', normalizeRange($event.target.value, 6, 1, 24))"
+                      />
+                    </div>
+                  </div>
+                  <div class="grid grid-cols-2 gap-3">
+                    <div>
+                      <label class="block text-xs font-medium text-muted mb-1.5">Text Color</label>
+                      <input
+                        :value="selectedWidget.style?.color || '#ffffff'"
+                        type="color"
+                        class="w-full h-10 bg-slate-800/50 border border-slate-700 rounded-lg cursor-pointer"
+                        @input="updateWidgetStyle('color', $event.target.value)"
+                      />
+                    </div>
+                    <div>
+                      <label class="block text-xs font-medium text-muted mb-1.5">Background</label>
+                      <input
+                        :value="getBackgroundHex(selectedWidget.style?.backgroundColor, '#0f172a')"
+                        type="color"
+                        class="w-full h-10 bg-slate-800/50 border border-slate-700 rounded-lg cursor-pointer"
+                        @input="updateWidgetStyle('backgroundColor', $event.target.value)"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div v-if="selectedWidget.type === 'qr_action'">
+                <h3 class="text-sm font-semibold mb-3 text-muted uppercase">QR Action Properties</h3>
+                <div class="space-y-3">
+                  <div>
+                    <label class="block text-xs font-medium text-muted mb-1.5">CTA Text</label>
+                    <input
+                      :value="selectedWidget.style?.ctaText || ''"
+                      type="text"
+                      class="input-base w-full px-3 py-2 text-sm"
+                      placeholder="Scan for discount"
+                      @input="updateWidgetStyle('ctaText', $event.target.value)"
+                    />
+                  </div>
+                  <div>
+                    <label class="block text-xs font-medium text-muted mb-1.5">Campaign ID</label>
+                    <input
+                      :value="selectedWidget.style?.campaignId || ''"
+                      type="text"
+                      class="input-base w-full px-3 py-2 text-sm"
+                      placeholder="branch-x-morning"
+                      @input="updateWidgetStyle('campaignId', $event.target.value)"
+                    />
+                  </div>
+                  <div>
+                    <label class="block text-xs font-medium text-muted mb-1.5">Default URL</label>
+                    <input
+                      :value="selectedWidget.style?.defaultUrl || selectedWidget.content || ''"
+                      type="url"
+                      class="input-base w-full px-3 py-2 text-sm"
+                      placeholder="https://example.com/menu"
+                      @input="updateWidgetStyle('defaultUrl', $event.target.value); updateWidgetProperty('content', $event.target.value)"
+                    />
+                  </div>
+                  <div class="grid grid-cols-2 gap-3">
+                    <div>
+                      <label class="block text-xs font-medium text-muted mb-1.5">Foreground</label>
+                      <input
+                        :value="selectedWidget.style?.foregroundColor || '#000000'"
+                        type="color"
+                        class="w-full h-10 bg-slate-800/50 border border-slate-700 rounded-lg cursor-pointer"
+                        @input="updateWidgetStyle('foregroundColor', $event.target.value)"
+                      />
+                    </div>
+                    <div>
+                      <label class="block text-xs font-medium text-muted mb-1.5">Background</label>
+                      <input
+                        :value="selectedWidget.style?.backgroundColor || '#ffffff'"
+                        type="color"
+                        class="w-full h-10 bg-slate-800/50 border border-slate-700 rounded-lg cursor-pointer"
+                        @input="updateWidgetStyle('backgroundColor', $event.target.value)"
+                      />
+                    </div>
+                  </div>
+                  <div class="grid grid-cols-2 gap-3">
+                    <div>
+                      <label class="block text-xs font-medium text-muted mb-1.5">Quiet Zone (modules)</label>
+                      <input
+                        type="number"
+                        min="4"
+                        max="12"
+                        :value="normalizeRange(selectedWidget.style?.quietZone, 4, 4, 12)"
+                        class="input-base w-full px-3 py-2 text-sm"
+                        @input="updateWidgetStyle('quietZone', normalizeRange($event.target.value, 4, 4, 12))"
+                      />
+                    </div>
+                    <div>
+                      <label class="block text-xs font-medium text-muted mb-1.5">Error Correction</label>
+                      <select
+                        :value="selectedWidget.style?.errorCorrectionLevel || 'H'"
+                        class="select-base w-full px-3 py-2 text-sm"
+                        @change="updateWidgetStyle('errorCorrectionLevel', $event.target.value)"
+                      >
+                        <option value="H">High (H)</option>
+                        <option value="Q">Quartile (Q)</option>
+                        <option value="M">Medium (M)</option>
+                        <option value="L">Low (L)</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <label class="block text-xs font-medium text-muted mb-1.5">Center Logo URL (optional)</label>
+                    <input
+                      :value="selectedWidget.style?.logoUrl || ''"
+                      type="url"
+                      class="input-base w-full px-3 py-2 text-sm"
+                      placeholder="https://example.com/logo.png"
+                      @input="updateWidgetStyle('logoUrl', $event.target.value)"
+                    />
+                  </div>
+                  <div>
+                    <div class="flex items-center justify-between mb-2">
+                      <label class="block text-xs font-medium text-muted">Rules</label>
+                      <button
+                        type="button"
+                        class="btn-outline px-2 py-1 rounded text-xs"
+                        @click="addQrRule()"
+                      >
+                        + Add Rule
+                      </button>
+                    </div>
+                    <div class="space-y-2">
+                      <div
+                        v-for="(rule, ruleIndex) in currentQrRules"
+                        :key="`qr-rule-${ruleIndex}`"
+                        class="rounded-lg border border-border-color/70 bg-slate-900/40 p-2.5 space-y-2"
+                      >
+                        <div class="grid grid-cols-[1fr_auto] gap-2 items-center">
+                          <input
+                            :value="rule.name || ''"
+                            type="text"
+                            class="input-base w-full px-2 py-1.5 text-xs"
+                            placeholder="Rule name"
+                            @input="updateQrRule(ruleIndex, 'name', $event.target.value)"
+                          />
+                          <button
+                            type="button"
+                            class="px-2 py-1 text-[11px] rounded border border-red-500/60 text-red-300 hover:bg-red-500/10"
+                            @click="removeQrRule(ruleIndex)"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                          <div>
+                            <label class="block text-[11px] text-muted mb-1">Priority</label>
+                            <input
+                              :value="rule.priority ?? ruleIndex + 1"
+                              type="number"
+                              min="1"
+                              class="input-base w-full px-2 py-1.5 text-xs"
+                              @input="updateQrRule(ruleIndex, 'priority', Math.max(1, Number.parseInt($event.target.value || '1', 10) || 1))"
+                            />
+                          </div>
+                          <label class="flex items-center justify-between rounded border border-border-color/60 px-2 py-1.5">
+                            <span class="text-[11px] text-muted">Active</span>
+                            <input
+                              type="checkbox"
+                              class="h-3.5 w-3.5"
+                              :checked="rule.isActive !== false"
+                              @change="updateQrRule(ruleIndex, 'isActive', $event.target.checked)"
+                            />
+                          </label>
+                        </div>
+                        <div>
+                          <label class="block text-[11px] text-muted mb-1">Target URL</label>
+                          <input
+                            :value="rule.targetUrl || ''"
+                            type="url"
+                            class="input-base w-full px-2 py-1.5 text-xs"
+                            placeholder="https://example.com/landing"
+                            @input="updateQrRule(ruleIndex, 'targetUrl', $event.target.value)"
+                          />
+                        </div>
+                        <div>
+                          <label class="block text-[11px] text-muted mb-1">Time Window</label>
+                          <div class="grid grid-cols-2 gap-2 mb-2">
+                            <label class="flex items-center gap-1.5 text-[11px] text-primary">
+                              <input
+                                type="radio"
+                                :name="`rule-time-mode-${ruleIndex}`"
+                                :checked="isQrRuleAllDay(rule)"
+                                @change="setQrRuleTimeMode(ruleIndex, 'all_day')"
+                              />
+                              All Day
+                            </label>
+                            <label class="flex items-center gap-1.5 text-[11px] text-primary">
+                              <input
+                                type="radio"
+                                :name="`rule-time-mode-${ruleIndex}`"
+                                :checked="!isQrRuleAllDay(rule)"
+                                @change="setQrRuleTimeMode(ruleIndex, 'custom')"
+                              />
+                              Custom Range
+                            </label>
+                          </div>
+                          <div v-if="!isQrRuleAllDay(rule)" class="grid grid-cols-2 gap-2">
+                            <select
+                              :value="rule.startHour ?? 8"
+                              class="select-base w-full px-2 py-1.5 text-xs"
+                              @change="updateQrRule(ruleIndex, 'startHour', Number.parseInt($event.target.value, 10))"
+                            >
+                              <option v-for="hour in qrHourOptions" :key="`start-${ruleIndex}-${hour.value}`" :value="hour.value">
+                                {{ hour.label }}
+                              </option>
+                            </select>
+                            <select
+                              :value="rule.endHour ?? 18"
+                              class="select-base w-full px-2 py-1.5 text-xs"
+                              @change="updateQrRule(ruleIndex, 'endHour', Number.parseInt($event.target.value, 10))"
+                            >
+                              <option v-for="hour in qrHourOptions" :key="`end-${ruleIndex}-${hour.value}`" :value="hour.value">
+                                {{ hour.label }}
+                              </option>
+                            </select>
+                          </div>
+                        </div>
+                        <div>
+                          <label class="block text-[11px] text-muted mb-1">Days of Week</label>
+                          <div class="grid grid-cols-7 gap-1">
+                            <button
+                              v-for="day in qrWeekdayOptions"
+                              :key="`day-${ruleIndex}-${day.value}`"
+                              type="button"
+                              class="px-0 py-1 rounded text-[10px] border transition-colors"
+                              :class="(rule.daysOfWeek || []).includes(day.value) ? 'bg-emerald-500/20 border-emerald-400/80 text-emerald-200' : 'border-border-color text-muted hover:text-primary'"
+                              @click="toggleQrRuleDay(ruleIndex, day.value)"
+                            >
+                              {{ day.label }}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="text-xs" :class="qrReadabilityOk(selectedWidget) ? 'text-emerald-400' : 'text-amber-400'">
+                    {{ qrReadabilityMessage(selectedWidget) }}
+                  </div>
+                </div>
+              </div>
+
               <!-- Image/Video Widget Properties -->
               <div v-if="selectedWidget.type === 'image' || selectedWidget.type === 'video'">
                 <h3 class="text-sm font-semibold mb-3 text-gray-400 uppercase">{{ selectedWidget.type === 'image' ? 'Image' : 'Video' }} Properties</h3>
@@ -753,21 +1022,150 @@
                 </div>
               </div>
 
-              <!-- Clock/Date Widget Properties -->
-              <div v-if="selectedWidget.type === 'clock' || selectedWidget.type === 'date'">
-                <h3 class="text-sm font-semibold mb-3 text-gray-400 uppercase">{{ selectedWidget.type === 'clock' ? 'Clock' : 'Date' }} Properties</h3>
+              <div v-if="selectedWidget.type === 'album'">
+                <h3 class="text-sm font-semibold mb-3 text-gray-400 uppercase">Album Playlist Properties</h3>
                 <div class="space-y-3">
+                  <div class="flex gap-2">
+                    <button
+                      @click="openMediaLibrary('album')"
+                      class="flex-1 px-3 py-2 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white rounded-lg text-sm font-medium transition-all duration-200"
+                    >
+                      Add Media to Queue
+                    </button>
+                    <button
+                      @click="clearAlbumQueue()"
+                      class="px-3 py-2 bg-red-600/50 hover:bg-red-600 text-white rounded-lg text-sm transition-colors duration-200"
+                    >
+                      Clear
+                    </button>
+                  </div>
+
+                  <div>
+                    <label class="block text-xs font-medium text-gray-400 mb-1.5">Transition</label>
+                    <select
+                      :value="selectedWidget.style?.transition || 'fade'"
+                      class="w-full px-3 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-sm text-white"
+                      @change="updateWidgetStyle('transition', $event.target.value)"
+                    >
+                      <option value="fade">Fade</option>
+                      <option value="slideLeft">Slide Left</option>
+                      <option value="slideRight">Slide Right</option>
+                      <option value="none">None</option>
+                    </select>
+                  </div>
+
+                  <div class="grid grid-cols-2 gap-3">
+                    <div>
+                      <label class="block text-xs font-medium text-gray-400 mb-1.5">Default Duration (s)</label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="300"
+                        :value="selectedWidget.style?.defaultDurationSec || 10"
+                        class="w-full px-3 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-sm text-white"
+                        @input="updateWidgetStyle('defaultDurationSec', normalizeRange($event.target.value, 10, 1, 300))"
+                      />
+                    </div>
+                    <div>
+                      <label class="block text-xs font-medium text-gray-400 mb-1.5">Transition Duration (ms)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="5000"
+                        :value="selectedWidget.style?.transitionDurationMs || 450"
+                        class="w-full px-3 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-sm text-white"
+                        @input="updateWidgetStyle('transitionDurationMs', normalizeRange($event.target.value, 450, 0, 5000))"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label class="block text-xs font-medium text-gray-400 mb-1.5">Object Fit</label>
+                    <select
+                      :value="selectedWidget.style?.objectFit || 'contain'"
+                      class="w-full px-3 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-sm text-white"
+                      @change="updateWidgetStyle('objectFit', $event.target.value)"
+                    >
+                      <option value="contain">Contain</option>
+                      <option value="cover">Cover</option>
+                    </select>
+                  </div>
+
+                  <div class="rounded-lg border border-slate-700/80 bg-slate-900/40 p-3">
+                    <div class="text-xs text-gray-400 mb-2">Queue Items</div>
+                    <div v-if="!albumQueueItems.length" class="text-xs text-gray-500">
+                      No media selected yet.
+                    </div>
+                    <div v-for="(item, idx) in albumQueueItems" :key="item.content_id" class="grid grid-cols-[1fr_auto_auto_auto] gap-2 items-center py-1">
+                      <div class="text-xs text-gray-200 truncate" :title="item.name || item.content_id">
+                        {{ idx + 1 }}. {{ item.name || item.content_id }}
+                      </div>
+                      <input
+                        type="number"
+                        min="1"
+                        max="300"
+                        :value="item.durationSec || 10"
+                        class="w-20 px-2 py-1 bg-slate-800/60 border border-slate-700 rounded text-xs text-white"
+                        @input="updateAlbumItemDuration(item.content_id, $event.target.value)"
+                      />
+                      <button class="px-2 py-1 text-xs bg-slate-700 hover:bg-slate-600 rounded" @click="moveAlbumItem(item.content_id, -1)">Up</button>
+                      <button class="px-2 py-1 text-xs bg-red-700/70 hover:bg-red-600 rounded" @click="removeAlbumItem(item.content_id)">Del</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Clock/Date Widget Properties -->
+              <div v-if="selectedWidget.type === 'clock' || selectedWidget.type === 'date' || selectedWidget.type === 'weekday'">
+                <h3 class="text-sm font-semibold mb-3 text-gray-400 uppercase">{{ selectedWidget.type === 'clock' ? 'Clock' : selectedWidget.type === 'date' ? 'Date' : 'Weekday' }} Properties</h3>
+                <div class="space-y-3">
+                  <div>
+                    <label class="block text-xs font-medium text-gray-400 mb-1.5">Style Preset</label>
+                    <div class="grid grid-cols-[1fr_auto] gap-2">
+                      <select
+                        :value="selectedWidget.style?.preset || (selectedWidget.type === 'clock' ? 'digitalBoard' : selectedWidget.type === 'date' ? 'calendarCard' : 'weekdayBold')"
+                        class="select-base w-full px-3 py-2 text-sm"
+                        @change="applyTemporalPreset(selectedWidget.type, $event.target.value)"
+                      >
+                        <option
+                          v-for="preset in selectedWidget.type === 'clock' ? clockStylePresets : selectedWidget.type === 'date' ? dateStylePresets : weekdayStylePresets"
+                          :key="preset.id"
+                          :value="preset.id"
+                        >
+                          {{ preset.label }}
+                        </option>
+                      </select>
+                      <button
+                        class="btn-outline px-3 py-2 rounded text-xs"
+                        @click="applyTemporalPreset(selectedWidget.type, selectedWidget.style?.preset || (selectedWidget.type === 'clock' ? 'digitalBoard' : selectedWidget.type === 'date' ? 'calendarCard' : 'weekdayBold'))"
+                      >
+                        Apply
+                      </button>
+                    </div>
+                  </div>
                   <div>
                     <label class="block text-xs font-medium text-gray-400 mb-1.5">Format</label>
                     <input
                       v-model="selectedWidget.content"
                       type="text"
-                      :placeholder="selectedWidget.type === 'clock' ? 'HH:mm:ss' : 'YYYY-MM-DD'"
+                      :placeholder="selectedWidget.type === 'clock' ? 'HH:mm:ss' : selectedWidget.type === 'date' ? 'YYYY-MM-DD' : 'dddd'"
                       class="w-full px-3 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
-                      @input="updateWidgetProperty('content', $event.target.value)"
+                      @input="updateWidgetProperty('content', $event.target.value); updateWidgetStyle('format', $event.target.value)"
                     />
                   </div>
-                  <div v-if="selectedWidget.type === 'clock'">
+                  <div>
+                    <label class="block text-xs font-medium text-gray-400 mb-1.5">Language / Locale</label>
+                    <select
+                      :value="selectedWidget.style?.locale || 'en-US'"
+                      class="select-base w-full px-3 py-2 text-sm"
+                      @change="updateWidgetStyle('locale', $event.target.value)"
+                    >
+                      <option v-for="locale in supportedLocales" :key="locale.value" :value="locale.value">
+                        {{ locale.label }}
+                      </option>
+                    </select>
+                  </div>
+                  <div>
                     <label class="block text-xs font-medium text-gray-400 mb-1.5">Time Zone</label>
                     <select
                       :value="selectedWidget.style?.timeZone || defaultTimeZone"
@@ -784,6 +1182,51 @@
                     </select>
                   </div>
                   <div>
+                    <label class="block text-xs font-medium text-gray-400 mb-1.5">Show Weekday</label>
+                    <input
+                      type="checkbox"
+                      class="h-4 w-4"
+                      :checked="selectedWidget.type === 'weekday' ? true : selectedWidget.style?.showWeekday === true"
+                      :disabled="selectedWidget.type === 'weekday'"
+                      @change="updateWidgetStyle('showWeekday', $event.target.checked)"
+                    />
+                  </div>
+                  <div v-if="selectedWidget.type !== 'clock' || selectedWidget.style?.showWeekday === true || selectedWidget.type === 'weekday'">
+                    <label class="block text-xs font-medium text-gray-400 mb-1.5">Weekday Style</label>
+                    <select
+                      :value="selectedWidget.style?.weekdayStyle || 'long'"
+                      class="select-base w-full px-3 py-2 text-sm"
+                      @change="updateWidgetStyle('weekdayStyle', $event.target.value)"
+                    >
+                      <option value="long">Long</option>
+                      <option value="short">Short</option>
+                      <option value="narrow">Narrow</option>
+                    </select>
+                  </div>
+                  <div v-if="selectedWidget.type === 'clock'">
+                    <label class="block text-xs font-medium text-gray-400 mb-1.5">Clock Display Mode</label>
+                    <select
+                      :value="selectedWidget.style?.displayMode || 'timeOnly'"
+                      class="select-base w-full px-3 py-2 text-sm"
+                      @change="updateWidgetStyle('displayMode', $event.target.value)"
+                    >
+                      <option value="timeOnly">Time Only</option>
+                      <option value="timePlusWeekday">Time + Weekday (Inline)</option>
+                      <option value="stacked">Stacked</option>
+                    </select>
+                  </div>
+                  <div v-if="selectedWidget.type === 'date'">
+                    <label class="block text-xs font-medium text-gray-400 mb-1.5">Date Display Mode</label>
+                    <select
+                      :value="selectedWidget.style?.displayMode || 'inline'"
+                      class="select-base w-full px-3 py-2 text-sm"
+                      @change="updateWidgetStyle('displayMode', $event.target.value)"
+                    >
+                      <option value="inline">Inline</option>
+                      <option value="stacked">Stacked</option>
+                    </select>
+                  </div>
+                  <div>
                     <label class="block text-xs font-medium text-gray-400 mb-1.5">Font Size (px)</label>
                     <div class="grid grid-cols-[1fr_auto] gap-2 items-center">
                       <input
@@ -791,7 +1234,7 @@
                         min="12"
                         max="220"
                         step="1"
-                        :value="getFontSizeNumber(selectedWidget.style?.fontSize, selectedWidget.type === 'clock' ? 56 : 40)"
+                        :value="getFontSizeNumber(selectedWidget.style?.fontSize, selectedWidget.type === 'clock' ? 56 : selectedWidget.type === 'date' ? 40 : 42)"
                         class="w-full"
                         @input="updateWidgetStyle('fontSize', `${$event.target.value}px`)"
                       />
@@ -799,9 +1242,9 @@
                         type="number"
                         min="12"
                         max="220"
-                        :value="getFontSizeNumber(selectedWidget.style?.fontSize, selectedWidget.type === 'clock' ? 56 : 40)"
+                        :value="getFontSizeNumber(selectedWidget.style?.fontSize, selectedWidget.type === 'clock' ? 56 : selectedWidget.type === 'date' ? 40 : 42)"
                         class="input-base w-20 px-2 py-1 text-sm"
-                        @input="updateWidgetStyle('fontSize', `${$event.target.value || (selectedWidget.type === 'clock' ? 56 : 40)}px`)"
+                        @input="updateWidgetStyle('fontSize', `${$event.target.value || (selectedWidget.type === 'clock' ? 56 : selectedWidget.type === 'date' ? 40 : 42)}px`)"
                       />
                     </div>
                   </div>
@@ -849,6 +1292,156 @@
                       <option value="center">Center</option>
                       <option value="right">Right</option>
                     </select>
+                  </div>
+                </div>
+              </div>
+
+              <div v-if="selectedWidget.type === 'countdown'">
+                <h3 class="text-sm font-semibold mb-3 text-muted uppercase">Countdown Properties</h3>
+                <div class="space-y-3">
+                  <div>
+                    <label class="block text-xs font-medium text-muted mb-1.5">Event name</label>
+                    <input
+                      :value="selectedWidget.content || ''"
+                      type="text"
+                      class="input-base w-full px-3 py-2 text-sm"
+                      placeholder="Spring Festival"
+                      @input="updateWidgetProperty('content', $event.target.value)"
+                    />
+                  </div>
+                  <div>
+                    <label class="block text-xs font-medium text-muted mb-1.5">Target date and time (local)</label>
+                    <input
+                      :value="countdownTargetLocal"
+                      type="datetime-local"
+                      class="input-base w-full px-3 py-2 text-sm"
+                      @input="onCountdownTargetAtInput($event.target.value)"
+                    />
+                  </div>
+                  <div>
+                    <label class="block text-xs font-medium text-muted mb-1.5">Progress start (optional)</label>
+                    <input
+                      :value="countdownStartLocal"
+                      type="datetime-local"
+                      class="input-base w-full px-3 py-2 text-sm"
+                      @input="onCountdownStartAtInput($event.target.value)"
+                    />
+                    <p class="text-[11px] text-slate-500 mt-1">Used for the progress bar. Leave empty to start from first display.</p>
+                  </div>
+                  <div class="grid grid-cols-2 gap-3">
+                    <div>
+                      <label class="block text-xs font-medium text-muted mb-1.5">After zero</label>
+                      <select
+                        :value="selectedWidget.style?.zeroStateMode || 'showMessage'"
+                        class="select-base w-full px-3 py-2 text-sm"
+                        @change="updateWidgetStyle('zeroStateMode', $event.target.value)"
+                      >
+                        <option value="showMessage">Show message</option>
+                        <option value="hideWidget">Hide widget</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label class="block text-xs font-medium text-muted mb-1.5">Theme</label>
+                      <select
+                        :value="selectedWidget.style?.theme || 'urgency'"
+                        class="select-base w-full px-3 py-2 text-sm"
+                        @change="updateWidgetStyle('theme', $event.target.value)"
+                      >
+                        <option value="urgency">Urgency</option>
+                        <option value="celebration">Celebration</option>
+                        <option value="custom">Custom colors</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div v-if="(selectedWidget.style?.zeroStateMode || 'showMessage') === 'showMessage'">
+                    <label class="block text-xs font-medium text-muted mb-1.5">Message at zero</label>
+                    <textarea
+                      :value="selectedWidget.style?.zeroStateMessage || ''"
+                      rows="2"
+                      class="input-base w-full px-3 py-2 text-sm"
+                      placeholder="The event has started!"
+                      @input="updateWidgetStyle('zeroStateMessage', $event.target.value)"
+                    />
+                  </div>
+                  <div>
+                    <label class="flex items-center gap-2 text-xs text-muted">
+                      <input
+                        type="checkbox"
+                        class="h-4 w-4"
+                        :checked="selectedWidget.style?.showProgress === true"
+                        @change="updateWidgetStyle('showProgress', $event.target.checked)"
+                      />
+                      Show progress bar
+                    </label>
+                  </div>
+                  <div class="grid grid-cols-2 gap-2">
+                    <div>
+                      <label class="block text-[11px] text-muted mb-1">Days label</label>
+                      <input
+                        :value="selectedWidget.style?.labels?.days ?? 'Days'"
+                        type="text"
+                        class="input-base w-full px-2 py-1.5 text-sm"
+                        @input="updateCountdownLabel('days', $event.target.value)"
+                      />
+                    </div>
+                    <div>
+                      <label class="block text-[11px] text-muted mb-1">Hours label</label>
+                      <input
+                        :value="selectedWidget.style?.labels?.hours ?? 'Hours'"
+                        type="text"
+                        class="input-base w-full px-2 py-1.5 text-sm"
+                        @input="updateCountdownLabel('hours', $event.target.value)"
+                      />
+                    </div>
+                    <div>
+                      <label class="block text-[11px] text-muted mb-1">Minutes label</label>
+                      <input
+                        :value="selectedWidget.style?.labels?.minutes ?? 'Minutes'"
+                        type="text"
+                        class="input-base w-full px-2 py-1.5 text-sm"
+                        @input="updateCountdownLabel('minutes', $event.target.value)"
+                      />
+                    </div>
+                    <div>
+                      <label class="block text-[11px] text-muted mb-1">Seconds label</label>
+                      <input
+                        :value="selectedWidget.style?.labels?.seconds ?? 'Seconds'"
+                        type="text"
+                        class="input-base w-full px-2 py-1.5 text-sm"
+                        @input="updateCountdownLabel('seconds', $event.target.value)"
+                      />
+                    </div>
+                  </div>
+                  <div class="grid grid-cols-2 gap-3">
+                    <div>
+                      <label class="block text-xs font-medium text-muted mb-1.5">Text color</label>
+                      <input
+                        :value="selectedWidget.style?.color || '#fecaca'"
+                        type="color"
+                        class="w-full h-10 bg-slate-800/50 border border-slate-700 rounded-lg cursor-pointer"
+                        @input="updateWidgetStyle('color', $event.target.value)"
+                      />
+                    </div>
+                    <div>
+                      <label class="block text-xs font-medium text-muted mb-1.5">Background</label>
+                      <input
+                        :value="getBackgroundHex(selectedWidget.style?.backgroundColor, '#450a0a')"
+                        type="color"
+                        class="w-full h-10 bg-slate-800/50 border border-slate-700 rounded-lg cursor-pointer"
+                        @input="updateWidgetStyle('backgroundColor', $event.target.value)"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label class="block text-xs font-medium text-muted mb-1.5">Font size (px)</label>
+                    <input
+                      type="number"
+                      min="12"
+                      max="220"
+                      :value="getFontSizeNumber(selectedWidget.style?.fontSize, 36)"
+                      class="input-base w-full px-3 py-2 text-sm"
+                      @input="updateWidgetStyle('fontSize', `${normalizeRange($event.target.value, 36, 12, 220)}px`)"
+                    />
                   </div>
                 </div>
               </div>
@@ -1031,6 +1624,54 @@ const selectedWidget = computed(() => {
   return widgets.value.find(w => w.id === selectedWidgetId.value)
 })
 
+const albumQueueItems = computed(() => {
+  const widget = selectedWidget.value
+  if (!widget || widget.type !== 'album') return []
+  const playlist = Array.isArray(widget.style?.playlist) ? widget.style.playlist : []
+  return playlist
+})
+
+const toDatetimeLocalValue = (iso) => {
+  if (!iso) return ''
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
+const fromDatetimeLocalToIso = (local) => {
+  if (!local) return ''
+  const d = new Date(local)
+  return Number.isNaN(d.getTime()) ? '' : d.toISOString()
+}
+
+const countdownTargetLocal = computed(() => {
+  const w = selectedWidget.value
+  if (!w || w.type !== 'countdown') return ''
+  return toDatetimeLocalValue(w.style?.targetAt)
+})
+
+const countdownStartLocal = computed(() => {
+  const w = selectedWidget.value
+  if (!w || w.type !== 'countdown') return ''
+  return toDatetimeLocalValue(w.style?.startAt)
+})
+
+const onCountdownTargetAtInput = (local) => {
+  updateWidgetStyle('targetAt', fromDatetimeLocalToIso(local))
+}
+
+const onCountdownStartAtInput = (local) => {
+  updateWidgetStyle('startAt', local ? fromDatetimeLocalToIso(local) : '')
+}
+
+const updateCountdownLabel = (key, value) => {
+  if (!selectedWidget.value || selectedWidget.value.type !== 'countdown') return
+  if (!selectedWidget.value.style) selectedWidget.value.style = {}
+  if (!selectedWidget.value.style.labels) selectedWidget.value.style.labels = {}
+  selectedWidget.value.style.labels[key] = value
+}
+
 // Widget visibility state (default to visible)
 const widgetVisibility = ref({})
 
@@ -1050,6 +1691,59 @@ const leftPanelCollapsed = ref(false)
 const rightPanelCollapsed = ref(false)
 const rightPanelTab = ref('properties')
 const defaultTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
+const widgetLibrarySections = [
+  {
+    id: 'date-time',
+    label: 'Date & Time',
+    items: [
+      { type: 'clock', label: 'Add Clock', iconPath: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' },
+      { type: 'date', label: 'Add Date', iconPath: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z' },
+      { type: 'weekday', label: 'Add Weekday', iconPath: 'M8 7V3m8 4V3m-9 9h10m-8 5h6M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z' },
+      { type: 'countdown', label: 'Add Countdown', iconPath: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M2 12h2m16 0h2M4.93 19.07l1.41-1.41m11.32-11.32l1.41-1.41' },
+    ]
+  },
+  {
+    id: 'text-live',
+    label: 'Text & Live Info',
+    items: [
+      { type: 'text', label: 'Add Text', iconPath: 'M4 6h16M4 12h16M4 18h7' },
+      { type: 'marquee', label: 'Add Marquee', iconPath: 'M4 12h16M4 7h7m6 0h3M4 17h5m8 0h3' },
+      { type: 'weather', label: 'Add Weather', iconPath: 'M3 15a4 4 0 014-4h.26A6 6 0 0119 13h1a3 3 0 010 6H7a4 4 0 01-4-4z' },
+      { type: 'qr_action', label: 'Add QR Action', iconPath: 'M4 4h5v5H4V4zm11 0h5v5h-5V4zM4 15h5v5H4v-5zm2-9h1v1H6V6zm10 0h1v1h-1V6zm-1 10h5v1h-5v-1zm-1-5h1v3h-1v-3zm-3 0h2v1h-2v-1zm-1 2h1v1h-1v-1zm2 2h1v1h-1v-1zm-2 2h2v1h-2v-1z' },
+    ]
+  },
+  {
+    id: 'media',
+    label: 'Media',
+    items: [
+      { type: 'image', label: 'Add Image', iconPath: 'M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z' },
+      { type: 'video', label: 'Add Video', iconPath: 'M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z' },
+      { type: 'album', label: 'Add Album Playlist', iconPath: 'M4 7h16M4 12h16M4 17h10m4 0h2M8 7v10M16 7v10' },
+    ]
+  },
+  {
+    id: 'web-data',
+    label: 'Web & Data',
+    items: [
+      { type: 'webview', label: 'Add Webview', iconPath: 'M21 12H3m0 0l4-4m-4 4l4 4m14-4l-4-4m4 4l-4 4' },
+      { type: 'chart', label: 'Add Chart', iconPath: 'M3 3v18h18M8 13l3-3 3 2 4-5' },
+    ]
+  },
+]
+const widgetSectionOpenState = ref({
+  'date-time': true,
+  'text-live': true,
+  media: true,
+  'web-data': false,
+})
+const isWidgetSectionOpen = (sectionId) => leftPanelCollapsed.value || widgetSectionOpenState.value[sectionId] !== false
+const toggleWidgetSection = (sectionId) => {
+  if (leftPanelCollapsed.value) return
+  widgetSectionOpenState.value = {
+    ...widgetSectionOpenState.value,
+    [sectionId]: !isWidgetSectionOpen(sectionId),
+  }
+}
 const worldTimeZones = [
   { value: 'UTC', label: 'UTC (Coordinated Universal Time)' },
   { value: 'Asia/Tehran', label: 'Tehran (Asia/Tehran)' },
@@ -1084,6 +1778,47 @@ const marqueePresets = [
   { id: 'darkGlass', label: 'Dark Glass', style: { color: '#e5e7eb', backgroundColor: 'rgba(15,23,42,0.85)', fontSize: '36px', fontWeight: '700', mode: 'bounce', direction: 'left' } },
 ]
 
+const supportedLocales = [
+  { value: 'en-US', label: 'English (US)' },
+  { value: 'fa-IR', label: 'Persian (Iran)' },
+  { value: 'ar-SA', label: 'Arabic (Saudi Arabia)' },
+  { value: 'tr-TR', label: 'Turkish (Turkey)' },
+  { value: 'fr-FR', label: 'French (France)' },
+]
+
+const qrWeekdayOptions = [
+  { value: 0, label: 'Mon' },
+  { value: 1, label: 'Tue' },
+  { value: 2, label: 'Wed' },
+  { value: 3, label: 'Thu' },
+  { value: 4, label: 'Fri' },
+  { value: 5, label: 'Sat' },
+  { value: 6, label: 'Sun' },
+]
+
+const qrHourOptions = Array.from({ length: 24 }, (_, hour) => ({
+  value: hour,
+  label: `${String(hour).padStart(2, '0')}:00`,
+}))
+
+const clockStylePresets = [
+  { id: 'digitalBoard', label: 'Digital Board', style: { preset: 'digitalBoard', color: '#e2e8f0', backgroundColor: '#0f172a', fontSize: '56px', fontWeight: '800', fontFamily: "'Segoe UI', sans-serif", textAlign: 'center', locale: 'en-US', displayMode: 'timeOnly', showWeekday: false, timeZone: defaultTimeZone } },
+  { id: 'glassBlue', label: 'Glass Blue', style: { preset: 'glassBlue', color: '#dbeafe', backgroundColor: 'rgba(30,64,175,0.65)', fontSize: '54px', fontWeight: '700', textShadow: '0 0 12px rgba(30,64,175,0.6)', fontFamily: "Roboto, sans-serif", locale: 'en-US', displayMode: 'timePlusWeekday', showWeekday: true, weekdayStyle: 'short', timeZone: defaultTimeZone } },
+  { id: 'minimalDark', label: 'Minimal Dark', style: { preset: 'minimalDark', color: '#f8fafc', backgroundColor: '#111827', fontSize: '52px', fontWeight: '600', fontFamily: "Arial, sans-serif", locale: 'en-US', displayMode: 'stacked', showWeekday: true, weekdayStyle: 'long', timeZone: defaultTimeZone } },
+]
+
+const dateStylePresets = [
+  { id: 'calendarCard', label: 'Calendar Card', style: { preset: 'calendarCard', color: '#f8fafc', backgroundColor: '#1e293b', fontSize: '40px', fontWeight: '700', textAlign: 'center', fontFamily: "'Segoe UI', sans-serif", locale: 'en-US', displayMode: 'inline', showWeekday: true, weekdayStyle: 'long', dateStyle: 'medium', timeZone: defaultTimeZone } },
+  { id: 'minimalLight', label: 'Minimal Light', style: { preset: 'minimalLight', color: '#0f172a', backgroundColor: '#f8fafc', fontSize: '38px', fontWeight: '600', textAlign: 'center', fontFamily: "Roboto, sans-serif", locale: 'en-US', displayMode: 'stacked', showWeekday: true, weekdayStyle: 'short', dateStyle: 'short', timeZone: defaultTimeZone } },
+  { id: 'boldBanner', label: 'Bold Banner', style: { preset: 'boldBanner', color: '#fde68a', backgroundColor: '#7c2d12', fontSize: '42px', fontWeight: '800', textAlign: 'center', fontFamily: "Verdana, sans-serif", locale: 'en-US', displayMode: 'inline', showWeekday: false, dateStyle: 'full', timeZone: defaultTimeZone } },
+]
+
+const weekdayStylePresets = [
+  { id: 'weekdayBold', label: 'Weekday Bold', style: { preset: 'weekdayBold', color: '#ffffff', backgroundColor: '#0f172a', fontSize: '44px', fontWeight: '800', textAlign: 'center', fontFamily: "'Segoe UI', sans-serif", locale: 'en-US', weekdayStyle: 'long', timeZone: defaultTimeZone } },
+  { id: 'weekdayCalm', label: 'Weekday Calm', style: { preset: 'weekdayCalm', color: '#dbeafe', backgroundColor: '#1d4ed8', fontSize: '40px', fontWeight: '700', textAlign: 'center', fontFamily: "Roboto, sans-serif", locale: 'en-US', weekdayStyle: 'short', timeZone: defaultTimeZone } },
+  { id: 'weekdayLight', label: 'Weekday Light', style: { preset: 'weekdayLight', color: '#0f172a', backgroundColor: '#f8fafc', fontSize: '38px', fontWeight: '700', textAlign: 'center', fontFamily: "Arial, sans-serif", locale: 'en-US', weekdayStyle: 'narrow', timeZone: defaultTimeZone } },
+]
+
 const getMarqueeDefaultStyle = () => ({
   preset: 'breakingNews',
   mode: 'continuous',
@@ -1105,6 +1840,108 @@ const getMarqueeDefaultStyle = () => ({
   lineHeight: 1.2,
   letterSpacing: '0.01em',
 })
+
+const getWeatherDefaultStyle = () => ({
+  location: 'Tehran,IR',
+  units: 'celsius',
+  layout: 'compact',
+  forecastDays: 3,
+  hideAfterHours: 6,
+  color: '#ffffff',
+  backgroundColor: '#0f172a',
+})
+
+const getAlbumDefaultStyle = () => ({
+  transition: 'fade',
+  transitionDurationMs: 450,
+  defaultDurationSec: 10,
+  gifMode: 'autoEnd',
+  objectFit: 'contain',
+  muted: true,
+  loopPlaylist: true,
+  playlist: [],
+})
+
+const getCountdownDefaultStyle = () => {
+  const target = new Date()
+  target.setDate(target.getDate() + 7)
+  target.setHours(18, 0, 0, 0)
+  const start = new Date()
+  return {
+    targetAt: target.toISOString(),
+    startAt: start.toISOString(),
+    zeroStateMode: 'showMessage',
+    zeroStateMessage: 'The event has started!',
+    theme: 'urgency',
+    showProgress: true,
+    granularityMode: 'auto',
+    labels: {
+      days: 'Days',
+      hours: 'Hours',
+      minutes: 'Minutes',
+      seconds: 'Seconds',
+    },
+    color: '#fecaca',
+    backgroundColor: '#450a0a',
+    fontSize: '36px',
+    fontWeight: '800',
+    fontFamily: "'Segoe UI', sans-serif",
+    textAlign: 'center',
+    borderRadius: '12px',
+  }
+}
+
+const getQrActionDefaultStyle = () => ({
+  ctaText: 'Scan to continue',
+  campaignId: '',
+  defaultUrl: 'https://example.com/menu',
+  redirectPath: '',
+  displayUrl: '',
+  logoUrl: '',
+  foregroundColor: '#000000',
+  backgroundColor: '#ffffff',
+  textColor: '#0f172a',
+  errorCorrectionLevel: 'H',
+  quietZone: 4,
+  rules: [
+    {
+      name: 'Morning Menu',
+      priority: 1,
+      startHour: 8,
+      endHour: 12,
+      daysOfWeek: [0, 1, 2, 3, 4, 5, 6],
+      targetUrl: 'https://example.com/menu-breakfast',
+      isActive: true,
+    },
+    {
+      name: 'Evening Menu',
+      priority: 2,
+      startHour: 12,
+      endHour: 23,
+      daysOfWeek: [0, 1, 2, 3, 4, 5, 6],
+      targetUrl: 'https://example.com/menu-dinner',
+      isActive: true,
+    },
+  ],
+})
+
+const getTemporalDefaultStyle = (type) => {
+  if (type === 'clock') return { ...clockStylePresets[0].style }
+  if (type === 'date') return { ...dateStylePresets[0].style, format: 'YYYY-MM-DD' }
+  if (type === 'weekday') return { ...weekdayStylePresets[0].style, showWeekday: true, format: 'dddd' }
+  return {}
+}
+
+const applyTemporalPreset = (type, presetId) => {
+  if (!selectedWidget.value || selectedWidget.value.type !== type) return
+  const source = type === 'clock' ? clockStylePresets : type === 'date' ? dateStylePresets : weekdayStylePresets
+  const preset = source.find((entry) => entry.id === presetId) || source[0]
+  if (!preset) return
+  selectedWidget.value.style = {
+    ...(selectedWidget.value.style || {}),
+    ...preset.style,
+  }
+}
 
 // Sort widgets by z-index for display
 const sortedWidgetsByZIndex = computed(() => {
@@ -1207,8 +2044,25 @@ const zoomOut = () => {
 
 // Add widget
 const addWidget = (type) => {
-  const defaultWidth = type === 'text' ? 300 : type === 'marquee' ? 720 : type === 'image' || type === 'video' || type === 'webview' ? 400 : type === 'chart' ? 500 : 200
-  const defaultHeight = type === 'text' ? 100 : type === 'marquee' ? 110 : type === 'image' || type === 'video' || type === 'webview' ? 300 : type === 'chart' ? 300 : 100
+  const defaultWidth =
+    type === 'text'
+      ? 300
+      : type === 'marquee'
+        ? Math.min(720, Math.max(320, canvasWidth.value * 0.6))
+        : type === 'weather'
+          ? 420
+        : type === 'qr_action'
+          ? 360
+        : type === 'countdown'
+          ? 520
+        : type === 'image' || type === 'video' || type === 'album' || type === 'webview'
+          ? 400
+          : type === 'chart'
+            ? 500
+            : type === 'weekday'
+              ? 280
+            : 200
+  const defaultHeight = type === 'text' ? 100 : type === 'marquee' ? 110 : type === 'weather' ? 180 : type === 'qr_action' ? 420 : type === 'countdown' ? 200 : type === 'image' || type === 'video' || type === 'album' || type === 'webview' ? 300 : type === 'chart' ? 300 : type === 'weekday' ? 120 : 100
 
   const widget = {
     id: generateId(),
@@ -1226,24 +2080,38 @@ const addWidget = (type) => {
         ? 'Sample Text'
         : type === 'marquee'
         ? 'Breaking News: New promotions are now live • Visit the help desk for details • Stay tuned for more updates'
+        : type === 'weather'
+        ? 'Tehran,IR'
+        : type === 'qr_action'
+        ? 'https://example.com/menu'
         : type === 'clock'
         ? 'HH:mm:ss'
         : type === 'date'
         ? 'YYYY-MM-DD'
+        : type === 'weekday'
+        ? 'dddd'
         : type === 'webview'
         ? 'https://example.com'
         : type === 'chart'
         ? '{"type":"bar","data":{"labels":["A","B","C"],"datasets":[{"label":"Series","data":[12,19,7]}]}}'
+        : type === 'countdown'
+        ? 'Spring Festival'
         : '',
+    content_ids: [],
     style: {
       ...(type === 'marquee' ? getMarqueeDefaultStyle() : {}),
-      color: type === 'text' || type === 'clock' || type === 'date' ? '#000000' : undefined,
-      fontSize: type === 'text' || type === 'clock' || type === 'date' ? '24px' : undefined,
-      fontFamily: type === 'text' || type === 'clock' || type === 'date' ? 'Arial, sans-serif' : undefined,
+      ...(type === 'weather' ? getWeatherDefaultStyle() : {}),
+      ...(type === 'qr_action' ? getQrActionDefaultStyle() : {}),
+      ...(type === 'countdown' ? getCountdownDefaultStyle() : {}),
+      ...(type === 'album' ? getAlbumDefaultStyle() : {}),
+      ...((type === 'clock' || type === 'date' || type === 'weekday') ? getTemporalDefaultStyle(type) : {}),
+      color: type === 'text' ? '#000000' : undefined,
+      fontSize: type === 'text' ? '24px' : undefined,
+      fontFamily: type === 'text' ? 'Arial, sans-serif' : undefined,
       textAlign: type === 'text' ? 'left' : undefined,
-      backgroundColor: type === 'text' ? 'transparent' : (type === 'clock' || type === 'date' ? '#000000' : undefined),
-      timeZone: type === 'clock' ? defaultTimeZone : undefined,
-      objectFit: type === 'image' || type === 'video' ? 'cover' : undefined,
+      backgroundColor: type === 'text' ? 'transparent' : undefined,
+      timeZone: type === 'clock' || type === 'date' || type === 'weekday' ? defaultTimeZone : undefined,
+      objectFit: type === 'image' || type === 'video' ? 'cover' : (type === 'album' ? 'contain' : undefined),
     }
   }
 
@@ -1321,7 +2189,7 @@ const getWidgetStyle = (widget) => {
   // Check visibility
   const isVisible = widget.visible !== false
   const widgetBg =
-    (widget.type === 'text' || widget.type === 'marquee' || widget.type === 'clock' || widget.type === 'date')
+    (widget.type === 'text' || widget.type === 'marquee' || widget.type === 'clock' || widget.type === 'date' || widget.type === 'weekday' || widget.type === 'qr_action' || widget.type === 'countdown')
       ? (widget.style?.backgroundColor || 'transparent')
       : 'transparent'
   
@@ -1389,9 +2257,109 @@ const openMediaLibrary = (widgetType) => {
   showMediaLibrary.value = true
 }
 
+const syncAlbumWidgetQueue = (widget) => {
+  if (!widget || widget.type !== 'album') return
+  if (!Array.isArray(widget.content_ids)) widget.content_ids = []
+  if (!widget.style || typeof widget.style !== 'object') widget.style = getAlbumDefaultStyle()
+  if (!Array.isArray(widget.style.playlist)) widget.style.playlist = []
+
+  const normalizedPlaylist = []
+  const normalizedIds = []
+  widget.style.playlist.forEach((item, index) => {
+    if (!item || !item.content_id) return
+    const itemId = String(item.content_id)
+    if (normalizedIds.includes(itemId)) return
+    normalizedIds.push(itemId)
+    normalizedPlaylist.push({
+      content_id: itemId,
+      name: item.name || '',
+      order: index,
+      durationSec: normalizeRange(item.durationSec, widget.style.defaultDurationSec || 10, 1, 300),
+      transition: item.transition || widget.style.transition || 'fade',
+      mediaType: item.mediaType || null,
+      url: item.url || '',
+    })
+  })
+  widget.style.playlist = normalizedPlaylist
+  widget.content_ids = normalizedIds
+  widget.content_id = normalizedIds[0] || null
+}
+
+const clearAlbumQueue = () => {
+  if (!selectedWidget.value || selectedWidget.value.type !== 'album') return
+  selectedWidget.value.content = ''
+  selectedWidget.value.content_id = null
+  selectedWidget.value.content_ids = []
+  if (!selectedWidget.value.style) selectedWidget.value.style = getAlbumDefaultStyle()
+  selectedWidget.value.style.playlist = []
+}
+
+const removeAlbumItem = (contentId) => {
+  if (!selectedWidget.value || selectedWidget.value.type !== 'album') return
+  const targetId = String(contentId)
+  selectedWidget.value.style.playlist = (selectedWidget.value.style.playlist || []).filter(
+    (item) => String(item.content_id) !== targetId
+  )
+  syncAlbumWidgetQueue(selectedWidget.value)
+}
+
+const moveAlbumItem = (contentId, delta) => {
+  if (!selectedWidget.value || selectedWidget.value.type !== 'album') return
+  const list = [...(selectedWidget.value.style.playlist || [])]
+  const currentIndex = list.findIndex(item => String(item.content_id) === String(contentId))
+  if (currentIndex < 0) return
+  const nextIndex = Math.max(0, Math.min(list.length - 1, currentIndex + delta))
+  if (nextIndex === currentIndex) return
+  const [moved] = list.splice(currentIndex, 1)
+  list.splice(nextIndex, 0, moved)
+  selectedWidget.value.style.playlist = list
+  syncAlbumWidgetQueue(selectedWidget.value)
+}
+
+const updateAlbumItemDuration = (contentId, duration) => {
+  if (!selectedWidget.value || selectedWidget.value.type !== 'album') return
+  const list = selectedWidget.value.style?.playlist
+  if (!Array.isArray(list)) return
+  const row = list.find(item => String(item.content_id) === String(contentId))
+  if (!row) return
+  row.durationSec = normalizeRange(duration, selectedWidget.value.style.defaultDurationSec || 10, 1, 300)
+}
+
 // Handle media selection from library
 const handleMediaSelect = async (data) => {
   if (!selectedWidget.value || !data.url) return
+
+  if (selectedWidget.value.type === 'album') {
+    if (!selectedWidget.value.style || typeof selectedWidget.value.style !== 'object') {
+      selectedWidget.value.style = getAlbumDefaultStyle()
+    }
+    if (!Array.isArray(selectedWidget.value.style.playlist)) {
+      selectedWidget.value.style.playlist = []
+    }
+    if (!Array.isArray(selectedWidget.value.content_ids)) {
+      selectedWidget.value.content_ids = []
+    }
+
+    const contentId = data.content?.id ? String(data.content.id) : null
+    if (!contentId) return
+    const existing = selectedWidget.value.style.playlist.find(item => String(item.content_id) === contentId)
+    if (!existing) {
+      selectedWidget.value.style.playlist.push({
+        content_id: contentId,
+        name: data.content?.name || '',
+        durationSec: selectedWidget.value.style.defaultDurationSec || 10,
+        transition: selectedWidget.value.style.transition || 'fade',
+        mediaType: data.content?.type || null,
+        url: data.url || '',
+      })
+    }
+    if (!selectedWidget.value.content) {
+      selectedWidget.value.content = data.url
+    }
+    syncAlbumWidgetQueue(selectedWidget.value)
+    notify.success('Media added to album queue')
+    return
+  }
   
   // Update widget content with selected URL
   updateWidgetProperty('content', data.url)
@@ -1696,6 +2664,129 @@ const normalizeRange = (value, fallback, min, max) => {
   return Math.max(min, Math.min(max, parsed))
 }
 
+const normalizeQrRule = (rule = {}, index = 0) => ({
+  name: typeof rule.name === 'string' ? rule.name : `Rule ${index + 1}`,
+  priority: Math.max(1, Number.parseInt(String(rule.priority ?? index + 1), 10) || index + 1),
+  startHour: rule.startHour === null || rule.startHour === undefined ? null : Math.max(0, Math.min(23, Number.parseInt(String(rule.startHour), 10) || 0)),
+  endHour: rule.endHour === null || rule.endHour === undefined ? null : Math.max(0, Math.min(23, Number.parseInt(String(rule.endHour), 10) || 0)),
+  daysOfWeek: Array.isArray(rule.daysOfWeek)
+    ? [...new Set(rule.daysOfWeek.map((d) => Number.parseInt(String(d), 10)).filter((d) => Number.isFinite(d) && d >= 0 && d <= 6))]
+    : [0, 1, 2, 3, 4, 5, 6],
+  targetUrl: typeof rule.targetUrl === 'string' ? rule.targetUrl : '',
+  isActive: rule.isActive !== false,
+})
+
+const ensureQrRules = () => {
+  if (!selectedWidget.value || selectedWidget.value.type !== 'qr_action') return
+  if (!selectedWidget.value.style) selectedWidget.value.style = {}
+  if (!Array.isArray(selectedWidget.value.style.rules) || selectedWidget.value.style.rules.length === 0) {
+    selectedWidget.value.style.rules = [normalizeQrRule({}, 0)]
+    return
+  }
+  selectedWidget.value.style.rules = selectedWidget.value.style.rules.map((rule, idx) => normalizeQrRule(rule, idx))
+}
+
+const currentQrRules = computed(() => {
+  if (!selectedWidget.value || selectedWidget.value.type !== 'qr_action') return []
+  ensureQrRules()
+  return selectedWidget.value.style.rules
+})
+
+const addQrRule = () => {
+  ensureQrRules()
+  const nextIndex = selectedWidget.value.style.rules.length
+  selectedWidget.value.style.rules.push(normalizeQrRule({}, nextIndex))
+}
+
+const removeQrRule = (index) => {
+  ensureQrRules()
+  if (selectedWidget.value.style.rules.length <= 1) {
+    selectedWidget.value.style.rules = [normalizeQrRule({}, 0)]
+    return
+  }
+  selectedWidget.value.style.rules.splice(index, 1)
+  selectedWidget.value.style.rules = selectedWidget.value.style.rules.map((rule, idx) => normalizeQrRule(rule, idx))
+}
+
+const updateQrRule = (index, key, value) => {
+  ensureQrRules()
+  const next = { ...selectedWidget.value.style.rules[index], [key]: value }
+  selectedWidget.value.style.rules[index] = normalizeQrRule(next, index)
+}
+
+const toggleQrRuleDay = (index, day) => {
+  ensureQrRules()
+  const current = selectedWidget.value.style.rules[index]
+  const days = Array.isArray(current.daysOfWeek) ? [...current.daysOfWeek] : []
+  const exists = days.includes(day)
+  const nextDays = exists ? days.filter((d) => d !== day) : [...days, day]
+  updateQrRule(index, 'daysOfWeek', nextDays.length ? nextDays : [day])
+}
+
+const isQrRuleAllDay = (rule) => rule?.startHour === null && rule?.endHour === null
+
+const setQrRuleTimeMode = (index, mode) => {
+  if (mode === 'all_day') {
+    updateQrRule(index, 'startHour', null)
+    updateQrRule(index, 'endHour', null)
+    return
+  }
+  const current = currentQrRules.value[index] || {}
+  updateQrRule(index, 'startHour', current.startHour ?? 8)
+  updateQrRule(index, 'endHour', current.endHour ?? 18)
+}
+
+const toRgb = (hex) => {
+  const clean = String(hex || '').replace('#', '').trim()
+  if (!clean) return null
+  const full = clean.length === 3
+    ? `${clean[0]}${clean[0]}${clean[1]}${clean[1]}${clean[2]}${clean[2]}`
+    : clean.slice(0, 6)
+  const asNumber = Number.parseInt(full, 16)
+  if (!Number.isFinite(asNumber)) return null
+  return {
+    r: (asNumber >> 16) & 255,
+    g: (asNumber >> 8) & 255,
+    b: asNumber & 255,
+  }
+}
+
+const relativeLuminance = (rgb) => {
+  const f = (v) => {
+    const x = v / 255
+    return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4
+  }
+  return 0.2126 * f(rgb.r) + 0.7152 * f(rgb.g) + 0.0722 * f(rgb.b)
+}
+
+const contrastRatio = (hexA, hexB) => {
+  const a = toRgb(hexA)
+  const b = toRgb(hexB)
+  if (!a || !b) return 1
+  const l1 = relativeLuminance(a)
+  const l2 = relativeLuminance(b)
+  const bright = Math.max(l1, l2)
+  const dark = Math.min(l1, l2)
+  return (bright + 0.05) / (dark + 0.05)
+}
+
+const qrReadabilityOk = (widget) => {
+  const fg = widget?.style?.foregroundColor || '#000000'
+  const bg = widget?.style?.backgroundColor || '#ffffff'
+  const quiet = Number(widget?.style?.quietZone ?? 4)
+  return contrastRatio(fg, bg) >= 4.5 && quiet >= 4
+}
+
+const qrReadabilityMessage = (widget) => {
+  const fg = widget?.style?.foregroundColor || '#000000'
+  const bg = widget?.style?.backgroundColor || '#ffffff'
+  const ratio = contrastRatio(fg, bg)
+  const quiet = Number(widget?.style?.quietZone ?? 4)
+  if (ratio < 4.5) return `Low contrast (${ratio.toFixed(2)}:1). Use darker foreground on lighter background.`
+  if (quiet < 4) return 'Quiet zone is too small. Use at least 4 modules.'
+  return `Readable contrast (${ratio.toFixed(2)}:1) and quiet zone are valid.`
+}
+
 const applyMarqueePreset = (presetId) => {
   if (!selectedWidget.value || selectedWidget.value.type !== 'marquee') return
   const preset = marqueePresets.find(item => item.id === presetId)
@@ -1773,8 +2864,21 @@ const loadTemplateData = async () => {
           visible: widget.visible !== undefined ? widget.visible : true, // Default to visible
           content: widget.content || '',
           content_id: widget.content_id || null, // Preserve content_id when loading
+          content_ids: Array.isArray(widget.content_ids)
+            ? widget.content_ids
+            : (widget.content_id ? [widget.content_id] : []),
           style: widget.type === 'marquee'
             ? { ...getMarqueeDefaultStyle(), ...(widget.style || {}) }
+            : widget.type === 'weather'
+            ? { ...getWeatherDefaultStyle(), ...(widget.style || {}) }
+            : widget.type === 'qr_action'
+            ? { ...getQrActionDefaultStyle(), ...(widget.style || {}) }
+            : widget.type === 'countdown'
+            ? { ...getCountdownDefaultStyle(), ...(widget.style || {}) }
+            : widget.type === 'album'
+            ? { ...getAlbumDefaultStyle(), ...(widget.style || {}) }
+            : widget.type === 'clock' || widget.type === 'date' || widget.type === 'weekday'
+            ? { ...getTemporalDefaultStyle(widget.type), ...(widget.style || {}), format: (widget.style?.format || widget.content || undefined) }
             : (widget.style || {})
         }
         
@@ -1813,6 +2917,12 @@ const saveTemplate = async () => {
     return
   }
 
+  const unreadableQr = widgets.value.find((widget) => widget.type === 'qr_action' && !qrReadabilityOk(widget))
+  if (unreadableQr) {
+    notify.error(`Fix QR readability for "${unreadableQr.name}" before saving.`)
+    return
+  }
+
   saving.value = true
   try {
     // Build template data for API
@@ -1837,6 +2947,8 @@ const saveTemplate = async () => {
           visible: widget.visible !== undefined ? widget.visible : true, // Include visibility state
           content: widget.content || '',
           content_id: widget.content_id || null, // Include content_id if available
+          content_ids: Array.isArray(widget.content_ids) ? widget.content_ids : [],
+          playlist_items: Array.isArray(widget.style?.playlist) ? widget.style.playlist : [],
           style: widget.style || {}
         }))
       }
@@ -1920,6 +3032,10 @@ const handlePushToScreenSelect = async (screen) => {
   
   pushing.value = true
   try {
+    // Always save latest editor changes before pushing, so the screen receives
+    // exactly what user sees in the editor (no manual refresh mismatch).
+    await saveTemplate()
+
     // Step 1: Activate template on the screen
     await templatesStore.activateOnScreen(
       templateId.value,
@@ -2182,6 +3298,17 @@ onUnmounted(() => {
 .peer:focus-visible + .marquee-switch-track {
   outline: 2px solid rgba(59, 130, 246, 0.9);
   outline-offset: 2px;
+}
+
+.widget-accordion-enter-active,
+.widget-accordion-leave-active {
+  transition: all 0.22s ease;
+}
+
+.widget-accordion-enter-from,
+.widget-accordion-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
 }
 </style>
 

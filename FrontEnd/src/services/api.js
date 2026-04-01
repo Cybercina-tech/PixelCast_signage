@@ -309,6 +309,29 @@ export const widgetsAPI = {
   delete: (id) => api.delete(`/widgets/${id}/`),
 }
 
+export const qrActionsAPI = {
+  links: {
+    list: (params) => api.get('/qr-action-links/', { params }),
+    detail: (id) => api.get(`/qr-action-links/${id}/`),
+    create: (data) => api.post('/qr-action-links/', data),
+    update: (id, data) => api.put(`/qr-action-links/${id}/`, data),
+    patch: (id, data) => api.patch(`/qr-action-links/${id}/`, data),
+    delete: (id) => api.delete(`/qr-action-links/${id}/`),
+    analytics: (params) => api.get('/qr-action-links/analytics/', { params }),
+  },
+  rules: {
+    list: (params) => api.get('/qr-action-rules/', { params }),
+    create: (data) => api.post('/qr-action-rules/', data),
+    update: (id, data) => api.put(`/qr-action-rules/${id}/`, data),
+    patch: (id, data) => api.patch(`/qr-action-rules/${id}/`, data),
+    delete: (id) => api.delete(`/qr-action-rules/${id}/`),
+  },
+  scans: {
+    list: (params) => api.get('/qr-scan-events/', { params }),
+    detail: (id) => api.get(`/qr-scan-events/${id}/`),
+  },
+}
+
 // Contents API
 export const contentsAPI = {
   list: (params) => api.get('/contents/', { params }),
@@ -500,6 +523,40 @@ export const coreAPI = {
     verify: (id) => api.post(`/core/backups/${id}/verify/`),
     cleanup: () => api.post('/core/backups/cleanup/'),
   },
+  tvCatalog: {
+    list: (params) =>
+      api.get('/core/tv-brands/', {
+        params,
+        meta: { suppressGlobalErrorToast: true },
+      }),
+    detail: (id) =>
+      api.get(`/core/tv-brands/${id}/`, {
+        meta: { suppressGlobalErrorToast: true },
+      }),
+  },
+}
+
+export const tvCatalogAPI = {
+  list: (params) =>
+    api.get('/core/tv-brands/', {
+      params,
+      meta: { suppressGlobalErrorToast: true },
+    }),
+  detail: (id) =>
+    api.get(`/core/tv-brands/${id}/`, {
+      meta: { suppressGlobalErrorToast: true },
+    }),
+}
+
+// Notification Center API
+export const notificationCenterAPI = {
+  list: (params) => api.get('/core/notifications/', { params }),
+  markAsRead: (id) => api.post(`/core/notifications/${id}/mark_as_read/`),
+  markAllAsRead: () => api.post('/core/notifications/mark_all_as_read/'),
+  dismiss: (id) => api.delete(`/core/notifications/${id}/dismiss/`),
+  clear: () => api.delete('/core/notifications/clear/'),
+  getPreferences: () => api.get('/core/notification-preferences/me/'),
+  savePreferences: (data) => api.put('/core/notification-preferences/me/', data),
 }
 
 // Licensing API
