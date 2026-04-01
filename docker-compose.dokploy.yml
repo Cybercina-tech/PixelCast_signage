@@ -3,6 +3,8 @@
 # Compose path: docker-compose.dokploy.yml
 #
 # Prefer this over docker-compose.yml (Vite dev). Production = Nginx + built Vue + Gunicorn.
+# Set secrets in Dokploy env or repo `.env` (DB_PASSWORD default safpewri234aca; see .env.example).
+# `db` + `backend` load env_file: .env from docker-compose.prod.yml.
 #
 # If you must run the Vite dev stack behind https:// (Traefik), use docker-compose.yml +
 # docker-compose.https.yml and set VITE_BEHIND_HTTPS_PROXY=1 (see .env.example).

@@ -9,11 +9,16 @@
 #
 # Published host port defaults to 8080 (container still listens on 80). Port 80 on the host is
 # often taken by Traefik/reverse proxy — set HTTP_PORT=80 only if nothing else binds :80.
+#
+# Database: copy .env.example → .env; DB_PASSWORD default safpewri234aca. `db` + `backend` use env_file: .env.
 
 services:
   # db + backend: single source — DB_NAME, DB_USER, DB_PASSWORD (see .env.example).
   db:
     image: postgres:15-alpine
+    env_file:
+      - path: .env
+        required: false
     environment:
       - POSTGRES_DB=${DB_NAME:-pixelcast_signage_db}
       - POSTGRES_USER=${DB_USER:-pixelcast_signage_user}
@@ -45,6 +50,9 @@ services:
       context: ./app
       dockerfile: Dockerfile
     command: sh /app/entrypoint.sh
+    env_file:
+      - path: .env
+        required: false
     environment:
       - SECRET_KEY=${SECRET_KEY:-wN9vQx2!mK7pR4tY8uH3cD6sL1zA5eB9fG2jT7nV4qP8xM3rK6hC1wZ}
       - DEBUG=${DEBUG:-False}

@@ -1,5 +1,6 @@
 # Optional overlay: Vite HMR over WSS (fixes Mixed Content when the app is served at https://…).
 # Local http://localhost:5173 → keep VITE_BEHIND_HTTPS_PROXY=0 (default in docker-compose.yml).
+# DB stack unchanged — same .env / DB_PASSWORD as docker-compose.yml (default safpewri234aca).
 #
 # Dokploy / Traefik (dev stack with Vite):
 #   docker compose -f docker-compose.yml -f docker-compose.https.yml up -d --build

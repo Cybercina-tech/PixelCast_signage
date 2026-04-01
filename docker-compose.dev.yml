@@ -1,5 +1,10 @@
+# Overlay: e.g. `docker compose -f docker-compose.yml -f docker-compose.dev.yml up`
+# Uses same `.env` as base stack (DB_PASSWORD default safpewri234aca).
 services:
   backend:
+    env_file:
+      - path: .env
+        required: false
     volumes:
       - ./app:/app
     ports:

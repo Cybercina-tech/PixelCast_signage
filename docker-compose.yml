@@ -1,11 +1,17 @@
 # Local development: Vite dev server + Django runserver/hot reload + bind mounts.
 # For Dokploy / server deploy use docker-compose.dokploy.yml (includes docker-compose.prod.yml).
+#
+# Database: single source — copy .env.example → .env and set DB_NAME, DB_USER, DB_PASSWORD (default pass: safpewri234aca).
+# Services `db` and `backend` use env_file: .env so container env matches Compose substitution.
 services:
-  # Postgres and Django both use the same DB_NAME, DB_USER, DB_PASSWORD from the host .env
-  # (or shell). Set those once; POSTGRES_* below is only the mapping into the db container.
+  # Postgres and Django both use the same DB_NAME, DB_USER, DB_PASSWORD from .env
+  # (see .env.example). POSTGRES_* below maps into the db container only.
   db:
     image: postgres:15-alpine
     container_name: db
+    env_file:
+      - path: .env
+        required: false
     environment:
       - POSTGRES_DB=${DB_NAME:-pixelcast_signage_db}
       - POSTGRES_USER=${DB_USER:-pixelcast_signage_user}
@@ -41,6 +47,9 @@ services:
       dockerfile: Dockerfile
     container_name: backend
     command: sh /app/entrypoint.sh
+    env_file:
+      - path: .env
+        required: false
     environment:
       # Omit PIXELCAST_SIGNAGE_ENV_FILE so CI/Dokploy clones without a host .env file still boot.
       - SECRET_KEY=${SECRET_KEY:-wN9vQx2!mK7pR4tY8uH3cD6sL1zA5eB9fG2jT7nV4qP8xM3rK6hC1wZ}
