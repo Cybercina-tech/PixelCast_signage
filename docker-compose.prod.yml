@@ -4,8 +4,8 @@
 # Deploy:
 #   docker compose -f docker-compose.prod.yml up -d --build
 #
-# On Dokploy, set the compose file to docker-compose.prod.yml and configure env (SECRET_KEY,
-# ALLOWED_HOSTS, DB_PASSWORD, CSRF_TRUSTED_ORIGINS or BASE_URL, etc.).
+# On Dokploy, prefer docker-compose.dokploy.yml (includes this file) so the UI points at one
+# entry. Configure env: SECRET_KEY, ALLOWED_HOSTS, DB_PASSWORD, CSRF_TRUSTED_ORIGINS or BASE_URL.
 #
 # Published host port defaults to 8080 (container still listens on 80). Port 80 on the host is
 # often taken by Traefik/reverse proxy — set HTTP_PORT=80 only if nothing else binds :80.
@@ -47,7 +47,7 @@ services:
     environment:
       - SECRET_KEY=${SECRET_KEY:-wN9vQx2!mK7pR4tY8uH3cD6sL1zA5eB9fG2jT7nV4qP8xM3rK6hC1wZ}
       - DEBUG=${DEBUG:-False}
-      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-localhost,127.0.0.1,backend,frontend}
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-localhost,127.0.0.1,backend,frontend,.traefik.me}
       - BASE_URL=${BASE_URL:-}
       - CSRF_TRUSTED_ORIGINS=${CSRF_TRUSTED_ORIGINS:-}
       - DB_NAME=${DB_NAME:-pixelcast_signage_db}

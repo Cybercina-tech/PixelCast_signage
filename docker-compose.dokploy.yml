@@ -1,0 +1,11 @@
+# =============================================================================
+# Dokploy / production on the server — USE THIS FILE in the Dokploy UI.
+# Compose path: docker-compose.dokploy.yml
+#
+# Do NOT deploy docker-compose.yml on the server: that stack is for local dev (Vite +
+# bind mounts) and is the wrong fit for Traefik.
+#
+# This file includes the production stack (Nginx + Vue build + Gunicorn, no source mounts).
+# =============================================================================
+include:
+  - path: docker-compose.prod.yml
