@@ -101,6 +101,12 @@ const playerWidget = computed(() => {
     id: widget.id,
     type: widget.type,
     name: widget.name,
+    ...(widget.type === 'countdown'
+      ? {
+          content: typeof widget.content === 'string' ? widget.content : '',
+          content_url: typeof widget.content === 'string' ? widget.content : '',
+        }
+      : {}),
     // content_json contains widget-level style/configuration
     content_json: {
       // Text widget style properties

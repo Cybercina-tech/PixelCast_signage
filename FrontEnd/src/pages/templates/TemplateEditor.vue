@@ -1384,15 +1384,36 @@
               <div v-if="selectedWidget.type === 'countdown'">
                 <h3 class="text-sm font-semibold mb-3 text-muted uppercase">Countdown</h3>
                 <div class="space-y-3">
-                  <div>
-                    <label class="block text-xs font-medium text-muted mb-1.5">Event name</label>
-                    <input
-                      :value="selectedWidget.content || ''"
-                      type="text"
-                      class="input-base w-full px-3 py-2 text-sm"
-                      placeholder="Spring Festival"
-                      @input="updateWidgetProperty('content', $event.target.value)"
-                    />
+                  <div class="rounded-lg border border-border-color/80 bg-card/30 p-3 space-y-3">
+                    <p class="text-[11px] font-semibold text-muted uppercase tracking-wide">
+                      Names
+                    </p>
+                    <div>
+                      <label class="block text-xs font-medium text-muted mb-1.5">Title above countdown</label>
+                      <input
+                        :value="selectedWidget.content || ''"
+                        type="text"
+                        class="input-base w-full px-3 py-2 text-sm"
+                        placeholder="Spring Festival"
+                        @input="updateWidgetProperty('content', $event.target.value)"
+                      />
+                      <p class="text-[10px] text-muted mt-1">
+                        Shown on screen above the timer (player & preview).
+                      </p>
+                    </div>
+                    <div>
+                      <label class="block text-xs font-medium text-muted mb-1.5">Widget name (editor list)</label>
+                      <input
+                        :value="selectedWidget.name || ''"
+                        type="text"
+                        class="input-base w-full px-3 py-2 text-sm"
+                        placeholder="Countdown — Lobby"
+                        @input="updateWidgetProperty('name', $event.target.value)"
+                      />
+                      <p class="text-[10px] text-muted mt-1">
+                        Label in the layers list only; not drawn on the canvas.
+                      </p>
+                    </div>
                   </div>
                   <div class="space-y-2">
                     <div class="min-w-0">
@@ -2159,6 +2180,7 @@ const canvasContainer = ref(null)
 const canvasWrapper = ref(null)
 const canvasArea = ref(null)
 const scale = ref(0.5)
+let canvasResizeObserver = null
 
 // Moveable references
 const moveableRef = ref(null)
@@ -2204,24 +2226,19 @@ const calculateScale = () => {
   if (!canvasContainer.value) return
 
   const container = canvasContainer.value
-  // Leave comfortable margin for better UX (20px on each side = 40px total)
-  // This ensures the canvas doesn't touch the edges
-  const margin = 20
-  const containerWidth = container.clientWidth - (margin * 2)
-  const containerHeight = container.clientHeight - (margin * 2)
+  const margin = 4
+  const containerWidth = Math.max(1, container.clientWidth - margin * 2)
+  const containerHeight = Math.max(1, container.clientHeight - margin * 2)
 
-  // Calculate scale to fit both dimensions
   // Canvas width + bezel padding (12px * 2 = 24px)
   const totalCanvasWidth = canvasWidth.value + 24
   const totalCanvasHeight = canvasHeight.value + 24
-  
-  // Calculate scale for both dimensions to maintain aspect ratio
+
   const scaleX = containerWidth / totalCanvasWidth
   const scaleY = containerHeight / totalCanvasHeight
 
-  // Use the smaller scale to ensure canvas fits perfectly (contain fit)
-  // This maintains aspect ratio and prevents distortion
-  scale.value = Math.min(scaleX, scaleY, 1)
+  // Contain: fit full canvas in the workspace; allow scale > 1 so the preview can fill large panels
+  scale.value = Math.min(Math.min(scaleX, scaleY), 2)
 }
 
 // Handle wheel for zoom
@@ -3348,7 +3365,14 @@ onMounted(async () => {
   // Calculate scale after DOM is ready and template is loaded
   await nextTick()
   calculateScale()
-  
+
+  if (typeof ResizeObserver !== 'undefined' && canvasContainer.value) {
+    canvasResizeObserver = new ResizeObserver(() => {
+      nextTick(() => calculateScale())
+    })
+    canvasResizeObserver.observe(canvasContainer.value)
+  }
+
   // Recalculate scale on window resize
   window.addEventListener('resize', calculateScale)
   window.addEventListener('keydown', handleKeyDown)
@@ -3362,6 +3386,8 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
+  canvasResizeObserver?.disconnect()
+  canvasResizeObserver = null
   window.removeEventListener('resize', calculateScale)
   window.removeEventListener('keydown', handleKeyDown)
   window.removeEventListener('online', handleOnline)

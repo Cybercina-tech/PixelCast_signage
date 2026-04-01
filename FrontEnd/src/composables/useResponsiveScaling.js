@@ -42,9 +42,10 @@ export function useResponsiveScaling(template) {
   }
   
   /**
-   * Contain mode (matches TemplateEditor "Fit" / WebPlayer template comment):
-   * - Entire template pixel rect must fit inside the viewport (no cropping).
-   * - Letterboxing on one axis when aspect ratios differ.
+   * Contain mode (full template visible, no cropping):
+   * - Entire template pixel rect fits inside the viewport; aspect ratio preserved.
+   * - Letterboxing on one axis when viewport and template aspects differ.
+   * (Cover mode would fill the screen but clip edge widgets — bad for signage layouts.)
    */
   const scaleFactor = computed(() => {
     if (!template.value) return 1
