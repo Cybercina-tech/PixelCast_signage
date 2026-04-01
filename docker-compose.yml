@@ -1,13 +1,15 @@
 # Local development: Vite dev server + Django runserver/hot reload + bind mounts.
 # For Dokploy / server deploy use docker-compose.dokploy.yml (includes docker-compose.prod.yml).
 services:
+  # Postgres and Django both use the same DB_NAME, DB_USER, DB_PASSWORD from the host .env
+  # (or shell). Set those once; POSTGRES_* below is only the mapping into the db container.
   db:
     image: postgres:15-alpine
     container_name: db
     environment:
       - POSTGRES_DB=${DB_NAME:-pixelcast_signage_db}
       - POSTGRES_USER=${DB_USER:-pixelcast_signage_user}
-      # Non-empty default prevents Postgres boot failure when .env is missing.
+      # Must match backend's DB_PASSWORD (same variable).
       - POSTGRES_PASSWORD=${DB_PASSWORD:-tqaG32AWqO}
       # Use an internal subdirectory to avoid initdb failure when mount root contains artifacts.
       - PGDATA=/var/lib/postgresql/data/pgdata
@@ -44,6 +46,7 @@ services:
       - SECRET_KEY=${SECRET_KEY:-wN9vQx2!mK7pR4tY8uH3cD6sL1zA5eB9fG2jT7nV4qP8xM3rK6hC1wZ}
       - DEBUG=${DEBUG:-False}
       - ALLOWED_HOSTS=${ALLOWED_HOSTS:-localhost,127.0.0.1,backend,frontend,.traefik.me}
+      # Same DB_* as service `db` above (one password in .env → both containers).
       - DB_NAME=${DB_NAME:-pixelcast_signage_db}
       - DB_USER=${DB_USER:-pixelcast_signage_user}
       - DB_PASSWORD=${DB_PASSWORD:-tqaG32AWqO}
