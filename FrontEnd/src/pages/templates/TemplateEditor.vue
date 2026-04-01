@@ -1,12 +1,12 @@
 <template>
   <AppLayout>
-    <div v-if="loading" class="template-editor h-screen w-full flex items-center justify-center bg-gray-900 text-white overflow-hidden">
+    <div v-if="loading" class="template-editor h-full min-h-0 w-full flex items-center justify-center bg-editor-workspace dark:bg-gray-900 text-primary dark:text-white overflow-hidden">
       <div class="text-center">
-        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
-        <p class="text-gray-400">Loading template...</p>
+        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-accent-color mx-auto mb-4"></div>
+        <p class="text-muted">Loading template...</p>
       </div>
     </div>
-    <div v-else class="template-editor h-screen w-full flex flex-col bg-gray-900 text-white overflow-hidden">
+    <div v-else class="template-editor h-full min-h-0 w-full flex flex-col bg-editor-workspace dark:bg-gray-900 text-primary dark:text-white overflow-hidden">
       <!-- Top Toolbar -->
       <div class="flex items-center justify-between px-4 py-3 bg-card border-b border-border-color">
         <div class="flex items-center gap-3">
@@ -37,7 +37,7 @@
           <button
             @click="deleteSelectedWidget"
             :disabled="!selectedWidgetId"
-            class="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-400 border border-red-500/60 text-red-300 hover:bg-red-500/10 disabled:opacity-40 disabled:cursor-not-allowed"
+            class="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-400 border border-red-200 dark:border-red-500/60 text-red-600 dark:text-red-300 hover:bg-red-500/10 disabled:opacity-40 disabled:cursor-not-allowed"
             title="Delete selected object"
           >
             Delete Object
@@ -89,18 +89,20 @@
               <div
                 v-for="section in widgetLibrarySections"
                 :key="section.id"
-                class="rounded-xl border border-border-color/80 bg-card/60 backdrop-blur-sm"
+                class="rounded-xl border border-border-color/80 bg-card/60 backdrop-blur-sm shadow-soft overflow-hidden"
+                :style="widgetSectionCardStyle(section.id)"
               >
                 <button
                   v-if="!leftPanelCollapsed"
-                  class="w-full px-3 py-2.5 flex items-center justify-between text-left"
+                  class="w-full px-3 py-2.5 flex items-center justify-between text-left transition-colors"
+                  :style="widgetSectionHeaderStyle(section.id)"
                   @click="toggleWidgetSection(section.id)"
                 >
-                  <span class="text-[11px] uppercase tracking-wide text-gray-300 font-semibold">
+                  <span class="text-[11px] uppercase tracking-wide text-muted font-semibold">
                     {{ section.label }}
                   </span>
                   <svg
-                    class="w-4 h-4 text-gray-400 transition-transform duration-200"
+                    class="w-4 h-4 text-muted transition-transform duration-200"
                     :class="{ 'rotate-180': isWidgetSectionOpen(section.id) }"
                     fill="none"
                     stroke="currentColor"
@@ -137,10 +139,10 @@
         </div>
 
         <!-- Center: Canvas Area -->
-        <div class="flex-1 flex flex-col bg-gray-900 overflow-hidden">
+        <div class="flex-1 flex flex-col bg-editor-workspace dark:bg-gray-900 overflow-hidden">
           <div
             ref="canvasContainer"
-            class="relative flex-1 overflow-hidden bg-gray-700 flex items-center justify-center"
+            class="relative flex-1 overflow-hidden bg-editor-matte dark:bg-gray-700 flex items-center justify-center"
             @wheel.prevent="handleWheel"
           >
             <!-- Monitor Frame (Wall-Mounted Display) -->
@@ -253,8 +255,8 @@
             <h2 v-if="!rightPanelCollapsed" class="text-lg font-semibold text-primary">Inspector</h2>
             <h2 v-else class="text-xs font-semibold text-primary uppercase tracking-wide">Panel</h2>
           </div>
-          <div v-if="!rightPanelCollapsed" class="flex-1 min-h-0 overflow-y-auto custom-scrollbar scroll-container p-4">
-            <div class="mb-4 grid grid-cols-2 rounded-lg bg-gray-800/50 p-1">
+            <div v-if="!rightPanelCollapsed" class="flex-1 min-h-0 overflow-y-auto custom-scrollbar scroll-container p-4">
+            <div class="mb-4 grid grid-cols-2 editor-inspector-tabs">
               <button
                 @click="rightPanelTab = 'properties'"
                 :class="rightPanelTab === 'properties' ? 'bg-accent-color text-white' : 'text-muted hover:text-primary'"
@@ -358,16 +360,13 @@
                       class="select-base w-full px-3 py-2 text-sm"
                       @change="updateWidgetStyle('fontFamily', $event.target.value)"
                     >
-                      <option value="Arial, sans-serif">Arial</option>
-                      <option value="Helvetica, sans-serif">Helvetica</option>
-                      <option value="Times New Roman, serif">Times New Roman</option>
-                      <option value="Courier New, monospace">Courier New</option>
-                      <option value="Georgia, serif">Georgia</option>
-                      <option value="Verdana, sans-serif">Verdana</option>
+                      <option v-for="font in WIDGET_FONT_OPTIONS" :key="font.value" :value="font.value">
+                        {{ font.label }}
+                      </option>
                     </select>
                   </div>
                   <div>
-                    <label class="block text-xs font-medium text-gray-400 mb-1.5">Font Size (px)</label>
+                    <label class="block text-xs font-medium text-muted mb-1.5">Font Size (px)</label>
                     <div class="grid grid-cols-[1fr_auto] gap-2 items-center">
                       <input
                         type="range"
@@ -389,28 +388,43 @@
                     </div>
                   </div>
                   <div>
-                    <label class="block text-xs font-medium text-gray-400 mb-1.5">Color</label>
+                    <label class="block text-xs font-medium text-muted mb-1.5">Color</label>
                     <input
                       v-model="selectedWidget.style.color"
                       type="color"
-                      class="w-full h-10 bg-slate-800/50 border border-slate-700 rounded-lg cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                      class="editor-color-input"
                       @input="updateWidgetStyle('color', $event.target.value)"
                     />
                   </div>
                   <div>
-                    <label class="block text-xs font-medium text-gray-400 mb-1.5">Background Color</label>
+                    <label class="block text-xs font-medium text-muted mb-1.5">Background Color</label>
                     <input
                       :value="getBackgroundHex(selectedWidget.style?.backgroundColor, '#000000')"
                       type="color"
-                      class="w-full h-10 bg-slate-800/50 border border-slate-700 rounded-lg cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                      class="editor-color-input"
+                      :disabled="selectedWidget.style?.transparentBackground === true"
                       @input="updateWidgetStyle('backgroundColor', $event.target.value)"
                     />
+                    <label class="editor-switch-row mt-2">
+                      <span class="text-sm text-primary">Transparent background</span>
+                      <span class="editor-switch">
+                        <input
+                          type="checkbox"
+                          class="sr-only peer"
+                          :checked="selectedWidget.style?.transparentBackground === true"
+                          @change="updateWidgetStyle('transparentBackground', $event.target.checked)"
+                        />
+                        <span class="editor-switch-track">
+                          <span class="editor-switch-thumb"></span>
+                        </span>
+                      </span>
+                    </label>
                   </div>
                   <div>
-                    <label class="block text-xs font-medium text-gray-400 mb-1.5">Text Align</label>
+                    <label class="block text-xs font-medium text-muted mb-1.5">Text Align</label>
                     <select
                       v-model="selectedWidget.style.textAlign"
-                      class="w-full px-3 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                      class="editor-select"
                       @change="updateWidgetStyle('textAlign', $event.target.value)"
                     >
                       <option value="left">Left</option>
@@ -529,59 +543,59 @@
                     </div>
                   </div>
                   <div class="grid grid-cols-2 gap-3">
-                    <label class="marquee-switch-row">
+                    <label class="editor-switch-row">
                       <span class="text-sm text-primary">Loop</span>
-                      <span class="marquee-switch">
+                      <span class="editor-switch">
                         <input
                           type="checkbox"
                           class="sr-only peer"
                           :checked="selectedWidget.style?.loop !== false"
                           @change="updateWidgetStyle('loop', $event.target.checked)"
                         />
-                        <span class="marquee-switch-track">
-                          <span class="marquee-switch-thumb"></span>
+                        <span class="editor-switch-track">
+                          <span class="editor-switch-thumb"></span>
                         </span>
                       </span>
                     </label>
-                    <label class="marquee-switch-row">
+                    <label class="editor-switch-row">
                       <span class="text-sm text-primary">Fade Edge</span>
-                      <span class="marquee-switch">
+                      <span class="editor-switch">
                         <input
                           type="checkbox"
                           class="sr-only peer"
                           :checked="selectedWidget.style?.fadeEdge !== false"
                           @change="updateWidgetStyle('fadeEdge', $event.target.checked)"
                         />
-                        <span class="marquee-switch-track">
-                          <span class="marquee-switch-thumb"></span>
+                        <span class="editor-switch-track">
+                          <span class="editor-switch-thumb"></span>
                         </span>
                       </span>
                     </label>
-                    <label class="marquee-switch-row">
+                    <label class="editor-switch-row">
                       <span class="text-sm text-primary">Uppercase</span>
-                      <span class="marquee-switch">
+                      <span class="editor-switch">
                         <input
                           type="checkbox"
                           class="sr-only peer"
                           :checked="selectedWidget.style?.uppercase === true"
                           @change="updateWidgetStyle('uppercase', $event.target.checked)"
                         />
-                        <span class="marquee-switch-track">
-                          <span class="marquee-switch-thumb"></span>
+                        <span class="editor-switch-track">
+                          <span class="editor-switch-thumb"></span>
                         </span>
                       </span>
                     </label>
-                    <label class="marquee-switch-row">
+                    <label class="editor-switch-row">
                       <span class="text-sm text-primary">Reverse</span>
-                      <span class="marquee-switch">
+                      <span class="editor-switch">
                         <input
                           type="checkbox"
                           class="sr-only peer"
                           :checked="selectedWidget.style?.reverse === true"
                           @change="updateWidgetStyle('reverse', $event.target.checked)"
                         />
-                        <span class="marquee-switch-track">
-                          <span class="marquee-switch-thumb"></span>
+                        <span class="editor-switch-track">
+                          <span class="editor-switch-thumb"></span>
                         </span>
                       </span>
                     </label>
@@ -628,7 +642,7 @@
                       <input
                         :value="selectedWidget.style?.color || '#ffffff'"
                         type="color"
-                        class="w-full h-10 bg-slate-800/50 border border-slate-700 rounded-lg cursor-pointer"
+                        class="editor-color-input"
                         @input="updateWidgetStyle('color', $event.target.value)"
                       />
                     </div>
@@ -637,11 +651,26 @@
                       <input
                         :value="getBackgroundHex(selectedWidget.style?.backgroundColor, '#111111')"
                         type="color"
-                        class="w-full h-10 bg-slate-800/50 border border-slate-700 rounded-lg cursor-pointer"
+                        class="editor-color-input"
+                        :disabled="selectedWidget.style?.transparentBackground === true"
                         @input="updateWidgetStyle('backgroundColor', $event.target.value)"
                       />
                     </div>
                   </div>
+                  <label class="editor-switch-row">
+                    <span class="text-sm text-primary">Transparent background</span>
+                    <span class="editor-switch">
+                      <input
+                        type="checkbox"
+                        class="sr-only peer"
+                        :checked="selectedWidget.style?.transparentBackground === true"
+                        @change="updateWidgetStyle('transparentBackground', $event.target.checked)"
+                      />
+                      <span class="editor-switch-track">
+                        <span class="editor-switch-thumb"></span>
+                      </span>
+                    </span>
+                  </label>
                 </div>
               </div>
 
@@ -713,7 +742,7 @@
                       <input
                         :value="selectedWidget.style?.color || '#ffffff'"
                         type="color"
-                        class="w-full h-10 bg-slate-800/50 border border-slate-700 rounded-lg cursor-pointer"
+                        class="editor-color-input"
                         @input="updateWidgetStyle('color', $event.target.value)"
                       />
                     </div>
@@ -722,11 +751,26 @@
                       <input
                         :value="getBackgroundHex(selectedWidget.style?.backgroundColor, '#0f172a')"
                         type="color"
-                        class="w-full h-10 bg-slate-800/50 border border-slate-700 rounded-lg cursor-pointer"
+                        class="editor-color-input"
+                        :disabled="selectedWidget.style?.transparentBackground === true"
                         @input="updateWidgetStyle('backgroundColor', $event.target.value)"
                       />
                     </div>
                   </div>
+                  <label class="editor-switch-row">
+                    <span class="text-sm text-primary">Transparent background</span>
+                    <span class="editor-switch">
+                      <input
+                        type="checkbox"
+                        class="sr-only peer"
+                        :checked="selectedWidget.style?.transparentBackground === true"
+                        @change="updateWidgetStyle('transparentBackground', $event.target.checked)"
+                      />
+                      <span class="editor-switch-track">
+                        <span class="editor-switch-thumb"></span>
+                      </span>
+                    </span>
+                  </label>
                 </div>
               </div>
 
@@ -769,7 +813,7 @@
                       <input
                         :value="selectedWidget.style?.foregroundColor || '#000000'"
                         type="color"
-                        class="w-full h-10 bg-slate-800/50 border border-slate-700 rounded-lg cursor-pointer"
+                        class="editor-color-input"
                         @input="updateWidgetStyle('foregroundColor', $event.target.value)"
                       />
                     </div>
@@ -778,11 +822,26 @@
                       <input
                         :value="selectedWidget.style?.backgroundColor || '#ffffff'"
                         type="color"
-                        class="w-full h-10 bg-slate-800/50 border border-slate-700 rounded-lg cursor-pointer"
+                        class="editor-color-input"
+                        :disabled="selectedWidget.style?.transparentBackground === true"
                         @input="updateWidgetStyle('backgroundColor', $event.target.value)"
                       />
                     </div>
                   </div>
+                  <label class="editor-switch-row">
+                    <span class="text-sm text-primary">Transparent background</span>
+                    <span class="editor-switch">
+                      <input
+                        type="checkbox"
+                        class="sr-only peer"
+                        :checked="selectedWidget.style?.transparentBackground === true"
+                        @change="updateWidgetStyle('transparentBackground', $event.target.checked)"
+                      />
+                      <span class="editor-switch-track">
+                        <span class="editor-switch-thumb"></span>
+                      </span>
+                    </span>
+                  </label>
                   <div class="grid grid-cols-2 gap-3">
                     <div>
                       <label class="block text-xs font-medium text-muted mb-1.5">Quiet Zone (modules)</label>
@@ -834,7 +893,7 @@
                       <div
                         v-for="(rule, ruleIndex) in currentQrRules"
                         :key="`qr-rule-${ruleIndex}`"
-                        class="rounded-lg border border-border-color/70 bg-slate-900/40 p-2.5 space-y-2"
+                        class="editor-panel-inset p-2.5 space-y-2"
                       >
                         <div class="grid grid-cols-[1fr_auto] gap-2 items-center">
                           <input
@@ -846,7 +905,7 @@
                           />
                           <button
                             type="button"
-                            class="px-2 py-1 text-[11px] rounded border border-red-500/60 text-red-300 hover:bg-red-500/10"
+                            class="px-2 py-1 text-[11px] rounded border border-red-200 dark:border-red-500/60 text-red-600 dark:text-red-300 hover:bg-red-500/10"
                             @click="removeQrRule(ruleIndex)"
                           >
                             Remove
@@ -863,14 +922,19 @@
                               @input="updateQrRule(ruleIndex, 'priority', Math.max(1, Number.parseInt($event.target.value || '1', 10) || 1))"
                             />
                           </div>
-                          <label class="flex items-center justify-between rounded border border-border-color/60 px-2 py-1.5">
-                            <span class="text-[11px] text-muted">Active</span>
-                            <input
-                              type="checkbox"
-                              class="h-3.5 w-3.5"
-                              :checked="rule.isActive !== false"
-                              @change="updateQrRule(ruleIndex, 'isActive', $event.target.checked)"
-                            />
+                          <label class="editor-switch-row editor-switch-row--compact">
+                            <span class="text-[11px] text-primary">Active</span>
+                            <span class="editor-switch">
+                              <input
+                                type="checkbox"
+                                class="sr-only peer"
+                                :checked="rule.isActive !== false"
+                                @change="updateQrRule(ruleIndex, 'isActive', $event.target.checked)"
+                              />
+                              <span class="editor-switch-track">
+                                <span class="editor-switch-thumb"></span>
+                              </span>
+                            </span>
                           </label>
                         </div>
                         <div>
@@ -952,10 +1016,10 @@
 
               <!-- Image/Video Widget Properties -->
               <div v-if="selectedWidget.type === 'image' || selectedWidget.type === 'video'">
-                <h3 class="text-sm font-semibold mb-3 text-gray-400 uppercase">{{ selectedWidget.type === 'image' ? 'Image' : 'Video' }} Properties</h3>
+                <h3 class="text-sm font-semibold mb-3 text-muted uppercase">{{ selectedWidget.type === 'image' ? 'Image' : 'Video' }} Properties</h3>
                 <div class="space-y-3">
                   <div>
-                    <label class="block text-xs font-medium text-gray-400 mb-1.5">Media Source</label>
+                    <label class="block text-xs font-medium text-muted mb-1.5">Media Source</label>
                     <div class="flex gap-2">
                       <button
                         @click="openMediaLibrary(selectedWidget.type)"
@@ -968,13 +1032,13 @@
                       </button>
                     </div>
                     <div v-if="selectedWidget.content" class="mt-2">
-                      <label class="block text-xs font-medium text-gray-400 mb-1.5">Current URL</label>
+                      <label class="block text-xs font-medium text-muted mb-1.5">Current URL</label>
                       <div class="flex gap-2">
                         <input
                           v-model="selectedWidget.content"
                           type="text"
                           placeholder="Enter image/video URL"
-                          class="flex-1 px-3 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                          class="editor-select flex-1 placeholder:text-muted"
                           @input="updateWidgetProperty('content', $event.target.value)"
                         />
                         <button
@@ -988,7 +1052,7 @@
                         </button>
                       </div>
                       <!-- Preview -->
-                      <div v-if="selectedWidget.content" class="mt-2 rounded-lg overflow-hidden border border-slate-700 bg-slate-800/30">
+                      <div v-if="selectedWidget.content" class="mt-2 rounded-lg overflow-hidden border border-border-color bg-surface-inset dark:bg-slate-800/30">
                         <img
                           v-if="selectedWidget.type === 'image'"
                           :src="selectedWidget.content"
@@ -1007,10 +1071,10 @@
                     </div>
                   </div>
                   <div>
-                    <label class="block text-xs font-medium text-gray-400 mb-1.5">Object Fit</label>
+                    <label class="block text-xs font-medium text-muted mb-1.5">Object Fit</label>
                     <select
                       v-model="selectedWidget.style.objectFit"
-                      class="w-full px-3 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                      class="editor-select"
                       @change="updateWidgetStyle('objectFit', $event.target.value)"
                     >
                       <option value="contain">Contain</option>
@@ -1023,7 +1087,7 @@
               </div>
 
               <div v-if="selectedWidget.type === 'album'">
-                <h3 class="text-sm font-semibold mb-3 text-gray-400 uppercase">Album Playlist Properties</h3>
+                <h3 class="text-sm font-semibold mb-3 text-muted uppercase">Album Playlist Properties</h3>
                 <div class="space-y-3">
                   <div class="flex gap-2">
                     <button
@@ -1041,10 +1105,10 @@
                   </div>
 
                   <div>
-                    <label class="block text-xs font-medium text-gray-400 mb-1.5">Transition</label>
+                    <label class="block text-xs font-medium text-muted mb-1.5">Transition</label>
                     <select
                       :value="selectedWidget.style?.transition || 'fade'"
-                      class="w-full px-3 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-sm text-white"
+                      class="editor-select"
                       @change="updateWidgetStyle('transition', $event.target.value)"
                     >
                       <option value="fade">Fade</option>
@@ -1056,34 +1120,34 @@
 
                   <div class="grid grid-cols-2 gap-3">
                     <div>
-                      <label class="block text-xs font-medium text-gray-400 mb-1.5">Default Duration (s)</label>
+                      <label class="block text-xs font-medium text-muted mb-1.5">Default Duration (s)</label>
                       <input
                         type="number"
                         min="1"
                         max="300"
                         :value="selectedWidget.style?.defaultDurationSec || 10"
-                        class="w-full px-3 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-sm text-white"
+                        class="editor-select"
                         @input="updateWidgetStyle('defaultDurationSec', normalizeRange($event.target.value, 10, 1, 300))"
                       />
                     </div>
                     <div>
-                      <label class="block text-xs font-medium text-gray-400 mb-1.5">Transition Duration (ms)</label>
+                      <label class="block text-xs font-medium text-muted mb-1.5">Transition Duration (ms)</label>
                       <input
                         type="number"
                         min="0"
                         max="5000"
                         :value="selectedWidget.style?.transitionDurationMs || 450"
-                        class="w-full px-3 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-sm text-white"
+                        class="editor-select"
                         @input="updateWidgetStyle('transitionDurationMs', normalizeRange($event.target.value, 450, 0, 5000))"
                       />
                     </div>
                   </div>
 
                   <div>
-                    <label class="block text-xs font-medium text-gray-400 mb-1.5">Object Fit</label>
+                    <label class="block text-xs font-medium text-muted mb-1.5">Object Fit</label>
                     <select
                       :value="selectedWidget.style?.objectFit || 'contain'"
-                      class="w-full px-3 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-sm text-white"
+                      class="editor-select"
                       @change="updateWidgetStyle('objectFit', $event.target.value)"
                     >
                       <option value="contain">Contain</option>
@@ -1091,13 +1155,13 @@
                     </select>
                   </div>
 
-                  <div class="rounded-lg border border-slate-700/80 bg-slate-900/40 p-3">
-                    <div class="text-xs text-gray-400 mb-2">Queue Items</div>
-                    <div v-if="!albumQueueItems.length" class="text-xs text-gray-500">
+                  <div class="editor-panel-inset p-3">
+                    <div class="text-xs text-muted mb-2">Queue Items</div>
+                    <div v-if="!albumQueueItems.length" class="text-xs text-muted">
                       No media selected yet.
                     </div>
                     <div v-for="(item, idx) in albumQueueItems" :key="item.content_id" class="grid grid-cols-[1fr_auto_auto_auto] gap-2 items-center py-1">
-                      <div class="text-xs text-gray-200 truncate" :title="item.name || item.content_id">
+                      <div class="text-xs text-primary truncate" :title="item.name || item.content_id">
                         {{ idx + 1 }}. {{ item.name || item.content_id }}
                       </div>
                       <input
@@ -1105,10 +1169,10 @@
                         min="1"
                         max="300"
                         :value="item.durationSec || 10"
-                        class="w-20 px-2 py-1 bg-slate-800/60 border border-slate-700 rounded text-xs text-white"
+                        class="input-base w-20 px-2 py-1 text-xs"
                         @input="updateAlbumItemDuration(item.content_id, $event.target.value)"
                       />
-                      <button class="px-2 py-1 text-xs bg-slate-700 hover:bg-slate-600 rounded" @click="moveAlbumItem(item.content_id, -1)">Up</button>
+                      <button type="button" class="px-2 py-1 text-xs rounded border border-border-color bg-surface-2 hover:bg-surface-inset text-primary" @click="moveAlbumItem(item.content_id, -1)">Up</button>
                       <button class="px-2 py-1 text-xs bg-red-700/70 hover:bg-red-600 rounded" @click="removeAlbumItem(item.content_id)">Del</button>
                     </div>
                   </div>
@@ -1117,10 +1181,10 @@
 
               <!-- Clock/Date Widget Properties -->
               <div v-if="selectedWidget.type === 'clock' || selectedWidget.type === 'date' || selectedWidget.type === 'weekday'">
-                <h3 class="text-sm font-semibold mb-3 text-gray-400 uppercase">{{ selectedWidget.type === 'clock' ? 'Clock' : selectedWidget.type === 'date' ? 'Date' : 'Weekday' }} Properties</h3>
+                <h3 class="text-sm font-semibold mb-3 text-muted uppercase">{{ selectedWidget.type === 'clock' ? 'Clock' : selectedWidget.type === 'date' ? 'Date' : 'Weekday' }} Properties</h3>
                 <div class="space-y-3">
                   <div>
-                    <label class="block text-xs font-medium text-gray-400 mb-1.5">Style Preset</label>
+                    <label class="block text-xs font-medium text-muted mb-1.5">Style Preset</label>
                     <div class="grid grid-cols-[1fr_auto] gap-2">
                       <select
                         :value="selectedWidget.style?.preset || (selectedWidget.type === 'clock' ? 'digitalBoard' : selectedWidget.type === 'date' ? 'calendarCard' : 'weekdayBold')"
@@ -1144,17 +1208,17 @@
                     </div>
                   </div>
                   <div>
-                    <label class="block text-xs font-medium text-gray-400 mb-1.5">Format</label>
+                    <label class="block text-xs font-medium text-muted mb-1.5">Format</label>
                     <input
                       v-model="selectedWidget.content"
                       type="text"
                       :placeholder="selectedWidget.type === 'clock' ? 'HH:mm:ss' : selectedWidget.type === 'date' ? 'YYYY-MM-DD' : 'dddd'"
-                      class="w-full px-3 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                      class="editor-select placeholder:text-muted"
                       @input="updateWidgetProperty('content', $event.target.value); updateWidgetStyle('format', $event.target.value)"
                     />
                   </div>
                   <div>
-                    <label class="block text-xs font-medium text-gray-400 mb-1.5">Language / Locale</label>
+                    <label class="block text-xs font-medium text-muted mb-1.5">Language / Locale</label>
                     <select
                       :value="selectedWidget.style?.locale || 'en-US'"
                       class="select-base w-full px-3 py-2 text-sm"
@@ -1166,7 +1230,7 @@
                     </select>
                   </div>
                   <div>
-                    <label class="block text-xs font-medium text-gray-400 mb-1.5">Time Zone</label>
+                    <label class="block text-xs font-medium text-muted mb-1.5">Time Zone</label>
                     <select
                       :value="selectedWidget.style?.timeZone || defaultTimeZone"
                       class="select-base w-full px-3 py-2 text-sm"
@@ -1181,18 +1245,26 @@
                       </option>
                     </select>
                   </div>
-                  <div>
-                    <label class="block text-xs font-medium text-gray-400 mb-1.5">Show Weekday</label>
-                    <input
-                      type="checkbox"
-                      class="h-4 w-4"
-                      :checked="selectedWidget.type === 'weekday' ? true : selectedWidget.style?.showWeekday === true"
-                      :disabled="selectedWidget.type === 'weekday'"
-                      @change="updateWidgetStyle('showWeekday', $event.target.checked)"
-                    />
-                  </div>
+                  <label
+                    class="editor-switch-row"
+                    :class="{ 'editor-switch-row--disabled': selectedWidget.type === 'weekday' }"
+                  >
+                    <span class="text-sm text-primary">Show Weekday</span>
+                    <span class="editor-switch">
+                      <input
+                        type="checkbox"
+                        class="sr-only peer"
+                        :checked="selectedWidget.type === 'weekday' ? true : selectedWidget.style?.showWeekday === true"
+                        :disabled="selectedWidget.type === 'weekday'"
+                        @change="updateWidgetStyle('showWeekday', $event.target.checked)"
+                      />
+                      <span class="editor-switch-track">
+                        <span class="editor-switch-thumb"></span>
+                      </span>
+                    </span>
+                  </label>
                   <div v-if="selectedWidget.type !== 'clock' || selectedWidget.style?.showWeekday === true || selectedWidget.type === 'weekday'">
-                    <label class="block text-xs font-medium text-gray-400 mb-1.5">Weekday Style</label>
+                    <label class="block text-xs font-medium text-muted mb-1.5">Weekday Style</label>
                     <select
                       :value="selectedWidget.style?.weekdayStyle || 'long'"
                       class="select-base w-full px-3 py-2 text-sm"
@@ -1204,7 +1276,7 @@
                     </select>
                   </div>
                   <div v-if="selectedWidget.type === 'clock'">
-                    <label class="block text-xs font-medium text-gray-400 mb-1.5">Clock Display Mode</label>
+                    <label class="block text-xs font-medium text-muted mb-1.5">Clock Display Mode</label>
                     <select
                       :value="selectedWidget.style?.displayMode || 'timeOnly'"
                       class="select-base w-full px-3 py-2 text-sm"
@@ -1216,18 +1288,19 @@
                     </select>
                   </div>
                   <div v-if="selectedWidget.type === 'date'">
-                    <label class="block text-xs font-medium text-gray-400 mb-1.5">Date Display Mode</label>
+                    <label class="block text-xs font-medium text-muted mb-1.5">Date Display Mode</label>
                     <select
-                      :value="selectedWidget.style?.displayMode || 'inline'"
+                      :value="normalizeDateDisplayModeForEditor(selectedWidget.style)"
                       class="select-base w-full px-3 py-2 text-sm"
-                      @change="updateWidgetStyle('displayMode', $event.target.value)"
+                      @change="onDateDisplayModeChange($event.target.value)"
                     >
-                      <option value="inline">Inline</option>
+                      <option value="dateOnly">Date Only</option>
+                      <option value="datePlusWeekday">Date + Weekday (Inline)</option>
                       <option value="stacked">Stacked</option>
                     </select>
                   </div>
                   <div>
-                    <label class="block text-xs font-medium text-gray-400 mb-1.5">Font Size (px)</label>
+                    <label class="block text-xs font-medium text-muted mb-1.5">Font Size (px)</label>
                     <div class="grid grid-cols-[1fr_auto] gap-2 items-center">
                       <input
                         type="range"
@@ -1249,40 +1322,52 @@
                     </div>
                   </div>
                   <div>
-                    <label class="block text-xs font-medium text-gray-400 mb-1.5">Text Color</label>
+                    <label class="block text-xs font-medium text-muted mb-1.5">Text Color</label>
                     <input
                       :value="selectedWidget.style?.color || '#ffffff'"
                       type="color"
-                      class="w-full h-10 bg-slate-800/50 border border-slate-700 rounded-lg cursor-pointer"
+                      class="editor-color-input"
                       @input="updateWidgetStyle('color', $event.target.value)"
                     />
                   </div>
                   <div>
-                    <label class="block text-xs font-medium text-gray-400 mb-1.5">Background Color</label>
+                    <label class="block text-xs font-medium text-muted mb-1.5">Background Color</label>
                     <input
                       :value="getBackgroundHex(selectedWidget.style?.backgroundColor, '#000000')"
                       type="color"
-                      class="w-full h-10 bg-slate-800/50 border border-slate-700 rounded-lg cursor-pointer"
+                      class="editor-color-input"
+                      :disabled="selectedWidget.style?.transparentBackground === true"
                       @input="updateWidgetStyle('backgroundColor', $event.target.value)"
                     />
+                    <label class="editor-switch-row mt-2">
+                      <span class="text-sm text-primary">Transparent background</span>
+                      <span class="editor-switch">
+                        <input
+                          type="checkbox"
+                          class="sr-only peer"
+                          :checked="selectedWidget.style?.transparentBackground === true"
+                          @change="updateWidgetStyle('transparentBackground', $event.target.checked)"
+                        />
+                        <span class="editor-switch-track">
+                          <span class="editor-switch-thumb"></span>
+                        </span>
+                      </span>
+                    </label>
                   </div>
                   <div>
-                    <label class="block text-xs font-medium text-gray-400 mb-1.5">Font Family</label>
+                    <label class="block text-xs font-medium text-muted mb-1.5">Font Family</label>
                     <select
                       :value="selectedWidget.style?.fontFamily || 'Arial, sans-serif'"
                       class="select-base w-full px-3 py-2 text-sm"
                       @change="updateWidgetStyle('fontFamily', $event.target.value)"
                     >
-                      <option value="Arial, sans-serif">Arial</option>
-                      <option value="Helvetica, sans-serif">Helvetica</option>
-                      <option value="'Segoe UI', sans-serif">Segoe UI</option>
-                      <option value="Roboto, sans-serif">Roboto</option>
-                      <option value="Verdana, sans-serif">Verdana</option>
-                      <option value="Georgia, serif">Georgia</option>
+                      <option v-for="font in WIDGET_FONT_OPTIONS" :key="font.value" :value="font.value">
+                        {{ font.label }}
+                      </option>
                     </select>
                   </div>
                   <div>
-                    <label class="block text-xs font-medium text-gray-400 mb-1.5">Text Align</label>
+                    <label class="block text-xs font-medium text-muted mb-1.5">Text Align</label>
                     <select
                       :value="selectedWidget.style?.textAlign || 'center'"
                       class="select-base w-full px-3 py-2 text-sm"
@@ -1297,7 +1382,7 @@
               </div>
 
               <div v-if="selectedWidget.type === 'countdown'">
-                <h3 class="text-sm font-semibold mb-3 text-muted uppercase">Countdown Properties</h3>
+                <h3 class="text-sm font-semibold mb-3 text-muted uppercase">Countdown</h3>
                 <div class="space-y-3">
                   <div>
                     <label class="block text-xs font-medium text-muted mb-1.5">Event name</label>
@@ -1309,129 +1394,93 @@
                       @input="updateWidgetProperty('content', $event.target.value)"
                     />
                   </div>
-                  <div>
-                    <label class="block text-xs font-medium text-muted mb-1.5">Target date and time (local)</label>
-                    <input
-                      :value="countdownTargetLocal"
-                      type="datetime-local"
-                      class="input-base w-full px-3 py-2 text-sm"
-                      @input="onCountdownTargetAtInput($event.target.value)"
-                    />
+                  <div class="space-y-2">
+                    <div class="min-w-0">
+                      <label class="block text-xs font-medium text-muted mb-1.5">Progress start (optional)</label>
+                      <input
+                        :value="countdownStartLocal"
+                        type="datetime-local"
+                        class="input-base w-full min-w-0 px-3 py-2 text-sm"
+                        @input="onCountdownStartAtInput($event.target.value)"
+                      />
+                      <p class="text-[10px] text-muted mt-1 leading-snug">
+                        Bar only — empty uses first display.
+                      </p>
+                    </div>
+                    <div class="min-w-0">
+                      <label class="block text-xs font-medium text-muted mb-1.5">Target date and time (local)</label>
+                      <input
+                        :value="countdownTargetLocal"
+                        type="datetime-local"
+                        class="input-base w-full min-w-0 px-3 py-2 text-sm"
+                        @input="onCountdownTargetAtInput($event.target.value)"
+                      />
+                    </div>
                   </div>
                   <div>
-                    <label class="block text-xs font-medium text-muted mb-1.5">Progress start (optional)</label>
-                    <input
-                      :value="countdownStartLocal"
-                      type="datetime-local"
-                      class="input-base w-full px-3 py-2 text-sm"
-                      @input="onCountdownStartAtInput($event.target.value)"
-                    />
-                    <p class="text-[11px] text-slate-500 mt-1">Used for the progress bar. Leave empty to start from first display.</p>
-                  </div>
-                  <div class="grid grid-cols-2 gap-3">
-                    <div>
-                      <label class="block text-xs font-medium text-muted mb-1.5">After zero</label>
-                      <select
-                        :value="selectedWidget.style?.zeroStateMode || 'showMessage'"
-                        class="select-base w-full px-3 py-2 text-sm"
-                        @change="updateWidgetStyle('zeroStateMode', $event.target.value)"
+                    <label class="block text-xs font-medium text-muted mb-1.5">Appearance theme</label>
+                    <select
+                      :value="selectedWidget.style?.theme || COUNTDOWN_THEME_DEFAULT_ID"
+                      class="select-base w-full px-3 py-2 text-sm"
+                      @change="applyCountdownTheme($event.target.value)"
+                    >
+                      <option
+                        v-for="opt in COUNTDOWN_THEMES"
+                        :key="opt.id"
+                        :value="opt.id"
+                        :title="opt.hint || opt.label"
                       >
-                        <option value="showMessage">Show message</option>
-                        <option value="hideWidget">Hide widget</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label class="block text-xs font-medium text-muted mb-1.5">Theme</label>
-                      <select
-                        :value="selectedWidget.style?.theme || 'urgency'"
-                        class="select-base w-full px-3 py-2 text-sm"
-                        @change="updateWidgetStyle('theme', $event.target.value)"
-                      >
-                        <option value="urgency">Urgency</option>
-                        <option value="celebration">Celebration</option>
-                        <option value="custom">Custom colors</option>
-                      </select>
-                    </div>
+                        {{ opt.label }}
+                      </option>
+                    </select>
+                    <p class="text-[11px] text-muted mt-1">
+                      {{ countdownThemeHint }}
+                    </p>
                   </div>
-                  <div v-if="(selectedWidget.style?.zeroStateMode || 'showMessage') === 'showMessage'">
-                    <label class="block text-xs font-medium text-muted mb-1.5">Message at zero</label>
-                    <textarea
-                      :value="selectedWidget.style?.zeroStateMessage || ''"
-                      rows="2"
-                      class="input-base w-full px-3 py-2 text-sm"
-                      placeholder="The event has started!"
-                      @input="updateWidgetStyle('zeroStateMessage', $event.target.value)"
-                    />
-                  </div>
-                  <div>
-                    <label class="flex items-center gap-2 text-xs text-muted">
-                      <input
-                        type="checkbox"
-                        class="h-4 w-4"
-                        :checked="selectedWidget.style?.showProgress === true"
-                        @change="updateWidgetStyle('showProgress', $event.target.checked)"
-                      />
-                      Show progress bar
-                    </label>
-                  </div>
-                  <div class="grid grid-cols-2 gap-2">
-                    <div>
-                      <label class="block text-[11px] text-muted mb-1">Days label</label>
-                      <input
-                        :value="selectedWidget.style?.labels?.days ?? 'Days'"
-                        type="text"
-                        class="input-base w-full px-2 py-1.5 text-sm"
-                        @input="updateCountdownLabel('days', $event.target.value)"
-                      />
-                    </div>
-                    <div>
-                      <label class="block text-[11px] text-muted mb-1">Hours label</label>
-                      <input
-                        :value="selectedWidget.style?.labels?.hours ?? 'Hours'"
-                        type="text"
-                        class="input-base w-full px-2 py-1.5 text-sm"
-                        @input="updateCountdownLabel('hours', $event.target.value)"
-                      />
-                    </div>
-                    <div>
-                      <label class="block text-[11px] text-muted mb-1">Minutes label</label>
-                      <input
-                        :value="selectedWidget.style?.labels?.minutes ?? 'Minutes'"
-                        type="text"
-                        class="input-base w-full px-2 py-1.5 text-sm"
-                        @input="updateCountdownLabel('minutes', $event.target.value)"
-                      />
-                    </div>
-                    <div>
-                      <label class="block text-[11px] text-muted mb-1">Seconds label</label>
-                      <input
-                        :value="selectedWidget.style?.labels?.seconds ?? 'Seconds'"
-                        type="text"
-                        class="input-base w-full px-2 py-1.5 text-sm"
-                        @input="updateCountdownLabel('seconds', $event.target.value)"
-                      />
-                    </div>
-                  </div>
-                  <div class="grid grid-cols-2 gap-3">
+                  <div
+                    v-if="countdownIsCustomTheme"
+                    class="grid grid-cols-2 gap-3 rounded-lg border border-border-color/80 bg-card/40 p-3"
+                  >
                     <div>
                       <label class="block text-xs font-medium text-muted mb-1.5">Text color</label>
                       <input
                         :value="selectedWidget.style?.color || '#fecaca'"
                         type="color"
-                        class="w-full h-10 bg-slate-800/50 border border-slate-700 rounded-lg cursor-pointer"
+                        class="editor-color-input"
                         @input="updateWidgetStyle('color', $event.target.value)"
                       />
                     </div>
                     <div>
-                      <label class="block text-xs font-medium text-muted mb-1.5">Background</label>
+                      <label class="block text-xs font-medium text-muted mb-1.5">Background (solid)</label>
                       <input
                         :value="getBackgroundHex(selectedWidget.style?.backgroundColor, '#450a0a')"
                         type="color"
-                        class="w-full h-10 bg-slate-800/50 border border-slate-700 rounded-lg cursor-pointer"
+                        class="editor-color-input"
+                        :disabled="selectedWidget.style?.transparentBackground === true"
                         @input="updateWidgetStyle('backgroundColor', $event.target.value)"
                       />
                     </div>
                   </div>
+                  <p
+                    v-else
+                    class="text-[11px] text-muted rounded-md bg-card/30 px-2 py-1.5 border border-border-color/60"
+                  >
+                    Colors and background for this theme are preset. Choose <strong class="text-primary">Custom</strong> to set your own solid colors or gradients in JSON if needed.
+                  </p>
+                  <label class="editor-switch-row">
+                    <span class="text-sm text-primary">Transparent background</span>
+                    <span class="editor-switch">
+                      <input
+                        type="checkbox"
+                        class="sr-only peer"
+                        :checked="selectedWidget.style?.transparentBackground === true"
+                        @change="updateWidgetStyle('transparentBackground', $event.target.checked)"
+                      />
+                      <span class="editor-switch-track">
+                        <span class="editor-switch-thumb"></span>
+                      </span>
+                    </span>
+                  </label>
                   <div>
                     <label class="block text-xs font-medium text-muted mb-1.5">Font size (px)</label>
                     <input
@@ -1443,19 +1492,97 @@
                       @input="updateWidgetStyle('fontSize', `${normalizeRange($event.target.value, 36, 12, 220)}px`)"
                     />
                   </div>
+                  <label class="editor-switch-row">
+                    <span class="text-sm text-primary">Show progress bar</span>
+                    <span class="editor-switch">
+                      <input
+                        type="checkbox"
+                        class="sr-only peer"
+                        :checked="selectedWidget.style?.showProgress === true"
+                        @change="updateWidgetStyle('showProgress', $event.target.checked)"
+                      />
+                      <span class="editor-switch-track">
+                        <span class="editor-switch-thumb"></span>
+                      </span>
+                    </span>
+                  </label>
+                  <div>
+                    <label class="block text-xs font-medium text-muted mb-1.5">When timer hits zero</label>
+                    <select
+                      :value="selectedWidget.style?.zeroStateMode || 'showMessage'"
+                      class="select-base w-full px-3 py-2 text-sm"
+                      @change="updateWidgetStyle('zeroStateMode', $event.target.value)"
+                    >
+                      <option value="showMessage">Show message</option>
+                      <option value="hideWidget">Hide widget</option>
+                    </select>
+                  </div>
+                  <div v-if="(selectedWidget.style?.zeroStateMode || 'showMessage') === 'showMessage'">
+                    <label class="block text-xs font-medium text-muted mb-1.5">Message at zero</label>
+                    <textarea
+                      :value="selectedWidget.style?.zeroStateMessage || ''"
+                      rows="2"
+                      class="input-base w-full px-3 py-2 text-sm"
+                      placeholder="The event has started!"
+                      @input="updateWidgetStyle('zeroStateMessage', $event.target.value)"
+                    />
+                  </div>
+                  <details class="rounded-lg border border-border-color/70 bg-card/20 p-2">
+                    <summary class="text-xs font-medium text-muted cursor-pointer select-none">
+                      Unit labels (translation)
+                    </summary>
+                    <div class="grid grid-cols-2 gap-2 mt-3">
+                      <div>
+                        <label class="block text-[11px] text-muted mb-1">Days</label>
+                        <input
+                          :value="selectedWidget.style?.labels?.days ?? 'Days'"
+                          type="text"
+                          class="input-base w-full px-2 py-1.5 text-sm"
+                          @input="updateCountdownLabel('days', $event.target.value)"
+                        />
+                      </div>
+                      <div>
+                        <label class="block text-[11px] text-muted mb-1">Hours</label>
+                        <input
+                          :value="selectedWidget.style?.labels?.hours ?? 'Hours'"
+                          type="text"
+                          class="input-base w-full px-2 py-1.5 text-sm"
+                          @input="updateCountdownLabel('hours', $event.target.value)"
+                        />
+                      </div>
+                      <div>
+                        <label class="block text-[11px] text-muted mb-1">Minutes</label>
+                        <input
+                          :value="selectedWidget.style?.labels?.minutes ?? 'Minutes'"
+                          type="text"
+                          class="input-base w-full px-2 py-1.5 text-sm"
+                          @input="updateCountdownLabel('minutes', $event.target.value)"
+                        />
+                      </div>
+                      <div>
+                        <label class="block text-[11px] text-muted mb-1">Seconds</label>
+                        <input
+                          :value="selectedWidget.style?.labels?.seconds ?? 'Seconds'"
+                          type="text"
+                          class="input-base w-full px-2 py-1.5 text-sm"
+                          @input="updateCountdownLabel('seconds', $event.target.value)"
+                        />
+                      </div>
+                    </div>
+                  </details>
                 </div>
               </div>
 
               <div v-if="selectedWidget.type === 'webview'">
-                <h3 class="text-sm font-semibold mb-3 text-gray-400 uppercase">Webview Properties</h3>
+                <h3 class="text-sm font-semibold mb-3 text-muted uppercase">Webview Properties</h3>
                 <div class="space-y-3">
                   <div>
-                    <label class="block text-xs font-medium text-gray-400 mb-1.5">URL</label>
+                    <label class="block text-xs font-medium text-muted mb-1.5">URL</label>
                     <input
                       v-model="selectedWidget.content"
                       type="url"
                       placeholder="https://example.com"
-                      class="w-full px-3 py-2 bg-slate-800/50 border border-slate-700 rounded-lg text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                      class="editor-select placeholder:text-muted"
                       @input="updateWidgetProperty('content', $event.target.value)"
                     />
                   </div>
@@ -1471,23 +1598,23 @@
             </div>
 
             <div v-else-if="rightPanelTab === 'properties'" class="text-center py-12">
-              <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-700/50 mb-4">
-                <svg class="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-surface-inset dark:bg-slate-700/50 mb-4">
+                <svg class="w-8 h-8 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                 </svg>
               </div>
-              <h3 class="text-sm font-medium text-slate-300 mb-2">No widget selected</h3>
-              <p class="text-xs text-slate-400">Select a widget from the canvas to edit its properties</p>
+              <h3 class="text-sm font-medium text-primary mb-2">No widget selected</h3>
+              <p class="text-xs text-muted">Select a widget from the canvas to edit its properties</p>
             </div>
 
             <div v-if="rightPanelTab === 'layers'">
-              <h3 class="text-sm font-semibold mb-3 text-gray-400 uppercase tracking-wide">Layers ({{ widgets.length }})</h3>
+              <h3 class="text-sm font-semibold mb-3 text-muted uppercase tracking-wide">Layers ({{ widgets.length }})</h3>
               <div v-if="widgets.length === 0" class="text-center py-8">
-                <svg class="w-12 h-12 mx-auto text-gray-600 mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-12 h-12 mx-auto text-muted mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
-                <p class="text-sm text-gray-400">No widgets yet</p>
-                <p class="text-xs text-gray-500 mt-1">Add widgets to get started</p>
+                <p class="text-sm text-muted">No widgets yet</p>
+                <p class="text-xs text-muted mt-1">Add widgets to get started</p>
               </div>
               <div v-else class="space-y-2">
                 <div
@@ -1512,7 +1639,7 @@
                         @click.stop="toggleWidgetVisibility(widget.id)"
                         :class="[
                           'transition-colors duration-200 flex-shrink-0',
-                          widget.visible !== false ? 'text-gray-400 hover:text-gray-300' : 'text-gray-600 opacity-50'
+                          widget.visible !== false ? 'text-muted hover:text-primary' : 'text-muted opacity-50'
                         ]"
                         :title="widget.visible !== false ? 'Hide Widget' : 'Show Widget'"
                       >
@@ -1531,21 +1658,21 @@
                         @blur="finishEditingWidgetName(widget.id)"
                         @keyup.enter="finishEditingWidgetName(widget.id)"
                         @keyup.esc="cancelEditingWidgetName"
-                        class="font-medium bg-gray-800 border border-blue-500 rounded px-1 py-0.5 text-sm flex-1 min-w-0"
+                        class="font-medium bg-surface-inset dark:bg-gray-800 border border-blue-500 rounded px-1 py-0.5 text-sm flex-1 min-w-0 text-primary"
                         @click.stop
                         ref="widgetNameInput"
                       />
-                      <span class="text-xs text-gray-400 flex-shrink-0 ml-auto">Z:{{ widget.zIndex }}</span>
+                      <span class="text-xs text-muted flex-shrink-0 ml-auto">Z:{{ widget.zIndex }}</span>
                     </div>
-                    <button @click.stop="deleteWidget(widget.id)" class="text-red-400 hover:text-red-300 active:scale-95 transition-all duration-200 flex-shrink-0 ml-2" title="Delete Widget">
+                    <button @click.stop="deleteWidget(widget.id)" class="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 active:scale-95 transition-all duration-200 flex-shrink-0 ml-2" title="Delete Widget">
                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                       </svg>
                     </button>
                   </div>
-                  <div class="text-xs text-gray-400 mt-1.5 flex items-center gap-2">
-                    <span class="px-1.5 py-0.5 bg-gray-600/50 rounded text-[10px] uppercase">{{ widget.type }}</span>
-                    <span class="text-gray-500">{{ Math.round(widget.width) }}×{{ Math.round(widget.height) }}</span>
+                  <div class="text-xs text-muted mt-1.5 flex items-center gap-2">
+                    <span class="px-1.5 py-0.5 bg-surface-inset dark:bg-gray-600/50 rounded text-[10px] uppercase text-muted">{{ widget.type }}</span>
+                    <span class="text-muted">{{ Math.round(widget.width) }}×{{ Math.round(widget.height) }}</span>
                   </div>
                 </div>
               </div>
@@ -1589,6 +1716,13 @@ import ChartEditorPanel from './components/chart/ChartEditorPanel.vue'
 import MediaLibraryModal from '@/components/common/MediaLibraryModal.vue'
 import PushToScreenModal from '@/components/templates/PushToScreenModal.vue'
 import { useScreensStore } from '@/stores/screens'
+import { resolveWidgetBackgroundColor } from '@/utils/widgetBackground'
+import { WIDGET_FONT_OPTIONS } from '@/constants/widgetFonts'
+import {
+  COUNTDOWN_THEMES,
+  getCountdownThemePreset,
+  COUNTDOWN_THEME_DEFAULT_ID,
+} from '@/constants/countdownThemes'
 
 const route = useRoute()
 const router = useRouter()
@@ -1672,6 +1806,38 @@ const updateCountdownLabel = (key, value) => {
   selectedWidget.value.style.labels[key] = value
 }
 
+const countdownIsCustomTheme = computed(() => {
+  const w = selectedWidget.value
+  if (!w || w.type !== 'countdown') return false
+  return (w.style?.theme || COUNTDOWN_THEME_DEFAULT_ID) === 'custom'
+})
+
+const countdownThemeHint = computed(() => {
+  const w = selectedWidget.value
+  if (!w || w.type !== 'countdown') return ''
+  const id = w.style?.theme || COUNTDOWN_THEME_DEFAULT_ID
+  const entry = COUNTDOWN_THEMES.find((t) => t.id === id)
+  return entry?.hint || ''
+})
+
+const applyCountdownTheme = (themeId) => {
+  if (!selectedWidget.value || selectedWidget.value.type !== 'countdown') return
+  if (!selectedWidget.value.style) selectedWidget.value.style = {}
+  if (themeId === 'custom') {
+    selectedWidget.value.style = {
+      ...selectedWidget.value.style,
+      theme: 'custom',
+    }
+    return
+  }
+  const entry = COUNTDOWN_THEMES.find((t) => t.id === themeId)
+  selectedWidget.value.style = {
+    ...selectedWidget.value.style,
+    theme: themeId,
+    ...(entry?.preset || {}),
+  }
+}
+
 // Widget visibility state (default to visible)
 const widgetVisibility = ref({})
 
@@ -1744,6 +1910,29 @@ const toggleWidgetSection = (sectionId) => {
     [sectionId]: !isWidgetSectionOpen(sectionId),
   }
 }
+
+/** Antler widget library — category border + header tint (CSS variables in style.css) */
+const WIDGET_SECTION_ACCENT = {
+  'date-time': { accent: '--widget-section-date-time', tint: '--widget-section-date-time-bg' },
+  'text-live': { accent: '--widget-section-text-live', tint: '--widget-section-text-live-bg' },
+  media: { accent: '--widget-section-media', tint: '--widget-section-media-bg' },
+  'web-data': { accent: '--widget-section-web-data', tint: '--widget-section-web-data-bg' },
+}
+const widgetSectionCardStyle = (sectionId) => {
+  const t = WIDGET_SECTION_ACCENT[sectionId]
+  if (!t) return {}
+  return {
+    borderLeftWidth: '4px',
+    borderLeftStyle: 'solid',
+    borderLeftColor: `var(${t.accent})`,
+  }
+}
+const widgetSectionHeaderStyle = (sectionId) => {
+  const t = WIDGET_SECTION_ACCENT[sectionId]
+  if (!t) return {}
+  return { backgroundColor: `var(${t.tint})` }
+}
+
 const worldTimeZones = [
   { value: 'UTC', label: 'UTC (Coordinated Universal Time)' },
   { value: 'Asia/Tehran', label: 'Tehran (Asia/Tehran)' },
@@ -1768,14 +1957,29 @@ const worldTimeZones = [
 const marqueePresets = [
   { id: 'breakingNews', label: 'Breaking News', style: { color: '#ffffff', backgroundColor: '#b91c1c', fontSize: '42px', fontWeight: '800', fadeEdge: true, mode: 'continuous', direction: 'left' } },
   { id: 'stockTape', label: 'Stock Tape', style: { color: '#22c55e', backgroundColor: '#0f172a', fontSize: '32px', fontWeight: '700', separator: '  ▲  ', mode: 'continuous', direction: 'left' } },
-  { id: 'sports', label: 'Sports Bar', style: { color: '#fde047', backgroundColor: '#1f2937', fontSize: '36px', fontWeight: '700', separator: '  |  ', mode: 'step', direction: 'left' } },
+  { id: 'sports', label: 'Sports Bar', style: { color: '#fde047', backgroundColor: '#1f2937', fontSize: '36px', fontWeight: '700', separator: '  |  ', mode: 'continuous', direction: 'left' } },
   { id: 'gold', label: 'Golden Luxury', style: { color: '#fbbf24', backgroundColor: '#111827', fontSize: '40px', fontWeight: '700', textShadow: '0 0 16px rgba(251,191,36,0.45)', mode: 'continuous', direction: 'left' } },
-  { id: 'neon', label: 'Neon Glow', style: { color: '#22d3ee', backgroundColor: '#020617', fontSize: '40px', fontWeight: '700', textShadow: '0 0 12px rgba(34,211,238,0.9)', mode: 'bounce', direction: 'left' } },
+  { id: 'neon', label: 'Neon Glow', style: { color: '#22d3ee', backgroundColor: '#020617', fontSize: '40px', fontWeight: '700', textShadow: '0 0 12px rgba(34,211,238,0.9)', mode: 'continuous', direction: 'left' } },
   { id: 'minimalLight', label: 'Minimal Light', style: { color: '#111827', backgroundColor: '#f8fafc', fontSize: '34px', fontWeight: '600', mode: 'continuous', direction: 'left' } },
   { id: 'alerts', label: 'Alert Banner', style: { color: '#ffffff', backgroundColor: '#dc2626', fontSize: '38px', fontWeight: '800', uppercase: true, mode: 'continuous', direction: 'left' } },
-  { id: 'calmBlue', label: 'Calm Blue', style: { color: '#dbeafe', backgroundColor: '#1d4ed8', fontSize: '34px', fontWeight: '600', mode: 'step', direction: 'right' } },
+  {
+    id: 'calmBlue',
+    label: 'Calm Blue',
+    style: {
+      color: '#e8f4fc',
+      backgroundColor: '#0c1b2e',
+      fontSize: '34px',
+      fontWeight: '600',
+      letterSpacing: '0.02em',
+      textShadow: '0 1px 2px rgba(0,0,0,0.45)',
+      fadeEdge: true,
+      separator: '  ·  ',
+      mode: 'continuous',
+      direction: 'left',
+    },
+  },
   { id: 'matrix', label: 'Matrix', style: { color: '#4ade80', backgroundColor: '#052e16', fontSize: '30px', fontWeight: '600', letterSpacing: '0.08em', mode: 'continuous', direction: 'left' } },
-  { id: 'darkGlass', label: 'Dark Glass', style: { color: '#e5e7eb', backgroundColor: 'rgba(15,23,42,0.85)', fontSize: '36px', fontWeight: '700', mode: 'bounce', direction: 'left' } },
+  { id: 'darkGlass', label: 'Dark Glass', style: { color: '#e5e7eb', backgroundColor: 'rgba(15,23,42,0.85)', fontSize: '36px', fontWeight: '700', mode: 'continuous', direction: 'left' } },
 ]
 
 const supportedLocales = [
@@ -1808,9 +2012,9 @@ const clockStylePresets = [
 ]
 
 const dateStylePresets = [
-  { id: 'calendarCard', label: 'Calendar Card', style: { preset: 'calendarCard', color: '#f8fafc', backgroundColor: '#1e293b', fontSize: '40px', fontWeight: '700', textAlign: 'center', fontFamily: "'Segoe UI', sans-serif", locale: 'en-US', displayMode: 'inline', showWeekday: true, weekdayStyle: 'long', dateStyle: 'medium', timeZone: defaultTimeZone } },
+  { id: 'calendarCard', label: 'Calendar Card', style: { preset: 'calendarCard', color: '#f8fafc', backgroundColor: '#1e293b', fontSize: '40px', fontWeight: '700', textAlign: 'center', fontFamily: "'Segoe UI', sans-serif", locale: 'en-US', displayMode: 'datePlusWeekday', showWeekday: true, weekdayStyle: 'long', dateStyle: 'medium', timeZone: defaultTimeZone } },
   { id: 'minimalLight', label: 'Minimal Light', style: { preset: 'minimalLight', color: '#0f172a', backgroundColor: '#f8fafc', fontSize: '38px', fontWeight: '600', textAlign: 'center', fontFamily: "Roboto, sans-serif", locale: 'en-US', displayMode: 'stacked', showWeekday: true, weekdayStyle: 'short', dateStyle: 'short', timeZone: defaultTimeZone } },
-  { id: 'boldBanner', label: 'Bold Banner', style: { preset: 'boldBanner', color: '#fde68a', backgroundColor: '#7c2d12', fontSize: '42px', fontWeight: '800', textAlign: 'center', fontFamily: "Verdana, sans-serif", locale: 'en-US', displayMode: 'inline', showWeekday: false, dateStyle: 'full', timeZone: defaultTimeZone } },
+  { id: 'boldBanner', label: 'Bold Banner', style: { preset: 'boldBanner', color: '#fde68a', backgroundColor: '#7c2d12', fontSize: '42px', fontWeight: '800', textAlign: 'center', fontFamily: "Verdana, sans-serif", locale: 'en-US', displayMode: 'dateOnly', showWeekday: false, dateStyle: 'full', timeZone: defaultTimeZone } },
 ]
 
 const weekdayStylePresets = [
@@ -1872,22 +2076,17 @@ const getCountdownDefaultStyle = () => {
     startAt: start.toISOString(),
     zeroStateMode: 'showMessage',
     zeroStateMessage: 'The event has started!',
-    theme: 'urgency',
     showProgress: true,
-    granularityMode: 'auto',
     labels: {
       days: 'Days',
       hours: 'Hours',
       minutes: 'Minutes',
       seconds: 'Seconds',
     },
-    color: '#fecaca',
-    backgroundColor: '#450a0a',
     fontSize: '36px',
-    fontWeight: '800',
-    fontFamily: "'Segoe UI', sans-serif",
+    fontFamily: "'Inter', system-ui, sans-serif",
     textAlign: 'center',
-    borderRadius: '12px',
+    ...getCountdownThemePreset(COUNTDOWN_THEME_DEFAULT_ID),
   }
 }
 
@@ -2188,9 +2387,18 @@ const getWidgetStyle = (widget) => {
   
   // Check visibility
   const isVisible = widget.visible !== false
+  const editorBgFallback = (type) => {
+    switch (type) {
+      case 'marquee': return '#111827'
+      case 'qr_action': return '#ffffff'
+      case 'weather': return '#0f172a'
+      case 'countdown': return '#450a0a'
+      default: return 'transparent'
+    }
+  }
   const widgetBg =
-    (widget.type === 'text' || widget.type === 'marquee' || widget.type === 'clock' || widget.type === 'date' || widget.type === 'weekday' || widget.type === 'qr_action' || widget.type === 'countdown')
-      ? (widget.style?.backgroundColor || 'transparent')
+    (widget.type === 'text' || widget.type === 'marquee' || widget.type === 'clock' || widget.type === 'date' || widget.type === 'weekday' || widget.type === 'qr_action' || widget.type === 'countdown' || widget.type === 'weather')
+      ? resolveWidgetBackgroundColor(widget.style, editorBgFallback(widget.type))
       : 'transparent'
   
   return {
@@ -2576,6 +2784,26 @@ const updateWidgetStyle = (property, value) => {
     selectedWidget.value.style = {}
   }
   selectedWidget.value.style[property] = value
+}
+
+/** Maps saved style (including legacy `inline`) to Date Display Mode select value */
+const normalizeDateDisplayModeForEditor = (style) => {
+  if (!style || typeof style !== 'object') return 'dateOnly'
+  const raw = style.displayMode
+  if (raw === 'stacked') return 'stacked'
+  if (raw === 'datePlusWeekday' || raw === 'timePlusWeekday') return 'datePlusWeekday'
+  if (raw === 'dateOnly' || raw === 'timeOnly') return 'dateOnly'
+  if (raw === 'inline') return style.showWeekday === true ? 'datePlusWeekday' : 'dateOnly'
+  return style.showWeekday === true ? 'datePlusWeekday' : 'dateOnly'
+}
+
+const onDateDisplayModeChange = (mode) => {
+  updateWidgetStyle('displayMode', mode)
+  if (mode === 'dateOnly') {
+    updateWidgetStyle('showWeekday', false)
+  } else {
+    updateWidgetStyle('showWeekday', true)
+  }
 }
 
 const handleChartWidgetUpdate = ({ content, stylePatch }) => {
@@ -3200,16 +3428,19 @@ onUnmounted(() => {
 .monitor-frame {
   position: relative;
   display: inline-block;
-  background-color: #1a1a1a;
+  background-color: var(--editor-bezel);
   border-radius: 0.5rem;
   box-sizing: border-box;
-  /* Subtle inner bevel effect */
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid var(--editor-bezel-highlight);
+  border-left: 1px solid var(--editor-bezel-highlight);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.18);
+  border-right: 1px solid rgba(0, 0, 0, 0.18);
+  box-shadow: var(--editor-bezel-shadow);
+}
+
+.dark .monitor-frame {
   border-bottom: 1px solid rgba(0, 0, 0, 0.3);
   border-right: 1px solid rgba(0, 0, 0, 0.3);
-  /* Deep drop shadow for depth */
-  box-shadow: 0 35px 35px rgba(0, 0, 0, 0.5);
 }
 
 .power-indicator {
@@ -3246,60 +3477,6 @@ onUnmounted(() => {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
-.marquee-switch-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  padding: 0.375rem 0.5rem;
-  border-radius: 0.5rem;
-  background: rgba(30, 41, 59, 0.28);
-  border: 1px solid rgba(100, 116, 139, 0.35);
-}
-
-.marquee-switch {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-}
-
-.marquee-switch-track {
-  width: 2.5rem;
-  height: 1.35rem;
-  border-radius: 9999px;
-  border: 1px solid rgba(100, 116, 139, 0.5);
-  background: rgba(51, 65, 85, 0.7);
-  display: inline-flex;
-  align-items: center;
-  padding: 0 2px;
-  transition: background-color 0.2s ease, border-color 0.2s ease;
-}
-
-.marquee-switch-thumb {
-  width: 1rem;
-  height: 1rem;
-  border-radius: 9999px;
-  background: #f8fafc;
-  transform: translateX(0);
-  transition: transform 0.2s ease;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
-}
-
-.peer:checked + .marquee-switch-track {
-  background: rgba(16, 185, 129, 0.35);
-  border-color: rgba(16, 185, 129, 0.9);
-}
-
-.peer:checked + .marquee-switch-track .marquee-switch-thumb {
-  transform: translateX(1.1rem);
-  background: #ffffff;
-}
-
-.peer:focus-visible + .marquee-switch-track {
-  outline: 2px solid rgba(59, 130, 246, 0.9);
-  outline-offset: 2px;
-}
-
 .widget-accordion-enter-active,
 .widget-accordion-leave-active {
   transition: all 0.22s ease;
@@ -3309,6 +3486,89 @@ onUnmounted(() => {
 .widget-accordion-leave-to {
   opacity: 0;
   transform: translateY(-4px);
+}
+</style>
+
+<style>
+/* Unscoped: inspector pill toggles (TemplateEditor + embedded Chart* panels) */
+.editor-switch-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.375rem 0.5rem;
+  border-radius: 0.5rem;
+  background: rgba(241, 245, 249, 0.92);
+  border: 1px solid rgba(15, 23, 42, 0.1);
+}
+
+.dark .editor-switch-row {
+  background: rgba(30, 41, 59, 0.28);
+  border: 1px solid rgba(100, 116, 139, 0.35);
+}
+
+.editor-switch-row--compact {
+  padding: 0.25rem 0.4rem;
+  gap: 0.5rem;
+}
+
+.editor-switch-row--disabled {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.editor-switch {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.editor-switch-track {
+  width: 2.5rem;
+  height: 1.35rem;
+  border-radius: 9999px;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  background: rgba(226, 232, 240, 0.95);
+  display: inline-flex;
+  align-items: center;
+  padding: 0 2px;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.dark .editor-switch-track {
+  border: 1px solid rgba(100, 116, 139, 0.5);
+  background: rgba(51, 65, 85, 0.7);
+}
+
+.editor-switch-thumb {
+  width: 1rem;
+  height: 1rem;
+  border-radius: 9999px;
+  background: #f8fafc;
+  transform: translateX(0);
+  transition: transform 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+
+.editor-switch .peer:checked + .editor-switch-track {
+  background: rgba(16, 185, 129, 0.35);
+  border-color: rgba(16, 185, 129, 0.9);
+}
+
+.editor-switch .peer:checked + .editor-switch-track .editor-switch-thumb {
+  transform: translateX(1.1rem);
+  background: #ffffff;
+}
+
+.editor-switch .peer:focus-visible + .editor-switch-track {
+  outline: 2px solid rgba(59, 130, 246, 0.9);
+  outline-offset: 2px;
+}
+
+.editor-switch .peer:disabled + .editor-switch-track {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 </style>
 

@@ -42,43 +42,32 @@ export function useResponsiveScaling(template) {
   }
   
   /**
-   * Horizontal-fit mode:
-   * - Always fill viewport width completely.
-   * - Keep aspect ratio.
-   * - Height may letterbox (if shorter) or crop (if taller).
+   * Contain mode (matches TemplateEditor "Fit" / WebPlayer template comment):
+   * - Entire template pixel rect must fit inside the viewport (no cropping).
+   * - Letterboxing on one axis when aspect ratios differ.
    */
   const scaleFactor = computed(() => {
     if (!template.value) return 1
-    
+
     const templateWidth = template.value.width || 1920
     const templateHeight = template.value.height || 1080
-    
-    // Safety check for invalid dimensions
+
     if (templateWidth <= 0 || templateHeight <= 0) {
       console.warn('Invalid template dimensions, using default scale')
       return 1
     }
-    
-    // Safety check for viewport dimensions
+
     if (viewportWidth.value <= 0 || viewportHeight.value <= 0) {
       console.warn('Invalid viewport dimensions, using default scale')
       return 1
     }
-    
+
     const scaleX = viewportWidth.value / templateWidth
-    let scale = scaleX
-    // Tiny shrink so float math never places the scaled rect 1px past the clip edge.
+    const scaleY = viewportHeight.value / templateHeight
+    let scale = Math.min(scaleX, scaleY)
     scale *= 1 - 1e-6
-    
-    const finalScale = Math.max(0.01, Math.min(scale, 10))
-    
-    console.log('[useResponsiveScaling] Scale calculated (fit-width):', {
-      templateSize: `${templateWidth}x${templateHeight}`,
-      viewportSize: `${viewportWidth.value}x${viewportHeight.value}`,
-      scale: finalScale.toFixed(6),
-    })
-    
-    return finalScale
+
+    return Math.max(0.01, Math.min(scale, 10))
   })
   
   // Calculate scaled dimensions
@@ -92,12 +81,12 @@ export function useResponsiveScaling(template) {
     return (template.value.height || 1080) * scaleFactor.value
   })
   
-  // In fit-width mode, X is always anchored to the left edge.
   const offsetX = computed(() => {
-    return 0
+    if (!template.value) return 0
+    const gap = viewportWidth.value - scaledWidth.value
+    return Math.max(0, Math.floor(gap * 0.5 * 1000) / 1000)
   })
-  
-  // Y is centered only when there is extra vertical room; otherwise top-anchored.
+
   const offsetY = computed(() => {
     if (!template.value) return 0
     const gap = viewportHeight.value - scaledHeight.value

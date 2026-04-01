@@ -27,6 +27,7 @@
 
 <script setup>
 import { computed } from 'vue'
+import { resolveWidgetBackgroundColor } from '@/utils/widgetBackground'
 
 const props = defineProps({
   widget: {
@@ -94,21 +95,24 @@ const holdSeconds = computed(() => {
 const loopEnabled = computed(() => styleJson.value.loop !== false)
 const gapPx = computed(() => clamp(styleJson.value.gap, 80, 16, 500))
 const fadeEdgeEnabled = computed(() => styleJson.value.fadeEdge !== false)
-const containerStyle = computed(() => ({
-  '--marquee-duration': `${durationSeconds.value}s`,
-  '--marquee-hold': `${holdSeconds.value}s`,
-  '--marquee-gap': `${gapPx.value}px`,
-  '--marquee-iteration': loopEnabled.value ? 'infinite' : '1',
-  '--marquee-bg': styleJson.value.backgroundColor || '#111827',
-  width: '100%',
-  height: '100%',
-  boxSizing: 'border-box',
-  paddingTop: '3px',
-  paddingBottom: '6px',
-  overflow: 'hidden',
-  backgroundColor: styleJson.value.backgroundColor || '#111827',
-  position: 'relative',
-}))
+const containerStyle = computed(() => {
+  const bg = resolveWidgetBackgroundColor(styleJson.value, '#111827')
+  return {
+    '--marquee-duration': `${durationSeconds.value}s`,
+    '--marquee-hold': `${holdSeconds.value}s`,
+    '--marquee-gap': `${gapPx.value}px`,
+    '--marquee-iteration': loopEnabled.value ? 'infinite' : '1',
+    '--marquee-bg': bg,
+    width: '100%',
+    height: '100%',
+    boxSizing: 'border-box',
+    paddingTop: '3px',
+    paddingBottom: '6px',
+    overflow: 'hidden',
+    backgroundColor: bg,
+    position: 'relative',
+  }
+})
 
 const buildShadow = (raw) => {
   if (!raw || typeof raw !== 'string') return 'none'
@@ -233,27 +237,28 @@ const itemStyle = computed(() => ({
   animation: marquee-down var(--marquee-duration) linear var(--marquee-iteration);
 }
 
-.mode-step.dir-right {
-  animation: marquee-step-forward calc(var(--marquee-duration) + var(--marquee-hold)) steps(1, end) var(--marquee-iteration);
+/* Horizontal step: forward = text travels right→left (matches continuous dir-left); reverse = left→right */
+.mode-step.dir-left {
+  animation: marquee-step-forward calc(var(--marquee-duration) + var(--marquee-hold)) linear var(--marquee-iteration);
 }
 
-.mode-step.dir-left {
-  animation: marquee-step-reverse calc(var(--marquee-duration) + var(--marquee-hold)) steps(1, end) var(--marquee-iteration);
+.mode-step.dir-right {
+  animation: marquee-step-reverse calc(var(--marquee-duration) + var(--marquee-hold)) linear var(--marquee-iteration);
 }
 
 .mode-step.dir-up {
-  animation: marquee-step-up calc(var(--marquee-duration) + var(--marquee-hold)) steps(1, end) var(--marquee-iteration);
+  animation: marquee-step-up calc(var(--marquee-duration) + var(--marquee-hold)) linear var(--marquee-iteration);
 }
 
 .mode-step.dir-down {
-  animation: marquee-step-down calc(var(--marquee-duration) + var(--marquee-hold)) steps(1, end) var(--marquee-iteration);
-}
-
-.mode-bounce.dir-right {
-  animation: marquee-bounce-forward calc(var(--marquee-duration) + var(--marquee-hold)) ease-in-out var(--marquee-iteration);
+  animation: marquee-step-down calc(var(--marquee-duration) + var(--marquee-hold)) linear var(--marquee-iteration);
 }
 
 .mode-bounce.dir-left {
+  animation: marquee-bounce-forward calc(var(--marquee-duration) + var(--marquee-hold)) ease-in-out var(--marquee-iteration);
+}
+
+.mode-bounce.dir-right {
   animation: marquee-bounce-reverse calc(var(--marquee-duration) + var(--marquee-hold)) ease-in-out var(--marquee-iteration);
 }
 

@@ -17,23 +17,8 @@
         <!-- Monitor Frame Effect -->
         <div class="absolute inset-0 border-2 border-border-color rounded-lg pointer-events-none"></div>
         
-        <!-- Template Preview -->
-        <div v-if="screen.active_template" class="w-full h-full flex items-center justify-center bg-card">
-          <div class="text-center p-4">
-            <DocumentTextIcon class="w-12 h-12 text-accent-color mx-auto mb-2" style="color: var(--accent-color);" />
-            <p class="text-xs text-primary font-medium truncate max-w-[200px]">
-              {{ screen.active_template.name }}
-            </p>
-          </div>
-        </div>
-        
-        <!-- No Template State -->
-        <div v-else class="w-full h-full flex items-center justify-center bg-card">
-          <div class="text-center">
-            <TvIcon class="w-8 h-8 text-muted mx-auto mb-2" />
-            <p class="text-xs text-muted">No Template</p>
-          </div>
-        </div>
+        <!-- Live template preview (same layout as player) -->
+        <ScreenTemplatePreview :screen="screen" />
       </div>
     </div>
 
@@ -105,13 +90,12 @@
 import { computed } from 'vue'
 import { useScreensStore } from '@/stores/screens'
 import {
-  TvIcon,
-  DocumentTextIcon,
   ArrowPathIcon,
   FingerPrintIcon,
   PencilIcon,
 } from '@heroicons/vue/24/outline'
 import StatusIndicator from './StatusIndicator.vue'
+import ScreenTemplatePreview from './ScreenTemplatePreview.vue'
 
 const props = defineProps({
   screen: {

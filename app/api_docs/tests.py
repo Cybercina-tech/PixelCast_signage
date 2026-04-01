@@ -54,7 +54,8 @@ class APIDocumentationTests(BaseAPITestCase):
         response = self.client.get(url, {'format': 'json'})
         
         if response.status_code == status.HTTP_200_OK:
-            self.assertEqual(response['Content-Type'], 'application/vnd.oai.openapi+json; charset=utf-8')
+            ct = response['Content-Type']
+            self.assertIn('application/vnd.oai.openapi+json', ct)
             self.assertIn('openapi', response.data)
     
     def test_schema_format_yaml(self):

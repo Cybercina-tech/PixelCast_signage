@@ -12,7 +12,7 @@
       <Navbar :title="title" @toggle-sidebar="sidebarOpen = !sidebarOpen" />
       <main :class="['flex-1 flex flex-col scroll-container', isEditorRoute ? 'overflow-hidden' : 'overflow-y-auto custom-scrollbar']">
         <div :class="[
-          'flex-1 w-full main-content-wrapper',
+          'flex-1 min-h-0 w-full main-content-wrapper',
           isEditorRoute ? 'p-0' : 'p-4 md:p-6 lg:p-8'
         ]">
           <slot />

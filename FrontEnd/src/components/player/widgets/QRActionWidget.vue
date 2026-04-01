@@ -15,6 +15,7 @@
 <script setup>
 import { computed, onMounted, watch, ref } from 'vue'
 import * as QRCode from 'qrcode'
+import { resolveWidgetBackgroundColor } from '@/utils/widgetBackground'
 
 const props = defineProps({
   widget: {
@@ -43,19 +44,22 @@ const qrTargetUrl = computed(() => {
 })
 
 const containerStyle = computed(() => ({
-  background: styleJson.value?.backgroundColor || '#ffffff',
+  background: resolveWidgetBackgroundColor(styleJson.value, '#ffffff'),
   color: styleJson.value?.foregroundColor || '#000000',
 }))
 
 const generateQr = async () => {
   try {
+    const lightColor = styleJson.value?.transparentBackground
+      ? '#00000000'
+      : (styleJson.value?.backgroundColor || '#ffffff')
     const dataUrl = await QRCode.toDataURL(qrTargetUrl.value, {
       width: 512,
       margin: quietZone.value,
       errorCorrectionLevel: styleJson.value?.errorCorrectionLevel || 'H',
       color: {
         dark: styleJson.value?.foregroundColor || '#000000',
-        light: styleJson.value?.backgroundColor || '#ffffff',
+        light: lightColor,
       },
     })
     qrDataUrl.value = dataUrl

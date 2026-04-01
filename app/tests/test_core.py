@@ -1,6 +1,7 @@
 """
 Tests for core infrastructure features: caching, rate limiting, audit, backup.
 """
+import uuid
 import pytest
 from django.test import TestCase
 from django.contrib.auth import get_user_model
@@ -27,6 +28,7 @@ class TestCaching(TestCase):
         """Set up test data."""
         self.user = User.objects.create_user(
             username='testuser',
+            email='testuser@example.com',
             password='testpass123',
             role='Developer'
         )
@@ -91,6 +93,7 @@ class TestRateLimiting(TestCase):
         """Set up test data."""
         self.user = User.objects.create_user(
             username='testuser',
+            email='testuser@example.com',
             password='testpass123',
             role='Developer'
         )
@@ -138,6 +141,7 @@ class TestRateLimiting(TestCase):
         """Test role-based rate limiting."""
         viewer = User.objects.create_user(
             username='viewer',
+            email='viewer@example.com',
             password='testpass123',
             role='Employee'
         )
@@ -174,12 +178,13 @@ class TestAuditLogging(TestCase):
         """Set up test data."""
         self.user = User.objects.create_user(
             username='testuser',
+            email='testuser@example.com',
             password='testpass123',
             role='Developer'
         )
         self.screen = Screen.objects.create(
             name='Test Screen',
-            device_id='test-device-001'
+            device_id=f'test-device-{uuid.uuid4().hex[:12]}',
         )
 
     def test_log_crud_create(self):
@@ -268,6 +273,7 @@ class TestBackupSystem(TestCase):
         """Set up test data."""
         self.user = User.objects.create_user(
             username='testuser',
+            email='testuser@example.com',
             password='testpass123',
             role='Developer'
         )
@@ -359,6 +365,7 @@ class TestIntegration(TestCase):
         """Set up test data."""
         self.user = User.objects.create_user(
             username='testuser',
+            email='testuser@example.com',
             password='testpass123',
             role='Developer'
         )
@@ -370,7 +377,7 @@ class TestIntegration(TestCase):
 
         screen = Screen.objects.create(
             name='Test Screen',
-            device_id='test-device-001'
+            device_id=f'test-device-{uuid.uuid4().hex[:12]}',
         )
 
         # Set cache
@@ -390,7 +397,7 @@ class TestIntegration(TestCase):
         """Test that audit logs are created on model save."""
         screen = Screen.objects.create(
             name='Test Screen',
-            device_id='test-device-001'
+            device_id=f'test-device-{uuid.uuid4().hex[:12]}',
         )
 
         # Set user on instance for signal

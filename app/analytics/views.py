@@ -187,11 +187,12 @@ def screen_detail(request, screen_id):
         # Rate limiting
         check_rate_limit(request.user.id, 'screen_detail')
         
-        # Validate screen_id
-        validate_uuid_list([screen_id], "screen_id")
+        # Validate screen_id (URL converter may pass uuid.UUID; validator expects strings)
+        screen_id_str = str(screen_id)
+        validate_uuid_list([screen_id_str], "screen_id")
         
         # Get detailed statistics
-        details = ScreenAnalyticsService.get_screen_details(screen_id)
+        details = ScreenAnalyticsService.get_screen_details(screen_id_str)
         
         if details is None:
             return Response({

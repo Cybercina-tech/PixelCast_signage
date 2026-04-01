@@ -122,6 +122,7 @@ class UserListSerializer(serializers.ModelSerializer):
 
 class UserCreateSerializer(serializers.ModelSerializer):
     """Serializer for creating new users"""
+    id = serializers.IntegerField(read_only=True)
     password = serializers.CharField(
         write_only=True,
         required=True,
@@ -139,7 +140,7 @@ class UserCreateSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = [
-            'username', 'email', 'password', 'password_confirm',
+            'id', 'username', 'email', 'password', 'password_confirm',
             'full_name', 'phone_number', 'role', 'organization_name'
         ]
         extra_kwargs = {

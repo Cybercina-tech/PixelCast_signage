@@ -6,6 +6,7 @@ from django.utils import timezone
 from django.db.models import Q
 from django.utils import timezone as django_timezone
 from django.views.decorators.csrf import csrf_exempt
+from django.http import HttpResponseNotModified
 from datetime import timedelta
 import secrets
 import uuid
@@ -670,6 +671,18 @@ def content_sync_endpoint(request):
     }, status=status.HTTP_400_BAD_REQUEST)
 
 
+def _player_template_etag(screen):
+    """
+    Stable ETag for player template JSON (or empty assignment).
+    Used with If-None-Match so TVs can poll without re-downloading unchanged layouts.
+    """
+    if not screen.active_template_id:
+        return f'"screen-{screen.id}-no-template"'
+    t = screen.active_template
+    ts = t.updated_at.isoformat() if getattr(t, 'updated_at', None) else ''
+    return f'"{t.id}-{ts}-v{t.version}"'
+
+
 def _get_client_ip(request):
     """Extract client IP address from request"""
     x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
@@ -704,16 +717,34 @@ def player_template_endpoint(request):
             'active_template__layers__widgets__contents',
         ).get(id=screen.id)
 
+        etag = _player_template_etag(screen)
+        inm = (request.META.get('HTTP_IF_NONE_MATCH') or '').strip()
+        if inm:
+            # Exact match on our quoted ETag (ignore weak validators for simplicity)
+            tokens = [x.strip() for x in inm.split(',')]
+            if etag in tokens:
+                resp = HttpResponseNotModified()
+                resp['ETag'] = etag
+                resp['Access-Control-Allow-Origin'] = '*'
+                resp['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
+                resp['Access-Control-Allow-Headers'] = 'Content-Type, X-Device-Token, If-None-Match'
+                resp['Access-Control-Expose-Headers'] = 'ETag, Date'
+                return resp
+
         if not screen.active_template:
             response = JsonResponse({'status': 'no_template', 'template': None}, status=200)
+            response['ETag'] = etag
             response['Access-Control-Allow-Origin'] = '*'
-            response['Access-Control-Allow-Headers'] = 'Content-Type, X-Device-Token'
+            response['Access-Control-Allow-Headers'] = 'Content-Type, X-Device-Token, If-None-Match'
+            response['Access-Control-Expose-Headers'] = 'ETag, Date'
             return response
 
         template = screen.active_template
         if not template.width or not template.height or template.width <= 0 or template.height <= 0:
             response = JsonResponse({'status': 'error', 'error': 'Template has invalid dimensions', 'template': None}, status=200)
+            response['ETag'] = etag
             response['Access-Control-Allow-Origin'] = '*'
+            response['Access-Control-Expose-Headers'] = 'ETag, Date'
             return response
 
         serializer = PlayerTemplateSerializer(template, context={'request': request, 'screen': screen})
@@ -723,9 +754,11 @@ def player_template_endpoint(request):
             'screen_id': str(screen.id),
             'template': serializer.data,
         }, status=200)
+        response['ETag'] = etag
         response['Access-Control-Allow-Origin'] = '*'
         response['Access-Control-Allow-Methods'] = 'GET, OPTIONS'
-        response['Access-Control-Allow-Headers'] = 'Content-Type, X-Device-Token'
+        response['Access-Control-Allow-Headers'] = 'Content-Type, X-Device-Token, If-None-Match'
+        response['Access-Control-Expose-Headers'] = 'ETag, Date'
         return response
 
     except Exception as e:

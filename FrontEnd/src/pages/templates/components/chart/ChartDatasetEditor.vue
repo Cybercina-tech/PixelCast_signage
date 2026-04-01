@@ -29,9 +29,19 @@
           Tension
           <input type="number" min="0" max="1" step="0.1" class="input-base w-full px-2 py-1 mt-1 text-xs" :value="dataset.tension ?? 0.3" @input="patchDataset(index, 'tension', Number($event.target.value || 0))" />
         </label>
-        <label class="text-[11px] text-gray-400 flex items-center gap-2 mt-5">
-          <input type="checkbox" :checked="Boolean(dataset.fill)" @change="patchDataset(index, 'fill', $event.target.checked)" />
-          Fill
+        <label class="editor-switch-row editor-switch-row--compact mt-5">
+          <span class="text-[11px] text-primary">Fill</span>
+          <span class="editor-switch">
+            <input
+              type="checkbox"
+              class="sr-only peer"
+              :checked="Boolean(dataset.fill)"
+              @change="patchDataset(index, 'fill', $event.target.checked)"
+            />
+            <span class="editor-switch-track">
+              <span class="editor-switch-thumb"></span>
+            </span>
+          </span>
         </label>
       </div>
     </div>

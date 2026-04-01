@@ -533,14 +533,16 @@ const filteredContents = computed(() => {
   // Only show contents with secure_url (uploaded files)
   filtered = filtered.filter(c => c.secure_url)
 
+  // Standalone library uploads only (never widget-bound rows from template sync)
+  filtered = filtered.filter(c => c.widget == null || c.widget === '')
+
   return filtered
 })
 
 // Load contents when modal opens
 const loadContents = async () => {
   try {
-    // Clear filters to fetch all contents (backend will filter by user/org)
-    await contentStore.fetchContents()
+    await contentStore.fetchContents({ library_only: 1 })
   } catch (error) {
     console.error('Failed to load contents:', error)
     notify.error('Failed to load media library')

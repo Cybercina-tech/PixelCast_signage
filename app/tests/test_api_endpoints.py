@@ -2,7 +2,10 @@
 Integration tests for all API endpoints.
 """
 import json
+from datetime import timedelta
+
 from django.urls import reverse
+from django.utils import timezone
 from rest_framework import status
 from tests.base import BaseAPITestCase
 from io import BytesIO
@@ -158,6 +161,20 @@ class ContentAPITests(BaseAPITestCase):
         
         self.assertResponseSuccess(response)
         self.assertEqual(len(response.data['results']), 2)
+
+    def test_list_contents_library_only_returns_standalone_uploads(self):
+        """Media library lists only rows with no widget (not template/widget-bound)."""
+        from templates.models import Content
+
+        self.create_content(name='Widget bound')
+        Content.objects.create(name='Library upload', type='image', widget=None)
+
+        url = reverse('content-list')
+        response = self.client.get(url, {'library_only': '1'})
+        self.assertResponseSuccess(response)
+        self.assertEqual(len(response.data['results']), 1)
+        self.assertEqual(response.data['results'][0]['name'], 'Library upload')
+        self.assertIsNone(response.data['results'][0].get('widget'))
     
     def test_create_content(self):
         """Test creating content."""
@@ -277,7 +294,7 @@ class CommandAPITests(BaseAPITestCase):
         data = {
             'name': 'New Command',
             'type': 'restart',
-            'screen': str(screen.id),
+            'screen_id': str(screen.id),
             'payload': {}
         }
         response = self.client.post(url, data, format='json')

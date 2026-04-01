@@ -56,7 +56,7 @@
       :style="templateContainerStyle"
     >
       <!-- Logical canvas: template pixel space (e.g. 1920×1080), scaled to fit viewport (contain) -->
-      <div class="template-scaler" :style="templateScalerStyle">
+      <div class="template-scaler" :key="templateMountKey" :style="templateScalerStyle">
         <LayerRenderer
           v-for="layer in sortedLayers"
           :key="layer.id"
@@ -74,6 +74,7 @@ import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { usePlayerStore } from '@/stores/player'
 import { useResponsiveScaling } from '@/composables/useResponsiveScaling'
+import { buildPlaybackLayers } from '@/utils/templatePlaybackLayers'
 import LayerRenderer from '@/components/player/LayerRenderer.vue'
 import UnpairMessage from '@/components/player/UnpairMessage.vue'
 import PairingFlow from '@/components/player/PairingFlow.vue'
@@ -97,6 +98,8 @@ const errorMessage = computed(() => playerStore.errorMessage)
 const retryCountdown = computed(() => playerStore.retryCountdown)
 const overlayVisible = computed(() => playerStore.overlayVisible)
 const overlayMessage = computed(() => playerStore.overlayMessage)
+/** Bumped on remote "restart" command to remount layers/widgets without reloading the page. */
+const templateMountKey = computed(() => playerStore.templateMountKey)
 const showNoTemplateState = ref(false)
 let noTemplateTimer = null
 
@@ -215,95 +218,7 @@ function handlePaired({ screenId, deviceToken }) {
   })
 }
 
-const parseTemplateUnit = (raw, total, fallback = 0) => {
-  if (typeof raw === 'number' && Number.isFinite(raw)) return raw
-  if (typeof raw === 'string') {
-    const value = raw.trim()
-    if (value.endsWith('%')) {
-      const pct = Number.parseFloat(value.slice(0, -1))
-      if (Number.isFinite(pct)) return (pct / 100) * total
-    }
-    const parsed = Number.parseFloat(value)
-    if (Number.isFinite(parsed)) return parsed
-  }
-  return fallback
-}
-
-const sortedLayers = computed(() => {
-  if (!template.value) return []
-
-  const tplWidth = Number(template.value.width) || 1920
-  const tplHeight = Number(template.value.height) || 1080
-  const dbLayers = Array.isArray(template.value.layers) ? template.value.layers : []
-  const activeDbLayers = dbLayers
-    .filter(layer => layer?.is_active !== false)
-    .sort((a, b) => {
-      const zA = a?.z_index || 0
-      const zB = b?.z_index || 0
-      if (zA !== zB) return zA - zB
-      return (a?.name || '').localeCompare(b?.name || '')
-    })
-
-  const configWidgets = Array.isArray(template.value?.config_json?.widgets)
-    ? template.value.config_json.widgets
-    : []
-  if (!configWidgets.length) return activeDbLayers
-
-  // Build a lookup from DB widgets (for secure media URLs + content records).
-  const dbWidgetMap = new Map()
-  activeDbLayers.forEach((layer) => {
-    const widgets = Array.isArray(layer?.widgets) ? layer.widgets : []
-    widgets.forEach((widget) => {
-      if (widget?.id) dbWidgetMap.set(String(widget.id), widget)
-    })
-  })
-
-  const mergedWidgets = configWidgets.map((configWidget, idx) => {
-    const widgetId = String(configWidget?.id || '')
-    const dbWidget = dbWidgetMap.get(widgetId) || {}
-    const styleJson = (configWidget?.style && typeof configWidget.style === 'object')
-      ? configWidget.style
-      : (dbWidget?.content_json || {})
-    return {
-      ...dbWidget,
-      id: dbWidget.id || configWidget.id || `cfg-${idx}`,
-      name: configWidget?.name || dbWidget?.name || `Widget ${idx + 1}`,
-      type: configWidget?.type || dbWidget?.type || 'text',
-      x: parseTemplateUnit(configWidget?.x, tplWidth, Number(dbWidget?.x) || 0),
-      y: parseTemplateUnit(configWidget?.y, tplHeight, Number(dbWidget?.y) || 0),
-      width: Math.max(1, parseTemplateUnit(configWidget?.width, tplWidth, Number(dbWidget?.width) || 1)),
-      height: Math.max(1, parseTemplateUnit(configWidget?.height, tplHeight, Number(dbWidget?.height) || 1)),
-      z_index: configWidget?.zIndex ?? configWidget?.z_index ?? dbWidget?.z_index ?? idx,
-      is_active: configWidget?.visible !== false && dbWidget?.is_active !== false,
-      content_json: styleJson,
-      content_url: configWidget?.content || dbWidget?.content_url || '',
-      contents: Array.isArray(dbWidget?.contents) ? dbWidget.contents : [],
-    }
-  })
-    .filter(widget => widget.is_active !== false)
-    .sort((a, b) => {
-      const zA = a?.z_index || 0
-      const zB = b?.z_index || 0
-      if (zA !== zB) return zA - zB
-      return (a?.name || '').localeCompare(b?.name || '')
-    })
-
-  return [{
-    id: 'config-layout-layer',
-    name: 'Config Layout Layer',
-    x: 0,
-    y: 0,
-    width: tplWidth,
-    height: tplHeight,
-    z_index: 0,
-    background_color: 'transparent',
-    opacity: 1,
-    animation_type: 'none',
-    animation_duration: 0,
-    is_active: true,
-    widgets: mergedWidgets,
-  }]
-})
+const sortedLayers = computed(() => buildPlaybackLayers(template.value))
 
 const {
   viewportWidth,

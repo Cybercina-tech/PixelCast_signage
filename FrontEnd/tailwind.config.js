@@ -11,6 +11,8 @@ export default {
     'bg-surface-1',
     'bg-surface-2',
     'bg-surface-3',
+    'bg-editor-workspace',
+    'bg-editor-matte',
     'border',
     'border-border-color',
   ],
@@ -35,6 +37,11 @@ export default {
           2: 'var(--surface-2)',
           3: 'var(--surface-3)',
           inset: 'var(--surface-inset)',
+        },
+        /* Template editor shell — sync with style.css Antler tokens */
+        editor: {
+          workspace: 'var(--editor-workspace-bg)',
+          matte: 'var(--editor-matte-bg)',
         },
         // Border tokens — هم به‌صورت utility اختصاصی و هم نام عمومی
         border: 'var(--border-color)',
@@ -127,6 +134,7 @@ export default {
       },
       boxShadow: {
         'card-dark': '0 4px 20px -2px rgba(0, 0, 0, 0.5)',
+        soft: 'var(--shadow-soft)',
       },
     },
   },

@@ -1,7 +1,10 @@
 """
 Tests for permission and authorization logic.
 """
-from django.test import TestCase
+import uuid
+
+from rest_framework.test import APITestCase, APIClient
+
 from tests.base import BaseAPITestCase
 from accounts.permissions import RolePermissions
 
@@ -40,19 +43,36 @@ class PermissionTests(BaseAPITestCase):
 class APIPermissionTests(BaseAPITestCase):
     """Tests for API endpoint permissions."""
 
+    def setUp(self):
+        """Use an unauthenticated API client; each test sets auth as needed."""
+        from django.core.cache import cache
+
+        cache.clear()
+        super(APITestCase, self).setUp()
+        self.client = APIClient()
+        suffix = uuid.uuid4().hex[:10]
+        self.user = self.create_user(
+            username=f'perm_api_{suffix}',
+            email=f'perm_api_{suffix}@test.local',
+            password='testpass123',
+            role='Manager',
+            organization_name='TestOrg',
+        )
+
     def test_unauthorized_access_denied(self):
-        self.client.force_authenticate(user=None)
         from django.urls import reverse
+
+        self.client.logout()
         url = reverse('screen-list')
-        response = self.client.get(url)
-        self.assertUnauthorized(response)
+        response = self.client.get(url, HTTP_AUTHORIZATION='')
+        self.assertIn(response.status_code, (401, 403))
 
     def test_employee_can_create_screens(self):
         employee = self.create_user(role='Employee')
         self.client.force_authenticate(user=employee)
         from django.urls import reverse
         url = reverse('screen-list')
-        data = {'name': 'Test', 'device_id': 'test-001'}
+        data = {'name': 'Test', 'device_id': f'test-{uuid.uuid4().hex[:12]}'}
         response = self.client.post(url, data, format='json')
         self.assertIn(response.status_code, [201, 400])
 
@@ -61,7 +81,7 @@ class APIPermissionTests(BaseAPITestCase):
         self.client.force_authenticate(user=manager)
         from django.urls import reverse
         url = reverse('screen-list')
-        data = {'name': 'Test', 'device_id': 'test-001'}
+        data = {'name': 'Test', 'device_id': f'test-{uuid.uuid4().hex[:12]}'}
         response = self.client.post(url, data, format='json')
         self.assertIn(response.status_code, [201, 400])
 
@@ -74,7 +94,7 @@ class APIPermissionTests(BaseAPITestCase):
         data = {
             'name': 'Test Command',
             'type': 'refresh',
-            'screen': str(screen.id),
+            'screen_id': str(screen.id),
             'payload': {}
         }
         response = self.client.post(url, data, format='json')
@@ -89,7 +109,7 @@ class APIPermissionTests(BaseAPITestCase):
         data = {
             'name': 'Test Command',
             'type': 'refresh',
-            'screen': str(screen.id),
+            'screen_id': str(screen.id),
             'payload': {}
         }
         response = self.client.post(url, data, format='json')

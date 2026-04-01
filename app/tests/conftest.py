@@ -2,6 +2,15 @@
 Pytest configuration and shared fixtures.
 """
 import pytest
+
+
+def pytest_collection_modifyitems(config, items):
+    """Run APIPermissionTests last to avoid DRF client/session pollution from other tests."""
+    tail = [i for i in items if 'APIPermissionTests' in i.nodeid]
+    if not tail:
+        return
+    head = [i for i in items if 'APIPermissionTests' not in i.nodeid]
+    items[:] = head + tail
 from django.test import TestCase, Client
 from django.contrib.auth import get_user_model
 from django.utils import timezone

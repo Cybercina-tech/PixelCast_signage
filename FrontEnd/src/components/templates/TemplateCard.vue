@@ -14,31 +14,14 @@
       </span>
     </div>
 
-    <!-- Mini Canvas Preview -->
+    <!-- Mini Canvas Preview (same LayerRenderer + contain scale as screen list) -->
     <div class="relative bg-surface-inset border-b border-border-color p-4">
-      <div 
-        class="aspect-video bg-slate-100 dark:bg-slate-900 rounded-lg overflow-hidden relative"
-        :style="{ aspectRatio: `${template.width}/${template.height}` }"
+      <div
+        class="rounded-lg overflow-hidden relative bg-black"
+        :style="{ aspectRatio: `${template.width || 16}/${template.height || 9}` }"
       >
-        <!-- Monitor Frame Effect -->
-        <div class="absolute inset-0 border-2 border-border-color rounded-lg pointer-events-none"></div>
-        
-        <!-- Template Preview Content -->
-        <div class="w-full h-full flex items-center justify-center bg-gradient-to-br from-indigo-100 to-blue-100 dark:from-indigo-500/20 dark:to-blue-500/20 relative">
-          <!-- Grid Pattern Background -->
-          <div class="absolute inset-0 bg-grid-pattern opacity-10"></div>
-          
-          <!-- Preview Content -->
-          <div class="relative z-10 text-center p-4">
-            <DocumentTextIcon class="w-12 h-12 text-indigo-400 mx-auto mb-2" />
-            <p class="text-xs text-primary font-medium truncate max-w-[200px]">
-              {{ template.name }}
-            </p>
-            <p class="text-xs text-muted mt-1">
-              {{ template.width }}×{{ template.height }}
-            </p>
-          </div>
-        </div>
+        <div class="absolute inset-0 border-2 border-border-color rounded-lg pointer-events-none z-[2]"></div>
+        <TemplateListPreview :template="template" />
       </div>
     </div>
 
@@ -131,11 +114,11 @@
 
 <script setup>
 import {
-  DocumentTextIcon,
   PencilIcon,
   DocumentDuplicateIcon,
   TrashIcon,
 } from '@heroicons/vue/24/outline'
+import TemplateListPreview from './TemplateListPreview.vue'
 
 const props = defineProps({
   template: {
@@ -193,13 +176,6 @@ const getCreatedBy = (createdBy) => {
 </script>
 
 <style scoped>
-.bg-grid-pattern {
-  background-image: 
-    linear-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.1) 1px, transparent 1px);
-  background-size: 20px 20px;
-}
-
 .line-clamp-2 {
   display: -webkit-box;
   -webkit-line-clamp: 2;

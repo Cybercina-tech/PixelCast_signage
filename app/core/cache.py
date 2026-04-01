@@ -110,7 +110,8 @@ class CacheManager:
         try:
             if timeout is None:
                 timeout = cls.TIMEOUT_MEDIUM
-            return cache.set(key, value, timeout, version)
+            cache.set(key, value, timeout, version)
+            return True
         except Exception as e:
             logger.error(f"Cache set error for key {key}: {e}")
             return False
@@ -158,6 +159,16 @@ class CacheManager:
     @classmethod
     def invalidate_resource(cls, resource_type: str, resource_id: str) -> None:
         """Invalidate all cache entries for a specific resource."""
+        prefix_by_type = {
+            'screen': cls.PREFIX_SCREEN,
+            'template': cls.PREFIX_TEMPLATE,
+            'content': cls.PREFIX_CONTENT,
+            'command': cls.PREFIX_COMMAND,
+            'user': cls.PREFIX_USER,
+        }
+        if resource_type in prefix_by_type:
+            cache.delete(cls.generate_key(prefix_by_type[resource_type], resource_id))
+
         patterns = [
             f"{resource_type}:{resource_id}:*",
             f"{resource_type}:{resource_id}",

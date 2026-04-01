@@ -186,6 +186,7 @@
           <table class="w-full">
             <thead class="bg-card border-b border-border-color">
               <tr>
+                <th class="px-4 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider w-40">Preview</th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">Status</th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">Name</th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">Pairing Code</th>
@@ -205,6 +206,11 @@
                   'hover:bg-card'
                 ]"
               >
+                <td class="px-4 py-3 align-middle w-40">
+                  <div class="w-36 max-w-full aspect-video rounded-md overflow-hidden border border-border-color bg-black">
+                    <ScreenTemplatePreview :screen="screen" />
+                  </div>
+                </td>
                 <td class="px-6 py-4 whitespace-nowrap">
                   <StatusIndicator :status="getScreenStatus(screen)" />
                 </td>
@@ -295,10 +301,14 @@ import {
 } from '@heroicons/vue/24/outline'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import ScreenCard from '@/components/screens/ScreenCard.vue'
+import ScreenTemplatePreview from '@/components/screens/ScreenTemplatePreview.vue'
 import StatusIndicator from '@/components/screens/StatusIndicator.vue'
+import { templatesAPI } from '@/services/api'
+import { useTemplatesStore } from '@/stores/templates'
 
 const router = useRouter()
 const screensStore = useScreensStore()
+const templatesStore = useTemplatesStore()
 const commandsStore = useCommandsStore()
 const notify = useNotification()
 
@@ -369,6 +379,30 @@ const clearFilters = () => {
   screensStore.fetchScreens()
 }
 
+/** Load full templates (with layers) for list previews; screen list API only returns template id/name. */
+async function prefetchActiveTemplates() {
+  const ids = [
+    ...new Set(screensStore.screens.map((s) => s.active_template?.id).filter(Boolean)),
+  ]
+  await Promise.all(
+    ids.map(async (id) => {
+      const cached = templatesStore.templates.find((t) => t.id === id)
+      if (cached?.layers?.length) return
+      try {
+        const { data } = await templatesAPI.detail(id)
+        const idx = templatesStore.templates.findIndex((t) => t.id === id)
+        if (idx !== -1) {
+          templatesStore.templates[idx] = data
+        } else {
+          templatesStore.templates.push(data)
+        }
+      } catch {
+        /* ignore */
+      }
+    })
+  )
+}
+
 const handleRefresh = async (screen) => {
   try {
     await commandsStore.createCommand({
@@ -409,8 +443,8 @@ const startStatusPolling = () => {
   // Poll every 30 seconds
   statusPollInterval = setInterval(async () => {
     try {
-      // Refresh status for all screens
       await screensStore.fetchScreens()
+      await prefetchActiveTemplates()
     } catch (error) {
       console.error('Error polling screen status:', error)
     }
@@ -426,6 +460,7 @@ const stopStatusPolling = () => {
 
 onMounted(async () => {
   await screensStore.fetchScreens()
+  await prefetchActiveTemplates()
   startStatusPolling()
 })
 

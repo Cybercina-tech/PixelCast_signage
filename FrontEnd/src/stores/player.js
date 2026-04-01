@@ -28,6 +28,10 @@ export const usePlayerStore = defineStore('player', {
     activeScreenId: null,
     /** Difference serverNow - deviceNow from HTTP Date header on template fetch (ms). */
     serverTimeOffsetMs: 0,
+    /** Last ETag from GET /player/template/ (for If-None-Match on silent polls). */
+    templateEtag: null,
+    /** Bumped on soft "restart" command to remount the template tree without document reload. */
+    templateMountKey: 0,
   }),
 
   actions: {
@@ -217,20 +221,36 @@ export const usePlayerStore = defineStore('player', {
 
     // ── Template ───────────────────────────────────────────────────
 
-    async fetchTemplate() {
+    /**
+     * Load or refresh the active template for this screen.
+     * @param {{ silent?: boolean }} options — silent: no loading flash, keep playing on transient errors (polling).
+     */
+    async fetchTemplate(options = {}) {
+      const silent = options.silent === true
       try {
         if (!this.loadDeviceIdentity(this.activeScreenId)) {
           const error = new Error('Screen not paired. Please pair your screen first.')
           error.code = 'SCREEN_NOT_PAIRED'
           throw error
         }
-        this.status = 'loading'
-        this.errorMessage = null
-        const response = await playerAPI.fetchTemplate()
-        const { _timeSync, ...payload } = response
+        if (!silent) {
+          this.status = 'loading'
+          this.errorMessage = null
+        }
+        const response = await playerAPI.fetchTemplate({
+          ifNoneMatch: silent && this.templateEtag ? this.templateEtag : undefined,
+        })
+
+        if (response.status === 'not_modified') {
+          if (response._etag) this.templateEtag = response._etag
+          return
+        }
+
+        const { _timeSync, _etag, ...payload } = response
+        if (_etag) this.templateEtag = _etag
         if (_timeSync) {
           this.serverTimeOffsetMs = _timeSync.serverNowMs - _timeSync.clientNowMs
-        } else {
+        } else if (!silent) {
           this.serverTimeOffsetMs = 0
         }
 
@@ -257,6 +277,10 @@ export const usePlayerStore = defineStore('player', {
           this.status = 'unpaired'
           this.errorMessage = 'Screen not found. Please re-pair.'
           this.stopPolling()
+          return
+        }
+
+        if (silent && this.status === 'success' && this.template) {
           return
         }
 
@@ -371,14 +395,14 @@ export const usePlayerStore = defineStore('player', {
         this.fetchAndExecuteCommands().catch(() => {})
       }, 5000)
 
-      // Template polling fallback:
-      // keep this frequent enough so screens update automatically even if a command is delayed.
+      // Template polling safety net: commands deliver refresh quickly; this catches missed pushes.
+      // Silent fetch + If-None-Match avoids loading flicker and cheap 304s when nothing changed.
       const poll = () => {
-        const interval = this.status === 'no_template' ? 10000 : 15000
+        const interval = this.status === 'no_template' ? 20000 : 60000
         this.pollingInterval = setInterval(() => {
-          this.fetchTemplate().then(() => {
+          this.fetchTemplate({ silent: true }).then(() => {
             if (this.pollingInterval) {
-              const newInterval = this.status === 'no_template' ? 10000 : 15000
+              const newInterval = this.status === 'no_template' ? 20000 : 60000
               if (newInterval !== interval) {
                 clearInterval(this.pollingInterval)
                 this.pollingInterval = null
@@ -421,18 +445,19 @@ export const usePlayerStore = defineStore('player', {
           case 'restart':
             success = true
             await playerAPI.updateCommandStatus(id, 'done', '', {})
-            setTimeout(() => window.location.reload(), 1000)
+            this.templateMountKey += 1
+            await this.fetchTemplate({ silent: true })
             return
 
           case 'refresh':
             success = true
-            await this.fetchTemplate()
+            await this.fetchTemplate({ silent: true })
             break
 
           case 'change_template':
             if (payload?.template_id) {
               success = true
-              await this.fetchTemplate()
+              await this.fetchTemplate({ silent: true })
             } else {
               errorMessage = 'Template ID not provided in payload'
             }
@@ -456,7 +481,10 @@ export const usePlayerStore = defineStore('player', {
             this.clearDeviceIdentity()
             success = true
             await playerAPI.updateCommandStatus(id, 'done', '', {})
-            window.location.reload()
+            this.status = 'unpaired'
+            this.template = null
+            this.templateEtag = null
+            this.stopPolling()
             return
 
           case 'custom':

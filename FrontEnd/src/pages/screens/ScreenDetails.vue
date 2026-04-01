@@ -27,9 +27,22 @@
     <div v-else-if="screen" class="space-y-6 pb-6">
       <!-- Header -->
       <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <h1 class="text-3xl font-bold text-primary mb-2">{{ screen.name || 'Unnamed Screen' }}</h1>
-          <p class="text-secondary">{{ screen.device_id }}</p>
+        <div class="flex items-start gap-3 min-w-0">
+          <button
+            type="button"
+            @click="goToScreensList"
+            class="btn-outline px-3 py-2 rounded-lg text-sm font-medium transition-all duration-400 flex items-center gap-2 shrink-0 mt-0.5"
+            title="Back to Screens"
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            Back
+          </button>
+          <div class="min-w-0">
+            <h1 class="text-3xl font-bold text-primary mb-2">{{ screen.name || 'Unnamed Screen' }}</h1>
+            <p class="text-secondary">{{ screen.device_id }}</p>
+          </div>
         </div>
         <div class="flex items-center gap-2">
           <!-- Online Status Indicator -->
@@ -439,6 +452,10 @@ const getScreenId = () => {
     return route.query.id
   }
   return null
+}
+
+const goToScreensList = () => {
+  router.push({ name: 'screens' })
 }
 
 const formatDate = (dateString) => {

@@ -11,6 +11,7 @@ Tests core functionality including:
 from django.test import TestCase
 from django.utils import timezone
 from django.core.cache import cache
+from django.core.exceptions import ValidationError
 from datetime import timedelta
 import json
 
@@ -81,21 +82,23 @@ class NotificationDispatcherTestCase(TestCase):
     
     def test_dispatch_invalid_event_key(self):
         """Test dispatch with invalid event key"""
-        with self.assertRaises(ValueError):
-            NotificationDispatcher.dispatch(
-                event_key='invalid-event-key',
-                payload={'test': 'data'}
-            )
-    
+        result = NotificationDispatcher.dispatch(
+            event_key='invalid-event-key',
+            payload={'test': 'data'}
+        )
+        self.assertFalse(result['success'])
+        self.assertIn('dispatch error', result['message'].lower())
+
     def test_dispatch_payload_too_large(self):
         """Test dispatch with payload exceeding size limit"""
         large_payload = {'data': 'x' * (NotificationDispatcher.MAX_PAYLOAD_SIZE + 1)}
-        
-        with self.assertRaises(ValueError):
-            NotificationDispatcher.dispatch(
-                event_key='test.event',
-                payload=large_payload
-            )
+
+        result = NotificationDispatcher.dispatch(
+            event_key='test.event',
+            payload=large_payload
+        )
+        self.assertFalse(result['success'])
+        self.assertIn('dispatch error', result['message'].lower())
     
     def test_cooldown_enforcement(self):
         """Test cooldown enforcement"""

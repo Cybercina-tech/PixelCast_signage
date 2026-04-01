@@ -8,15 +8,22 @@
         class="relative bg-black rounded overflow-hidden aspect-video flex items-center justify-center"
         :class="{ 'border-2 border-green-500': isOnline, 'border-2 border-gray-600': !isOnline }"
       >
-        <!-- Active Template Preview -->
-        <div v-if="hasRenderableTemplate" class="w-full h-full relative preview-canvas">
-          <LayerRenderer
-            v-for="layer in sortedLayers"
-            :key="layer.id"
-            :layer="layer"
-            :template-width="templateWidth"
-            :template-height="templateHeight"
-          />
+        <!-- Active Template Preview: scale entire template to fit (same coordinate space as player) -->
+        <div
+          v-if="hasRenderableTemplate"
+          class="absolute inset-0 flex items-center justify-center overflow-hidden"
+        >
+          <div :style="clipWrapperStyle" class="shrink-0">
+            <div :style="innerStageStyle" class="relative preview-canvas">
+              <LayerRenderer
+                v-for="layer in sortedLayers"
+                :key="layer.id"
+                :layer="layer"
+                :template-width="templateWidth"
+                :template-height="templateHeight"
+              />
+            </div>
+          </div>
         </div>
         <div v-else-if="activeTemplate" class="w-full h-full relative">
           <div class="absolute inset-0 flex flex-col items-center justify-center p-4 text-center text-gray-300">
@@ -79,6 +86,8 @@
 <script setup>
 import { computed, ref } from 'vue'
 import LayerRenderer from '@/components/player/LayerRenderer.vue'
+import { useTemplatePreviewScale } from '@/composables/useTemplatePreviewScale.js'
+import { buildPlaybackLayers, templateHasRenderablePlayback } from '@/utils/templatePlaybackLayers'
 
 const props = defineProps({
   activeTemplate: {
@@ -101,19 +110,19 @@ const monitorScreenRef = ref(null)
 const templateWidth = computed(() => Number(props.activeTemplate?.width) || 1920)
 const templateHeight = computed(() => Number(props.activeTemplate?.height) || 1080)
 
-const sortedLayers = computed(() => {
-  if (!Array.isArray(props.activeTemplate?.layers)) return []
-  return [...props.activeTemplate.layers]
-    .filter((layer) => layer && layer.is_active !== false)
-    .sort((a, b) => {
-      const zA = a.z_index || 0
-      const zB = b.z_index || 0
-      if (zA !== zB) return zA - zB
-      return (a.name || '').localeCompare(b.name || '')
-    })
-})
+const { clipWrapperStyle, innerStageStyle } = useTemplatePreviewScale(
+  monitorScreenRef,
+  templateWidth,
+  templateHeight
+)
 
-const hasRenderableTemplate = computed(() => !!props.activeTemplate && sortedLayers.value.length > 0)
+const sortedLayers = computed(() =>
+  props.activeTemplate ? buildPlaybackLayers(props.activeTemplate) : []
+)
+
+const hasRenderableTemplate = computed(
+  () => !!props.activeTemplate && templateHasRenderablePlayback(props.activeTemplate)
+)
 
 function getCaptureElement() {
   return monitorScreenRef.value

@@ -45,10 +45,11 @@ PASSWORD_HASHERS = [
     'django.contrib.auth.hashers.MD5PasswordHasher',
 ]
 
-# Disable caching
+# In-memory cache so CacheManager / RateLimiter tests work without Redis
 CACHES = {
     'default': {
-        'BACKEND': 'django.core.cache.backends.dummy.DummyCache',
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'screengram-test-cache',
     }
 }
 
@@ -100,3 +101,6 @@ CONTENT_STORAGE = {
 
 # Disable S3 for tests (use local storage)
 USE_S3_STORAGE = False
+
+# Avoid license middleware blocking API tests that expect 201/401/403 from auth alone
+LICENSE_ENFORCEMENT_ENABLED = False

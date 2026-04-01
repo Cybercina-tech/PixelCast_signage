@@ -1,8 +1,8 @@
 <template>
   <div class="date-widget" :style="dateStyle">
-    <div v-if="showWeekday && displayMode === 'stacked'" class="date-stacked">
+    <div v-if="displayMode === 'stacked'" class="date-stacked">
       <span class="date-main">{{ formattedDate }}</span>
-      <span class="date-weekday">{{ formattedWeekday }}</span>
+      <span v-if="showWeekday" class="date-weekday">{{ formattedWeekday }}</span>
     </div>
     <span v-else>{{ inlineValue }}</span>
   </div>
@@ -11,6 +11,7 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { formatDateValue, formatWeekdayValue } from '@/utils/dateTimeFormatters'
+import { resolveWidgetBackgroundColor } from '@/utils/widgetBackground'
 
 const props = defineProps({
   widget: {
@@ -23,12 +24,22 @@ const now = ref(new Date())
 let timerId = null
 const styleJson = computed(() => props.widget?.content_json || {})
 
+/** Mirrors clock widget: dateOnly | datePlusWeekday | stacked; legacy `inline` maps from showWeekday */
 const displayMode = computed(() => {
   const raw = styleJson.value?.displayMode
-  return raw === 'stacked' ? 'stacked' : 'inline'
+  if (raw === 'stacked' || raw === 'datePlusWeekday') return raw
+  if (raw === 'timePlusWeekday') return 'datePlusWeekday'
+  if (raw === 'dateOnly' || raw === 'timeOnly') return 'dateOnly'
+  if (raw === 'inline') {
+    return styleJson.value?.showWeekday === true ? 'datePlusWeekday' : 'dateOnly'
+  }
+  return 'dateOnly'
 })
 
-const showWeekday = computed(() => styleJson.value?.showWeekday === true)
+const showWeekday = computed(() => {
+  if (styleJson.value?.showWeekday === true) return true
+  return displayMode.value !== 'dateOnly'
+})
 
 const formattedDate = computed(() => {
   return formatDateValue(now.value, {
@@ -41,7 +52,10 @@ const formattedWeekday = computed(() => formatWeekdayValue(now.value, styleJson.
 
 const inlineValue = computed(() => {
   if (!showWeekday.value) return formattedDate.value
-  return `${formattedWeekday.value}, ${formattedDate.value}`
+  if (displayMode.value === 'datePlusWeekday') {
+    return `${formattedWeekday.value} | ${formattedDate.value}`
+  }
+  return formattedDate.value
 })
 
 const dateStyle = computed(() => {
@@ -60,7 +74,7 @@ const dateStyle = computed(() => {
     fontSize: resolvedFontSize,
     fontFamily: style.fontFamily || 'Arial, sans-serif',
     fontWeight: style.fontWeight || '600',
-    backgroundColor: style.backgroundColor || 'transparent',
+    backgroundColor: resolveWidgetBackgroundColor(style),
     padding: '12px',
     boxSizing: 'border-box',
     textAlign: style.textAlign || 'center',

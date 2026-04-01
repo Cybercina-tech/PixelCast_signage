@@ -7,6 +7,7 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { formatWeekdayValue } from '@/utils/dateTimeFormatters'
+import { resolveWidgetBackgroundColor } from '@/utils/widgetBackground'
 
 const props = defineProps({
   widget: {
@@ -38,7 +39,7 @@ const weekdayStyle = computed(() => {
     fontSize: resolvedFontSize,
     fontFamily: style.fontFamily || 'Arial, sans-serif',
     fontWeight: style.fontWeight || '700',
-    backgroundColor: style.backgroundColor || 'transparent',
+    backgroundColor: resolveWidgetBackgroundColor(style),
     padding: '12px',
     boxSizing: 'border-box',
     textAlign: style.textAlign || 'center',

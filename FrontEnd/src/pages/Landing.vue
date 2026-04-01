@@ -110,30 +110,30 @@
                   Real-time digital signage with secure setup wizard, remote screen control, and enterprise-grade monitoring.
                 </p>
                 <div
-                  class="grid grid-cols-1 min-[420px]:grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4 justify-center lg:justify-start pt-1 w-full max-w-3xl min-[420px]:max-w-none lg:max-w-none [&>a]:min-h-14 [&>button]:min-h-14"
+                  class="hero-cta-grid grid grid-cols-2 gap-2.5 sm:gap-3 md:gap-4 pt-1 w-full max-w-md sm:max-w-lg md:max-w-xl mx-auto lg:mx-0"
                 >
                   <router-link
                     :to="isInstalled ? '/signup' : '/install'"
-                    class="neon-button-large px-4 sm:px-6 py-3 rounded-lg font-semibold text-base sm:text-lg text-white transition-all duration-300 text-center inline-flex items-center justify-center w-full"
+                    class="hero-cta-btn neon-button-large rounded-xl font-semibold !text-white visited:!text-white hover:!text-white transition-all duration-300 text-center inline-flex items-center justify-center w-full min-w-0 min-h-[3rem] sm:min-h-[3.25rem] px-2.5 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm md:text-base leading-tight"
                   >
                     {{ isInstalled ? 'Start Free Trial' : 'Start Installation' }}
                   </router-link>
                   <a
                     href="/documentation/index.html"
-                    class="glass-card px-4 sm:px-6 py-3 rounded-lg font-semibold text-base sm:text-lg text-white border border-white/20 hover:border-white/40 transition-all duration-300 text-center inline-flex items-center justify-center w-full"
+                    class="hero-cta-btn glass-card rounded-xl font-semibold !text-white visited:!text-white hover:!text-white border border-white/20 hover:border-white/40 transition-all duration-300 text-center inline-flex items-center justify-center w-full min-w-0 min-h-[3rem] sm:min-h-[3.25rem] px-2.5 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm md:text-base leading-tight"
                   >
                     Documentation
                   </a>
                   <router-link
                     to="/data-center"
-                    class="glass-card px-4 sm:px-6 py-3 rounded-lg font-semibold text-base sm:text-lg text-white border border-white/20 hover:border-white/40 transition-all duration-300 text-center inline-flex items-center justify-center w-full"
+                    class="hero-cta-btn glass-card rounded-xl font-semibold !text-white visited:!text-white hover:!text-white border border-white/20 hover:border-white/40 transition-all duration-300 text-center inline-flex items-center justify-center w-full min-w-0 min-h-[3rem] sm:min-h-[3.25rem] px-2.5 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm md:text-base leading-tight"
                   >
                     Data Center
                   </router-link>
                   <button 
                     type="button"
                     @click="scrollToSection(1)" 
-                    class="glass-card px-4 sm:px-6 py-3 rounded-lg font-semibold text-base sm:text-lg text-white border border-white/20 hover:border-white/40 transition-all duration-300 text-center inline-flex items-center justify-center w-full"
+                    class="hero-cta-btn glass-card rounded-xl font-semibold !text-white hover:!text-white border border-white/20 hover:border-white/40 transition-all duration-300 text-center inline-flex items-center justify-center w-full min-w-0 min-h-[3rem] sm:min-h-[3.25rem] px-2.5 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm md:text-base leading-tight"
                   >
                     Explore Features
                   </button>
@@ -809,6 +809,19 @@ onUnmounted(() => {
   transform: translateY(-3px) scale(1.02);
 }
 
+/* Hero CTAs: body/link inherit would otherwise use --text-body (dark in light mode). */
+.hero-cta-grid .hero-cta-btn {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff;
+}
+
+.hero-cta-grid .hero-cta-btn:hover,
+.hero-cta-grid .hero-cta-btn:visited,
+.hero-cta-grid .hero-cta-btn:active {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff;
+}
+
 /* Floating 3D Mockup */
 .perspective-1000 {
   perspective: 1000px;
@@ -958,6 +971,17 @@ onUnmounted(() => {
 @media (max-width: 768px) {
   .glass-card {
     padding: 1rem;
+  }
+
+  /* Hero CTA grid: keep compact padding (global .glass-card rule above uses padding shorthand). */
+  .hero-cta-grid .hero-cta-btn {
+    padding: 0.625rem 0.5rem;
+  }
+
+  @media (min-width: 480px) {
+    .hero-cta-grid .hero-cta-btn {
+      padding: 0.75rem 0.875rem;
+    }
   }
   
   .section {

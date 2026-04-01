@@ -3,9 +3,19 @@
     <h4 class="text-xs font-semibold uppercase text-gray-400">Chart Options</h4>
 
     <div class="grid grid-cols-2 gap-3">
-      <label class="text-[11px] text-gray-400 flex items-center gap-2">
-        <input type="checkbox" :checked="legendDisplay" @change="updateLegendDisplay($event.target.checked)" />
-        Show Legend
+      <label class="editor-switch-row editor-switch-row--compact">
+        <span class="text-[11px] text-primary">Show Legend</span>
+        <span class="editor-switch">
+          <input
+            type="checkbox"
+            class="sr-only peer"
+            :checked="legendDisplay"
+            @change="updateLegendDisplay($event.target.checked)"
+          />
+          <span class="editor-switch-track">
+            <span class="editor-switch-thumb"></span>
+          </span>
+        </span>
       </label>
       <label class="text-[11px] text-gray-400">
         Legend Position
@@ -23,20 +33,50 @@
         Title
         <input class="input-base w-full px-2 py-1 mt-1 text-xs" :value="titleText" @input="updateTitle($event.target.value)" placeholder="Chart title" />
       </label>
-      <label class="text-[11px] text-gray-400 flex items-center gap-2 mt-5">
-        <input type="checkbox" :checked="titleDisplay" @change="updateTitleDisplay($event.target.checked)" />
-        Show Title
+      <label class="editor-switch-row editor-switch-row--compact mt-5">
+        <span class="text-[11px] text-primary">Show Title</span>
+        <span class="editor-switch">
+          <input
+            type="checkbox"
+            class="sr-only peer"
+            :checked="titleDisplay"
+            @change="updateTitleDisplay($event.target.checked)"
+          />
+          <span class="editor-switch-track">
+            <span class="editor-switch-thumb"></span>
+          </span>
+        </span>
       </label>
     </div>
 
     <div class="grid grid-cols-2 gap-3">
-      <label class="text-[11px] text-gray-400 flex items-center gap-2">
-        <input type="checkbox" :checked="xGridDisplay" @change="updateXGrid($event.target.checked)" />
-        X Grid
+      <label class="editor-switch-row editor-switch-row--compact">
+        <span class="text-[11px] text-primary">X Grid</span>
+        <span class="editor-switch">
+          <input
+            type="checkbox"
+            class="sr-only peer"
+            :checked="xGridDisplay"
+            @change="updateXGrid($event.target.checked)"
+          />
+          <span class="editor-switch-track">
+            <span class="editor-switch-thumb"></span>
+          </span>
+        </span>
       </label>
-      <label class="text-[11px] text-gray-400 flex items-center gap-2">
-        <input type="checkbox" :checked="yGridDisplay" @change="updateYGrid($event.target.checked)" />
-        Y Grid
+      <label class="editor-switch-row editor-switch-row--compact">
+        <span class="text-[11px] text-primary">Y Grid</span>
+        <span class="editor-switch">
+          <input
+            type="checkbox"
+            class="sr-only peer"
+            :checked="yGridDisplay"
+            @change="updateYGrid($event.target.checked)"
+          />
+          <span class="editor-switch-track">
+            <span class="editor-switch-thumb"></span>
+          </span>
+        </span>
       </label>
     </div>
   </div>
@@ -54,68 +94,66 @@ const props = defineProps({
 
 const emit = defineEmits(['update:options'])
 
-const getWithFallback = (getter, fallback) => {
-  try {
-    const value = getter()
-    return value === undefined ? fallback : value
-  } catch {
-    return fallback
-  }
-}
+const legendDisplay = computed(() => props.options?.plugins?.legend?.display !== false)
+const legendPosition = computed(() => props.options?.plugins?.legend?.position || 'top')
+const titleText = computed(() => props.options?.plugins?.title?.text || '')
+const titleDisplay = computed(() => props.options?.plugins?.title?.display === true)
+const xGridDisplay = computed(() => props.options?.scales?.x?.grid?.display !== false)
+const yGridDisplay = computed(() => props.options?.scales?.y?.grid?.display !== false)
 
-const legendDisplay = computed(() => getWithFallback(() => props.options.plugins.legend.display, true))
-const legendPosition = computed(() => getWithFallback(() => props.options.plugins.legend.position, 'top'))
-const titleDisplay = computed(() => getWithFallback(() => props.options.plugins.title.display, false))
-const titleText = computed(() => getWithFallback(() => props.options.plugins.title.text, ''))
-const xGridDisplay = computed(() => getWithFallback(() => props.options.scales.x.grid.display, true))
-const yGridDisplay = computed(() => getWithFallback(() => props.options.scales.y.grid.display, true))
-
-const cloneOptions = () => {
-  const options = props.options && typeof props.options === 'object' ? props.options : {}
-  return JSON.parse(JSON.stringify(options))
-}
-
-const patchOptions = (mutator) => {
-  const next = cloneOptions()
-  mutator(next)
+const patchOptions = (fn) => {
+  const next = JSON.parse(JSON.stringify(props.options || {}))
+  fn(next)
   emit('update:options', next)
 }
 
-const updateLegendDisplay = (value) => patchOptions((next) => {
-  next.plugins = next.plugins || {}
-  next.plugins.legend = next.plugins.legend || {}
-  next.plugins.legend.display = value
-})
+const updateLegendDisplay = (checked) => {
+  patchOptions((o) => {
+    if (!o.plugins) o.plugins = {}
+    if (!o.plugins.legend) o.plugins.legend = {}
+    o.plugins.legend.display = checked
+  })
+}
 
-const updateLegendPosition = (value) => patchOptions((next) => {
-  next.plugins = next.plugins || {}
-  next.plugins.legend = next.plugins.legend || {}
-  next.plugins.legend.position = value
-})
+const updateLegendPosition = (position) => {
+  patchOptions((o) => {
+    if (!o.plugins) o.plugins = {}
+    if (!o.plugins.legend) o.plugins.legend = {}
+    o.plugins.legend.position = position
+  })
+}
 
-const updateTitleDisplay = (value) => patchOptions((next) => {
-  next.plugins = next.plugins || {}
-  next.plugins.title = next.plugins.title || {}
-  next.plugins.title.display = value
-})
+const updateTitle = (text) => {
+  patchOptions((o) => {
+    if (!o.plugins) o.plugins = {}
+    if (!o.plugins.title) o.plugins.title = {}
+    o.plugins.title.text = text
+  })
+}
 
-const updateTitle = (value) => patchOptions((next) => {
-  next.plugins = next.plugins || {}
-  next.plugins.title = next.plugins.title || {}
-  next.plugins.title.text = value
-})
+const updateTitleDisplay = (checked) => {
+  patchOptions((o) => {
+    if (!o.plugins) o.plugins = {}
+    if (!o.plugins.title) o.plugins.title = {}
+    o.plugins.title.display = checked
+  })
+}
 
-const updateXGrid = (value) => patchOptions((next) => {
-  next.scales = next.scales || {}
-  next.scales.x = next.scales.x || {}
-  next.scales.x.grid = next.scales.x.grid || {}
-  next.scales.x.grid.display = value
-})
+const updateXGrid = (checked) => {
+  patchOptions((o) => {
+    if (!o.scales) o.scales = {}
+    if (!o.scales.x) o.scales.x = {}
+    if (!o.scales.x.grid) o.scales.x.grid = {}
+    o.scales.x.grid.display = checked
+  })
+}
 
-const updateYGrid = (value) => patchOptions((next) => {
-  next.scales = next.scales || {}
-  next.scales.y = next.scales.y || {}
-  next.scales.y.grid = next.scales.y.grid || {}
-  next.scales.y.grid.display = value
-})
+const updateYGrid = (checked) => {
+  patchOptions((o) => {
+    if (!o.scales) o.scales = {}
+    if (!o.scales.y) o.scales.y = {}
+    if (!o.scales.y.grid) o.scales.y.grid = {}
+    o.scales.y.grid.display = checked
+  })
+}
 </script>

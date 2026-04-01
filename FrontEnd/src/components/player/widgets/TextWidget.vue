@@ -19,6 +19,7 @@
 
 <script setup>
 import { computed } from 'vue'
+import { resolveWidgetBackgroundColor } from '@/utils/widgetBackground'
 
 const props = defineProps({
   widget: {
@@ -100,7 +101,7 @@ const textStyle = computed(() => {
   const fontSize = normalizeFontSize(widgetJson.fontSize || props.widget.font_size)
   const color = widgetJson.color || props.widget.color || '#000000'
   const textAlign = widgetJson.textAlign || props.widget.alignment || 'left'
-  const backgroundColor = widgetJson.backgroundColor || 'transparent'
+  const backgroundColor = resolveWidgetBackgroundColor(widgetJson)
   const fontWeight = widgetJson.fontWeight || 'normal'
   const lineHeight = widgetJson.lineHeight || 1.5
   

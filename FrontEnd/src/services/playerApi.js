@@ -23,6 +23,8 @@ const playerApi = axios.create({
   baseURL: IOT_BASE_URL,
   headers: { 'Content-Type': 'application/json' },
   timeout: 10000,
+  // Template endpoint may return 304 Not Modified (If-None-Match); treat as success.
+  validateStatus: (status) => (status >= 200 && status < 300) || status === 304,
 })
 
 // Strip any JWT Authorization header; inject X-Device-Token instead
@@ -89,10 +91,19 @@ function wrapError(error) {
 
 export const fetchTemplate = async (override = {}) => {
   const identity = resolveIdentity(override)
+  const { ifNoneMatch } = override
   try {
     const response = await playerApi.get('/player/template/', {
       params: { screen_id: identity.screenId },
+      headers: ifNoneMatch ? { 'If-None-Match': ifNoneMatch } : {},
     })
+    if (response.status === 304) {
+      return {
+        status: 'not_modified',
+        _timeSync: null,
+        _etag: ifNoneMatch || response.headers?.etag || response.headers?.ETag || null,
+      }
+    }
     const data = response.data || {}
     const dateHeader = response.headers?.date
     let serverNowMs = null
@@ -101,8 +112,10 @@ export const fetchTemplate = async (override = {}) => {
       if (!Number.isNaN(parsed)) serverNowMs = parsed
     }
     const clientNowMs = Date.now()
+    const etagHeader = response.headers?.etag || response.headers?.ETag || null
     return {
       ...data,
+      _etag: etagHeader,
       _timeSync: serverNowMs != null ? { serverNowMs, clientNowMs } : null,
     }
   } catch (error) {

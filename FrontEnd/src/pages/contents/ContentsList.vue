@@ -368,13 +368,16 @@ const filteredContents = computed(() => {
     filtered = filtered.filter(c => !c.is_assigned)
   }
 
+  // Standalone uploads only (widget-bound rows never appear in this page)
+  filtered = filtered.filter(c => c.widget == null || c.widget === '')
+
   return filtered
 })
 
 // Methods
 const loadContents = async () => {
   try {
-    await contentStore.fetchContents({ page: page.value })
+    await contentStore.fetchContents({ page: page.value, library_only: 1 })
   } catch (error) {
     console.error('Failed to load contents:', error)
   }
@@ -400,7 +403,7 @@ const loadMore = async () => {
   loadingMore.value = true
   try {
     page.value++
-    const response = await contentStore.fetchContents({ page: page.value })
+    const response = await contentStore.fetchContents({ page: page.value, library_only: 1 })
     const results = response?.results || response || []
     if (results.length === 0) {
       hasMore.value = false

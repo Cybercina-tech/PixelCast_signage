@@ -132,6 +132,7 @@ const conditionTone = computed(() => {
 })
 
 const dynamicBackground = computed(() => {
+  if (styleJson.value?.transparentBackground === true) return 'transparent'
   if (styleJson.value?.backgroundColor) return styleJson.value.backgroundColor
   const night = isNight.value
   switch (conditionTone.value) {

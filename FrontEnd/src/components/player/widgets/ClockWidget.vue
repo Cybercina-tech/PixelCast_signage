@@ -11,6 +11,7 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { formatClockValue, formatWeekdayValue } from '@/utils/dateTimeFormatters'
+import { resolveWidgetBackgroundColor } from '@/utils/widgetBackground'
 
 const props = defineProps({
   widget: {
@@ -41,7 +42,7 @@ const clockStyle = computed(() => {
     fontWeight: style.fontWeight || '700',
     lineHeight: style.lineHeight || 1.1,
     letterSpacing: style.letterSpacing || '0',
-    backgroundColor: style.backgroundColor || 'transparent',
+    backgroundColor: resolveWidgetBackgroundColor(style),
     padding: '12px',
     boxSizing: 'border-box',
     textAlign: style.textAlign || 'center',

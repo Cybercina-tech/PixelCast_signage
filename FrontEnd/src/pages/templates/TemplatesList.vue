@@ -251,6 +251,7 @@ import { useScreensStore } from '@/stores/screens'
 import { useNotification } from '@/composables/useNotification'
 import { useDeleteConfirmation } from '@/composables/useDeleteConfirmation'
 import { normalizeApiError } from '@/utils/apiError'
+import { templatesAPI } from '@/services/api'
 import {
   DocumentTextIcon,
   PlusIcon,
@@ -496,7 +497,28 @@ watch(showPushModal, async (isOpen) => {
   }
 })
 
+/** List API omits layers; prefetch full templates so card previews render without N duplicate fetches. */
+async function prefetchTemplateLayersForList() {
+  const ids = templatesStore.templates.map((t) => t.id).filter(Boolean)
+  await Promise.all(
+    ids.map(async (id) => {
+      const existing = templatesStore.templates.find((t) => t.id === id)
+      if (existing?.layers?.length) return
+      try {
+        const { data } = await templatesAPI.detail(id)
+        const idx = templatesStore.templates.findIndex((t) => t.id === id)
+        if (idx !== -1) {
+          templatesStore.templates[idx] = data
+        }
+      } catch {
+        /* ignore */
+      }
+    })
+  )
+}
+
 onMounted(async () => {
   await templatesStore.fetchTemplates()
+  await prefetchTemplateLayersForList()
 })
 </script>

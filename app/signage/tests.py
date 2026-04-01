@@ -196,6 +196,22 @@ class DeviceAuthEndpointTests(TestCase):
         )
         self.assertIn(resp.status_code, [200])
 
+    def test_template_304_when_if_none_match_matches(self):
+        resp = self.client.get(
+            f'/iot/player/template/?screen_id={self.screen.id}',
+            **self._auth_headers(),
+        )
+        self.assertEqual(resp.status_code, 200)
+        etag = resp.get('ETag')
+        self.assertIsNotNone(etag)
+        resp2 = self.client.get(
+            f'/iot/player/template/?screen_id={self.screen.id}',
+            HTTP_IF_NONE_MATCH=etag,
+            **self._auth_headers(),
+        )
+        self.assertEqual(resp2.status_code, 304)
+        self.assertEqual(resp2.get('ETag'), etag)
+
     def test_template_without_token_rejected(self):
         resp = self.client.get(f'/iot/player/template/?screen_id={self.screen.id}')
         self.assertEqual(resp.status_code, 401)

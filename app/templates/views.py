@@ -891,32 +891,38 @@ class ContentViewSet(viewsets.ModelViewSet):
         """Filter queryset based on user permissions - returns all content for user/org"""
         queryset = super().get_queryset()
         user = self.request.user
-        
+
         # Filter by user/organization ownership
-        if user.has_full_access():
-            return queryset
-        
-        # Get accessible templates for widget-based content
-        if user.can_manage_own_resources():
-            org_users = user.get_organization_users()
-            accessible_templates = Template.objects.filter(
-                Q(created_by=user) | Q(created_by__in=org_users)
+        if not user.has_full_access():
+            # Get accessible templates for widget-based content
+            if user.can_manage_own_resources():
+                org_users = user.get_organization_users()
+                accessible_templates = Template.objects.filter(
+                    Q(created_by=user) | Q(created_by__in=org_users)
+                )
+            else:
+                accessible_templates = Template.objects.filter(created_by=user)
+
+            from .models import Layer, Widget
+            accessible_layers = Layer.objects.filter(template__in=accessible_templates)
+            accessible_widgets = Widget.objects.filter(layer__in=accessible_layers)
+
+            queryset = queryset.filter(
+                Q(widget__in=accessible_widgets) | Q(widget__isnull=True)
             )
-        else:
-            accessible_templates = Template.objects.filter(created_by=user)
-        
-        # Get widgets for accessible templates
-        from .models import Layer, Widget
-        accessible_layers = Layer.objects.filter(template__in=accessible_templates)
-        accessible_widgets = Widget.objects.filter(layer__in=accessible_layers)
-        
-        # Return content that either:
-        # 1. Belongs to accessible widgets, OR
-        # 2. Has no widget (standalone media library content)
-        # For standalone content, we'll filter by organization/user later if needed
-        return queryset.filter(
-            Q(widget__in=accessible_widgets) | Q(widget__isnull=True)
-        )
+
+        # List-only: Media Library / Upload UI should show only standalone uploads (widget is null).
+        # Widget-bound rows created by template sync stay out unless ?widget=<id> is used.
+        if getattr(self, 'action', None) == 'list':
+            widget_id = self.request.query_params.get('widget')
+            if widget_id:
+                queryset = queryset.filter(widget_id=widget_id)
+            else:
+                lib = (self.request.query_params.get('library_only') or '').strip().lower()
+                if lib in ('1', 'true', 'yes', 'on'):
+                    queryset = queryset.filter(widget__isnull=True)
+
+        return queryset
 
     @action(detail=False, methods=['get'])
     def storage_stats(self, request):
