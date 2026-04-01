@@ -11,13 +11,13 @@ services:
 
   frontend-dev:
     build:
-      context: ./frontend
+      context: ./FrontEnd
       dockerfile: Dockerfile.dev
     container_name: frontend-dev
     ports:
       - "5173:5173"
     volumes:
-      - ./frontend:/app
+      - ./FrontEnd:/app
       - /app/node_modules
     environment:
       CHOKIDAR_USEPOLLING: "true"
