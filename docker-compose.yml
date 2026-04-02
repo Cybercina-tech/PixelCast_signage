@@ -3,9 +3,9 @@
 #
 # Database: defaults live in `.env.example` (committed). Copy to `.env` to override.
 # Order: .env.example first, then `.env` — later file wins. `environment:` below still overrides
-# DB_* / POSTGRES_* from host/Dokploy when set (same ${DB_PASSWORD:-…} for db + backend).
+# DB_* / POSTGRES_* from host/Dokploy when set.
 services:
-  # Postgres: POSTGRES_* from env files + same host interpolation as backend so passwords always match.
+  # Postgres: password is pinned in `environment` for deterministic local setup.
   db:
     image: postgres:15-alpine
     container_name: db
@@ -17,7 +17,7 @@ services:
     environment:
       - POSTGRES_DB=${DB_NAME:-pixelcast_signage_db}
       - POSTGRES_USER=${DB_USER:-pixelcast_signage_user}
-      - POSTGRES_PASSWORD=${DB_PASSWORD:-safpewri234aca}
+      - POSTGRES_PASSWORD=safpewri234aca
       # Use an internal subdirectory to avoid initdb failure when mount root contains artifacts.
       - PGDATA=/var/lib/postgresql/data/pgdata
     volumes:
@@ -59,10 +59,10 @@ services:
       - SECRET_KEY=${SECRET_KEY:-wN9vQx2!mK7pR4tY8uH3cD6sL1zA5eB9fG2jT7nV4qP8xM3rK6hC1wZ}
       - DEBUG=${DEBUG:-False}
       - ALLOWED_HOSTS=${ALLOWED_HOSTS:-localhost,127.0.0.1,backend,frontend,.traefik.me}
-      # Same DB_* as service `db` above (one password in .env → both containers).
+      # Same DB_* as service `db` above.
       - DB_NAME=${DB_NAME:-pixelcast_signage_db}
       - DB_USER=${DB_USER:-pixelcast_signage_user}
-      - DB_PASSWORD=${DB_PASSWORD:-safpewri234aca}
+      - DB_PASSWORD=safpewri234aca
       - DB_HOST=db
       - DB_PORT=5432
       - REDIS_HOST=redis
