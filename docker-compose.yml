@@ -1,5 +1,5 @@
-# Local development: Vite dev server + Django runserver/hot reload + bind mounts.
-# For Dokploy / server deploy use docker-compose.dokploy.yml (includes docker-compose.prod.yml).
+# Local development compose: Vite dev server + Django runserver/hot reload + bind mounts.
+# Production/server deploy uses docker-compose.prod.yml.
 #
 # Database: defaults live in `.env.example` (committed). Copy to `.env` to override.
 # Order: .env.example first, then `.env` — later file wins. `environment:` below still overrides
@@ -103,7 +103,7 @@ services:
       - VITE_API_BASE_URL=/api
       - VITE_IOT_BASE_URL=/iot
       - VITE_PROXY_TARGET=http://backend:8000
-      # Traefik HTTPS: set VITE_BEHIND_HTTPS_PROXY=1 (or use docker-compose.https.yml). See .env.example.
+      # For HTTPS-reverse-proxy dev, set VITE_BEHIND_HTTPS_PROXY=1. See .env.example.
       - VITE_BEHIND_HTTPS_PROXY=${VITE_BEHIND_HTTPS_PROXY:-0}
       - VITE_HMR_PROTOCOL=${VITE_HMR_PROTOCOL:-}
       - VITE_HMR_CLIENT_PORT=${VITE_HMR_CLIENT_PORT:-}

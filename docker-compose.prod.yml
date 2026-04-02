@@ -4,8 +4,7 @@
 # Deploy:
 #   docker compose -f docker-compose.prod.yml up -d --build
 #
-# On Dokploy, prefer docker-compose.dokploy.yml (includes this file) so the UI points at one
-# entry. Configure env: SECRET_KEY, ALLOWED_HOSTS, DB_PASSWORD, CSRF_TRUSTED_ORIGINS or BASE_URL.
+# Configure env: SECRET_KEY, ALLOWED_HOSTS, DB_PASSWORD, CSRF_TRUSTED_ORIGINS or BASE_URL.
 #
 # Published host port defaults to 8080 (container still listens on 80). Port 80 on the host is
 # often taken by Traefik/reverse proxy — set HTTP_PORT=80 only if nothing else binds :80.
