@@ -10,6 +10,9 @@
 # often taken by Traefik/reverse proxy.
 #
 # Database: committed `.env.example` supplies defaults; optional `.env` overrides. Dokploy: set DB_* or rely on defaults.
+#
+# Dokploy / Traefik: attach `frontend` and `backend` to `dokploy-network` (external) so the proxy can reach them.
+# Do not bind-mount `./documentation` here — that path may not exist on the server build context and can break the container.
 
 services:
   # db + backend: same pinned password for both services.
@@ -87,19 +90,24 @@ services:
       redis:
         condition: service_healthy
     restart: always
+    networks:
+      - default
+      - dokploy-network
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
     volumes:
-      - ./documentation:/usr/share/nginx/html/documentation:ro
       - backend_media:/app/media:ro
     depends_on:
       - backend
     ports:
       - "8080:80"
     restart: always
+    networks:
+      - default
+      - dokploy-network
 
 volumes:
   postgres_data:
@@ -107,3 +115,8 @@ volumes:
   backend_media:
   backend_static:
   installation_state:
+
+networks:
+  # Create once on the host if missing: `docker network create dokploy-network`
+  dokploy-network:
+    external: true
