@@ -1,22 +1,25 @@
 # Django Settings
-SECRET_KEY=w@vMD*7Uz@yzNUr=wsM4uMidPI6N6Ce)yeWx)RuiKB=Z$%A9kBCXrxnpVsx@kkA)
+SECRET_KEY=asdflsajdkf324k2345sdfjbgasdfndjfhjl42j34ejrb2l45b2j35b2l3j5b2j35b2l3kj5b3j
 DEBUG=False
 # Include .traefik.me (leading dot = subdomains) for Dokploy preview URLs; add your real domain in production.
-ALLOWED_HOSTS=localhost,127.0.0.1,backend,frontend,www.pixelcast-application-hiakj5-c49ba3-204-168-142-183.traefik.me
-
+ALLOWED_HOSTS=www.pixelcast.cybercina.co.uk,pixelcast.cybercina.co.uk
+CSRF_TRUSTED_ORIGINS=https://pixelcast.cybercina.co.uk,https://www.pixelcast.cybercina.co.uk
 # Database Configuration (single source for Docker Compose)
-# docker-compose maps these to the Postgres container: POSTGRES_DB/USER/PASSWORD = DB_* .
-# Set the password once here; do not set a different POSTGRES_PASSWORD for Compose.
+# Django uses DB_* . The official Postgres image reads POSTGRES_* — keep the same values as DB_* below.
 DB_NAME=pixelcast_signage_db
 DB_USER=pixelcast_signage_user
 DB_PASSWORD=safpewri234aca
 DB_HOST=db
 DB_PORT=5432
 USE_SQLITE=False
+# Postgres container (docker-compose env_file) — must match DB_NAME / DB_USER / DB_PASSWORD above
+POSTGRES_DB=pixelcast_signage_db
+POSTGRES_USER=pixelcast_signage_user
+POSTGRES_PASSWORD=safpewri234aca
 
 # Application URLs
-BASE_URL=https://www.pixelcast-application-hiakj5-c49ba3-204-168-142-183.traefik.me
-CSRF_TRUSTED_ORIGINS=https://www.pixelcast-application-hiakj5-c49ba3-204-168-142-183.traefik.me
+BASE_URL=https://pixelcast.cybercina.co.uk
+
 
 # Weather Widget (OpenWeather)
 OPENWEATHER_API_KEY=
@@ -52,8 +55,8 @@ CHANNEL_LAYERS_BACKEND=redis
 BACKEND_PORT=8000
 # Dev (docker-compose.yml): host port published to Vite :5173 — use FRONTEND_HOST_PORT (avoid FRONTEND_PORT; some hosts set it to 80 and break Traefik)
 FRONTEND_HOST_PORT=5173
-# Prod (docker-compose.prod.yml): host port → Nginx :80 inside container. Default 8080 so Dokploy/Traefik can keep :80
 HTTP_PORT=8080
+# Prod (docker-compose.prod.yml): host port is pinned to 8080 in compose.
 # Vite dev behind HTTPS (Traefik/Dokploy): 1 = wss on :443 (fixes Mixed Content). Local http → 0.
 VITE_BEHIND_HTTPS_PROXY=0
 # Optional overrides (usually not needed if VITE_BEHIND_HTTPS_PROXY=1)
@@ -93,3 +96,4 @@ VITE_BEHIND_HTTPS_PROXY=0
 # AUDIT_LOGGING_ENABLED=True
 # AUDIT_LOG_READS=False
 # AUDIT_RETENTION_DAYS=365
+
