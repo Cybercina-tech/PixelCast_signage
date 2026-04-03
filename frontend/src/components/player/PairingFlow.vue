@@ -196,6 +196,36 @@ let countdownTimer = null
 let statusPollTimer = null
 let themeObserver = null
 
+function clearPairingTimers() {
+  if (countdownTimer) {
+    clearInterval(countdownTimer)
+    countdownTimer = null
+  }
+  if (statusPollTimer) {
+    clearInterval(statusPollTimer)
+    statusPollTimer = null
+  }
+}
+
+/** Expired / invalid session: show message on this page only, then refresh session (no global toast). */
+function handleSessionExpired() {
+  clearPairingTimers()
+  statusMessage.value =
+    'This activation code has expired. Generating a new code…'
+  statusMessageType.value = 'error'
+  setTimeout(() => {
+    generatePairingSession()
+  }, 2000)
+}
+
+function isExpiredStatusError(error) {
+  const data = error?.response?.data
+  if (!data) return false
+  if (data.status === 'expired') return true
+  const msg = String(data.message || data.error || '').toLowerCase()
+  return msg.includes('expired') || msg.includes('invalid')
+}
+
 // Methods
 async function generatePairingSession() {
   try {
@@ -269,13 +299,7 @@ function startCountdown() {
     if (countdown.value > 0) {
       countdown.value--
     } else {
-      // Expired - regenerate
-      clearInterval(countdownTimer)
-      statusMessage.value = 'Pairing code expired. Generating new code...'
-      statusMessageType.value = 'error'
-      setTimeout(() => {
-        generatePairingSession()
-      }, 2000)
+      handleSessionExpired()
     }
   }, 1000)
 }
@@ -293,8 +317,7 @@ function startStatusPolling() {
       const response = await pairingAPI.status({ pairing_token: pairingToken.value })
       
       if (response.data.status === 'paired') {
-        clearInterval(statusPollTimer)
-        clearInterval(countdownTimer)
+        clearPairingTimers()
 
         status.value = 'success'
         statusMessage.value = 'Screen paired successfully!'
@@ -307,17 +330,13 @@ function startStatusPolling() {
           emit('paired', { screenId: screen_id, deviceToken: device_token })
         }, 3000)
       } else if (response.data.status === 'expired') {
-        // Expired - regenerate
-        clearInterval(statusPollTimer)
-        clearInterval(countdownTimer)
-        statusMessage.value = 'Pairing code expired. Generating new code...'
-        statusMessageType.value = 'error'
-        setTimeout(() => {
-          generatePairingSession()
-        }, 2000)
+        handleSessionExpired()
       }
     } catch (error) {
-      // Silently handle polling errors (network issues, etc.)
+      if (isExpiredStatusError(error)) {
+        handleSessionExpired()
+        return
+      }
       console.error('Status polling error:', error)
     }
   }, 2000)
@@ -354,12 +373,7 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
-  if (countdownTimer) {
-    clearInterval(countdownTimer)
-  }
-  if (statusPollTimer) {
-    clearInterval(statusPollTimer)
-  }
+  clearPairingTimers()
   if (themeObserver) {
     themeObserver.disconnect()
   }
@@ -370,7 +384,9 @@ onUnmounted(() => {
 .activation-page {
   position: fixed;
   inset: 0;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 25%, #0f172a 50%, #1e293b 75%, #0a0e27 100%);
   background-size: 400% 400%;
   animation: gradientShift 20s ease infinite;
@@ -434,16 +450,18 @@ onUnmounted(() => {
   50% { opacity: 0.8; transform: translate(-50%, -50%) scale(1.1); }
 }
 
-/* Main Container */
+/* Main Container — start from top so short viewports see full flow (scroll if needed) */
 .activation-container {
   position: relative;
   z-index: 10;
-  min-height: 100vh;
+  min-height: 100%;
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  padding: 2rem;
+  justify-content: flex-start;
+  box-sizing: border-box;
+  padding: clamp(0.75rem, 3vmin, 2rem) clamp(1rem, 4vw, 2rem) 2rem;
   color: white;
 }
 
@@ -505,10 +523,10 @@ onUnmounted(() => {
 
 /* Main Title */
 .main-title {
-  font-size: 4rem;
+  font-size: clamp(1.75rem, 5.5vmin, 4rem);
   font-weight: 800;
   text-align: center;
-  margin-bottom: 3rem;
+  margin-bottom: clamp(1rem, 3vmin, 3rem);
   background: linear-gradient(135deg, #06b6d4, #8b5cf6);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -517,16 +535,24 @@ onUnmounted(() => {
   letter-spacing: -0.02em;
 }
 
+.pairing-state {
+  width: 100%;
+  max-width: 1200px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
 /* Code Section */
 .code-section {
-  margin-bottom: 4rem;
+  margin-bottom: clamp(1.5rem, 4vmin, 4rem);
   text-align: center;
 }
 
 .code-label {
-  font-size: 1.5rem;
+  font-size: clamp(0.75rem, 2vmin, 1.5rem);
   font-weight: 600;
-  margin-bottom: 1.5rem;
+  margin-bottom: clamp(0.75rem, 2vmin, 1.5rem);
   color: rgba(255, 255, 255, 0.7);
   text-transform: uppercase;
   letter-spacing: 0.1em;
@@ -540,8 +566,8 @@ onUnmounted(() => {
 }
 
 .digit-card {
-  width: 120px;
-  height: 160px;
+  width: clamp(44px, 12vmin, 120px);
+  height: clamp(56px, 16vmin, 160px);
   background: rgba(255, 255, 255, 0.05);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
@@ -594,7 +620,7 @@ onUnmounted(() => {
 }
 
 .digit-text {
-  font-size: 5rem;
+  font-size: clamp(1.75rem, 8vmin, 5rem);
   font-weight: 700;
   font-family: 'Courier New', 'Monaco', monospace;
   color: #06b6d4;
@@ -608,7 +634,7 @@ onUnmounted(() => {
 
 /* QR Code Section */
 .qr-section {
-  margin-bottom: 4rem;
+  margin-bottom: clamp(1.5rem, 4vmin, 4rem);
   text-align: center;
 }
 
@@ -643,15 +669,17 @@ onUnmounted(() => {
 }
 
 .qr-image {
-  width: 300px;
-  height: 300px;
+  width: min(300px, 70vmin);
+  max-width: 100%;
+  height: auto;
+  aspect-ratio: 1;
   display: block;
   border-radius: 12px;
 }
 
 .qr-placeholder {
-  width: 300px;
-  height: 300px;
+  width: min(300px, 70vmin);
+  height: min(300px, 70vmin);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -675,9 +703,9 @@ onUnmounted(() => {
 /* Instructions Section */
 .instructions-section {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 2rem;
-  margin-bottom: 4rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+  gap: clamp(0.75rem, 2vmin, 2rem);
+  margin-bottom: clamp(1.25rem, 3vmin, 4rem);
   max-width: 1200px;
   width: 100%;
 }
@@ -688,7 +716,7 @@ onUnmounted(() => {
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 20px;
-  padding: 2rem;
+  padding: clamp(1rem, 2.5vmin, 2rem);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1021,8 +1049,8 @@ onUnmounted(() => {
   }
   
   .qr-image {
-    width: 400px;
-    height: 400px;
+    width: min(400px, 55vmin);
+    height: auto;
   }
   
   .instruction-title {
@@ -1049,8 +1077,8 @@ onUnmounted(() => {
   }
   
   .qr-image {
-    width: 250px;
-    height: 250px;
+    width: min(250px, 75vw);
+    height: auto;
   }
   
   .instructions-section {

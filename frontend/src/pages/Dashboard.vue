@@ -33,6 +33,28 @@
           </div>
         </div>
 
+        <OnboardingChecklist />
+
+        <div
+          v-if="isSuperAdmin"
+          class="card-base rounded-2xl p-4 md:p-5 border border-indigo-500/25 bg-indigo-500/[0.06] dark:bg-indigo-950/30"
+        >
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <p class="text-sm font-semibold text-primary">Super Admin</p>
+              <p class="text-xs text-muted mt-1">
+                SaaS customers, billing signals, SMTP, and platform tools — Developer only.
+              </p>
+            </div>
+            <router-link
+              to="/super-admin"
+              class="btn-primary px-4 py-2 rounded-lg text-sm text-center shrink-0 inline-flex items-center justify-center"
+            >
+              Open Super Admin
+            </router-link>
+          </div>
+        </div>
+
         <!-- Loading Skeleton -->
         <div v-if="loading && !hasData" class="space-y-6 md:space-y-8">
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -423,12 +445,15 @@
 
 <script setup>
 import { computed, ref, onMounted, onUnmounted } from 'vue'
+import { useAuthStore } from '@/stores/auth'
+import { isDeveloperOrSuperuser } from '@/utils/permissions'
 import { useDashboardStore } from '@/stores/dashboard'
 import { useTemplatesStore } from '@/stores/templates'
 import { useScreensStore } from '@/stores/screens'
 import { useNotification } from '@/composables/useNotification'
 import { contentsAPI } from '@/services/api'
 import AppLayout from '@/components/layout/AppLayout.vue'
+import OnboardingChecklist from '@/components/onboarding/OnboardingChecklist.vue'
 import Chart from '@/components/common/Chart.vue'
 import {
   TvIcon,
@@ -438,10 +463,13 @@ import {
   ExclamationTriangleIcon,
 } from '@heroicons/vue/24/outline'
 
+const authStore = useAuthStore()
 const dashboardStore = useDashboardStore()
 const templatesStore = useTemplatesStore()
 const screensStore = useScreensStore()
 const notify = useNotification()
+
+const isSuperAdmin = computed(() => isDeveloperOrSuperuser(authStore.user))
 
 // State
 const loading = ref(true)

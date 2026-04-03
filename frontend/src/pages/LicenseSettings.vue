@@ -24,8 +24,12 @@
             <p class="text-sm text-primary">{{ statusData.activated_domain || "-" }}</p>
           </div>
           <div>
-            <p class="text-xs text-muted">Product ID Source</p>
-            <p class="text-sm text-primary">{{ statusData.product_id_source || "-" }}</p>
+            <p class="text-xs text-muted">Product ID</p>
+            <p class="text-sm text-primary">
+              <span v-if="statusData.product_id_source === 'env'">Set via server environment (CODECANYON_PRODUCT_ID)</span>
+              <span v-else-if="statusData.product_id_source === 'db'">Configured in database</span>
+              <span v-else>{{ statusData.product_id_source || "—" }}</span>
+            </p>
           </div>
           <div>
             <p class="text-xs text-muted">Grace Until</p>
@@ -53,10 +57,9 @@
             <label class="label-base block text-sm mb-1">Domain (optional)</label>
             <input v-model="form.domain" type="text" class="input-base w-full px-3 py-2 rounded-lg" />
           </div>
-          <div>
-            <label class="label-base block text-sm mb-1">CodeCanyon Product ID Override (optional)</label>
-            <input v-model="form.codecanyon_product_id_override" type="text" class="input-base w-full px-3 py-2 rounded-lg" />
-          </div>
+          <p class="text-xs text-muted">
+            Product ID is read from the <code class="text-primary">CODECANYON_PRODUCT_ID</code> environment variable on the server, not from this form.
+          </p>
           <button type="button" class="btn-primary px-4 py-2 rounded-lg text-sm" @click="activate" :disabled="loading">
             Activate
           </button>
@@ -81,7 +84,6 @@ const statusData = ref({})
 const form = ref({
   purchase_code: '',
   domain: '',
-  codecanyon_product_id_override: '',
 })
 
 function formatDate(value) {
@@ -128,7 +130,6 @@ async function activate() {
     const payload = {
       purchase_code: form.value.purchase_code.trim(),
       domain: form.value.domain.trim(),
-      codecanyon_product_id_override: form.value.codecanyon_product_id_override.trim(),
     }
     const { data } = await licenseAPI.activate(payload)
     notify.success(data?.message || 'License activated')

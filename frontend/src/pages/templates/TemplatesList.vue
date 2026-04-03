@@ -56,6 +56,7 @@
       <div class="flex justify-between items-center">
         <h1 class="text-2xl font-bold text-primary">Templates</h1>
         <button
+          v-if="canCreateTemplates"
           @click="showCreateModal = true"
           class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-all flex items-center gap-2"
         >
@@ -119,7 +120,7 @@
               : 'Get started by creating your first template.' }}
           </p>
           <button
-            v-if="!templatesStore.filters.search && templatesStore.filters.is_active === null"
+            v-if="canCreateTemplates && !templatesStore.filters.search && templatesStore.filters.is_active === null"
             @click="showCreateModal = true"
             class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-all inline-flex items-center gap-2"
           >
@@ -135,6 +136,9 @@
           v-for="template in templatesStore.filteredTemplates"
           :key="template.id"
           :template="template"
+          :can-duplicate="canDuplicateTemplate"
+          :can-push="canPushTemplate"
+          :can-delete="canDeleteTemplate"
           @edit="handleEdit"
           @duplicate="handleDuplicate"
           @push="handlePush"
@@ -246,6 +250,8 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
+import { hasPermission } from '@/utils/permissions'
 import { useTemplatesStore } from '@/stores/templates'
 import { useScreensStore } from '@/stores/screens'
 import { useNotification } from '@/composables/useNotification'
@@ -264,9 +270,15 @@ import TemplateCard from '@/components/templates/TemplateCard.vue'
 import PushToScreenModal from '@/components/templates/PushToScreenModal.vue'
 
 const router = useRouter()
+const authStore = useAuthStore()
 const templatesStore = useTemplatesStore()
 const screensStore = useScreensStore()
 const notify = useNotification()
+
+const canCreateTemplates = computed(() => hasPermission(authStore.user, 'create_templates'))
+const canDuplicateTemplate = computed(() => hasPermission(authStore.user, 'create_templates'))
+const canPushTemplate = computed(() => hasPermission(authStore.user, 'edit_templates'))
+const canDeleteTemplate = computed(() => hasPermission(authStore.user, 'delete_templates'))
 
 const showCreateModal = ref(false)
 const screens = computed(() => screensStore.screens)
@@ -497,13 +509,19 @@ watch(showPushModal, async (isOpen) => {
   }
 })
 
-/** List API omits layers; prefetch full templates so card previews render without N duplicate fetches. */
+const PREFETCH_TEMPLATE_CONCURRENCY = 8
+
+/** List API omits layers; prefetch full templates with bounded concurrency to avoid rate-limit bursts. */
 async function prefetchTemplateLayersForList() {
   const ids = templatesStore.templates.map((t) => t.id).filter(Boolean)
-  await Promise.all(
-    ids.map(async (id) => {
+  const pending = [...ids]
+
+  async function worker() {
+    while (pending.length) {
+      const id = pending.shift()
+      if (!id) continue
       const existing = templatesStore.templates.find((t) => t.id === id)
-      if (existing?.layers?.length) return
+      if (existing?.layers?.length) continue
       try {
         const { data } = await templatesAPI.detail(id)
         const idx = templatesStore.templates.findIndex((t) => t.id === id)
@@ -513,8 +531,11 @@ async function prefetchTemplateLayersForList() {
       } catch {
         /* ignore */
       }
-    })
-  )
+    }
+  }
+
+  const n = Math.min(PREFETCH_TEMPLATE_CONCURRENCY, Math.max(1, ids.length))
+  await Promise.all(Array.from({ length: n }, () => worker()))
 }
 
 onMounted(async () => {

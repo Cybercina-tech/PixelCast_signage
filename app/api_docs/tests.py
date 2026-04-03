@@ -13,40 +13,22 @@ class APIDocumentationTests(BaseAPITestCase):
     """Tests for API documentation endpoints."""
     
     def test_schema_endpoint_access(self):
-        """Test that schema endpoint is accessible."""
+        """Test that schema endpoint is accessible without authentication."""
         url = reverse('api_docs:schema')
-        
-        # In development (DEBUG=True), should work without auth
-        # In production, requires authentication
         response = self.client.get(url)
-        
-        # Should return OpenAPI schema (JSON or YAML)
-        self.assertIn(response.status_code, [
-            status.HTTP_200_OK,
-            status.HTTP_401_UNAUTHORIZED  # If DEBUG=False
-        ])
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
     
     def test_swagger_ui_access(self):
-        """Test that Swagger UI is accessible."""
+        """Test that Swagger UI is accessible without authentication."""
         url = reverse('api_docs:swagger-ui')
         response = self.client.get(url)
-        
-        # Should return HTML page
-        self.assertIn(response.status_code, [
-            status.HTTP_200_OK,
-            status.HTTP_401_UNAUTHORIZED  # If DEBUG=False
-        ])
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
     
     def test_redoc_access(self):
-        """Test that ReDoc is accessible."""
+        """Test that ReDoc is accessible without authentication."""
         url = reverse('api_docs:redoc')
         response = self.client.get(url)
-        
-        # Should return HTML page
-        self.assertIn(response.status_code, [
-            status.HTTP_200_OK,
-            status.HTTP_401_UNAUTHORIZED  # If DEBUG=False
-        ])
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
     
     def test_schema_format_json(self):
         """Test schema generation in JSON format."""

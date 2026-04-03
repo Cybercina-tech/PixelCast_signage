@@ -1,13 +1,18 @@
 <template>
   <button
-    :class="['neon-toggle', { 'neon-toggle-active': modelValue }]"
+    :class="[
+      'toggle-switch',
+      { 'toggle-switch-active': modelValue, 'toggle-switch-disabled': disabled },
+    ]"
     @click="toggle"
     type="button"
     role="switch"
     :aria-checked="modelValue"
+    :aria-label="ariaLabel"
+    :disabled="disabled"
   >
-    <span class="neon-toggle-track">
-      <span class="neon-toggle-thumb"></span>
+    <span class="toggle-switch-track">
+      <span class="toggle-switch-thumb"></span>
     </span>
   </button>
 </template>
@@ -18,118 +23,82 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  disabled: {
+    type: Boolean,
+    default: false,
+  },
+  ariaLabel: {
+    type: String,
+    default: 'Toggle',
+  },
 })
 
 const emit = defineEmits(['update:modelValue'])
 
 const toggle = () => {
+  if (props.disabled) return
   emit('update:modelValue', !props.modelValue)
 }
 </script>
 
 <style scoped>
-.neon-toggle {
+.toggle-switch {
   position: relative;
-  width: 52px;
-  height: 28px;
+  width: 46px;
+  height: 26px;
   padding: 0;
-  background: transparent;
+  background: none;
   border: none;
   cursor: pointer;
-  outline: none;
-  transition: all 0.3s ease;
+  transition: opacity 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.neon-toggle-track {
-  position: relative;
+.toggle-switch-track {
   width: 100%;
   height: 100%;
-  background: #DFE6E9; /* Silver Grey when OFF */
-  border: 1px solid #C4D1D6;
-  border-radius: 14px;
-  transition: all 0.3s ease;
+  border-radius: 9999px;
+  background: rgba(148, 163, 184, 0.25);
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  transition: background-color 0.2s ease, border-color 0.2s ease;
 }
 
-.neon-toggle-thumb {
+.toggle-switch-thumb {
   position: absolute;
-  top: 2px;
-  left: 2px;
-  width: 22px;
-  height: 22px;
-  background: #FFFFFF;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  /* Tiny 3D shadow */
-  box-shadow: 
-    0 2px 4px rgba(0, 0, 0, 0.15),
-    0 1px 2px rgba(0, 0, 0, 0.1),
-    inset 0 -1px 1px rgba(0, 0, 0, 0.05);
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.28);
+  transition: transform 0.2s ease, background-color 0.2s ease;
 }
 
-/* When ON - Professional Blue */
-.neon-toggle-active .neon-toggle-track {
-  background: #0984E3; /* Professional Blue */
-  border-color: #0871C2;
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
+.toggle-switch-active .toggle-switch-track {
+  background: rgba(6, 182, 212, 0.35);
+  border-color: rgba(6, 182, 212, 0.9);
 }
 
-.neon-toggle-active .neon-toggle-thumb {
-  transform: translateX(24px);
-  background: #FFFFFF;
-  /* Enhanced 3D shadow when active */
-  box-shadow: 
-    0 3px 6px rgba(0, 0, 0, 0.2),
-    0 1px 3px rgba(0, 0, 0, 0.15),
-    inset 0 -1px 2px rgba(0, 0, 0, 0.1);
+.toggle-switch-active .toggle-switch-thumb {
+  transform: translateX(20px);
+  background: #06b6d4;
 }
 
-.neon-toggle:hover .neon-toggle-track {
-  border-color: #B8C5CA;
+.toggle-switch:hover:not(.toggle-switch-disabled) .toggle-switch-track {
+  border-color: rgba(6, 182, 212, 0.6);
 }
 
-.neon-toggle-active:hover .neon-toggle-track {
-  background: #0871C2; /* Slightly darker blue on hover */
-  border-color: #065A9E;
-}
-
-.neon-toggle:focus-visible {
-  outline: 2px solid #0984E3;
+.toggle-switch:focus-visible {
+  outline: 2px solid rgba(6, 182, 212, 0.9);
   outline-offset: 2px;
 }
 
-/* Dark Mode Styles */
-.dark .neon-toggle-track {
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.dark .neon-toggle-thumb {
-  background: rgba(255, 255, 255, 0.3);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-}
-
-.dark .neon-toggle-active .neon-toggle-track {
-  background: rgba(6, 182, 212, 0.2);
-  border-color: #06b6d4;
-  box-shadow: 0 0 20px rgba(6, 182, 212, 0.4), inset 0 0 20px rgba(6, 182, 212, 0.1);
-}
-
-.dark .neon-toggle-active .neon-toggle-thumb {
-  background: #06b6d4;
-  box-shadow: 0 0 15px rgba(6, 182, 212, 0.8), 0 2px 8px rgba(0, 0, 0, 0.3);
-}
-
-.dark .neon-toggle:hover .neon-toggle-track {
-  border-color: rgba(255, 255, 255, 0.3);
-}
-
-.dark .neon-toggle-active:hover .neon-toggle-track {
-  border-color: #00d2ff;
-  box-shadow: 0 0 25px rgba(6, 182, 212, 0.5), inset 0 0 25px rgba(6, 182, 212, 0.15);
-}
-
-.dark .neon-toggle:focus-visible {
-  outline: 2px solid #06b6d4;
+.toggle-switch-disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 </style>
 

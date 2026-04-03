@@ -1,99 +1,14 @@
-# Django Settings
-SECRET_KEY=asdflsajdkf324k2345sdfjbgasdfndjfhjl42j34ejrb2l45b2j35b2l3j5b2j35b2l3kj5b3j
-DEBUG=False
-# Include .traefik.me (leading dot = subdomains) for Dokploy preview URLs; add your real domain in production.
-ALLOWED_HOSTS=www.pixelcast.cybercina.co.uk,pixelcast.cybercina.co.uk
-CSRF_TRUSTED_ORIGINS=https://pixelcast.cybercina.co.uk,https://www.pixelcast.cybercina.co.uk
-# Database Configuration (single source for Docker Compose)
-# Django uses DB_* . The official Postgres image reads POSTGRES_* — keep the same values as DB_* below.
-DB_NAME=pixelcast_signage_db
-DB_USER=pixelcast_signage_user
-DB_PASSWORD=safpewri234aca
-DB_HOST=db
-DB_PORT=5432
-USE_SQLITE=False
-# Postgres container (docker-compose env_file) — must match DB_NAME / DB_USER / DB_PASSWORD above
-POSTGRES_DB=pixelcast_signage_db
-POSTGRES_USER=pixelcast_signage_user
-POSTGRES_PASSWORD=safpewri234aca
+enchante notification system
 
-# Application URLs
-BASE_URL=https://pixelcast.cybercina.co.uk
+turn error dashboard to error logs and make it more peacfull
 
+remove porduct id and added to env
 
-# Weather Widget (OpenWeather)
-OPENWEATHER_API_KEY=
-OPENWEATHER_BASE_URL=https://api.openweathermap.org
-WEATHER_REFRESH_INTERVAL_SECONDS=900
-WEATHER_STALE_TTL_SECONDS=21600
-WEATHER_HTTP_TIMEOUT_SECONDS=5
-WEATHER_FORECAST_DAYS=5
+add apply button to webview widget
 
-# License Configuration
-LICENSE_SERVER_URL=
-CODECANYON_TOKEN=
-CODECANYON_PRODUCT_ID=
-LICENSE_ENFORCEMENT_ENABLED=True
-LICENSE_OFFLINE_GRACE_HOURS=72
-LICENSE_CACHE_TTL_SECONDS=900
-LICENSE_SERVER_TIMEOUT_SECONDS=8
+remove hide tools button
 
-# Redis Configuration
-REDIS_HOST=redis
-REDIS_PORT=6379
-USE_REDIS_CACHE=True
-REDIS_CACHE_URL=redis://redis:6379/1
+enchante layaer system for template editor
 
-# Celery Configuration
-CELERY_BROKER_URL=redis://redis:6379/0
-CELERY_RESULT_BACKEND=redis://redis:6379/0
-
-# Channel Layers (Django Channels)
-CHANNEL_LAYERS_BACKEND=redis
-
-# Port Mappings (for docker-compose)
-BACKEND_PORT=8000
-# Dev (docker-compose.yml): host port published to Vite :5173 — use FRONTEND_HOST_PORT (avoid FRONTEND_PORT; some hosts set it to 80 and break Traefik)
-FRONTEND_HOST_PORT=5173
-HTTP_PORT=8080
-# Prod (docker-compose.prod.yml): host port is pinned to 8080 in compose.
-# Vite dev behind HTTPS (Traefik/Dokploy): 1 = wss on :443 (fixes Mixed Content). Local http → 0.
-VITE_BEHIND_HTTPS_PROXY=0
-# Optional overrides (usually not needed if VITE_BEHIND_HTTPS_PROXY=1)
-# VITE_HMR_PROTOCOL=wss
-# VITE_HMR_CLIENT_PORT=443
-
-# Optional: AWS S3 Configuration (if using S3 storage)
-# USE_S3_STORAGE=False
-# AWS_ACCESS_KEY_ID=
-# AWS_SECRET_ACCESS_KEY=
-# AWS_STORAGE_BUCKET_NAME=pixelcast-signage-content
-# AWS_S3_REGION_NAME=us-east-1
-
-# Optional: Email Configuration
-# EMAIL_HOST=smtp.example.com
-# EMAIL_PORT=587
-# EMAIL_USE_TLS=True
-# EMAIL_HOST_USER=
-# EMAIL_HOST_PASSWORD=
-# DEFAULT_FROM_EMAIL=no-reply@pixelcastsignage.com
-
-# Optional: Notification Encryption Key
-# NOTIFICATION_ENCRYPTION_KEY=
-
-# Optional: Backup Configuration
-# BACKUP_DIR=/app/backups
-# BACKUP_RETENTION_DAYS=30
-# ENABLE_AUTO_BACKUP=False
-# BACKUP_ENCRYPTION=False
-
-# Optional: Rate Limiting
-# RATE_LIMITING_ENABLED=True
-# MAX_LOGIN_ATTEMPTS=5
-# LOCKOUT_DURATION=900
-
-# Optional: Audit Logging
-# AUDIT_LOGGING_ENABLED=True
-# AUDIT_LOG_READS=False
-# AUDIT_RETENTION_DAYS=365
+zoomout on connect and see the whole screen
 

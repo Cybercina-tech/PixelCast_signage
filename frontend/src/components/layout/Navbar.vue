@@ -1,5 +1,23 @@
 <template>
   <nav class="sleek-navbar">
+    <div
+      v-if="authStore.impersonation?.active"
+      class="w-full bg-amber-500/90 dark:bg-amber-700/90 text-slate-900 dark:text-amber-50 px-4 py-2 flex flex-wrap items-center justify-between gap-2 text-sm"
+      role="status"
+    >
+      <span
+        >Impersonation: signed in as <strong>{{ authStore.user?.username }}</strong> ({{
+          authStore.user?.email
+        }})</span
+      >
+      <button
+        type="button"
+        class="underline font-medium shrink-0"
+        @click="exitImpersonation"
+      >
+        Exit to admin
+      </button>
+    </div>
     <div class="navbar-container">
       <div class="navbar-content">
         <!-- Left: Sidebar Toggle + Breadcrumb -->
@@ -264,6 +282,15 @@ const route = useRoute()
 const authStore = useAuthStore()
 const notificationsStore = useNotificationsStore()
 
+async function exitImpersonation() {
+  try {
+    await authStore.stopPlatformImpersonation()
+    await router.push('/super-admin/customers')
+  } catch (e) {
+    console.error(e)
+  }
+}
+
 // UI State
 const showNotifications = ref(false)
 const showUserMenu = ref(false)
@@ -417,11 +444,10 @@ const formatTime = (dateString) => {
   return date.toLocaleDateString()
 }
 
-// Watch for new notifications and trigger bell shake
-let previousUnreadCount = 0
+// Watch for new notifications and trigger bell shake (skip initial sync)
+let previousUnreadCount = -1
 watch(unreadNotifications, (newCount) => {
-  if (newCount > previousUnreadCount && previousUnreadCount > 0) {
-    // New notification arrived
+  if (previousUnreadCount >= 0 && newCount > previousUnreadCount) {
     bellShake.value = true
     setTimeout(() => {
       bellShake.value = false
@@ -448,7 +474,7 @@ onMounted(() => {
   
   // Start polling for notifications if user is authenticated
   if (authStore.isAuthenticated) {
-    notificationsStore.startPolling(60000) // Poll every 60 seconds
+    notificationsStore.startPolling(30000) // Poll every 30 seconds
     previousUnreadCount = unreadNotifications.value
   }
 })

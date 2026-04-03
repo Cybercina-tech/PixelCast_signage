@@ -44,6 +44,7 @@ from .serializers import (
     QRActionRuleSerializer, QRScanEventSerializer
 )
 from accounts.permissions import RolePermissions
+from accounts.sidebar_config import has_permission
 from log.models import ContentDownloadLog
 from core.audit import AuditLogger
 from core.api_errors import error_response
@@ -66,23 +67,7 @@ class TemplateViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         """Filter queryset based on user permissions"""
-        queryset = super().get_queryset()
-        user = self.request.user
-        
-        # SuperAdmin and Admin can see all templates
-        if user.has_full_access():
-            return queryset
-        
-        # Manager, Operator, Viewer can see templates they created or in their organization
-        if user.can_manage_own_resources():
-            # Get users in same organization
-            org_users = user.get_organization_users()
-            return queryset.filter(
-                Q(created_by=user) | Q(created_by__in=org_users)
-            )
-        
-        # Viewer can only see their own templates
-        return queryset.filter(created_by=user)
+        return self.request.user.get_accessible_templates_queryset()
     
     def create(self, request, *args, **kwargs):
         """Handle template creation with better error messages"""
@@ -107,6 +92,8 @@ class TemplateViewSet(viewsets.ModelViewSet):
             
             headers = self.get_success_headers(serializer.data)
             return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+        except PermissionDenied:
+            raise
         except serializers.ValidationError as e:
             # Return detailed validation errors
             logger.warning(
@@ -141,6 +128,8 @@ class TemplateViewSet(viewsets.ModelViewSet):
     
     def perform_create(self, serializer):
         """Set created_by to current user"""
+        if not has_permission(self.request.user, 'create_templates'):
+            raise PermissionDenied("You do not have permission to create templates")
         template = serializer.save(created_by=self.request.user)
         
         # CRITICAL: Sync widgets from config_json to database AFTER save
@@ -151,6 +140,9 @@ class TemplateViewSet(viewsets.ModelViewSet):
         """Check permissions before update"""
         template = self.get_object()
         user = self.request.user
+
+        if not has_permission(user, 'edit_templates'):
+            raise PermissionDenied("You do not have permission to edit templates")
         
         # Check if user can edit this template
         if not RolePermissions.can_edit_resource(user, template):
@@ -558,6 +550,9 @@ class TemplateViewSet(viewsets.ModelViewSet):
     def perform_destroy(self, instance):
         """Check permissions before delete"""
         user = self.request.user
+
+        if not has_permission(user, 'delete_templates'):
+            raise PermissionDenied("You do not have permission to delete templates")
         
         # Only SuperAdmin, Admin, or creator can delete
         if not (user.has_full_access() or instance.created_by == user):
@@ -597,6 +592,8 @@ class TemplateViewSet(viewsets.ModelViewSet):
         
         # Check permissions
         user = request.user
+        if not has_permission(user, 'edit_templates'):
+            raise PermissionDenied("You do not have permission to activate this template")
         if not RolePermissions.can_edit_resource(user, template):
             raise PermissionDenied("You do not have permission to activate this template")
         
@@ -728,24 +725,16 @@ class LayerViewSet(viewsets.ModelViewSet):
                 return queryset.none()
         
         # If no template filter, filter by template permissions
-        if user.has_full_access():
-            return queryset
-        
-        # Get accessible templates
-        if user.can_manage_own_resources():
-            org_users = user.get_organization_users()
-            accessible_templates = Template.objects.filter(
-                Q(created_by=user) | Q(created_by__in=org_users)
-            )
-        else:
-            accessible_templates = Template.objects.filter(created_by=user)
-        
+        accessible_templates = user.get_accessible_templates_queryset()
         return queryset.filter(template__in=accessible_templates)
     
     def perform_create(self, serializer):
         """Check permissions for template"""
         template = serializer.validated_data.get('template')
         user = self.request.user
+
+        if not has_permission(user, 'edit_templates'):
+            raise PermissionDenied("You do not have permission to create layers for this template")
         
         if not RolePermissions.can_edit_resource(user, template):
             raise PermissionDenied("You do not have permission to create layers for this template")
@@ -756,6 +745,9 @@ class LayerViewSet(viewsets.ModelViewSet):
         """Check permissions before update"""
         layer = self.get_object()
         user = self.request.user
+
+        if not has_permission(user, 'edit_templates'):
+            raise PermissionDenied("You do not have permission to edit this layer")
         
         if not RolePermissions.can_edit_resource(user, layer.template):
             raise PermissionDenied("You do not have permission to edit this layer")
@@ -765,6 +757,9 @@ class LayerViewSet(viewsets.ModelViewSet):
     def perform_destroy(self, instance):
         """Check permissions before delete"""
         user = self.request.user
+
+        if not has_permission(user, 'edit_templates'):
+            raise PermissionDenied("You do not have permission to delete this layer")
         
         if not RolePermissions.can_edit_resource(user, instance.template):
             raise PermissionDenied("You do not have permission to delete this layer")
@@ -806,15 +801,7 @@ class WidgetViewSet(viewsets.ModelViewSet):
         if user.has_full_access():
             return queryset
         
-        # Get accessible templates
-        if user.can_manage_own_resources():
-            org_users = user.get_organization_users()
-            accessible_templates = Template.objects.filter(
-                Q(created_by=user) | Q(created_by__in=org_users)
-            )
-        else:
-            accessible_templates = Template.objects.filter(created_by=user)
-        
+        accessible_templates = user.get_accessible_templates_queryset()
         # Get layers for accessible templates
         accessible_layers = Layer.objects.filter(template__in=accessible_templates)
         
@@ -824,6 +811,9 @@ class WidgetViewSet(viewsets.ModelViewSet):
         """Check permissions for layer"""
         layer = serializer.validated_data.get('layer')
         user = self.request.user
+
+        if not has_permission(user, 'edit_templates'):
+            raise PermissionDenied("You do not have permission to create widgets for this layer")
         
         if not RolePermissions.can_edit_resource(user, layer.template):
             raise PermissionDenied("You do not have permission to create widgets for this layer")
@@ -834,6 +824,9 @@ class WidgetViewSet(viewsets.ModelViewSet):
         """Check permissions before update"""
         widget = self.get_object()
         user = self.request.user
+
+        if not has_permission(user, 'edit_templates'):
+            raise PermissionDenied("You do not have permission to edit this widget")
         
         if not RolePermissions.can_edit_resource(user, widget.layer.template):
             raise PermissionDenied("You do not have permission to edit this widget")
@@ -843,6 +836,9 @@ class WidgetViewSet(viewsets.ModelViewSet):
     def perform_destroy(self, instance):
         """Check permissions before delete"""
         user = self.request.user
+
+        if not has_permission(user, 'edit_templates'):
+            raise PermissionDenied("You do not have permission to delete this widget")
         
         if not RolePermissions.can_edit_resource(user, instance.layer.template):
             raise PermissionDenied("You do not have permission to delete this widget")
@@ -895,13 +891,7 @@ class ContentViewSet(viewsets.ModelViewSet):
         # Filter by user/organization ownership
         if not user.has_full_access():
             # Get accessible templates for widget-based content
-            if user.can_manage_own_resources():
-                org_users = user.get_organization_users()
-                accessible_templates = Template.objects.filter(
-                    Q(created_by=user) | Q(created_by__in=org_users)
-                )
-            else:
-                accessible_templates = Template.objects.filter(created_by=user)
+            accessible_templates = user.get_accessible_templates_queryset()
 
             from .models import Layer, Widget
             accessible_layers = Layer.objects.filter(template__in=accessible_templates)
@@ -1832,12 +1822,14 @@ class ScheduleViewSet(viewsets.ModelViewSet):
         if user.has_full_access():
             return queryset
         
-        # Manager, Operator, Viewer can see schedules for templates they can access
+        # Manager / Employee: org or own templates; Visitor: same template scope as Template list (sample + org read-only)
         if user.can_manage_own_resources():
             org_users = user.get_organization_users()
             accessible_templates = Template.objects.filter(
                 Q(created_by=user) | Q(created_by__in=org_users)
             )
+        elif user.is_visitor():
+            accessible_templates = user.get_accessible_templates_queryset()
         else:
             accessible_templates = Template.objects.filter(created_by=user)
         

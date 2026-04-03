@@ -236,10 +236,17 @@ class NotificationChannel(models.Model):
         
         # Validate config structure based on type
         if self.type == 'email':
-            required_fields = ['smtp_host', 'smtp_port', 'from_email']
-            for field in required_fields:
-                if field not in self.config:
-                    raise ValidationError(f"Email channel requires '{field}' in config")
+            cfg = self.config or {}
+            if cfg.get('use_system_smtp'):
+                if not cfg.get('to_emails'):
+                    raise ValidationError(
+                        "Email channel with use_system_smtp requires 'to_emails' in config"
+                    )
+            else:
+                required_fields = ['smtp_host', 'smtp_port', 'from_email']
+                for field in required_fields:
+                    if field not in self.config:
+                        raise ValidationError(f"Email channel requires '{field}' in config")
         
         elif self.type == 'sms':
             required_fields = ['provider', 'api_key']

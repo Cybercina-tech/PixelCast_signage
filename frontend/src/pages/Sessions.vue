@@ -6,7 +6,7 @@
         <p class="text-muted mt-1">View and manage your active login sessions</p>
       </div>
 
-      <Card title="Active Sessions">
+      <Card :title="`Active Sessions (${sessions.length})`">
         <div v-if="loading" class="flex items-center justify-center py-8">
           <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-brand"></div>
         </div>
@@ -109,9 +109,17 @@ const loadSessions = async () => {
 }
 
 const handleTerminateSession = async (sessionId) => {
-  // Note: Since JWT is stateless, we can't actually terminate individual sessions
-  // This is a placeholder for future implementation
-  notify.info('Individual session termination is not yet implemented. Use "Logout from All Sessions" instead.')
+  terminatingSession.value = sessionId
+  try {
+    const oid = parseInt(sessionId, 10)
+    await authAPI.revokeSession(Number.isFinite(oid) ? oid : sessionId)
+    notify.success('Session revoked')
+    await loadSessions()
+  } catch (err) {
+    notify.error(err.response?.data?.error || err.response?.data?.detail || 'Could not revoke session')
+  } finally {
+    terminatingSession.value = null
+  }
 }
 
 const handleLogoutAll = async () => {

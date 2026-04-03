@@ -1,24 +1,24 @@
 <template>
   <div class="space-y-6">
     <!-- Screen Statistics Summary -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 min-w-0">
       <Card title="Screen Status Overview">
         <div v-if="analyticsStore.screenStats" class="space-y-4">
-          <div class="flex items-center justify-between">
-            <span class="text-muted">Online Screens</span>
-            <span class="text-2xl font-bold text-success">
+          <div class="flex items-center justify-between gap-3 min-w-0">
+            <span class="text-muted shrink min-w-0">Online Screens</span>
+            <span class="text-xl sm:text-2xl font-bold text-success tabular-nums shrink-0">
               {{ analyticsStore.screenStats.status_breakdown?.online || 0 }}
             </span>
           </div>
-          <div class="flex items-center justify-between">
-            <span class="text-muted">Offline Screens</span>
-            <span class="text-2xl font-bold text-error">
+          <div class="flex items-center justify-between gap-3 min-w-0">
+            <span class="text-muted shrink min-w-0">Offline Screens</span>
+            <span class="text-xl sm:text-2xl font-bold text-error tabular-nums shrink-0">
               {{ analyticsStore.screenStats.status_breakdown?.offline || 0 }}
             </span>
           </div>
-          <div class="flex items-center justify-between">
-            <span class="text-muted">Total Screens</span>
-            <span class="text-2xl font-bold text-primary">
+          <div class="flex items-center justify-between gap-3 min-w-0">
+            <span class="text-muted shrink min-w-0">Total Screens</span>
+            <span class="text-xl sm:text-2xl font-bold text-primary tabular-nums shrink-0">
               {{ analyticsStore.screenStats.status_breakdown?.total || 0 }}
             </span>
           </div>
@@ -30,34 +30,34 @@
 
       <Card title="Health Metrics">
         <div v-if="analyticsStore.screenStats?.health_metrics" class="space-y-4">
-          <div class="flex items-center justify-between">
-            <span class="text-muted">Avg CPU Usage</span>
-            <span class="text-lg font-semibold text-primary">
-              {{ analyticsStore.screenStats.health_metrics.avg_cpu_usage?.toFixed(1) || 'N/A' }}%
+          <div class="flex items-center justify-between gap-3 min-w-0">
+            <span class="text-muted shrink min-w-0">Avg CPU Usage</span>
+            <span class="text-base sm:text-lg font-semibold text-primary tabular-nums shrink-0">
+              {{ formatPercent(analyticsStore.screenStats.health_metrics.avg_cpu_usage) }}%
             </span>
           </div>
-          <div class="flex items-center justify-between">
-            <span class="text-muted">Avg Memory Usage</span>
-            <span class="text-lg font-semibold text-primary">
-              {{ analyticsStore.screenStats.health_metrics.avg_memory_usage?.toFixed(1) || 'N/A' }}%
+          <div class="flex items-center justify-between gap-3 min-w-0">
+            <span class="text-muted shrink min-w-0">Avg Memory Usage</span>
+            <span class="text-base sm:text-lg font-semibold text-primary tabular-nums shrink-0">
+              {{ formatPercent(analyticsStore.screenStats.health_metrics.avg_memory_usage) }}%
             </span>
           </div>
-          <div class="flex items-center justify-between">
-            <span class="text-muted">Avg Latency</span>
-            <span class="text-lg font-semibold text-primary">
-              {{ analyticsStore.screenStats.health_metrics.avg_latency_ms?.toFixed(1) || 'N/A' }} ms
+          <div class="flex items-center justify-between gap-3 min-w-0">
+            <span class="text-muted shrink min-w-0">Avg Latency</span>
+            <span class="text-base sm:text-lg font-semibold text-primary tabular-nums shrink-0">
+              {{ formatLatency(analyticsStore.screenStats.health_metrics.avg_latency_ms) }} ms
             </span>
           </div>
-          <div class="flex items-center justify-between">
-            <span class="text-muted">Max CPU Usage</span>
-            <span class="text-lg font-semibold text-error">
-              {{ analyticsStore.screenStats.health_metrics.max_cpu_usage?.toFixed(1) || 'N/A' }}%
+          <div class="flex items-center justify-between gap-3 min-w-0">
+            <span class="text-muted shrink min-w-0">Max CPU Usage</span>
+            <span class="text-base sm:text-lg font-semibold text-error tabular-nums shrink-0">
+              {{ formatPercent(analyticsStore.screenStats.health_metrics.max_cpu_usage) }}%
             </span>
           </div>
-          <div class="flex items-center justify-between">
-            <span class="text-muted">Max Memory Usage</span>
-            <span class="text-lg font-semibold text-error">
-              {{ analyticsStore.screenStats.health_metrics.max_memory_usage?.toFixed(1) || 'N/A' }}%
+          <div class="flex items-center justify-between gap-3 min-w-0">
+            <span class="text-muted shrink min-w-0">Max Memory Usage</span>
+            <span class="text-base sm:text-lg font-semibold text-error tabular-nums shrink-0">
+              {{ formatPercent(analyticsStore.screenStats.health_metrics.max_memory_usage) }}%
             </span>
           </div>
         </div>
@@ -127,6 +127,14 @@ const screenTableData = computed(() => {
     is_online: screen.is_online,
   }))
 })
+
+const normalizeMetricNumber = (value) => {
+  const n = Number(value)
+  return Number.isFinite(n) ? n : 0
+}
+
+const formatPercent = (value) => normalizeMetricNumber(value).toFixed(1)
+const formatLatency = (value) => normalizeMetricNumber(value).toFixed(1)
 
 const viewScreenDetails = async (screenId) => {
   try {

@@ -7,6 +7,7 @@ from core.models import (
     SystemBackup,
     Notification,
     NotificationPreference,
+    SystemEmailSettings,
     TVBrand,
     TVModel,
 )
@@ -197,3 +198,79 @@ class TVBrandWithModelsSerializer(serializers.ModelSerializer):
         if hasattr(models_qs, 'all'):
             return models_qs.all().count()
         return 0
+
+
+class SystemEmailSettingsSerializer(serializers.ModelSerializer):
+    """Read/update system SMTP; password is write-only and never returned."""
+
+    smtp_password = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    smtp_password_configured = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        model = SystemEmailSettings
+        fields = [
+            'delivery_mode',
+            'smtp_host',
+            'smtp_port',
+            'use_tls',
+            'use_ssl',
+            'smtp_username',
+            'smtp_password',
+            'smtp_password_configured',
+            'default_from_email',
+            'last_smtp_test_at',
+            'last_smtp_test_ok',
+            'last_smtp_test_error_code',
+            'last_smtp_test_detail',
+            'updated_at',
+            'created_at',
+        ]
+        read_only_fields = [
+            'updated_at',
+            'created_at',
+            'smtp_password_configured',
+            'last_smtp_test_at',
+            'last_smtp_test_ok',
+            'last_smtp_test_error_code',
+            'last_smtp_test_detail',
+        ]
+
+    def get_smtp_password_configured(self, obj):
+        return bool((obj.smtp_password_encrypted or '').strip())
+
+    def validate(self, attrs):
+        delivery = attrs.get('delivery_mode', getattr(self.instance, 'delivery_mode', None))
+        use_tls = attrs.get('use_tls', getattr(self.instance, 'use_tls', True))
+        use_ssl = attrs.get('use_ssl', getattr(self.instance, 'use_ssl', False))
+        if use_tls and use_ssl:
+            raise serializers.ValidationError(
+                {'use_tls': 'Enable only one of TLS (STARTTLS) or SSL (implicit TLS), not both.'}
+            )
+        host = (attrs.get('smtp_host') or getattr(self.instance, 'smtp_host', '') or '').strip()
+        port = attrs.get('smtp_port', getattr(self.instance, 'smtp_port', 587))
+        if delivery == SystemEmailSettings.DELIVERY_SMTP:
+            if not host:
+                raise serializers.ValidationError({'smtp_host': 'SMTP host is required when using SMTP delivery.'})
+            try:
+                p = int(port)
+            except (TypeError, ValueError):
+                raise serializers.ValidationError({'smtp_port': 'Invalid port.'})
+            if p < 1 or p > 65535:
+                raise serializers.ValidationError({'smtp_port': 'Port must be between 1 and 65535.'})
+        return attrs
+
+    def update(self, instance, validated_data):
+        password = validated_data.pop('smtp_password', None)
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        if password is not None:
+            if str(password).strip():
+                instance.set_smtp_password(password)
+            else:
+                instance.clear_smtp_password()
+        instance.save()
+        return instance
+
+
+class SystemEmailTestSerializer(serializers.Serializer):
+    to = serializers.EmailField()

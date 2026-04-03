@@ -140,14 +140,15 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
     def get_queryset(self):
         """Filter audit logs based on user permissions."""
         user = self.request.user
-        queryset = AuditLog.objects.all()
+        queryset = AuditLog.objects.filter(is_archived=False)
 
         if user.is_developer():
-            pass
+            include_archived = self.request.query_params.get('include_archived')
+            if include_archived and include_archived.lower() == 'true':
+                queryset = AuditLog.objects.all()
         else:
             queryset = queryset.filter(user=user)
 
-        # Apply filters from query params
         action_type = self.request.query_params.get('action_type')
         if action_type:
             queryset = queryset.filter(action_type=action_type)
@@ -219,6 +220,39 @@ class AuditLogViewSet(viewsets.ReadOnlyModelViewSet):
             'action_type_counts': action_type_counts,
             'severity_counts': severity_counts,
         })
+
+    @action(detail=False, methods=['get'], url_path='export')
+    def export_csv(self, request):
+        """Export audit logs as CSV (Developer only)."""
+        if not request.user.is_developer():
+            return Response({'detail': 'Forbidden'}, status=403)
+        import csv
+        import io
+        from django.http import HttpResponse
+        qs = self.get_queryset()[:10000]
+        buf = io.StringIO()
+        writer = csv.writer(buf)
+        writer.writerow([
+            'Timestamp', 'Username', 'Role', 'Action', 'Severity',
+            'Resource Type', 'Resource Name', 'Description', 'Success',
+            'IP Address',
+        ])
+        for log in qs.iterator():
+            writer.writerow([
+                log.timestamp.isoformat() if log.timestamp else '',
+                log.username,
+                log.user_role,
+                log.action_type,
+                log.severity,
+                log.resource_type,
+                log.resource_name,
+                (log.description or '')[:500],
+                'Yes' if log.success else 'No',
+                log.ip_address or '',
+            ])
+        response = HttpResponse(buf.getvalue(), content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="audit_logs_export.csv"'
+        return response
 
 
 @extend_schema_view(

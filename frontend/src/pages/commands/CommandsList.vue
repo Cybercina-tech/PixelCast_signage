@@ -5,7 +5,7 @@
         <div>
           <h1 class="text-2xl font-bold text-primary">Commands</h1>
           <p class="text-sm text-muted mt-1">
-            در این بخش می‌توانید دستورها را برای نمایشگرها ارسال و وضعیت اجرای آن‌ها را پیگیری کنید.
+            Send commands to your displays from here and track their execution status.
           </p>
         </div>
         <button

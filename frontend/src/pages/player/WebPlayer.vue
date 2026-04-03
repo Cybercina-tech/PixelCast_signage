@@ -70,7 +70,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { usePlayerStore } from '@/stores/player'
 import { useResponsiveScaling } from '@/composables/useResponsiveScaling'
@@ -226,9 +226,17 @@ const {
   scaleFactor,
   offsetX,
   offsetY,
+  updateViewport,
   setupResizeListener,
   cleanupResizeListener,
 } = useResponsiveScaling(template)
+
+watch(
+  () => template.value,
+  () => {
+    nextTick(() => updateViewport())
+  }
+)
 
 const containerStyle = computed(() => ({
   position: 'fixed',

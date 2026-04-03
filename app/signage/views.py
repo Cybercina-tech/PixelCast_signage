@@ -2,6 +2,7 @@ from rest_framework import status, viewsets
 from rest_framework.decorators import action, api_view, permission_classes, authentication_classes
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.exceptions import PermissionDenied, ValidationError as DRFValidationError
 from django.utils import timezone
 from django.db.models import Q
 from django.utils import timezone as django_timezone
@@ -24,6 +25,7 @@ from templates.models import Template, Content
 from log.models import CommandExecutionLog, ScreenStatusLog, ContentDownloadLog
 from core.audit import AuditLogger
 from core.api_errors import error_response
+from saas_platform.plan_policy import assert_can_create_screen
 import logging
 
 logger = logging.getLogger(__name__)
@@ -46,9 +48,34 @@ class ScreenViewSet(viewsets.ModelViewSet):
         if user.is_developer() or user.is_manager():
             return queryset
 
+        # Visitor: browse all screens read-only; writes blocked in create/update/destroy
+        if user.is_visitor():
+            return queryset
+
         queryset = queryset.filter(owner=user)
         
         return queryset
+
+    def create(self, request, *args, **kwargs):
+        if request.user.is_visitor():
+            raise PermissionDenied('Visitors cannot create screens.')
+        assert_can_create_screen(request.user)
+        return super().create(request, *args, **kwargs)
+
+    def update(self, request, *args, **kwargs):
+        if request.user.is_visitor():
+            raise PermissionDenied('Visitors cannot edit screens.')
+        return super().update(request, *args, **kwargs)
+
+    def partial_update(self, request, *args, **kwargs):
+        if request.user.is_visitor():
+            raise PermissionDenied('Visitors cannot edit screens.')
+        return super().partial_update(request, *args, **kwargs)
+
+    def destroy(self, request, *args, **kwargs):
+        if request.user.is_visitor():
+            raise PermissionDenied('Visitors cannot delete screens.')
+        return super().destroy(request, *args, **kwargs)
     
     @action(detail=True, methods=['post'], url_path='revoke-token', permission_classes=[IsAuthenticated])
     def revoke_token(self, request, id=None):
@@ -58,6 +85,8 @@ class ScreenViewSet(viewsets.ModelViewSet):
         Revoke the device token for this screen, forcing the TV back to pairing.
         Only the screen owner (or developer/manager) can do this.
         """
+        if request.user.is_visitor():
+            raise PermissionDenied('Visitors cannot revoke device tokens.')
         screen = self.get_object()
         screen.revoke_device_token()
 
@@ -86,6 +115,8 @@ class ScreenViewSet(viewsets.ModelViewSet):
         Issue a brand-new device token (invalidates the old one).
         Returns the raw token once — the caller must deliver it to the TV.
         """
+        if request.user.is_visitor():
+            raise PermissionDenied('Visitors cannot regenerate device tokens.')
         screen = self.get_object()
         raw_token = screen.issue_device_token()
         screen.last_paired_at = timezone.now()
@@ -917,7 +948,12 @@ def bind_pairing_session(request):
                 return Response({
                     'error': 'Pairing session has expired or is invalid'
                 }, status=status.HTTP_400_BAD_REQUEST)
-            
+
+            try:
+                assert_can_create_screen(request.user)
+            except DRFValidationError as e:
+                return Response(e.detail, status=status.HTTP_400_BAD_REQUEST)
+
             # Create new screen
             screen = Screen.objects.create(
                 name=screen_name or f"Screen {session.pairing_code}",

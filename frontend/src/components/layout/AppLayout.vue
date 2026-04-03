@@ -10,6 +10,15 @@
     <Sidebar :is-open="sidebarOpen" @close="sidebarOpen = false" />
     <div class="flex-1 flex flex-col overflow-hidden lg:ml-0 relative z-10">
       <Navbar :title="title" @toggle-sidebar="sidebarOpen = !sidebarOpen" />
+      <div
+        v-if="authStore.isRestrictedMode"
+        class="shrink-0 border-b border-rose-500/30 bg-rose-500/10 px-4 py-2.5 flex items-center gap-3 text-sm text-rose-300"
+      >
+        <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+        </svg>
+        <span class="flex-1">{{ restrictionBannerText }}</span>
+      </div>
       <main :class="['flex-1 flex flex-col scroll-container', isEditorRoute ? 'overflow-hidden' : 'overflow-y-auto custom-scrollbar']">
         <div :class="[
           'flex-1 min-h-0 w-full main-content-wrapper',
@@ -48,14 +57,21 @@ const isEditorRoute = computed(() => {
   return route.name === 'template-editor' || route.name === 'template-editor-new' || (route.path.includes('/templates/') && route.path.includes('/edit'))
 })
 const authStore = useAuthStore()
+const restrictionBannerText = computed(() => {
+  const info = authStore.restrictionInfo
+  if (!info) return 'Your access is currently restricted. Only limited pages are available.'
+  const msg = info.reason || info.message || 'Your access is currently restricted.'
+  const untilStr = info.until ? ` Until: ${new Date(info.until).toLocaleString()}` : ''
+  return `${msg}${untilStr}`
+})
 const screensStore = useScreensStore()
 const { connect, disconnect, on, off, isConnected } = useWebSocket()
 
 // Set up WebSocket listener for screen status updates
 onMounted(() => {
-  if (authStore.isAuthenticated && authStore.accessToken) {
-    // Connect WebSocket
-    connect(authStore.accessToken)
+  if (authStore.isAuthenticated && authStore.token) {
+    // Connect WebSocket (JWT access token lives on `token`, not accessToken)
+    connect(authStore.token)
     
     // Listen for screen status updates
     on('screen_status_update', (data) => {

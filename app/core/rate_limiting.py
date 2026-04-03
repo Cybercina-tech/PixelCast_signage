@@ -244,6 +244,7 @@ class RateLimitMiddleware(MiddlewareMixin):
         # This ensures these requests bypass ALL rate limiting checks before any other logic
         # Whitelist /iot/ namespace completely to bypass all security filters
         if (request.path.startswith('/iot/') or  # NEW: Complete /iot/ namespace bypass
+            request.path.startswith('/ws/') or  # WebSocket upgrades (if ever routed through Django middleware)
             request.path.startswith('/api/screens/heartbeat/') or 
             request.path.startswith('/api/player/template/') or
             request.path.startswith('/public-iot/screens/heartbeat/') or

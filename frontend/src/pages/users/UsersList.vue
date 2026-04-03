@@ -53,6 +53,14 @@
                 <ShieldCheckIcon class="w-4 h-4" />
               </button>
               <button
+                v-if="isDeveloper"
+                @click="openPasswordModal(row)"
+                class="action-btn-role"
+                title="Set Password"
+              >
+                <KeyIcon class="w-4 h-4" />
+              </button>
+              <button
                 @click="handleDelete(row)"
                 class="action-btn-delete"
                 title="Delete"
@@ -114,9 +122,7 @@
           <div>
             <label class="label-base block text-sm mb-1">New Role</label>
             <select v-model="roleForm.role" required class="select-base w-full px-3 py-2 rounded-lg">
-              <option value="Developer">Developer</option>
-              <option value="Manager">Manager</option>
-              <option value="Employee">Employee</option>
+              <option v-for="opt in changeRoleOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
             </select>
           </div>
         </div>
@@ -129,6 +135,51 @@
           </button>
         </template>
       </Modal>
+
+      <Modal :show="showPasswordModal" title="Set User Password" @close="closePasswordModal">
+        <div class="space-y-4">
+          <p class="text-xs text-muted">
+            {{ passwordTargetUser ? `User: ${passwordTargetUser.username} (${passwordTargetUser.email})` : '' }}
+          </p>
+          <div>
+            <label class="label-base block text-sm mb-1">New Password</label>
+            <input
+              v-model="passwordForm.new_password"
+              :type="passwordForm.showPlain ? 'text' : 'password'"
+              required
+              class="input-base w-full px-3 py-2 rounded-lg"
+            />
+          </div>
+          <div>
+            <label class="label-base block text-sm mb-1">Confirm Password</label>
+            <input
+              v-model="passwordForm.confirm_password"
+              :type="passwordForm.showPlain ? 'text' : 'password'"
+              required
+              class="input-base w-full px-3 py-2 rounded-lg"
+            />
+          </div>
+          <div class="flex items-center gap-2">
+            <button type="button" class="btn-outline px-3 py-1.5 rounded-lg text-xs" @click="passwordForm.showPlain = !passwordForm.showPlain">
+              {{ passwordForm.showPlain ? 'Hide' : 'Show' }}
+            </button>
+            <button type="button" class="btn-outline px-3 py-1.5 rounded-lg text-xs" @click="generateStrongPassword">
+              Generate strong
+            </button>
+          </div>
+          <p class="text-xs text-muted">
+            Current password cannot be viewed because it is stored hashed on the server. Use this form to set any new password.
+          </p>
+        </div>
+        <template #footer>
+          <button type="button" @click="submitPasswordReset" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700" :disabled="savingPassword">
+            {{ savingPassword ? 'Saving...' : 'Save Password' }}
+          </button>
+          <button type="button" @click="closePasswordModal" class="btn-outline px-4 py-2 rounded-lg">
+            Cancel
+          </button>
+        </template>
+      </Modal>
     </div>
   </AppLayout>
 </template>
@@ -137,7 +188,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
-import { EyeIcon, PencilIcon, TrashIcon, ShieldCheckIcon } from '@heroicons/vue/24/outline'
+import { EyeIcon, PencilIcon, TrashIcon, ShieldCheckIcon, KeyIcon } from '@heroicons/vue/24/outline'
 import { useUsersStore } from '@/stores/users'
 import { useNotification } from '@/composables/useNotification'
 import { useDeleteConfirmation } from '@/composables/useDeleteConfirmation'
@@ -146,6 +197,7 @@ import Card from '@/components/common/Card.vue'
 import Table from '@/components/common/Table.vue'
 import Modal from '@/components/common/Modal.vue'
 import { isDeveloperOrSuperuser } from '@/utils/permissions'
+import { usersAPI } from '@/services/api'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -160,16 +212,30 @@ const roleOptions = computed(() => {
       { value: 'Developer', label: 'Developer' },
       { value: 'Manager', label: 'Manager' },
       { value: 'Employee', label: 'Employee' },
+      { value: 'Visitor', label: 'Visitor' },
     ]
   }
-  return [{ value: 'Employee', label: 'Employee' }]
+  return [
+    { value: 'Employee', label: 'Employee' },
+    { value: 'Visitor', label: 'Visitor' },
+  ]
 })
+
+const changeRoleOptions = [
+  { value: 'Developer', label: 'Developer' },
+  { value: 'Manager', label: 'Manager' },
+  { value: 'Employee', label: 'Employee' },
+  { value: 'Visitor', label: 'Visitor' },
+]
 
 const showCreateModal = ref(false)
 const showEditModal = ref(false)
 const showRoleModal = ref(false)
+const showPasswordModal = ref(false)
 const editingUser = ref(null)
 const roleChangingUser = ref(null)
+const passwordTargetUser = ref(null)
+const savingPassword = ref(false)
 
 const form = ref({
   username: '',
@@ -182,6 +248,12 @@ const form = ref({
 
 const roleForm = ref({
   role: 'Employee',
+})
+
+const passwordForm = ref({
+  new_password: '',
+  confirm_password: '',
+  showPlain: false,
 })
 
 const columns = [
@@ -213,6 +285,60 @@ const handleChangeRole = (row) => {
   roleChangingUser.value = row
   roleForm.value.role = row.role || 'Employee'
   showRoleModal.value = true
+}
+
+const openPasswordModal = (row) => {
+  passwordTargetUser.value = row
+  passwordForm.value = {
+    new_password: '',
+    confirm_password: '',
+    showPlain: false,
+  }
+  showPasswordModal.value = true
+}
+
+const closePasswordModal = () => {
+  showPasswordModal.value = false
+  passwordTargetUser.value = null
+  savingPassword.value = false
+}
+
+const generateStrongPassword = () => {
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%^&*'
+  const length = 16
+  let generated = ''
+  for (let i = 0; i < length; i += 1) {
+    generated += alphabet[Math.floor(Math.random() * alphabet.length)]
+  }
+  passwordForm.value.new_password = generated
+  passwordForm.value.confirm_password = generated
+  passwordForm.value.showPlain = true
+}
+
+const submitPasswordReset = async () => {
+  if (!passwordTargetUser.value?.id) return
+  const pwd = (passwordForm.value.new_password || '').trim()
+  const confirm = passwordForm.value.confirm_password || ''
+  if (!pwd) {
+    notify.error('New password is required')
+    return
+  }
+  if (pwd !== confirm) {
+    notify.error('Password confirmation does not match')
+    return
+  }
+
+  savingPassword.value = true
+  try {
+    await usersAPI.adminSetPassword(passwordTargetUser.value.id, { new_password: pwd })
+    notify.success('Password updated and sessions revoked')
+    closePasswordModal()
+  } catch (error) {
+    const errorMsg = error.response?.data?.detail || error.response?.data?.message || error.message || 'Password update failed'
+    notify.error(errorMsg)
+  } finally {
+    savingPassword.value = false
+  }
 }
 
 const handleDelete = async (row) => {

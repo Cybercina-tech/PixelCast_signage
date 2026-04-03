@@ -20,19 +20,32 @@ class UserSerializer(serializers.ModelSerializer):
     total_screens_count = serializers.IntegerField(read_only=True)
     active_templates_count = serializers.IntegerField(read_only=True)
     total_templates_count = serializers.IntegerField(read_only=True)
-    
+    storage_used_bytes = serializers.IntegerField(read_only=True)
+    subscription_plan = serializers.CharField(read_only=True)
+    subscription_status = serializers.CharField(read_only=True)
+    tenant_id = serializers.SerializerMethodField()
+    tenant_name = serializers.SerializerMethodField()
+    is_lock_active = serializers.SerializerMethodField()
+    admin_lock_reason = serializers.CharField(read_only=True)
+    tenant_restriction = serializers.SerializerMethodField()
+
     class Meta:
         model = User
         fields = [
             'id', 'username', 'email', 'full_name', 'phone_number',
-            'role', 'role_display', 'organization_name', 'is_active',
-            'is_staff', 'is_superuser', 'is_email_verified', 'last_seen', 'date_joined',
+            'role', 'role_display', 'organization_name', 'tenant_id', 'tenant_name', 'is_active',
+            'is_staff', 'is_superuser', 'is_email_verified', 'is_2fa_enabled', 'onboarding_progress',
+            'last_seen', 'date_joined',
             'active_screens_count', 'total_screens_count',
             'active_templates_count', 'total_templates_count',
+            'storage_used_bytes', 'subscription_plan', 'subscription_status',
+            'is_lock_active', 'admin_lock_reason', 'tenant_restriction',
             'password'
         ]
         read_only_fields = [
-            'id', 'is_staff', 'is_superuser', 'is_email_verified', 'last_seen', 'date_joined'
+            'id', 'is_staff', 'is_superuser', 'is_email_verified', 'is_2fa_enabled', 'last_seen', 'date_joined', 'tenant_id',
+            'is_lock_active', 'admin_lock_reason', 'tenant_restriction',
+            'storage_used_bytes', 'subscription_plan', 'subscription_status', 'tenant_name',
         ]
         extra_kwargs = {
             'email': {'required': True},
@@ -85,7 +98,37 @@ class UserSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("A user with this username already exists.")
         
         return value
-    
+
+    def get_tenant_id(self, obj):
+        tid = getattr(obj, 'tenant_id', None)
+        if tid is None:
+            return None
+        return str(tid)
+
+    def get_tenant_name(self, obj):
+        tenant = getattr(obj, 'tenant', None)
+        return tenant.name if tenant else None
+
+    def get_is_lock_active(self, obj):
+        if not getattr(obj, 'is_admin_locked', False):
+            return False
+        lock_until = getattr(obj, 'admin_lock_until', None)
+        if lock_until:
+            from django.utils import timezone
+            if lock_until <= timezone.now():
+                return False
+        return True
+
+    def get_tenant_restriction(self, obj):
+        tenant = getattr(obj, 'tenant', None)
+        if tenant and getattr(tenant, 'access_locked', False):
+            if tenant.is_access_lock_active():
+                return {
+                    'kind': 'tenant_access_lock',
+                    'reason': tenant.access_lock_reason or '',
+                }
+        return None
+
     def create(self, validated_data):
         """Create user with hashed password"""
         password = validated_data.pop('password', None)
@@ -107,17 +150,50 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class UserListSerializer(serializers.ModelSerializer):
-    """Simplified serializer for User list view"""
+    """List serializer with per-user metrics for the Super Admin global users console."""
     role_display = serializers.CharField(source='get_role_display', read_only=True)
-    
+    tenant_id = serializers.SerializerMethodField()
+    tenant_name = serializers.SerializerMethodField()
+    is_lock_active = serializers.SerializerMethodField()
+    admin_lock_reason = serializers.CharField(read_only=True)
+    total_screens_count = serializers.IntegerField(read_only=True)
+    active_screens_count = serializers.IntegerField(read_only=True)
+    total_templates_count = serializers.IntegerField(read_only=True)
+    storage_used_bytes = serializers.IntegerField(read_only=True)
+    subscription_plan = serializers.CharField(read_only=True)
+    subscription_status = serializers.CharField(read_only=True)
+
     class Meta:
         model = User
         fields = [
             'id', 'username', 'email', 'full_name', 'role',
             'role_display', 'organization_name', 'is_active',
-            'last_seen', 'date_joined'
+            'last_seen', 'date_joined',
+            'tenant_id', 'tenant_name',
+            'is_lock_active', 'admin_lock_reason',
+            'total_screens_count', 'active_screens_count',
+            'total_templates_count', 'storage_used_bytes',
+            'subscription_plan', 'subscription_status',
         ]
         read_only_fields = ['id', 'last_seen', 'date_joined']
+
+    def get_tenant_id(self, obj):
+        tid = getattr(obj, 'tenant_id', None)
+        return str(tid) if tid else None
+
+    def get_tenant_name(self, obj):
+        tenant = getattr(obj, 'tenant', None)
+        return tenant.name if tenant else None
+
+    def get_is_lock_active(self, obj):
+        if not getattr(obj, 'is_admin_locked', False):
+            return False
+        lock_until = getattr(obj, 'admin_lock_until', None)
+        if lock_until:
+            from django.utils import timezone
+            if lock_until <= timezone.now():
+                return False
+        return True
 
 
 class UserCreateSerializer(serializers.ModelSerializer):
@@ -275,6 +351,7 @@ class RoleSerializer(serializers.Serializer):
         ('Developer', 'Developer'),
         ('Manager', 'Manager'),
         ('Employee', 'Employee'),
+        ('Visitor', 'Visitor'),
     ]
 
     role = serializers.ChoiceField(choices=ROLE_CHOICES)
@@ -286,6 +363,7 @@ class RoleSerializer(serializers.Serializer):
             'Developer': 'Full system access including settings, logs, and license management',
             'Manager': 'Manage team (Employees), screens, and content; no system-level settings',
             'Employee': 'Screens, playlists, and media library only',
+            'Visitor': 'Dashboard and template exploration; changes are not saved',
         }
         return descriptions.get(role, '')
 

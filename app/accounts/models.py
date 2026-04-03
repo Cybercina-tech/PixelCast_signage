@@ -1,3 +1,4 @@
+import uuid
 from django.db import models
 from django.contrib.auth.models import AbstractUser, Group, Permission, UserManager as DjangoUserManager
 from django.core.validators import RegexValidator, EmailValidator
@@ -62,11 +63,12 @@ class User(AbstractUser):
         help_text="User's phone number"
     )
     
-    # Role & Permissions (3-tier hierarchy)
+    # Role & Permissions (Developer > Manager > Employee > Visitor)
     ROLE_CHOICES = [
         ('Developer', 'Developer'),
         ('Manager', 'Manager'),
         ('Employee', 'Employee'),
+        ('Visitor', 'Visitor'),
     ]
     role = models.CharField(
         max_length=20,
@@ -84,7 +86,15 @@ class User(AbstractUser):
         validators=[validate_organization_name],
         help_text="Organization name for multi-tenant support"
     )
-    
+    tenant = models.ForeignKey(
+        'saas_platform.Tenant',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='users',
+        help_text="SaaS customer account (Platform); optional for legacy installs",
+    )
+
     # Security fields
     failed_login_attempts = models.IntegerField(
         default=0,
@@ -112,7 +122,54 @@ class User(AbstractUser):
         null=True,
         help_text="Expiration time for the verification code"
     )
+
+    # Two-factor authentication (TOTP)
+    totp_secret = models.CharField(
+        max_length=64,
+        blank=True,
+        default='',
+        help_text="Base32 TOTP secret (empty when 2FA not configured)",
+    )
+    is_2fa_enabled = models.BooleanField(
+        default=False,
+        help_text="When True, login requires a TOTP code after password",
+    )
+    backup_codes_hash = models.TextField(
+        blank=True,
+        default='',
+        help_text="JSON list of hashed one-time backup codes (empty when none)",
+    )
+
+    # SSO extension (OIDC/SAML) — populated when using enterprise SSO
+    sso_provider = models.CharField(
+        max_length=64,
+        blank=True,
+        default='',
+        db_index=True,
+        help_text="e.g. google, azure, oidc",
+    )
+    sso_subject = models.CharField(
+        max_length=255,
+        blank=True,
+        default='',
+        db_index=True,
+        help_text="Stable subject identifier from the IdP",
+    )
     
+    # Admin lock (Developer can hard-lock any user)
+    is_admin_locked = models.BooleanField(
+        default=False,
+        help_text="Developer-imposed hard lock — blocks login and revokes sessions",
+    )
+    admin_lock_reason = models.CharField(
+        max_length=255, blank=True, default='',
+        help_text="Reason shown in admin tools when account is locked",
+    )
+    admin_lock_until = models.DateTimeField(
+        null=True, blank=True,
+        help_text="Optional expiration; null means locked until manually unlocked",
+    )
+
     # Status & Metadata
     last_seen = models.DateTimeField(
         blank=True,
@@ -122,6 +179,12 @@ class User(AbstractUser):
     date_joined = models.DateTimeField(
         default=timezone.now,
         help_text="Date and time when user account was created"
+    )
+
+    onboarding_progress = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Product onboarding checklist progress (tenant-scoped keys)",
     )
 
     objects = UserManager()
@@ -161,6 +224,12 @@ class User(AbstractUser):
             return False
         return self.role == 'Employee'
 
+    def is_visitor(self):
+        """Read-mostly tier: dashboard and template preview/edit without persist."""
+        if self.is_superuser:
+            return False
+        return self.role == 'Visitor'
+
     def is_admin(self):
         """Deprecated: old Admin role; use is_developer()."""
         return False
@@ -179,12 +248,12 @@ class User(AbstractUser):
         return self.is_developer()
 
     def can_manage_own_resources(self):
-        """All active roles may manage permitted resources."""
+        """Developer, Manager, and Employee may manage permitted resources; Visitor may not."""
         return self.is_developer() or self.is_manager() or self.is_employee()
 
     def has_read_only_access(self):
-        """No dedicated read-only tier in 3-role model."""
-        return False
+        """Visitor tier: UI read / local edit without server-side saves."""
+        return self.is_visitor()
 
     def can_execute_commands(self):
         """Developer and Manager may execute commands; not Employee."""
@@ -239,6 +308,36 @@ class User(AbstractUser):
         except ImportError:
             return 0
     
+    @property
+    def storage_used_bytes(self):
+        """Total file storage consumed by content in templates owned by this user."""
+        try:
+            from django.db.models import Sum
+            from templates.models import Content
+            result = Content.objects.filter(
+                widget__layer__template__created_by=self,
+                file_size__isnull=False,
+            ).aggregate(total=Sum('file_size'))
+            return result['total'] or 0
+        except Exception:
+            return 0
+
+    @property
+    def subscription_plan(self):
+        """Plan name from the user's tenant, or None."""
+        tenant = getattr(self, 'tenant', None)
+        if tenant:
+            return getattr(tenant, 'plan_name', '') or None
+        return None
+
+    @property
+    def subscription_status(self):
+        """Subscription status from the user's tenant, or None."""
+        tenant = getattr(self, 'tenant', None)
+        if tenant:
+            return getattr(tenant, 'subscription_status', '') or None
+        return None
+
     # Organization Helper Methods
     def get_organization_users(self):
         """Get all users in the same organization"""
@@ -248,6 +347,25 @@ class User(AbstractUser):
             organization_name=self.organization_name,
             is_active=True
         )
+
+    def get_accessible_templates_queryset(self):
+        """Templates this user may read in the API (includes sample templates for Visitors)."""
+        from django.db.models import Q
+        from templates.models import Template
+
+        qs = Template.objects.all()
+        if self.has_full_access():
+            return qs
+        if self.is_visitor():
+            q = Q(is_sample=True)
+            if self.organization_name:
+                org_users = self.get_organization_users()
+                q |= Q(created_by=self) | Q(created_by__in=org_users)
+            return qs.filter(q)
+        if self.can_manage_own_resources():
+            org_users = self.get_organization_users()
+            return qs.filter(Q(created_by=self) | Q(created_by__in=org_users))
+        return qs.filter(created_by=self)
     
     def can_access_user_resource(self, other_user):
         """
@@ -326,6 +444,46 @@ class User(AbstractUser):
                 logger.warning(f'Username validation warning for user {self.username}')
         
         super().save(*args, **kwargs)
+
+
+class UserInvitation(models.Model):
+    """Pending invitation to join a tenant with a given role."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    email = models.EmailField(db_index=True)
+    token = models.CharField(max_length=128, unique=True, db_index=True)
+    role = models.CharField(max_length=20, default='Employee')
+    tenant = models.ForeignKey(
+        'saas_platform.Tenant',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='invitations',
+    )
+    invited_by = models.ForeignKey(
+        'accounts.User',
+        on_delete=models.CASCADE,
+        related_name='sent_invitations',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    accepted_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = 'accounts_user_invitation'
+        ordering = ['-created_at']
+
+    def save(self, *args, **kwargs):
+        from .invitations import create_invitation_token, default_invite_expiry
+
+        if not self.expires_at:
+            self.expires_at = default_invite_expiry()
+        if not self.token:
+            self.token = create_invitation_token()
+        super().save(*args, **kwargs)
+
+    def is_valid(self) -> bool:
+        return self.accepted_at is None and self.expires_at > timezone.now()
 
 
 # Signals are handled in accounts/signals.py

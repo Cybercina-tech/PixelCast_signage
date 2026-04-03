@@ -71,28 +71,28 @@ def cleanup_expired_backups_task():
 
 @shared_task
 def cleanup_old_audit_logs():
-    """Celery task to cleanup old audit logs."""
+    """Archive old audit logs (immutable retention — never hard-deleted by default)."""
     from core.models import AuditLog
     from datetime import timedelta
 
-    logger.info("Starting cleanup of old audit logs")
+    logger.info("Starting archive of old audit logs")
 
     try:
         audit_config = getattr(settings, 'AUDIT_LOGGING', {})
         retention_days = audit_config.get('RETENTION_DAYS', 365)
 
         cutoff_date = timezone.now() - timedelta(days=retention_days)
-        old_logs = AuditLog.objects.filter(timestamp__lt=cutoff_date)
+        old_logs = AuditLog.objects.filter(timestamp__lt=cutoff_date, is_archived=False)
         count = old_logs.count()
 
         if count > 0:
-            deleted_count, _ = old_logs.delete()
-            logger.info(f"Deleted {deleted_count} old audit logs")
-            return deleted_count
+            archived_count = old_logs.update(is_archived=True)
+            logger.info(f"Archived {archived_count} old audit logs")
+            return archived_count
         else:
-            logger.info("No old audit logs to cleanup")
+            logger.info("No old audit logs to archive")
             return 0
 
     except Exception as e:
-        logger.error(f"Audit log cleanup failed: {e}")
+        logger.error(f"Audit log archive failed: {e}")
         raise

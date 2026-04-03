@@ -104,6 +104,11 @@ class Template(models.Model):
         default=True,
         help_text="Whether the template is currently active and available for use"
     )
+    is_sample = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text="If true, visible to all Visitor users for exploration (read-only in app)"
+    )
     created_at = models.DateTimeField(
         auto_now_add=True,
         help_text="When this template was created"

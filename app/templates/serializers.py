@@ -294,7 +294,7 @@ class TemplateSerializer(serializers.ModelSerializer):
         model = Template
         fields = [
             'id', 'name', 'description', 'orientation', 'width', 'height',
-            'thumbnail', 'created_by', 'is_active', 'version', 'config_json',
+            'thumbnail', 'created_by', 'is_active', 'is_sample', 'version', 'config_json',
             'meta_data', 'layers', 'layers_count', 'widgets_count',
             'contents_count', 'screens_count', 'created_at', 'updated_at'
         ]
@@ -334,6 +334,14 @@ class TemplateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({
                 'name': 'Template name is required.'
             })
+
+        request = self.context.get('request')
+        if request is not None and 'is_sample' in attrs:
+            u = request.user
+            if not (u.is_developer() or u.is_manager()):
+                raise serializers.ValidationError({
+                    'is_sample': 'Only Developer or Manager can mark templates as sample templates.'
+                })
         
         return attrs
     
@@ -363,7 +371,7 @@ class TemplateListSerializer(serializers.ModelSerializer):
         model = Template
         fields = [
             'id', 'name', 'description', 'orientation', 'width', 'height',
-            'thumbnail', 'is_active', 'version', 'layers_count',
+            'thumbnail', 'is_active', 'is_sample', 'version', 'layers_count',
             'screens_count', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']

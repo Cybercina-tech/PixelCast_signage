@@ -1,19 +1,18 @@
 # Local development compose: Vite dev server + Django runserver/hot reload + bind mounts.
 # Production/server deploy uses docker-compose.prod.yml.
 #
-# Database: defaults live in `.env.example` (committed). Copy to `.env` to override.
-# Order: .env.example first, then `.env` — later file wins. `environment:` below still overrides
-# DB_* / POSTGRES_* from host/Dokploy when set.
+# Environment policy:
+# - Compose services load ONLY `.env` (required).
+# - `.env.example` is documentation/template only; never loaded by Compose.
+# - `environment:` below still overrides values when defined.
 services:
   # Postgres: password is pinned in `environment` for deterministic local setup.
   db:
     image: postgres:15-alpine
     container_name: db
     env_file:
-      - path: .env.example
-        required: true
       - path: .env
-        required: false
+        required: true
     environment:
       - POSTGRES_DB=${DB_NAME:-pixelcast_signage_db}
       - POSTGRES_USER=${DB_USER:-pixelcast_signage_user}
@@ -50,10 +49,8 @@ services:
     container_name: backend
     command: sh /app/entrypoint.sh
     env_file:
-      - path: .env.example
-        required: true
       - path: .env
-        required: false
+        required: true
     environment:
       # Omit PIXELCAST_SIGNAGE_ENV_FILE so CI/Dokploy clones without a host .env file still boot.
       - SECRET_KEY=${SECRET_KEY:-wN9vQx2!mK7pR4tY8uH3cD6sL1zA5eB9fG2jT7nV4qP8xM3rK6hC1wZ}
@@ -103,6 +100,8 @@ services:
       - VITE_API_BASE_URL=/api
       - VITE_IOT_BASE_URL=/iot
       - VITE_PROXY_TARGET=http://backend:8000
+      # Browser WebSocket uses same origin as Vite; /ws is proxied to backend (avoid ws://localhost:8000 when :8000 is not published).
+      # Override only if needed: VITE_WS_URL=wss://your-domain
       # For HTTPS-reverse-proxy dev, set VITE_BEHIND_HTTPS_PROXY=1. See .env.example.
       - VITE_BEHIND_HTTPS_PROXY=${VITE_BEHIND_HTTPS_PROXY:-0}
       - VITE_HMR_PROTOCOL=${VITE_HMR_PROTOCOL:-}
@@ -110,7 +109,6 @@ services:
       - VITE_HMR_HOST=${VITE_HMR_HOST:-}
     volumes:
       - ./frontend:/app
-      - ./documentation:/app/public/documentation:ro
       - /app/node_modules
     depends_on:
       backend:

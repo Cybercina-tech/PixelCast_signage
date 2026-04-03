@@ -80,6 +80,10 @@ class RolePermissions:
         if user.is_developer():
             return True
 
+        # Sample templates are readable by all Visitors (explore mode)
+        if getattr(resource, 'is_sample', False) and user.is_visitor():
+            return True
+
         # Check organization access
         if hasattr(resource, 'owner') and resource.owner:
             return user.can_access_user_resource(resource.owner)

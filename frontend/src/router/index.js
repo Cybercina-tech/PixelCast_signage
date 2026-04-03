@@ -38,16 +38,40 @@ import UserDetails from '../pages/users/UserDetails.vue'
 // Logs
 import LogsReports from '../pages/logs/LogsReports.vue'
 
+// Tickets (requester)
+import TicketsList from '../pages/tickets/TicketsList.vue'
+import TicketDetail from '../pages/tickets/TicketDetail.vue'
+
 // Analytics
 import AnalyticsDashboard from '../pages/analytics/AnalyticsDashboard.vue'
 
 // Core Infrastructure
 import AuditLogs from '../pages/core/AuditLogs.vue'
 import Backups from '../pages/core/Backups.vue'
+import SystemEmailSettings from '../pages/core/SystemEmailSettings.vue'
 
 // Settings
 import Settings from '../pages/Settings.vue'
 import LicenseSettings from '../pages/LicenseSettings.vue'
+
+// Platform (SaaS super-admin)
+import PlatformTenantsList from '../pages/platform/TenantsList.vue'
+import PlatformTenantDetail from '../pages/platform/TenantDetail.vue'
+import SuperAdminShell from '../layouts/SuperAdminShell.vue'
+import SuperAdminHome from '../pages/super-admin/SuperAdminHome.vue'
+import SystemEmailSettingsPanel from '../components/core/SystemEmailSettingsPanel.vue'
+import SuperAdminUsers from '../pages/super-admin/SuperAdminUsers.vue'
+import SuperAdminBilling from '../pages/super-admin/SuperAdminBilling.vue'
+import SuperAdminReports from '../pages/super-admin/SuperAdminReports.vue'
+import SuperAdminDevices from '../pages/super-admin/SuperAdminDevices.vue'
+import SuperAdminAlerts from '../pages/super-admin/SuperAdminAlerts.vue'
+import SuperAdminCapacity from '../pages/super-admin/SuperAdminCapacity.vue'
+import SuperAdminSystem from '../pages/super-admin/SuperAdminSystem.vue'
+import SuperAdminFlags from '../pages/super-admin/SuperAdminFlags.vue'
+import SuperAdminTicketQueue from '../pages/super-admin/SuperAdminTicketQueue.vue'
+import SuperAdminTicketDetail from '../pages/super-admin/SuperAdminTicketDetail.vue'
+import SuperAdminTicketAnalytics from '../pages/super-admin/SuperAdminTicketAnalytics.vue'
+import SuperAdminTicketSettings from '../pages/super-admin/SuperAdminTicketSettings.vue'
 
 // User Management
 import Profile from '../pages/Profile.vue'
@@ -58,6 +82,8 @@ import Sessions from '../pages/Sessions.vue'
 import PrivacyPolicy from '../pages/PrivacyPolicy.vue'
 import TermsOfService from '../pages/TermsOfService.vue'
 import DataCenter from '../pages/DataCenter.vue'
+import Documentation from '../pages/Documentation.vue'
+import DocsChangelog from '../pages/DocsChangelog.vue'
 
 // Error Pages
 import NotFound from '../pages/errors/NotFound.vue'
@@ -97,6 +123,18 @@ const routes = [
     meta: { public: true },
   },
   {
+    path: '/forgot-password',
+    name: 'forgot-password',
+    component: () => import('../pages/ForgotPassword.vue'),
+    meta: { public: true },
+  },
+  {
+    path: '/reset-password',
+    name: 'reset-password',
+    component: () => import('../pages/ResetPassword.vue'),
+    meta: { public: true },
+  },
+  {
     path: '/privacy',
     name: 'privacy',
     component: PrivacyPolicy,
@@ -112,6 +150,18 @@ const routes = [
     path: '/data-center',
     name: 'data-center',
     component: DataCenter,
+    meta: { public: true },
+  },
+  {
+    path: '/docs',
+    name: 'docs',
+    component: Documentation,
+    meta: { public: true },
+  },
+  {
+    path: '/docs/changelog',
+    name: 'docs-changelog',
+    component: DocsChangelog,
     meta: { public: true },
   },
   {
@@ -149,6 +199,136 @@ const routes = [
     name: 'dashboard',
     component: Dashboard,
     meta: { requiresAuth: true },
+  },
+  {
+    path: '/super-admin',
+    component: SuperAdminShell,
+    meta: { requiresAuth: true, requiresRole: ['Developer'] },
+    children: [
+      {
+        path: '',
+        name: 'super-admin-home',
+        component: SuperAdminHome,
+        meta: { requiresAuth: true, requiresRole: ['Developer'] },
+      },
+      {
+        path: 'customers',
+        name: 'super-admin-customers',
+        component: PlatformTenantsList,
+        props: { embedded: true },
+        meta: { requiresAuth: true, requiresRole: ['Developer'] },
+      },
+      {
+        path: 'customers/:id',
+        name: 'super-admin-customer-detail',
+        component: PlatformTenantDetail,
+        props: { embedded: true },
+        meta: { requiresAuth: true, requiresRole: ['Developer'] },
+      },
+      {
+        path: 'users',
+        name: 'super-admin-users',
+        component: SuperAdminUsers,
+        meta: { requiresAuth: true, requiresRole: ['Developer'] },
+      },
+      {
+        path: 'billing',
+        name: 'super-admin-billing',
+        component: SuperAdminBilling,
+        meta: { requiresAuth: true, requiresRole: ['Developer'] },
+      },
+      {
+        path: 'reports',
+        name: 'super-admin-reports',
+        component: SuperAdminReports,
+        meta: { requiresAuth: true, requiresRole: ['Developer'] },
+      },
+      {
+        path: 'devices',
+        name: 'super-admin-devices',
+        component: SuperAdminDevices,
+        meta: { requiresAuth: true, requiresRole: ['Developer'] },
+      },
+      {
+        path: 'alerts',
+        name: 'super-admin-alerts',
+        component: SuperAdminAlerts,
+        meta: { requiresAuth: true, requiresRole: ['Developer'] },
+      },
+      {
+        path: 'capacity',
+        name: 'super-admin-capacity',
+        component: SuperAdminCapacity,
+        meta: { requiresAuth: true, requiresRole: ['Developer'] },
+      },
+      {
+        path: 'smtp',
+        name: 'super-admin-smtp',
+        component: SystemEmailSettingsPanel,
+        props: { showTitle: false },
+        meta: { requiresAuth: true, requiresRole: ['Developer'] },
+      },
+      {
+        path: 'system',
+        name: 'super-admin-system',
+        component: SuperAdminSystem,
+        meta: { requiresAuth: true, requiresRole: ['Developer'] },
+      },
+      {
+        path: 'flags',
+        name: 'super-admin-flags',
+        component: SuperAdminFlags,
+        meta: { requiresAuth: true, requiresRole: ['Developer'] },
+      },
+      {
+        path: 'audit-logs',
+        name: 'super-admin-audit-logs',
+        component: AuditLogs,
+        meta: { requiresAuth: true, requiresRole: ['Developer'] },
+      },
+      {
+        path: 'backups',
+        name: 'super-admin-backups',
+        component: Backups,
+        meta: { requiresAuth: true, requiresRole: ['Developer'] },
+      },
+      {
+        path: 'tickets',
+        name: 'super-admin-tickets',
+        component: SuperAdminTicketQueue,
+        meta: { requiresAuth: true, requiresRole: ['Developer'] },
+      },
+      {
+        path: 'tickets/analytics',
+        name: 'super-admin-ticket-analytics',
+        component: SuperAdminTicketAnalytics,
+        meta: { requiresAuth: true, requiresRole: ['Developer'] },
+      },
+      {
+        path: 'tickets/settings',
+        name: 'super-admin-ticket-settings',
+        component: SuperAdminTicketSettings,
+        meta: { requiresAuth: true, requiresRole: ['Developer'] },
+      },
+      {
+        path: 'tickets/:id',
+        name: 'super-admin-ticket-detail',
+        component: SuperAdminTicketDetail,
+        meta: { requiresAuth: true, requiresRole: ['Developer'] },
+      },
+    ],
+  },
+  {
+    path: '/platform/tenants',
+    redirect: '/super-admin/customers',
+  },
+  {
+    path: '/platform/tenants/:id',
+    redirect: (to) => ({ path: `/super-admin/customers/${to.params.id}` }),
+  },
+  {
+    path: '/core/email',
+    redirect: '/super-admin/smtp',
   },
   {
     path: '/screens',
@@ -241,6 +421,18 @@ const routes = [
     meta: { requiresAuth: true },
   },
   {
+    path: '/tickets',
+    name: 'tickets',
+    component: TicketsList,
+    meta: { requiresAuth: true },
+  },
+  {
+    path: '/tickets/:id',
+    name: 'ticket-detail',
+    component: TicketDetail,
+    meta: { requiresAuth: true },
+  },
+  {
     path: '/logs',
     name: 'logs',
     component: LogsReports,
@@ -262,6 +454,12 @@ const routes = [
     path: '/core/backups',
     name: 'backups',
     component: Backups,
+    meta: { requiresAuth: true, requiresRole: ['Developer'] },
+  },
+  {
+    path: '/core/email',
+    name: 'system-email-settings',
+    component: SystemEmailSettings,
     meta: { requiresAuth: true, requiresRole: ['Developer'] },
   },
   {
@@ -422,16 +620,6 @@ router.beforeEach(async (to, from, next) => {
       next({ name: 'forbidden' })
       return
     }
-  }
-
-  if (
-    authStore.isAuthenticated &&
-    authStore.user?.role === 'Employee' &&
-    !authStore.user?.is_superuser &&
-    to.name === 'dashboard'
-  ) {
-    next({ name: 'screens' })
-    return
   }
 
   next()

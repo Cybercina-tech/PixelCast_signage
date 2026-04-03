@@ -24,6 +24,8 @@ const RESERVED_KEYS = new Set([
   'non_field_errors',
   '__all__',
   'code',
+  'error_code',
+  'success',
   'lockout_seconds',
 ])
 

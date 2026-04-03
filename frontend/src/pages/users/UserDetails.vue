@@ -1,7 +1,17 @@
 <template>
   <AppLayout>
-    <div v-if="usersStore.loading" class="text-center py-8">Loading...</div>
-    <div v-else-if="user" class="space-y-6">
+    <div class="space-y-6">
+      <router-link
+        :to="{ name: 'users' }"
+        class="btn-outline inline-flex w-fit items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 hover:-translate-x-0.5"
+        title="Back to Team management"
+      >
+        <ArrowLeftIcon class="w-5 h-5 shrink-0" aria-hidden="true" />
+        Back to Team management
+      </router-link>
+
+      <div v-if="usersStore.loading" class="text-center py-8">Loading...</div>
+      <div v-else-if="user" class="space-y-6">
       <div class="flex justify-between items-center">
         <div>
           <h1 class="text-2xl font-bold text-primary">{{ user.full_name || user.username }}</h1>
@@ -57,8 +67,14 @@
             <div v-else-if="user.role === 'Manager'" class="p-2 bg-yellow-50 dark:bg-yellow-900/20 rounded text-primary">
               Manage Employees, screens, and content; no system settings
             </div>
-            <div v-else class="p-2 bg-gray-50 dark:bg-gray-800 rounded text-primary">
+            <div v-else-if="user.role === 'Employee'" class="p-2 bg-gray-50 dark:bg-gray-800 rounded text-primary">
               Screens, playlists, and media library
+            </div>
+            <div v-else-if="user.role === 'Visitor'" class="p-2 bg-slate-50 dark:bg-slate-900/40 rounded text-primary">
+              Dashboard and template exploration only; changes are not saved
+            </div>
+            <div v-else class="p-2 bg-gray-50 dark:bg-gray-800 rounded text-primary">
+              {{ user.role }}
             </div>
           </div>
         </Card>
@@ -104,6 +120,7 @@
           </button>
         </template>
       </Modal>
+      </div>
     </div>
   </AppLayout>
 </template>
@@ -113,6 +130,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useUsersStore } from '@/stores/users'
 import { useNotification } from '@/composables/useNotification'
+import { ArrowLeftIcon } from '@heroicons/vue/24/outline'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import Card from '@/components/common/Card.vue'
 import Modal from '@/components/common/Modal.vue'

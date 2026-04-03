@@ -31,7 +31,7 @@
         <div v-else class="nav-content">
           <!-- Menu Items -->
           <ul class="menu-list">
-            <li v-for="item in sidebarStore.items" :key="item.id" class="menu-item-wrapper">
+            <li v-for="item in displayedItems" :key="item.id" class="menu-item-wrapper">
                 <!-- Parent item with children (submenu) -->
                 <div v-if="item.children && item.children.length > 0">
                   <button
@@ -122,21 +122,44 @@
         </div>
       </nav>
       
-      <!-- Developer: Error Dashboard Toggle -->
+      <!-- Restriction banner -->
+      <div v-if="isRestricted" class="px-3 pb-2">
+        <div class="rounded-xl border border-rose-500/40 bg-rose-500/10 px-3 py-2.5 text-xs text-rose-300">
+          <p class="font-semibold">Access restricted</p>
+          <p class="mt-0.5 text-rose-300/80">{{ restrictionMessage }}</p>
+        </div>
+      </div>
+
+      <!-- Developer: quick super-admin link -->
+      <div v-if="isDeveloper && !isRestricted" class="px-3 pb-2">
+        <router-link
+          to="/super-admin"
+          class="menu-item menu-item-active"
+        >
+          <div class="menu-icon-wrapper">
+            <ShieldCheckIcon class="menu-icon icon-active" />
+          </div>
+          <span class="menu-text">Super Admin</span>
+        </router-link>
+      </div>
+
+      <!-- Developer: Error logs panel -->
       <div v-if="isDeveloper" class="sidebar-footer">
         <button
           @click="errorDashboardOpen = !errorDashboardOpen"
           class="error-dashboard-button"
+          type="button"
         >
-          <ExclamationTriangleIcon class="w-5 h-5" />
-          <span class="error-dashboard-text">Error Dashboard</span>
+          <ClipboardDocumentListIcon class="w-5 h-5" />
+          <span class="error-dashboard-text">Error Logs</span>
         </button>
       </div>
     </div>
   </aside>
   
-  <!-- Error Dashboard -->
+  <!-- Error logs (Developer only): do not mount for other roles — avoids /admin/errors/stats 403 + toasts on every page -->
   <ErrorDashboard
+    v-if="isDeveloper"
     :is-open="errorDashboardOpen"
     @close="errorDashboardOpen = false"
   />
@@ -168,11 +191,15 @@ import {
   ServerIcon,
   BoltIcon,
   ExclamationTriangleIcon,
+  ClipboardDocumentListIcon,
   ChevronDownIcon,
+  BuildingOffice2Icon,
+  EnvelopeIcon,
+  TicketIcon,
 } from '@heroicons/vue/24/outline'
 import { useAuthStore } from '@/stores/auth'
 import { useSidebarStore } from '@/stores/sidebar'
-import { isDeveloperOrSuperuser } from '@/utils/permissions'
+import { isDeveloperOrSuperuser, isRouteAllowedInRestrictedMode } from '@/utils/permissions'
 import ErrorDashboard from '@/components/admin/ErrorDashboard.vue'
 
 defineProps({
@@ -208,6 +235,10 @@ const iconMap = {
   ServerIcon,
   BoltIcon,
   ExclamationTriangleIcon,
+  BuildingOffice2Icon,
+  EnvelopeIcon,
+  ShieldCheckIcon,
+  TicketIcon,
 }
 
 const getIconComponent = (iconName) => {
@@ -215,7 +246,23 @@ const getIconComponent = (iconName) => {
 }
 
 const isDeveloper = computed(() => isDeveloperOrSuperuser(authStore.user))
+const isRestricted = computed(() => authStore.isRestrictedMode)
+const restrictionMessage = computed(() => {
+  const info = authStore.restrictionInfo
+  if (!info) return 'Your access has been limited by an administrator.'
+  return info.reason || info.message || 'Your access has been limited by an administrator.'
+})
 
+const displayedItems = computed(() => {
+  if (!isRestricted.value) return sidebarStore.items
+  return sidebarStore.items.filter((item) => {
+    if (item.path && isRouteAllowedInRestrictedMode(item.path)) return true
+    if (item.children?.length) {
+      return item.children.some((c) => c.path && isRouteAllowedInRestrictedMode(c.path))
+    }
+    return false
+  })
+})
 
 const isActive = (path) => {
   if (!path) return false

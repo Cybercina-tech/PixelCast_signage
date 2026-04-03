@@ -296,6 +296,16 @@ class UserManagementTests(TestCase):
         })
         
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_developer_can_change_own_role(self):
+        """Developers may change their own role via change_role (e.g. handoff)."""
+        self.client.force_authenticate(user=self.admin)
+        url = reverse('user-change-role', args=[self.admin.id])
+        response = self.client.post(url, {'role': 'Manager'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.admin.refresh_from_db()
+        self.assertEqual(self.admin.role, 'Manager')
+        self.assertFalse(self.admin.is_superuser)
     
     def test_delete_user(self):
         """Test user deletion."""
@@ -473,6 +483,12 @@ class PermissionTests(TestCase):
             password='pass123',
             role='Employee'
         )
+        self.visitor = User.objects.create_user(
+            username='visitor',
+            email='visitor@example.com',
+            password='pass123',
+            role='Visitor'
+        )
     
     def test_permission_methods(self):
         """Test permission helper methods."""
@@ -482,6 +498,8 @@ class PermissionTests(TestCase):
         
         self.assertTrue(self.manager.can_manage_own_resources())
         self.assertTrue(self.viewer.can_manage_own_resources())
+        self.assertFalse(self.visitor.can_manage_own_resources())
+        self.assertTrue(self.visitor.has_read_only_access())
 
     def test_role_checks(self):
         """Test role checking methods."""
@@ -489,6 +507,7 @@ class PermissionTests(TestCase):
         self.assertTrue(self.admin.is_developer())
         self.assertTrue(self.manager.is_manager())
         self.assertTrue(self.viewer.is_employee())
+        self.assertTrue(self.visitor.is_visitor())
 
 
 class SecurityEdgeCasesTests(TestCase):

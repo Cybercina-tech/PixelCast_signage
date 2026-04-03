@@ -12,6 +12,39 @@
 
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
       <section
+        class="rounded-2xl border border-cyan-400/25 bg-gradient-to-br from-cyan-950/40 to-slate-900/90 p-5 sm:p-6 shadow-lg shadow-cyan-950/20"
+      >
+        <h2 class="text-lg font-semibold text-white mb-2">Download — Android TV app</h2>
+        <p class="text-sm text-white/75 mb-3 max-w-3xl">
+          One official APK for TVs and boxes that run <strong class="text-white/90">Android TV</strong> or
+          <strong class="text-white/90">Google TV</strong>. The same build works across manufacturers—no per-brand
+          packages.
+        </p>
+        <p class="text-xs text-white/55 mb-4 max-w-3xl">
+          Displays on <strong class="text-white/70">Tizen</strong>, <strong class="text-white/70">webOS</strong>, or
+          other non-Android platforms do not use this APK. Use the
+          <router-link to="/player/connect" class="text-cyan-300 underline hover:text-cyan-200">Web Player</router-link>
+          in the device browser instead.
+        </p>
+        <div v-if="apkDownloadUrl" class="flex flex-wrap gap-3 items-center">
+          <a
+            :href="apkDownloadUrl"
+            class="btn-primary px-4 py-2.5 rounded-lg text-sm font-medium inline-flex items-center gap-2"
+            rel="noopener noreferrer"
+          >
+            Download APK
+          </a>
+          <span class="text-xs text-white/50">Install, then pair the screen from your admin.</span>
+        </div>
+        <p v-else class="text-sm text-amber-100/90 leading-relaxed">
+          Configure a download URL via server env
+          <code class="mx-0.5 rounded bg-black/35 px-1.5 py-0.5 font-mono text-xs">ANDROID_TV_APK_URL</code>
+          (recommended) or build-time
+          <code class="mx-0.5 rounded bg-black/35 px-1.5 py-0.5 font-mono text-xs">VITE_ANDROID_TV_APK_URL</code>
+          to show the button here.
+        </p>
+      </section>
+      <section
         v-if="usingFallback"
         class="rounded-xl border border-amber-400/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100"
       >
@@ -110,14 +143,6 @@
                 >
                   {{ selectedModelId === model.id ? 'Selected' : 'Select TV' }}
                 </button>
-                <button
-                  type="button"
-                  class="px-3 py-1.5 rounded-lg text-xs border border-amber-400/40 bg-amber-500/10 text-amber-200 cursor-not-allowed"
-                  disabled
-                  title="App package for this model is not published yet."
-                >
-                  Download (Coming Soon)
-                </button>
               </div>
             </div>
           </div>
@@ -138,7 +163,7 @@
 
 <script setup>
 import { computed, onMounted, ref, watchEffect } from 'vue'
-import { tvCatalogAPI } from '@/services/api'
+import { tvCatalogAPI, publicAPI } from '@/services/api'
 import { normalizeApiError } from '@/utils/apiError'
 import { getTvCatalogFallback } from '@/data/tvCatalogFallback'
 
@@ -152,6 +177,7 @@ const platform = ref('')
 const operationTime = ref('')
 const brightnessClass = ref('')
 const selectedModelId = ref(localStorage.getItem('selected_tv_model_id') || '')
+const apkDownloadUrl = ref('')
 
 const platformOptions = [
   { value: 'android_tv', label: 'Android TV' },
@@ -217,6 +243,21 @@ function isMissingTvTableError(err) {
   return msg.includes('core_tv_brand') || msg.includes('does not exist')
 }
 
+async function loadApkDownloadUrl() {
+  try {
+    const response = await publicAPI.downloads()
+    const url = response?.data?.android_tv_apk_url
+    if (url && String(url).trim()) {
+      apkDownloadUrl.value = String(url).trim()
+      return
+    }
+  } catch {
+    /* optional: server offline or not configured */
+  }
+  const viteUrl = import.meta.env.VITE_ANDROID_TV_APK_URL
+  if (viteUrl) apkDownloadUrl.value = String(viteUrl).trim()
+}
+
 async function fetchCatalog() {
   loading.value = true
   error.value = ''
@@ -242,6 +283,7 @@ async function fetchCatalog() {
 
 onMounted(() => {
   document.title = 'Data Center - PixelCast Signage'
+  loadApkDownloadUrl()
   fetchCatalog()
 })
 

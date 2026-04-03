@@ -163,6 +163,12 @@ class AuditLog(models.Model):
         help_text="When the action occurred"
     )
 
+    is_archived = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text="Archived logs are hidden from default queries but never deleted"
+    )
+
     class Meta:
         db_table = 'core_audit_log'
         verbose_name = 'Audit Log'
@@ -513,6 +519,75 @@ class NotificationPreference(models.Model):
         return f"Notification preferences for {self.user.username}"
 
 
+class SystemEmailSettings(models.Model):
+    """
+    Singleton (pk=1) system-wide SMTP / transactional email configuration.
+    Controlled from the admin UI (Developer); password stored encrypted at rest.
+    """
+
+    DELIVERY_CONSOLE = 'console'
+    DELIVERY_SMTP = 'smtp'
+    DELIVERY_CHOICES = [
+        (DELIVERY_CONSOLE, 'Console (development)'),
+        (DELIVERY_SMTP, 'SMTP'),
+    ]
+
+    id = models.PositiveSmallIntegerField(primary_key=True, default=1, editable=False)
+    delivery_mode = models.CharField(
+        max_length=16,
+        choices=DELIVERY_CHOICES,
+        default=DELIVERY_CONSOLE,
+        help_text='Console prints to logs; SMTP sends via configured host.',
+    )
+    smtp_host = models.CharField(max_length=255, blank=True, default='')
+    smtp_port = models.PositiveIntegerField(default=587)
+    use_tls = models.BooleanField(default=True)
+    use_ssl = models.BooleanField(default=False)
+    smtp_username = models.CharField(max_length=255, blank=True, default='')
+    smtp_password_encrypted = models.TextField(blank=True, default='')
+    default_from_email = models.CharField(max_length=255, blank=True, default='')
+    last_smtp_test_at = models.DateTimeField(null=True, blank=True)
+    last_smtp_test_ok = models.BooleanField(null=True, blank=True)
+    last_smtp_test_error_code = models.CharField(max_length=32, blank=True, default='')
+    last_smtp_test_detail = models.TextField(blank=True, default='')
+    updated_at = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'core_system_email_settings'
+        verbose_name = 'System email settings'
+        verbose_name_plural = 'System email settings'
+
+    def __str__(self):
+        return 'System email settings'
+
+    def save(self, *args, **kwargs):
+        self.pk = 1
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def get_solo(cls):
+        return cls.objects.get_or_create(pk=1, defaults={})[0]
+
+    def set_smtp_password(self, plain: str | None) -> None:
+        if plain is None:
+            return
+        plain = str(plain).strip()
+        if not plain:
+            return
+        from core.email_crypto import encrypt_secret
+
+        self.smtp_password_encrypted = encrypt_secret(plain)
+
+    def get_smtp_password(self) -> str:
+        from core.email_crypto import decrypt_secret
+
+        return decrypt_secret(self.smtp_password_encrypted or '')
+
+    def clear_smtp_password(self) -> None:
+        self.smtp_password_encrypted = ''
+
+
 class TVBrand(models.Model):
     """TV brand catalog entry for Data Center."""
 
@@ -598,3 +673,26 @@ class TVModel(models.Model):
 
     def __str__(self):
         return f"{self.brand.name} - {self.name}"
+
+
+class SupportTicket(models.Model):
+    """Lightweight in-app support ticket (foundation for helpdesk)."""
+
+    STATUS_CHOICES = [
+        ('open', 'Open'),
+        ('closed', 'Closed'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='support_tickets')
+    subject = models.CharField(max_length=255)
+    body = models.TextField()
+    status = models.CharField(max_length=16, choices=STATUS_CHOICES, default='open', db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return self.subject[:80]

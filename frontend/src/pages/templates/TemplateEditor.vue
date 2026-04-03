@@ -7,6 +7,13 @@
       </div>
     </div>
     <div v-else class="template-editor h-full min-h-0 w-full flex flex-col bg-editor-workspace dark:bg-gray-900 text-primary dark:text-white overflow-hidden">
+      <div
+        v-if="!canEditTemplates"
+        class="px-4 py-2.5 bg-amber-500/10 border-b border-amber-500/35 text-amber-100 text-sm text-center shrink-0"
+        role="status"
+      >
+        Read-only: you can explore the canvas; changes are not saved to the server.
+      </div>
       <!-- Top Toolbar -->
       <div class="flex items-center justify-between px-4 py-3 bg-card border-b border-border-color">
         <div class="flex items-center gap-3">
@@ -23,7 +30,8 @@
           <h1 class="text-xl font-semibold text-primary">{{ templateName || 'Untitled Template' }}</h1>
           <button
             @click="saveTemplate"
-            :disabled="saving"
+            :disabled="saving || !canEditTemplates"
+            :title="!canEditTemplates ? 'Your account cannot save templates' : ''"
             class="btn-primary px-4 py-2 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-sm font-medium transition-all duration-400"
           >
             {{ saving ? 'Saving...' : 'Save Template' }}
@@ -43,7 +51,7 @@
             Delete Object
           </button>
           <button
-            v-if="templateId"
+            v-if="templateId && canEditTemplates"
             @click="handlePushToScreen"
             :disabled="saving || pushing"
             class="btn-secondary px-4 py-2 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-sm font-medium transition-all duration-400 flex items-center gap-2"
@@ -56,13 +64,6 @@
           </button>
         </div>
         <div class="flex items-center gap-2 text-sm text-muted">
-          <button
-            @click="leftPanelCollapsed = !leftPanelCollapsed"
-            class="btn-outline px-2 py-1 rounded text-xs"
-            :title="leftPanelCollapsed ? 'Expand widget panel' : 'Collapse widget panel'"
-          >
-            {{ leftPanelCollapsed ? 'Show Tools' : 'Hide Tools' }}
-          </button>
           <button
             @click="rightPanelCollapsed = !rightPanelCollapsed"
             class="btn-outline px-2 py-1 rounded text-xs"
@@ -77,14 +78,12 @@
       <div class="flex-1 flex overflow-hidden">
         <!-- Left Sidebar: Widget Library -->
         <div
-          class="hidden lg:flex lg:flex-col h-full bg-card border-r border-border-color transition-all duration-200"
-          :class="leftPanelCollapsed ? 'w-16' : 'w-56'"
+          class="hidden lg:flex lg:flex-col h-full w-56 bg-card border-r border-border-color transition-all duration-200"
         >
           <div class="bg-card border-b border-border-color px-4 py-3 shrink-0">
-            <h2 v-if="!leftPanelCollapsed" class="text-lg font-semibold text-primary">Widget Library</h2>
-            <h2 v-else class="text-xs font-semibold text-primary uppercase tracking-wide">Tools</h2>
+            <h2 class="text-lg font-semibold text-primary">Widget Library</h2>
           </div>
-          <div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar scroll-container p-2" :class="leftPanelCollapsed ? 'space-y-1' : 'p-4'">
+          <div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar scroll-container p-2 p-4">
             <div class="space-y-3">
               <div
                 v-for="section in widgetLibrarySections"
@@ -93,7 +92,6 @@
                 :style="widgetSectionCardStyle(section.id)"
               >
                 <button
-                  v-if="!leftPanelCollapsed"
                   class="w-full px-3 py-2.5 flex items-center justify-between text-left transition-colors"
                   :style="widgetSectionHeaderStyle(section.id)"
                   @click="toggleWidgetSection(section.id)"
@@ -115,8 +113,7 @@
                 <transition name="widget-accordion">
                   <div
                     v-show="isWidgetSectionOpen(section.id)"
-                    class="space-y-2 p-2"
-                    :class="leftPanelCollapsed ? '' : 'pt-0'"
+                    class="space-y-2 p-2 pt-0"
                   >
                     <button
                       v-for="item in section.items"
@@ -124,12 +121,11 @@
                       @click="addWidget(item.type)"
                       class="w-full px-4 py-3 bg-card hover:bg-card active:scale-95 rounded-lg text-left text-primary transition-all duration-300 flex items-center gap-2 font-medium border border-border-color hover:border-accent-color/50"
                       style="--accent-color: var(--accent-color);"
-                      :title="leftPanelCollapsed ? item.label : ''"
                     >
                       <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="item.iconPath" />
                       </svg>
-                      <span v-if="!leftPanelCollapsed">{{ item.label }}</span>
+                      <span>{{ item.label }}</span>
                     </button>
                   </div>
                 </transition>
@@ -1600,12 +1596,20 @@
                   <div>
                     <label class="block text-xs font-medium text-muted mb-1.5">URL</label>
                     <input
-                      v-model="selectedWidget.content"
+                      v-model="webviewUrlDraft"
                       type="url"
                       placeholder="https://example.com"
                       class="editor-select placeholder:text-muted"
-                      @input="updateWidgetProperty('content', $event.target.value)"
+                      @keydown.enter.prevent="applyWebviewUrl"
                     />
+                    <button
+                      type="button"
+                      class="btn-primary mt-2 w-full px-3 py-2 rounded-lg text-sm font-medium"
+                      @click="applyWebviewUrl"
+                    >
+                      Apply URL
+                    </button>
+                    <p class="text-[11px] text-muted mt-2">Loads the address in the widget when you click Apply (or press Enter).</p>
                   </div>
                 </div>
               </div>
@@ -1655,7 +1659,7 @@
                   ]"
                 >
                   <div class="flex items-center justify-between gap-2">
-                    <div class="flex items-center gap-2 flex-1 min-w-0">
+                    <div class="flex items-center gap-1 flex-1 min-w-0">
                       <button
                         @click.stop="toggleWidgetVisibility(widget.id)"
                         :class="[
@@ -1684,6 +1688,40 @@
                         ref="widgetNameInput"
                       />
                       <span class="text-xs text-muted flex-shrink-0 ml-auto">Z:{{ widget.zIndex }}</span>
+                    </div>
+                    <div class="flex items-center gap-0.5 flex-shrink-0" @click.stop>
+                      <button
+                        type="button"
+                        class="px-1.5 py-1 rounded text-[10px] font-medium bg-surface-inset dark:bg-slate-700/80 text-muted hover:text-primary border border-border-color/60"
+                        title="Send backward"
+                        @click="moveLayerOrder(widget.id, 'back')"
+                      >
+                        ↓
+                      </button>
+                      <button
+                        type="button"
+                        class="px-1.5 py-1 rounded text-[10px] font-medium bg-surface-inset dark:bg-slate-700/80 text-muted hover:text-primary border border-border-color/60"
+                        title="Bring forward"
+                        @click="moveLayerOrder(widget.id, 'forward')"
+                      >
+                        ↑
+                      </button>
+                      <button
+                        type="button"
+                        class="px-1.5 py-1 rounded text-[10px] font-medium bg-surface-inset dark:bg-slate-700/80 text-muted hover:text-primary border border-border-color/60"
+                        title="Send to back"
+                        @click="sendLayerToBack(widget.id)"
+                      >
+                        ⤓
+                      </button>
+                      <button
+                        type="button"
+                        class="px-1.5 py-1 rounded text-[10px] font-medium bg-surface-inset dark:bg-slate-700/80 text-muted hover:text-primary border border-border-color/60"
+                        title="Bring to front"
+                        @click="bringLayerToFront(widget.id)"
+                      >
+                        ⤒
+                      </button>
                     </div>
                     <button @click.stop="deleteWidget(widget.id)" class="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 active:scale-95 transition-all duration-200 flex-shrink-0 ml-2" title="Delete Widget">
                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1737,6 +1775,8 @@ import ChartEditorPanel from './components/chart/ChartEditorPanel.vue'
 import MediaLibraryModal from '@/components/common/MediaLibraryModal.vue'
 import PushToScreenModal from '@/components/templates/PushToScreenModal.vue'
 import { useScreensStore } from '@/stores/screens'
+import { useAuthStore } from '@/stores/auth'
+import { hasPermission } from '@/utils/permissions'
 import { resolveWidgetBackgroundColor } from '@/utils/widgetBackground'
 import { WIDGET_FONT_OPTIONS } from '@/constants/widgetFonts'
 import {
@@ -1749,7 +1789,10 @@ const route = useRoute()
 const router = useRouter()
 const templatesStore = useTemplatesStore()
 const screensStore = useScreensStore()
+const authStore = useAuthStore()
 const notify = useNotification()
+
+const canEditTemplates = computed(() => hasPermission(authStore.user, 'edit_templates'))
 
 // Expose Math for template usage
 const Math = window.Math
@@ -1778,6 +1821,20 @@ const selectedWidgetId = ref(null)
 const selectedWidget = computed(() => {
   return widgets.value.find(w => w.id === selectedWidgetId.value)
 })
+
+const webviewUrlDraft = ref('')
+watch(
+  () => [selectedWidgetId.value, selectedWidget.value?.type, selectedWidget.value?.content],
+  () => {
+    const w = selectedWidget.value
+    if (w?.type === 'webview') {
+      webviewUrlDraft.value = typeof w.content === 'string' ? w.content : ''
+    } else {
+      webviewUrlDraft.value = ''
+    }
+  },
+  { immediate: true }
+)
 
 const albumQueueItems = computed(() => {
   const widget = selectedWidget.value
@@ -1874,7 +1931,6 @@ const widgetNameInput = ref(null)
 // Media Library Modal state
 const showMediaLibrary = ref(false)
 const mediaLibraryFilterType = ref(null)
-const leftPanelCollapsed = ref(false)
 const rightPanelCollapsed = ref(false)
 const rightPanelTab = ref('properties')
 const defaultTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
@@ -1923,9 +1979,8 @@ const widgetSectionOpenState = ref({
   media: true,
   'web-data': false,
 })
-const isWidgetSectionOpen = (sectionId) => leftPanelCollapsed.value || widgetSectionOpenState.value[sectionId] !== false
+const isWidgetSectionOpen = (sectionId) => widgetSectionOpenState.value[sectionId] !== false
 const toggleWidgetSection = (sectionId) => {
-  if (leftPanelCollapsed.value) return
   widgetSectionOpenState.value = {
     ...widgetSectionOpenState.value,
     [sectionId]: !isWidgetSectionOpen(sectionId),
@@ -2226,7 +2281,7 @@ const calculateScale = () => {
   if (!canvasContainer.value) return
 
   const container = canvasContainer.value
-  const margin = 4
+  const margin = 32
   const containerWidth = Math.max(1, container.clientWidth - margin * 2)
   const containerHeight = Math.max(1, container.clientHeight - margin * 2)
 
@@ -2794,6 +2849,46 @@ const updateWidgetProperty = (property, value) => {
   })
 }
 
+const applyWebviewUrl = () => {
+  if (!selectedWidget.value || selectedWidget.value.type !== 'webview') return
+  updateWidgetProperty('content', webviewUrlDraft.value.trim())
+}
+
+function swapWidgetZIndex(idA, idB) {
+  const a = widgets.value.find((w) => w.id === idA)
+  const b = widgets.value.find((w) => w.id === idB)
+  if (!a || !b) return
+  const t = a.zIndex
+  a.zIndex = b.zIndex
+  b.zIndex = t
+  nextTick(() => moveableRef.value?.updateRect?.())
+}
+
+function moveLayerOrder(widgetId, direction) {
+  const sorted = [...widgets.value].sort((a, b) => a.zIndex - b.zIndex)
+  const idx = sorted.findIndex((w) => w.id === widgetId)
+  if (idx < 0) return
+  if (direction === 'forward' && idx < sorted.length - 1) {
+    swapWidgetZIndex(sorted[idx].id, sorted[idx + 1].id)
+  } else if (direction === 'back' && idx > 0) {
+    swapWidgetZIndex(sorted[idx].id, sorted[idx - 1].id)
+  }
+}
+
+function bringLayerToFront(widgetId) {
+  const maxZ = Math.max(...widgets.value.map((w) => w.zIndex), 0)
+  const w = widgets.value.find((x) => x.id === widgetId)
+  if (w) w.zIndex = maxZ + 1
+  nextTick(() => moveableRef.value?.updateRect?.())
+}
+
+function sendLayerToBack(widgetId) {
+  const minZ = Math.min(...widgets.value.map((w) => w.zIndex), 0)
+  const w = widgets.value.find((x) => x.id === widgetId)
+  if (w) w.zIndex = minZ - 1
+  nextTick(() => moveableRef.value?.updateRect?.())
+}
+
 // Update widget style
 const updateWidgetStyle = (property, value) => {
   if (!selectedWidget.value) return
@@ -3151,6 +3246,11 @@ const loadTemplateData = async () => {
 
 // Save template - Convert to percentage-based JSON
 const saveTemplate = async () => {
+  if (!canEditTemplates.value) {
+    notify.warning('Your account cannot save templates.')
+    return
+  }
+
   if (!templateName.value || templateName.value.trim() === '') {
     notify.error('Please enter a template name')
     return
@@ -3253,6 +3353,11 @@ const onlineScreens = computed(() => {
 })
 
 const handlePushToScreen = async () => {
+  if (!canEditTemplates.value) {
+    notify.warning('Your account cannot push templates to screens.')
+    return
+  }
+
   if (!templateId.value) {
     notify.error('Please save the template first before pushing to screen')
     return
@@ -3313,8 +3418,46 @@ const handlePushToScreenSelect = async (screen) => {
   }
 }
 
-// Export JSON
+// Export JSON (Visitors: local snapshot only, no server save)
 const exportJSON = async () => {
+  if (!canEditTemplates.value) {
+    const templateData = {
+      name: templateName.value.trim(),
+      width: canvasWidth.value,
+      height: canvasHeight.value,
+      config_json: {
+        backgroundColor: canvasBackgroundColor.value,
+        backgroundImage: canvasBackgroundImage.value || undefined,
+        widgets: widgets.value.map(widget => ({
+          id: widget.id,
+          type: widget.type,
+          name: widget.name,
+          x: `${((widget.x / canvasWidth.value) * 100).toFixed(2)}%`,
+          y: `${((widget.y / canvasHeight.value) * 100).toFixed(2)}%`,
+          width: `${((widget.width / canvasWidth.value) * 100).toFixed(2)}%`,
+          height: `${((widget.height / canvasHeight.value) * 100).toFixed(2)}%`,
+          rotation: widget.rotation,
+          zIndex: widget.zIndex,
+          visible: widget.visible !== undefined ? widget.visible : true,
+          content: widget.content || '',
+          content_id: widget.content_id || null,
+          content_ids: Array.isArray(widget.content_ids) ? widget.content_ids : [],
+          playlist_items: Array.isArray(widget.style?.playlist) ? widget.style.playlist : [],
+          style: widget.style || {}
+        }))
+      }
+    }
+    const blob = new Blob([JSON.stringify(templateData, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${templateName.value || 'template'}-local.json`
+    a.click()
+    URL.revokeObjectURL(url)
+    notify.success('Exported local preview (not saved to server)')
+    return
+  }
+
   const savedTemplate = await saveTemplate()
   const blob = new Blob([JSON.stringify(savedTemplate, null, 2)], { type: 'application/json' })
   const url = URL.createObjectURL(blob)

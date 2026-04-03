@@ -33,6 +33,27 @@ class ScreenAnalyticsService:
     CACHE_TIMEOUT = 300  # 5 minutes
     
     @staticmethod
+    def _latest_status_logs_per_screen(queryset):
+        """
+        Return one latest status log per screen from queryset.
+        Uses PostgreSQL DISTINCT ON when available, with safe Python fallback.
+        """
+        from django.conf import settings
+
+        if 'postgresql' in settings.DATABASES['default']['ENGINE']:
+            return list(queryset.order_by('screen_id', '-recorded_at').distinct('screen_id'))
+
+        recent_logs = queryset.order_by('-recorded_at')
+        screen_ids_seen = set()
+        recent_logs_list = []
+        for log in recent_logs:
+            if log.screen_id in screen_ids_seen:
+                continue
+            recent_logs_list.append(log)
+            screen_ids_seen.add(log.screen_id)
+        return recent_logs_list
+
+    @staticmethod
     def get_screen_statistics(
         screen_ids: Optional[List[str]] = None,
         start_date: Optional[datetime] = None,
@@ -69,26 +90,14 @@ class ScreenAnalyticsService:
         if end_date:
             status_logs = status_logs.filter(recorded_at__lte=end_date)
         
-        # Get most recent status for each screen
-        # PostgreSQL-optimized: Use distinct('screen_id') with ordering
-        # This is more efficient than Python-side filtering
-        from django.conf import settings
-        
-        # Check if using PostgreSQL (distinct('field') is PostgreSQL-specific)
-        if 'postgresql' in settings.DATABASES['default']['ENGINE']:
-            # PostgreSQL: Use distinct('screen_id') for optimal performance
-            # distinct() with field name returns first row per distinct value based on ordering
-            recent_logs = status_logs.order_by('screen_id', '-recorded_at').distinct('screen_id')
-            recent_logs_list = list(recent_logs)
-        else:
-            # Fallback for other databases: Get unique screen IDs and their most recent logs
-            recent_logs = status_logs.order_by('-recorded_at')
-        screen_ids_seen = set()
-        recent_logs_list = []
-        for log in recent_logs:
-            if log.screen_id not in screen_ids_seen:
-                recent_logs_list.append(log)
-                screen_ids_seen.add(log.screen_id)
+        recent_logs_list = ScreenAnalyticsService._latest_status_logs_per_screen(status_logs)
+
+        # If the selected date range has no logs, fallback to latest known metrics overall.
+        if not recent_logs_list:
+            fallback_logs = ScreenStatusLog.objects.all()
+            if screen_ids:
+                fallback_logs = fallback_logs.filter(screen_id__in=screen_ids)
+            recent_logs_list = ScreenAnalyticsService._latest_status_logs_per_screen(fallback_logs)
         
         # Aggregate metrics from recent logs
         if recent_logs_list:
@@ -131,13 +140,13 @@ class ScreenAnalyticsService:
             'total_screens': total_screens,
             'status_breakdown': status_breakdown,
             'health_metrics': {
-                'avg_cpu_usage': round(float(metrics['avg_cpu']), 2) if metrics['avg_cpu'] else None,
-                'avg_memory_usage': round(float(metrics['avg_memory']), 2) if metrics['avg_memory'] else None,
-                'avg_latency_ms': round(float(metrics['avg_latency']), 2) if metrics['avg_latency'] else None,
-                'max_cpu_usage': round(float(metrics['max_cpu']), 2) if metrics['max_cpu'] else None,
-                'max_memory_usage': round(float(metrics['max_memory']), 2) if metrics['max_memory'] else None,
-                'max_latency_ms': round(float(metrics['max_latency']), 2) if metrics['max_latency'] else None,
-                'min_latency_ms': round(float(metrics['min_latency']), 2) if metrics['min_latency'] else None,
+                'avg_cpu_usage': round(float(metrics['avg_cpu']), 2) if metrics['avg_cpu'] is not None else 0.0,
+                'avg_memory_usage': round(float(metrics['avg_memory']), 2) if metrics['avg_memory'] is not None else 0.0,
+                'avg_latency_ms': round(float(metrics['avg_latency']), 2) if metrics['avg_latency'] is not None else 0.0,
+                'max_cpu_usage': round(float(metrics['max_cpu']), 2) if metrics['max_cpu'] is not None else 0.0,
+                'max_memory_usage': round(float(metrics['max_memory']), 2) if metrics['max_memory'] is not None else 0.0,
+                'max_latency_ms': round(float(metrics['max_latency']), 2) if metrics['max_latency'] is not None else 0.0,
+                'min_latency_ms': round(float(metrics['min_latency']), 2) if metrics['min_latency'] is not None else 0.0,
             },
             'health_score': round(health_score, 2),
             'period': {

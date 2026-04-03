@@ -57,8 +57,16 @@ class CommandViewSet(viewsets.ModelViewSet):
             return queryset.filter(
                 Q(created_by=user) | Q(screen__in=accessible_screens)
             )
+
+        # Visitor: read-only — same breadth as Manager for listing; writes blocked in perform_*
+        if user.is_visitor():
+            from signage.models import Screen
+            accessible_screens = Screen.objects.all()
+            return queryset.filter(
+                Q(created_by=user) | Q(screen__in=accessible_screens)
+            )
         
-        # Viewer can only see commands they created
+        # Employee / fallback: commands they created
         return queryset.filter(created_by=user)
     
     def perform_create(self, serializer):

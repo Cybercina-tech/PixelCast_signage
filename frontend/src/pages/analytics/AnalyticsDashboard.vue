@@ -1,31 +1,36 @@
 <template>
   <AppLayout>
-    <div class="space-y-6">
+    <div class="space-y-6 min-w-0 max-w-full">
       <!-- Header -->
-      <div class="flex items-center justify-between">
-        <h1 class="text-2xl font-bold text-primary">Analytics Dashboard</h1>
-        <div class="flex items-center space-x-4">
-          <!-- Date Range Filter -->
-          <div class="flex items-center space-x-2">
+      <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <h1 class="text-xl sm:text-2xl font-bold text-primary shrink-0">
+          Analytics Dashboard
+        </h1>
+        <!-- Date Range Filter -->
+        <div
+          class="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center w-full lg:w-auto lg:max-w-none min-w-0"
+        >
+          <div class="flex flex-col sm:flex-row sm:items-center gap-2 min-w-0 flex-1 sm:flex-initial">
             <input
               v-model="dateRange.start"
               type="date"
-              class="input-base px-3 py-2 rounded-lg text-sm"
+              class="input-base px-3 py-2 rounded-lg text-sm w-full min-w-0 sm:w-auto sm:min-w-[10.5rem]"
             />
-            <span class="text-muted">to</span>
+            <span class="text-muted shrink-0 hidden sm:inline">to</span>
             <input
               v-model="dateRange.end"
               type="date"
-              class="input-base px-3 py-2 rounded-lg text-sm"
+              class="input-base px-3 py-2 rounded-lg text-sm w-full min-w-0 sm:w-auto sm:min-w-[10.5rem]"
             />
-            <button
-              @click="applyFilters"
-              :disabled="analyticsStore.loading"
-              class="btn-primary px-4 py-2 rounded-lg disabled:opacity-50 text-sm"
-            >
-              Apply
-            </button>
           </div>
+          <button
+            type="button"
+            @click="applyFilters"
+            :disabled="analyticsStore.loading"
+            class="btn-primary px-4 py-2 rounded-lg disabled:opacity-50 text-sm w-full sm:w-auto shrink-0"
+          >
+            Apply
+          </button>
         </div>
       </div>
 
@@ -43,68 +48,72 @@
       <!-- Analytics Content -->
       <div v-else class="space-y-6">
         <!-- Overview Cards -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-6">
           <Card>
-            <div class="flex items-center justify-between">
-              <div>
+            <div class="flex items-center justify-between gap-3 min-w-0">
+              <div class="min-w-0">
                 <p class="text-sm text-muted">Total Screens</p>
-                <p class="text-3xl font-bold text-primary">
+                <p class="text-2xl sm:text-3xl font-bold text-primary tabular-nums">
                   {{ analyticsStore.screenStats?.total_screens || 0 }}
                 </p>
               </div>
-              <TvIcon class="w-12 h-12 text-primary-color" />
+              <TvIcon class="w-10 h-10 sm:w-12 sm:h-12 shrink-0 text-primary-color" />
             </div>
           </Card>
 
           <Card>
-            <div class="flex items-center justify-between">
-              <div>
+            <div class="flex items-center justify-between gap-3 min-w-0">
+              <div class="min-w-0">
                 <p class="text-sm text-muted">Health Score</p>
-                <p class="text-3xl font-bold text-success">
+                <p class="text-2xl sm:text-3xl font-bold text-success tabular-nums">
                   {{ analyticsStore.screenStats?.health_score?.toFixed(1) || 0 }}%
                 </p>
               </div>
-              <ChartBarIcon class="w-12 h-12 text-success" />
+              <ChartBarIcon class="w-10 h-10 sm:w-12 sm:h-12 shrink-0 text-success" />
             </div>
           </Card>
 
           <Card>
-            <div class="flex items-center justify-between">
-              <div>
+            <div class="flex items-center justify-between gap-3 min-w-0">
+              <div class="min-w-0">
                 <p class="text-sm text-muted">Commands Success Rate</p>
-                <p class="text-3xl font-bold text-info">
+                <p class="text-2xl sm:text-3xl font-bold text-info tabular-nums">
                   {{ analyticsStore.commandStats?.overall?.success_rate?.toFixed(1) || 0 }}%
                 </p>
               </div>
-              <CheckCircleIcon class="w-12 h-12 text-info" />
+              <CheckCircleIcon class="w-10 h-10 sm:w-12 sm:h-12 shrink-0 text-info" />
             </div>
           </Card>
 
           <Card>
-            <div class="flex items-center justify-between">
-              <div>
+            <div class="flex items-center justify-between gap-3 min-w-0">
+              <div class="min-w-0">
                 <p class="text-sm text-muted">Content Error Rate</p>
-                <p class="text-3xl font-bold text-error">
+                <p class="text-2xl sm:text-3xl font-bold text-error tabular-nums">
                   {{ analyticsStore.contentStats?.download_statistics?.error_rate?.toFixed(1) || 0 }}%
                 </p>
               </div>
-              <ExclamationTriangleIcon class="w-12 h-12 text-error" />
+              <ExclamationTriangleIcon class="w-10 h-10 sm:w-12 sm:h-12 shrink-0 text-error" />
             </div>
           </Card>
         </div>
 
-        <!-- Tabs -->
-        <div class="border-b border-border-color">
-          <nav class="-mb-px flex space-x-8">
+        <!-- Tabs: horizontal scroll on narrow viewports -->
+        <div class="border-b border-border-color -mx-4 px-4 sm:mx-0 sm:px-0">
+          <nav
+            class="-mb-px flex gap-1 sm:gap-6 overflow-x-auto pb-px touch-pan-x"
+            aria-label="Analytics sections"
+          >
             <button
               v-for="tab in tabs"
               :key="tab.id"
+              type="button"
               @click="activeTab = tab.id"
               :class="[
-                'whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm transition-colors',
+                'shrink-0 whitespace-nowrap py-3 sm:py-4 px-2 sm:px-1 border-b-2 font-medium text-sm transition-colors',
                 activeTab === tab.id
                   ? 'border-primary-color text-primary-color'
-                  : 'border-transparent text-muted hover:text-secondary hover:border-border-color'
+                  : 'border-transparent text-muted hover:text-secondary hover:border-border-color',
               ]"
             >
               {{ tab.label }}

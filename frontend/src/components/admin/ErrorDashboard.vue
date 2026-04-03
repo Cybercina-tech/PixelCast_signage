@@ -8,28 +8,31 @@
       class="w-96 max-w-[90vw] flex flex-col"
     >
     <!-- Header -->
-    <div class="p-4 border-b border-border-color flex items-center justify-between bg-card dark:bg-slate-800">
+    <div class="p-4 border-b border-border-color/60 flex items-center justify-between bg-slate-50/90 dark:bg-slate-800/80">
       <div class="flex items-center gap-2">
-        <ExclamationTriangleIcon class="w-6 h-6 text-red-500 dark:text-red-400" />
-        <h3 class="text-lg font-semibold text-primary">Error Dashboard</h3>
+        <ClipboardDocumentListIcon class="w-6 h-6 text-slate-500 dark:text-slate-400" />
+        <div>
+          <h3 class="text-lg font-semibold text-primary">Error Logs</h3>
+          <p class="text-xs text-muted font-normal">Recent server and API issues — calm view</p>
+        </div>
         <span
           v-if="unresolvedCount > 0"
-          class="ml-2 px-2 py-0.5 text-xs font-bold rounded-full bg-red-500 text-white"
+          class="ml-2 px-2 py-0.5 text-xs font-medium rounded-full bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-100"
         >
-          {{ unresolvedCount }}
+          {{ unresolvedCount }} open
         </span>
       </div>
       <button
         @click="$emit('close')"
-        class="p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
-        aria-label="Close error dashboard"
+        class="p-1 rounded-lg hover:bg-slate-200/80 dark:hover:bg-slate-700 transition-colors"
+        aria-label="Close error logs"
       >
         <XMarkIcon class="w-5 h-5 text-secondary" />
       </button>
     </div>
 
     <!-- Filters -->
-    <div class="p-4 border-b border-border-color bg-card/30 space-y-3">
+    <div class="p-4 border-b border-border-color/60 bg-slate-50/50 dark:bg-slate-900/30 space-y-3">
       <div class="flex gap-2">
         <select
           v-model="filters.level"
@@ -75,11 +78,12 @@
     <div class="flex-1 overflow-y-auto p-4 space-y-2">
       <div v-if="loading" class="text-center py-8 text-slate-600 dark:text-slate-400">
         <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500"></div>
-        <p class="mt-2">Loading errors...</p>
+        <p class="mt-2">Loading logs…</p>
       </div>
-      <div v-else-if="errors.length === 0" class="text-center py-8 text-slate-600 dark:text-slate-400">
-        <CheckCircleIcon class="w-12 h-12 mx-auto mb-2 text-green-500" />
-        <p>No errors found</p>
+      <div v-else-if="errors.length === 0" class="text-center py-10 text-slate-600 dark:text-slate-400">
+        <CheckCircleIcon class="w-10 h-10 mx-auto mb-3 text-emerald-500/80" />
+        <p class="font-medium text-primary">All quiet</p>
+        <p class="text-xs mt-1 text-muted">No log entries match your filters.</p>
       </div>
       <div
         v-else
@@ -149,8 +153,8 @@
         class="bg-card rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col border border-border-color"
         @click.stop
       >
-        <div class="p-4 border-b border-border-color flex items-center justify-between">
-          <h4 class="text-lg font-semibold text-slate-900 dark:text-slate-50">Error Details</h4>
+        <div class="p-4 border-b border-border-color flex items-center justify-between bg-slate-50/80 dark:bg-slate-800/50">
+          <h4 class="text-lg font-semibold text-slate-900 dark:text-slate-50">Log entry</h4>
           <button
             @click="selectedError = null"
             class="p-1 rounded-lg hover:bg-card transition-colors"
@@ -240,7 +244,7 @@
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import {
-  ExclamationTriangleIcon,
+  ClipboardDocumentListIcon,
   XMarkIcon,
   CheckCircleIcon,
 } from '@heroicons/vue/24/outline'
@@ -363,13 +367,13 @@ const formatTimestamp = (timestamp) => {
 
 const getLevelColor = (level) => {
   const colors = {
-    CRITICAL: 'bg-red-600 text-white',
-    ERROR: 'bg-red-500 text-white',
-    WARNING: 'bg-yellow-500 text-white',
-    INFO: 'bg-blue-500 text-white',
-    DEBUG: 'bg-gray-500 text-white',
+    CRITICAL: 'bg-rose-100 text-rose-900 dark:bg-rose-900/30 dark:text-rose-100',
+    ERROR: 'bg-red-100 text-red-900 dark:bg-red-900/25 dark:text-red-100',
+    WARNING: 'bg-amber-100 text-amber-900 dark:bg-amber-900/30 dark:text-amber-100',
+    INFO: 'bg-sky-100 text-sky-900 dark:bg-sky-900/25 dark:text-sky-100',
+    DEBUG: 'bg-slate-200 text-slate-800 dark:bg-slate-700 dark:text-slate-100',
   }
-  return colors[level] || 'bg-gray-500 text-white'
+  return colors[level] || 'bg-slate-200 text-slate-800 dark:bg-slate-700 dark:text-slate-100'
 }
 
 // Watch for filter changes

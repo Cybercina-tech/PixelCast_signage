@@ -108,6 +108,13 @@ DEBUG = env('DEBUG', default=False, cast=bool)
 # Allowed hosts - safe default for development
 ALLOWED_HOSTS = env('ALLOWED_HOSTS', default='localhost,127.0.0.1,backend,frontend', cast=list)
 
+# When DEBUG is on, merge common local/Docker hostnames. Production-only ALLOWED_HOSTS in .env
+# (e.g. public domains only) would otherwise cause 400 DisallowedHost for Vite's proxy
+# (Host: 127.0.0.1:8000) and Compose service names (backend:8000).
+if DEBUG:
+    _dev_allowed = ('localhost', '127.0.0.1', 'backend', 'frontend')
+    ALLOWED_HOSTS = list(dict.fromkeys([*ALLOWED_HOSTS, *_dev_allowed]))
+
 # CSRF trusted origins for HTTPS deployments behind reverse proxies (Traefik/Nginx)
 CSRF_TRUSTED_ORIGINS = env('CSRF_TRUSTED_ORIGINS', default='', cast=list)
 if not CSRF_TRUSTED_ORIGINS:
@@ -165,6 +172,20 @@ LICENSE_OFFLINE_GRACE_HOURS = env('LICENSE_OFFLINE_GRACE_HOURS', default=72, cas
 LICENSE_CACHE_TTL_SECONDS = env('LICENSE_CACHE_TTL_SECONDS', default=900, cast=int)
 LICENSE_SERVER_TIMEOUT_SECONDS = env('LICENSE_SERVER_TIMEOUT_SECONDS', default=8, cast=int)
 
+# Platform SaaS (multi-tenant super-admin, Stripe billing). Off by default for self-hosted license installs.
+# DEPLOYMENT_MODE: saas | self_hosted | hybrid — see core.deployment.resolve_effective_platform_saas
+from core.deployment import normalize_deployment_mode, resolve_effective_platform_saas
+
+DEPLOYMENT_MODE = normalize_deployment_mode(env('DEPLOYMENT_MODE', default='hybrid'))
+_PLATFORM_SAAS_ENV = env('PLATFORM_SAAS_ENABLED', default=True, cast=bool)
+PLATFORM_SAAS_ENABLED = resolve_effective_platform_saas(DEPLOYMENT_MODE, _PLATFORM_SAAS_ENV)
+STRIPE_SECRET_KEY = env('STRIPE_SECRET_KEY', default='')
+STRIPE_PUBLISHABLE_KEY = env('STRIPE_PUBLISHABLE_KEY', default='')
+STRIPE_WEBHOOK_SECRET = env('STRIPE_WEBHOOK_SECRET', default='')
+# Stripe Checkout / Customer Portal (optional — SaaS self-serve)
+STRIPE_PRICE_ID = env('STRIPE_PRICE_ID', default='')
+STRIPE_GRACE_PERIOD_DAYS = env('STRIPE_GRACE_PERIOD_DAYS', default=7, cast=int)
+
 
 # Application definition
 
@@ -179,10 +200,12 @@ INSTALLED_APPS = [
     'channels',  # Django Channels for WebSocket support
     'rest_framework',  # Django REST Framework
     'rest_framework_simplejwt',  # JWT Authentication
+    'rest_framework_simplejwt.token_blacklist',  # JWT refresh blacklist (session revoke)
     'setup',  # Setup/Installation wizard (must be early for middleware)
     'licensing',  # License management and enforcement
     'core',  # Core infrastructure (caching, rate limiting, audit, backup)
     'accounts',  # App for User management (must be before other apps)
+    'saas_platform',  # SaaS platform admin (tenants, Stripe webhooks)
     'signage',  # App for Screen management
     'templates',  # App for Template management
     'commands',  # App for Command management
@@ -191,6 +214,7 @@ INSTALLED_APPS = [
     'bulk_operations',  # App for bulk operations
     'content_validation',  # App for content validation
     'analytics',  # App for analytics dashboard
+    'tickets',  # Helpdesk ticket system (SaaS multi-tenant)
     'drf_spectacular',  # OpenAPI/Swagger documentation
     'api_docs',  # API documentation configuration
 ]
@@ -318,6 +342,13 @@ MEDIA_URL = '/media/'
 # Base URL for building absolute URLs (used in serializers)
 # In production, set this to your domain (e.g., 'https://yourdomain.com')
 BASE_URL = env('BASE_URL', default='http://localhost:8000')
+# Public SPA URL for password-reset and email links (Vite dev default)
+PUBLIC_WEB_APP_URL = env('PUBLIC_WEB_APP_URL', default='http://localhost:5173')
+# Enterprise SSO (OIDC/SAML) — off until IdP env vars are set
+SSO_ENABLED = env('SSO_ENABLED', default=False, cast=bool)
+
+# Public download link for Android TV player APK (served via GET /api/public/downloads/)
+ANDROID_TV_APK_URL = env('ANDROID_TV_APK_URL', default='')
 
 # OpenWeather integration (Weather widget backend fetch/cache)
 OPENWEATHER_API_KEY = env('OPENWEATHER_API_KEY', default='')
@@ -588,6 +619,12 @@ RATE_LIMITING = {
             'per_minute': 30,
             'per_hour': 500,
             'per_day': 5000,
+        },
+        # Same generous limits as Manager — Visitors browse many sections; avoids 429 spam
+        'Visitor': {
+            'per_minute': 100,
+            'per_hour': 2000,
+            'per_day': 20000,
         },
     },
     

@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { authAPI, usersAPI } from '../services/api'
+import { authAPI, usersAPI, platformAPI } from '../services/api'
 import { normalizeApiError } from '../utils/apiError'
 
 export const useAuthStore = defineStore('auth', {
@@ -14,6 +14,8 @@ export const useAuthStore = defineStore('auth', {
       loading: false,
       error: null,
       initialized: false,
+      /** Set when Developer is viewing the app as another user */
+      impersonation: null,
     }
   },
   actions: {
@@ -22,6 +24,12 @@ export const useAuthStore = defineStore('auth', {
       this.error = null
       try {
         const response = await authAPI.login(credentials)
+        if (response.data.status === '2fa_required') {
+          return {
+            needs2fa: true,
+            twoFactorToken: response.data.two_factor_token,
+          }
+        }
         // Backend returns: {status: 'success', user: {...}, tokens: {refresh, access}}
         if (response.data.tokens) {
           this.token = response.data.tokens.access
@@ -47,6 +55,34 @@ export const useAuthStore = defineStore('auth', {
         this.loading = false
       }
     },
+    async complete2fa({ twoFactorToken, code }) {
+      this.loading = true
+      this.error = null
+      try {
+        const response = await authAPI.login2fa({
+          two_factor_token: twoFactorToken,
+          code: String(code || '').trim(),
+        })
+        if (response.data.tokens) {
+          this.token = response.data.tokens.access
+          this.refreshToken = response.data.tokens.refresh
+          localStorage.setItem('auth_token', this.token)
+          localStorage.setItem('refresh_token', this.refreshToken)
+        }
+        if (response.data.user) {
+          this.user = response.data.user
+        } else {
+          await this.fetchMe()
+        }
+        this.isAuthenticated = true
+        return response.data
+      } catch (error) {
+        this.error = normalizeApiError(error).userMessage || 'Invalid code.'
+        throw error
+      } finally {
+        this.loading = false
+      }
+    },
     async logout() {
       try {
         const refreshToken = this.refreshToken || localStorage.getItem('refresh_token')
@@ -61,8 +97,10 @@ export const useAuthStore = defineStore('auth', {
         this.refreshToken = null
         this.user = null
         this.isAuthenticated = false
+        this.impersonation = null
         localStorage.removeItem('auth_token')
         localStorage.removeItem('refresh_token')
+        sessionStorage.removeItem('platform_admin_refresh')
       }
     },
     async fetchMe() {
@@ -114,6 +152,34 @@ export const useAuthStore = defineStore('auth', {
         throw error
       }
     },
+    async startPlatformImpersonation(userId) {
+      const adminRefresh = this.refreshToken || localStorage.getItem('refresh_token')
+      const { data } = await platformAPI.impersonate(userId)
+      if (adminRefresh) {
+        sessionStorage.setItem('platform_admin_refresh', adminRefresh)
+      }
+      this.token = data.tokens.access
+      this.refreshToken = data.tokens.refresh
+      localStorage.setItem('auth_token', this.token)
+      localStorage.setItem('refresh_token', this.refreshToken)
+      this.impersonation = data.impersonation || { active: true }
+      await this.fetchMe()
+    },
+    async stopPlatformImpersonation() {
+      const adminRefresh = sessionStorage.getItem('platform_admin_refresh')
+      if (!adminRefresh) {
+        this.impersonation = null
+        return
+      }
+      const { data } = await platformAPI.impersonateStop(adminRefresh)
+      sessionStorage.removeItem('platform_admin_refresh')
+      this.token = data.tokens.access
+      this.refreshToken = data.tokens.refresh
+      localStorage.setItem('auth_token', this.token)
+      localStorage.setItem('refresh_token', this.refreshToken)
+      this.impersonation = null
+      await this.fetchMe()
+    },
     async initialize() {
       // Initialize auth state on app startup
       if (this.initialized) return
@@ -125,6 +191,9 @@ export const useAuthStore = defineStore('auth', {
           this.refreshToken = localStorage.getItem('refresh_token')
           await this.fetchMe()
           this.isAuthenticated = true
+          if (sessionStorage.getItem('platform_admin_refresh')) {
+            this.impersonation = { active: true }
+          }
         } catch (error) {
           // Token invalid, clear it
           this.token = null

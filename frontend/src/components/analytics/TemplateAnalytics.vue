@@ -1,11 +1,11 @@
 <template>
   <div class="space-y-6">
     <!-- Template Statistics -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
       <Card>
         <div class="text-center">
           <p class="text-sm text-muted mb-2">Total Templates</p>
-          <p class="text-3xl font-bold text-primary">
+          <p class="text-2xl sm:text-3xl font-bold text-primary tabular-nums">
             {{ analyticsStore.templateStats?.total_templates || 0 }}
           </p>
         </div>
@@ -14,7 +14,7 @@
       <Card>
         <div class="text-center">
           <p class="text-sm text-muted mb-2">Active Screens</p>
-          <p class="text-3xl font-bold text-primary-color">
+          <p class="text-2xl sm:text-3xl font-bold text-primary-color tabular-nums">
             {{ analyticsStore.templateStats?.total_active_screens || 0 }}
           </p>
         </div>

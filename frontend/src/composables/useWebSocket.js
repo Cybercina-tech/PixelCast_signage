@@ -7,10 +7,33 @@
  * - Graceful disconnect on logout
  * - Real-time event handling
  */
-import { ref, onMounted, onUnmounted } from 'vue'
-import { useAppStore } from '../stores/app'
+import { ref } from 'vue'
 
-const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8000'
+/**
+ * Base WebSocket origin (no path): ws(s)://host[:port]
+ * - Prefer VITE_WS_URL if set (may be full URL; path is stripped).
+ * - Otherwise use the current page origin so dev traffic goes through the Vite proxy
+ *   (see vite.config.js proxy `/ws`) instead of requiring a published backend port :8000.
+ */
+function getWebSocketOrigin() {
+  const raw = import.meta.env.VITE_WS_URL
+  if (raw && String(raw).trim()) {
+    try {
+      const s = String(raw).trim()
+      const u = new URL(s.includes('://') ? s : `http://${s}`)
+      const proto =
+        u.protocol === 'https:' || u.protocol === 'wss:' ? 'wss:' : 'ws:'
+      return `${proto}//${u.host}`
+    } catch {
+      /* fall through */
+    }
+  }
+  if (typeof window !== 'undefined' && window.location?.host) {
+    return `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}`
+  }
+  return 'ws://127.0.0.1:8000'
+}
+
 const RECONNECT_DELAY = 1000
 const MAX_RECONNECT_DELAY = 30000
 const PING_INTERVAL = 30000
@@ -30,7 +53,7 @@ export function useWebSocket() {
     }
 
     try {
-      const wsUrl = `${WS_URL}/ws/dashboard/?token=${encodeURIComponent(token)}`
+      const wsUrl = `${getWebSocketOrigin()}/ws/dashboard/?token=${encodeURIComponent(token)}`
       socket.value = new WebSocket(wsUrl)
 
       socket.value.onopen = () => {

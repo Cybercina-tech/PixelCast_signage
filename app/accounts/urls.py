@@ -13,7 +13,18 @@ from .views import (
     create_role,
     SendVerificationEmail,
     VerifyEmail,
-    sidebar_items_view
+    sidebar_items_view,
+)
+from .invite_views import accept_invitation, team_invitations
+from .sso_views import sso_account_link_status, sso_providers_public
+from .api_auth_extras import (
+    login_2fa_view,
+    password_reset_confirm_view,
+    password_reset_request_view,
+    revoke_session_view,
+    twofa_disable_view,
+    twofa_setup_confirm_view,
+    twofa_setup_start_view,
 )
 
 # Create router for ViewSets
@@ -27,6 +38,13 @@ urlpatterns = [
     # Authentication endpoints
     path('auth/signup/', signup_view, name='auth-signup'),
     path('auth/login/', login_view, name='auth-login'),
+    path('auth/login/2fa/', login_2fa_view, name='auth-login-2fa'),
+    path('auth/password-reset/request/', password_reset_request_view, name='auth-password-reset-request'),
+    path('auth/password-reset/confirm/', password_reset_confirm_view, name='auth-password-reset-confirm'),
+    path('auth/2fa/setup/start/', twofa_setup_start_view, name='auth-2fa-setup-start'),
+    path('auth/2fa/setup/confirm/', twofa_setup_confirm_view, name='auth-2fa-setup-confirm'),
+    path('auth/2fa/disable/', twofa_disable_view, name='auth-2fa-disable'),
+    path('auth/sessions/revoke/', revoke_session_view, name='auth-sessions-revoke'),
     path('auth/logout/', logout_view, name='auth-logout'),
     path('auth/logout-all/', logout_all_view, name='auth-logout-all'),
     path('auth/sessions/', sessions_view, name='auth-sessions'),
@@ -43,4 +61,10 @@ urlpatterns = [
     
     # Sidebar items endpoint
     path('sidebar-items/', sidebar_items_view, name='sidebar-items'),
+
+    # Team / SSO
+    path('team/invitations/', team_invitations, name='team-invitations'),
+    path('team/invitations/accept/', accept_invitation, name='team-invitations-accept'),
+    path('auth/sso/providers/', sso_providers_public, name='auth-sso-providers'),
+    path('auth/sso/status/', sso_account_link_status, name='auth-sso-status'),
 ]

@@ -240,8 +240,12 @@ main() {
     set +x
     
     if [ "${ENABLE_HOT_RELOAD:-false}" = "true" ]; then
-        log_info "Hot reload enabled: starting Django dev server"
-        exec python manage.py runserver 0.0.0.0:8000
+        log_info "Hot reload enabled: starting Uvicorn with ASGI (WebSockets + /ws/dashboard/)"
+        exec uvicorn Screengram.asgi:application \
+            --host 0.0.0.0 \
+            --port 8000 \
+            --reload \
+            --reload-dir /app
     fi
 
     exec gunicorn Screengram.asgi:application \

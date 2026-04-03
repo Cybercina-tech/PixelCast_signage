@@ -4,6 +4,24 @@
  * Note: These are UI-only checks. Backend APIs enforce actual permissions.
  */
 
+const RESTRICTED_MODE_ALLOWED_PREFIXES = [
+  '/security',
+  '/sessions',
+  '/login',
+  '/logout',
+  '/403',
+  '/404',
+  '/401',
+  '/terms',
+]
+
+export function isRouteAllowedInRestrictedMode(path) {
+  const normalized = (path || '').split('?')[0]
+  return RESTRICTED_MODE_ALLOWED_PREFIXES.some(
+    (prefix) => normalized === prefix || normalized.startsWith(`${prefix}/`)
+  )
+}
+
 const ROUTE_PERMISSIONS = {
   '/dashboard': ['view_dashboard'],
   '/screens': ['view_screens'],
@@ -14,9 +32,10 @@ const ROUTE_PERMISSIONS = {
   '/users': ['view_users'],
   '/logs': ['view_logs'],
   '/analytics': ['view_analytics'],
-  '/core/audit-logs': ['view_audit_logs'],
-  '/core/backups': ['view_backups'],
   '/settings': ['view_settings'],
+  '/tickets': ['view_tickets'],
+  '/platform/tenants': ['view_platform'],
+  '/super-admin': ['view_platform'],
 }
 
 /**
@@ -44,6 +63,8 @@ const ROLE_PERMISSIONS = {
     'view_backups', 'manage_backups',
     'view_settings', 'edit_settings',
     'view_errors',
+    'view_platform',
+    'view_tickets', 'create_tickets',
   ],
   Manager: [
     'view_dashboard',
@@ -54,11 +75,25 @@ const ROLE_PERMISSIONS = {
     'view_commands', 'create_commands', 'execute_commands',
     'view_users', 'create_users', 'edit_users', 'delete_users',
     'view_analytics',
+    'view_tickets', 'create_tickets',
   ],
   Employee: [
+    'view_dashboard',
     'view_screens', 'create_screens', 'edit_screens',
     'view_schedules', 'create_schedules', 'edit_schedules',
     'view_contents', 'create_contents', 'edit_contents',
+    'view_tickets', 'create_tickets',
+  ],
+  Visitor: [
+    'view_dashboard',
+    'view_screens',
+    'view_templates',
+    'view_contents',
+    'view_schedules',
+    'view_commands',
+    'view_logs',
+    'view_analytics',
+    'view_tickets',
   ],
 }
 

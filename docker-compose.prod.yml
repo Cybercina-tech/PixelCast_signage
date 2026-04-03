@@ -9,7 +9,10 @@
 # Published host port is fixed to 8080 (container still listens on 80). Port 80 on the host is
 # often taken by Traefik/reverse proxy.
 #
-# Database: committed `.env.example` supplies defaults; optional `.env` overrides. Dokploy: set DB_* or rely on defaults.
+# Environment policy:
+# - Compose services load ONLY `.env` (required).
+# - `.env.example` is documentation/template only; never loaded by Compose.
+# - Dokploy can still inject/override env vars at runtime.
 #
 # Dokploy / Traefik: attach `frontend` and `backend` to `dokploy-network` (external) so the proxy can reach them.
 # Do not bind-mount `./documentation` here — that path may not exist on the server build context and can break the container.
@@ -19,10 +22,8 @@ services:
   db:
     image: postgres:15-alpine
     env_file:
-      - path: .env.example
-        required: true
       - path: .env
-        required: false
+        required: true
     environment:
       - POSTGRES_DB=${DB_NAME:-pixelcast_signage_db}
       - POSTGRES_USER=${DB_USER:-pixelcast_signage_user}
@@ -56,10 +57,8 @@ services:
       dockerfile: Dockerfile
     command: sh /app/entrypoint.sh
     env_file:
-      - path: .env.example
-        required: true
       - path: .env
-        required: false
+        required: true
     environment:
       - SECRET_KEY=${SECRET_KEY:-wN9vQx2!mK7pR4tY8uH3cD6sL1zA5eB9fG2jT7nV4qP8xM3rK6hC1wZ}
       - DEBUG=${DEBUG:-False}
@@ -95,9 +94,10 @@ services:
       - dokploy-network
 
   frontend:
+    # Context = repo root; Vue SPA includes /docs (product documentation).
     build:
-      context: ./frontend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: frontend/Dockerfile
     volumes:
       - backend_media:/app/media:ro
     depends_on:

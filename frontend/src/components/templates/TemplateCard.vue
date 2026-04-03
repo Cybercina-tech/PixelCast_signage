@@ -81,6 +81,7 @@
         
         <!-- Duplicate Button -->
         <button
+          v-if="canDuplicate"
           @click.stop="$emit('duplicate', template)"
           class="p-2.5 rounded-lg bg-indigo-600/80 hover:bg-indigo-600 text-white transition-all duration-200 hover:scale-110 hover:shadow-lg hover:shadow-indigo-500/50"
           title="Duplicate Template"
@@ -90,6 +91,7 @@
         
         <!-- Push to Screen Button -->
         <button
+          v-if="canPush"
           @click.stop="$emit('push', template)"
           class="p-2.5 rounded-lg bg-purple-600/80 hover:bg-purple-600 text-white transition-all duration-200 hover:scale-110 hover:shadow-lg hover:shadow-purple-500/50"
           title="Push to Screen"
@@ -101,6 +103,7 @@
         
         <!-- Delete Button -->
         <button
+          v-if="canDelete"
           @click.stop="$emit('delete', template)"
           class="p-2.5 rounded-lg bg-red-600/80 hover:bg-red-600 text-white transition-all duration-200 hover:scale-110 hover:shadow-lg hover:shadow-red-500/50"
           title="Delete Template"
@@ -124,6 +127,21 @@ const props = defineProps({
   template: {
     type: Object,
     required: true,
+  },
+  /** When false, hide duplicate (needs create_templates). */
+  canDuplicate: {
+    type: Boolean,
+    default: true,
+  },
+  /** When false, hide push to screen (needs edit_templates). */
+  canPush: {
+    type: Boolean,
+    default: true,
+  },
+  /** When false, hide delete (needs delete_templates). */
+  canDelete: {
+    type: Boolean,
+    default: true,
   },
 })
 

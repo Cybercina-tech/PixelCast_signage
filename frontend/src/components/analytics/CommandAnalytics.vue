@@ -1,11 +1,11 @@
 <template>
   <div class="space-y-6">
     <!-- Overall Statistics -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-6">
       <Card>
         <div class="text-center">
           <p class="text-sm text-muted mb-2">Total Commands</p>
-          <p class="text-3xl font-bold text-primary">
+          <p class="text-2xl sm:text-3xl font-bold text-primary tabular-nums">
             {{ analyticsStore.commandStats?.overall?.total || 0 }}
           </p>
         </div>
@@ -14,7 +14,7 @@
       <Card>
         <div class="text-center">
           <p class="text-sm text-muted mb-2">Success Rate</p>
-          <p class="text-3xl font-bold text-success">
+          <p class="text-2xl sm:text-3xl font-bold text-success tabular-nums">
             {{ analyticsStore.commandStats?.overall?.success_rate?.toFixed(1) || 0 }}%
           </p>
         </div>
@@ -23,7 +23,7 @@
       <Card>
         <div class="text-center">
           <p class="text-sm text-muted mb-2">Pending</p>
-          <p class="text-3xl font-bold text-warning">
+          <p class="text-2xl sm:text-3xl font-bold text-warning tabular-nums">
             {{ analyticsStore.commandStats?.overall?.pending || 0 }}
           </p>
         </div>
@@ -32,7 +32,7 @@
       <Card>
         <div class="text-center">
           <p class="text-sm text-muted mb-2">Failed</p>
-          <p class="text-3xl font-bold text-error">
+          <p class="text-2xl sm:text-3xl font-bold text-error tabular-nums">
             {{ analyticsStore.commandStats?.overall?.failed || 0 }}
           </p>
         </div>
@@ -47,6 +47,7 @@
             <tr>
               <th class="table-th">Type</th>
               <th class="table-th">Total</th>
+              <th class="table-th">Pending</th>
               <th class="table-th">Done</th>
               <th class="table-th">Failed</th>
             </tr>

@@ -42,6 +42,12 @@ class SidebarConfigTests(TestCase):
             password='testpass123',
             role='Employee',
         )
+        self.visitor = User.objects.create_user(
+            username='visitor',
+            email='visitor@test.com',
+            password='testpass123',
+            role='Visitor',
+        )
 
     def test_get_user_permissions_developer(self):
         permissions = get_user_permissions(self.developer)
@@ -58,7 +64,12 @@ class SidebarConfigTests(TestCase):
         permissions = get_user_permissions(self.employee)
         expected_perms = set(ROLE_PERMISSIONS['Employee'])
         self.assertEqual(permissions, expected_perms)
-        self.assertNotIn('view_dashboard', permissions)
+        self.assertIn('view_dashboard', permissions)
+
+    def test_get_user_permissions_visitor(self):
+        permissions = get_user_permissions(self.visitor)
+        expected_perms = set(ROLE_PERMISSIONS['Visitor'])
+        self.assertEqual(permissions, expected_perms)
 
     def test_has_permission(self):
         self.assertTrue(has_permission(self.developer, 'view_dashboard'))
@@ -70,6 +81,12 @@ class SidebarConfigTests(TestCase):
         self.assertTrue(has_permission(self.employee, 'view_screens'))
         self.assertFalse(has_permission(self.employee, 'view_users'))
 
+        self.assertTrue(has_permission(self.visitor, 'view_dashboard'))
+        self.assertTrue(has_permission(self.visitor, 'view_templates'))
+        self.assertTrue(has_permission(self.visitor, 'view_screens'))
+        self.assertFalse(has_permission(self.visitor, 'create_templates'))
+        self.assertFalse(has_permission(self.visitor, 'view_users'))
+
     def test_filter_sidebar_items_developer(self):
         items = filter_sidebar_items(self.developer)
         item_ids = [item['id'] for item in items]
@@ -80,11 +97,26 @@ class SidebarConfigTests(TestCase):
     def test_filter_sidebar_items_employee(self):
         items = filter_sidebar_items(self.employee)
         item_ids = [item['id'] for item in items]
-        self.assertNotIn('dashboard', item_ids)
+        self.assertIn('dashboard', item_ids)
         self.assertIn('screens', item_ids)
         self.assertIn('contents', item_ids)
         self.assertIn('schedules', item_ids)
         self.assertNotIn('users', item_ids)
+
+    def test_filter_sidebar_items_visitor(self):
+        items = filter_sidebar_items(self.visitor)
+        item_ids = [item['id'] for item in items]
+        self.assertIn('dashboard', item_ids)
+        self.assertIn('templates', item_ids)
+        self.assertIn('screens', item_ids)
+        self.assertIn('contents', item_ids)
+        self.assertIn('schedules', item_ids)
+        self.assertIn('commands', item_ids)
+        self.assertIn('logs', item_ids)
+        self.assertIn('analytics', item_ids)
+        self.assertNotIn('users', item_ids)
+        self.assertNotIn('settings', item_ids)
+        self.assertNotIn('core', item_ids)
 
     def test_filter_sidebar_items_with_children(self):
         items = filter_sidebar_items(self.developer)

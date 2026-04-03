@@ -63,11 +63,18 @@ PERMISSIONS = {
     'view_settings': 'view_settings',
     'edit_settings': 'edit_settings',
     
+    # Tickets / helpdesk
+    'view_tickets': 'view_tickets',
+    'create_tickets': 'create_tickets',
+
     # Admin
     'view_errors': 'view_errors',  # Developer only
+
+    # Platform (SaaS super-admin)
+    'view_platform': 'view_platform',
 }
 
-# Role to permissions mapping (3-tier)
+# Role to permissions mapping
 ROLE_PERMISSIONS = {
     'Developer': [
         'view_dashboard',
@@ -83,6 +90,8 @@ ROLE_PERMISSIONS = {
         'view_backups', 'manage_backups',
         'view_settings', 'edit_settings',
         'view_errors',
+        'view_platform',
+        'view_tickets', 'create_tickets',
     ],
     'Manager': [
         'view_dashboard',
@@ -93,11 +102,25 @@ ROLE_PERMISSIONS = {
         'view_commands', 'create_commands', 'execute_commands',
         'view_users', 'create_users', 'edit_users', 'delete_users',
         'view_analytics',
+        'view_tickets', 'create_tickets',
     ],
     'Employee': [
+        'view_dashboard',
         'view_screens', 'create_screens', 'edit_screens',
         'view_schedules', 'create_schedules', 'edit_schedules',
         'view_contents', 'create_contents', 'edit_contents',
+        'view_tickets', 'create_tickets',
+    ],
+    'Visitor': [
+        'view_dashboard',
+        'view_screens',
+        'view_templates',
+        'view_contents',
+        'view_schedules',
+        'view_commands',
+        'view_logs',
+        'view_analytics',
+        'view_tickets',
     ],
 }
 
@@ -150,6 +173,15 @@ SIDEBAR_ITEMS = [
         'icon': 'HomeIcon',
         'path': '/dashboard',
         'required_permissions': ['view_dashboard'],
+        'badge': None,
+        'children': None,
+    },
+    {
+        'id': 'super-admin',
+        'title': 'Super Admin',
+        'icon': 'ShieldCheckIcon',
+        'path': '/super-admin',
+        'required_permissions': ['view_platform'],
         'badge': None,
         'children': None,
     },
@@ -226,30 +258,13 @@ SIDEBAR_ITEMS = [
         'children': None,
     },
     {
-        'id': 'core',
-        'title': 'Core Infrastructure',
-        'icon': 'ServerIcon',
-        'path': None,  # Parent item, no direct path
-        'required_permissions': ['view_audit_logs', 'view_backups'],
+        'id': 'tickets',
+        'title': 'Tickets',
+        'icon': 'TicketIcon',
+        'path': '/tickets',
+        'required_permissions': ['view_tickets'],
         'badge': None,
-        'children': [
-            {
-                'id': 'audit-logs',
-                'title': 'Audit Logs',
-                'icon': 'ShieldCheckIcon',
-                'path': '/core/audit-logs',
-                'required_permissions': ['view_audit_logs'],
-                'badge': None,
-            },
-            {
-                'id': 'backups',
-                'title': 'Backups',
-                'icon': 'ServerIcon',
-                'path': '/core/backups',
-                'required_permissions': ['view_backups'],
-                'badge': None,
-            },
-        ],
+        'children': None,
     },
     {
         'id': 'settings',
@@ -259,6 +274,28 @@ SIDEBAR_ITEMS = [
         'required_permissions': ['view_settings'],
         'badge': None,
         'children': None,
+    },
+]
+
+# Injected when settings.PLATFORM_SAAS_ENABLED is True (see filter_sidebar_items).
+PLATFORM_SIDEBAR_ITEMS = [
+    {
+        'id': 'platform',
+        'title': 'SaaS customers',
+        'icon': 'BuildingOffice2Icon',
+        'path': None,
+        'required_permissions': ['view_platform'],
+        'badge': None,
+        'children': [
+            {
+                'id': 'platform-tenants',
+                'title': 'Customers',
+                'icon': 'UsersIcon',
+                'path': '/super-admin/customers',
+                'required_permissions': ['view_platform'],
+                'badge': None,
+            },
+        ],
     },
 ]
 
@@ -273,13 +310,19 @@ def filter_sidebar_items(user):
     Returns:
         list: Filtered sidebar items that user has access to
     """
+    from django.conf import settings
+
     if not user or not user.is_authenticated:
         return []
-    
+
+    items_source = list(SIDEBAR_ITEMS)
+    if getattr(settings, 'PLATFORM_SAAS_ENABLED', False):
+        items_source = items_source + PLATFORM_SIDEBAR_ITEMS
+
     user_permissions = get_user_permissions(user)
     filtered_items = []
     
-    for item in SIDEBAR_ITEMS:
+    for item in items_source:
         # Check if user has all required permissions for this item
         required_perms = item.get('required_permissions', [])
         if not required_perms or all(perm in user_permissions for perm in required_perms):

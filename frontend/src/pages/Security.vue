@@ -61,8 +61,61 @@
         </form>
       </Card>
 
+      <Card title="Two-factor authentication (TOTP)">
+        <p class="text-sm text-secondary mb-4">
+          Add an extra layer of security. Use an authenticator app (Google Authenticator, Authy, etc.).
+        </p>
+        <div v-if="authStore.user?.is_2fa_enabled" class="space-y-3">
+          <p class="text-sm text-emerald-600 font-medium">2FA is enabled on your account.</p>
+          <div class="space-y-2 max-w-md">
+            <input
+              v-model="disable2fa.password"
+              type="password"
+              class="input-base w-full px-3 py-2 rounded-lg"
+              placeholder="Current password"
+            />
+            <input
+              v-model="disable2fa.code"
+              type="text"
+              class="input-base w-full px-3 py-2 rounded-lg"
+              placeholder="Authenticator or backup code"
+            />
+            <button type="button" class="btn-outline px-4 py-2 rounded-lg" :disabled="twofaBusy" @click="runDisable2fa">
+              Disable 2FA
+            </button>
+          </div>
+        </div>
+        <div v-else class="space-y-4">
+          <div v-if="setup2fa.secret" class="rounded-lg border border-border-color p-4 space-y-2">
+            <p class="text-xs text-muted">Add this secret to your app, or scan the otpauth URL in a QR app.</p>
+            <pre class="text-xs break-all bg-card p-2 rounded">{{ setup2fa.secret }}</pre>
+            <p class="text-xs break-all text-muted">{{ setup2fa.otpauth }}</p>
+            <input
+              v-model="setup2fa.code"
+              type="text"
+              class="input-base w-full max-w-xs px-3 py-2 rounded-lg"
+              placeholder="6-digit code"
+            />
+            <button type="button" class="btn-primary px-4 py-2 rounded-lg" :disabled="twofaBusy" @click="confirm2fa">
+              Confirm &amp; enable
+            </button>
+          </div>
+          <div v-else>
+            <button type="button" class="btn-primary px-4 py-2 rounded-lg" :disabled="twofaBusy" @click="start2fa">
+              Start setup
+            </button>
+          </div>
+          <div v-if="setup2fa.backupCodes.length" class="rounded-lg border border-amber-500/30 bg-amber-500/5 p-4">
+            <p class="text-sm font-medium text-amber-800 dark:text-amber-200 mb-2">Save these backup codes now:</p>
+            <ul class="text-sm font-mono space-y-1">
+              <li v-for="(c, i) in setup2fa.backupCodes" :key="i">{{ c }}</li>
+            </ul>
+          </div>
+        </div>
+      </Card>
+
       <!-- Active Sessions Section -->
-      <Card title="Active Sessions">
+      <Card :title="`Active Sessions (${sessions.length})`">
         <div v-if="loadingSessions" class="flex items-center justify-center py-8">
           <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-brand"></div>
         </div>
@@ -139,6 +192,57 @@ const passwordForm = ref({
 })
 const sessions = ref([])
 const showLogoutAllModal = ref(false)
+const twofaBusy = ref(false)
+const setup2fa = ref({ secret: '', otpauth: '', code: '', backupCodes: [] })
+const disable2fa = ref({ password: '', code: '' })
+
+const start2fa = async () => {
+  twofaBusy.value = true
+  try {
+    const { data } = await authAPI.twofaSetupStart()
+    setup2fa.value.secret = data.secret
+    setup2fa.value.otpauth = data.otpauth_url
+    setup2fa.value.code = ''
+  } catch (e) {
+    notify.error(e.response?.data?.detail || 'Could not start 2FA setup')
+  } finally {
+    twofaBusy.value = false
+  }
+}
+
+const confirm2fa = async () => {
+  twofaBusy.value = true
+  try {
+    const { data } = await authAPI.twofaSetupConfirm({ code: setup2fa.value.code })
+    setup2fa.value.backupCodes = data.backup_codes || []
+    setup2fa.value.secret = ''
+    setup2fa.value.otpauth = ''
+    setup2fa.value.code = ''
+    await authStore.fetchMe()
+    notify.success('Two-factor authentication enabled')
+  } catch (e) {
+    notify.error(e.response?.data?.error || e.response?.data?.detail || 'Invalid code')
+  } finally {
+    twofaBusy.value = false
+  }
+}
+
+const runDisable2fa = async () => {
+  twofaBusy.value = true
+  try {
+    await authAPI.twofaDisable({
+      password: disable2fa.value.password,
+      code: disable2fa.value.code,
+    })
+    disable2fa.value = { password: '', code: '' }
+    await authStore.fetchMe()
+    notify.success('2FA disabled')
+  } catch (e) {
+    notify.error(e.response?.data?.error || e.response?.data?.detail || 'Failed')
+  } finally {
+    twofaBusy.value = false
+  }
+}
 
 const loadSessions = async () => {
   loadingSessions.value = true
@@ -197,9 +301,17 @@ const handleChangePassword = async () => {
 }
 
 const handleTerminateSession = async (sessionId) => {
-  // Note: Since JWT is stateless, we can't actually terminate individual sessions
-  // This is a placeholder for future implementation
-  notify.info('Individual session termination is not yet implemented. Use "Logout from All Sessions" instead.')
+  terminatingSession.value = sessionId
+  try {
+    const oid = parseInt(sessionId, 10)
+    await authAPI.revokeSession(Number.isFinite(oid) ? oid : sessionId)
+    notify.success('Session revoked')
+    await loadSessions()
+  } catch (err) {
+    notify.error(err.response?.data?.error || err.response?.data?.detail || 'Could not revoke session')
+  } finally {
+    terminatingSession.value = null
+  }
 }
 
 const handleLogoutAll = async () => {
@@ -230,7 +342,12 @@ const formatDate = (dateString) => {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
+  try {
+    await authStore.fetchMe()
+  } catch {
+    /* ignore */
+  }
   loadSessions()
 })
 </script>

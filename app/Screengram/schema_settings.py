@@ -45,7 +45,7 @@ API endpoints are rate-limited to prevent abuse:
 ## Security
 
 - All sensitive fields (passwords, tokens, secrets) are excluded from documentation
-- Production documentation requires authentication
+- Swagger/ReDoc/OpenAPI schema are readable without login; APIs still enforce JWT where applicable
 - HTTPS is required in production
 - Audit logging tracks all critical actions
 - Backup files are stored securely with integrity verification

@@ -2,13 +2,13 @@
   <div class="space-y-6">
     <!-- Period Selector -->
     <Card>
-      <div class="flex items-center justify-between mb-4">
-        <h3 class="text-lg font-semibold text-primary">Activity Trends</h3>
-        <div class="flex items-center space-x-2">
+      <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4 min-w-0">
+        <h3 class="text-lg font-semibold text-primary shrink-0">Activity Trends</h3>
+        <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto min-w-0">
           <select
             v-model="selectedPeriod"
             @change="updatePeriod"
-            class="select-base px-3 py-2 rounded-lg text-sm"
+            class="select-base px-3 py-2 rounded-lg text-sm flex-1 min-w-0 sm:flex-initial sm:min-w-[8rem]"
           >
             <option value="day">Daily</option>
             <option value="week">Weekly</option>
@@ -20,7 +20,7 @@
             type="number"
             min="1"
             max="365"
-            class="input-base w-20 px-3 py-2 rounded-lg text-sm"
+            class="input-base w-full sm:w-20 min-w-0 px-3 py-2 rounded-lg text-sm"
             placeholder="Days"
           />
         </div>

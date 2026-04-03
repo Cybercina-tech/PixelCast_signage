@@ -64,10 +64,18 @@
         <!-- Glass-portal card -->
         <div class="glass-portal rounded-2xl overflow-hidden">
           <div class="px-6 sm:px-8 py-8 sm:py-10">
-            <h2 class="cosmic-heading text-xl font-bold text-white mb-1">Welcome back</h2>
-            <p class="text-sm text-slate-400 mb-6">Enter your credentials to continue</p>
+            <h2 class="cosmic-heading text-xl font-bold text-white mb-1">
+              {{ needs2fa ? 'Two-factor authentication' : 'Welcome back' }}
+            </h2>
+            <p class="text-sm text-slate-400 mb-6">
+              {{
+                needs2fa
+                  ? 'Enter the 6-digit code from your authenticator app or a backup code.'
+                  : 'Enter your credentials to continue'
+              }}
+            </p>
 
-            <form @submit.prevent="handleLogin" class="space-y-5">
+            <form v-if="!needs2fa" @submit.prevent="handleLogin" class="space-y-5">
               <!-- Error -->
               <transition
                 enter-active-class="transition-all duration-300 ease-out"
@@ -177,6 +185,37 @@
                   </template>
                 </button>
               </div>
+
+              <p class="text-right text-xs">
+                <router-link to="/forgot-password" class="text-indigo-400 hover:text-indigo-300">
+                  Forgot password?
+                </router-link>
+              </p>
+            </form>
+
+            <form v-else @submit.prevent="handle2fa" class="space-y-5">
+              <div class="input-wrap">
+                <label class="block text-sm text-slate-400 mb-2">Authenticator code</label>
+                <input
+                  v-model="code2fa"
+                  type="text"
+                  inputmode="numeric"
+                  autocomplete="one-time-code"
+                  maxlength="12"
+                  class="auth-input cosmic-input w-full px-4 py-3 rounded-xl border border-white/10 bg-black/40 text-white focus:outline-none focus:border-indigo-500"
+                  placeholder="123456"
+                />
+              </div>
+              <button
+                type="submit"
+                :disabled="authStore.loading"
+                class="cosmic-btn auth-btn w-full py-3.5 px-4 rounded-xl font-semibold text-white bg-indigo-600 hover:bg-indigo-500 disabled:opacity-60"
+              >
+                {{ authStore.loading ? 'Verifying…' : 'Verify & continue' }}
+              </button>
+              <button type="button" class="text-sm text-slate-400 hover:text-white" @click="cancel2fa">
+                Back to login
+              </button>
             </form>
 
             <!-- Secondary action: Sign up -->
@@ -232,6 +271,9 @@ const form = ref({
 const showPassword = ref(false)
 const focusUsername = ref(false)
 const focusPassword = ref(false)
+const needs2fa = ref(false)
+const twoFactorToken = ref('')
+const code2fa = ref('')
 
 async function handleLogin() {
   try {
@@ -240,17 +282,43 @@ async function handleLogin() {
       username: form.value.username.trim().toLowerCase(),
       password: form.value.password,
     }
-    await authStore.login(credentials)
+    const result = await authStore.login(credentials)
+    if (result?.needs2fa) {
+      needs2fa.value = true
+      twoFactorToken.value = result.twoFactorToken
+      return
+    }
     notify.success('Login successful!')
     const redirect = route.query.redirect || '/dashboard'
     router.push(redirect)
   } catch (error) {
     const parsed = error.apiError || normalizeApiError(error)
     authStore.error = parsed.userMessage || 'Login failed. Please check your credentials.'
-    if (!parsed.isValidation) {
-      notify.error(authStore.error)
-    }
+    // Inline alert above the form is enough; avoid duplicate toasts (interceptor + here).
   }
+}
+
+async function handle2fa() {
+  try {
+    authStore.error = null
+    await authStore.complete2fa({
+      twoFactorToken: twoFactorToken.value,
+      code: code2fa.value,
+    })
+    notify.success('Login successful!')
+    const redirect = route.query.redirect || '/dashboard'
+    router.push(redirect)
+  } catch (error) {
+    const parsed = error.apiError || normalizeApiError(error)
+    authStore.error = parsed.userMessage || 'Invalid code.'
+  }
+}
+
+function cancel2fa() {
+  needs2fa.value = false
+  twoFactorToken.value = ''
+  code2fa.value = ''
+  authStore.error = null
 }
 
 onMounted(() => {

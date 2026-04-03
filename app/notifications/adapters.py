@@ -14,7 +14,7 @@ import logging
 import time
 import secrets
 from typing import Dict, Any, Optional
-from django.core.mail import send_mail, EmailMessage
+from django.core.mail import EmailMultiAlternatives, get_connection
 from django.conf import settings
 from django.utils import timezone
 import requests
@@ -91,72 +91,59 @@ class EmailAdapter(BaseAdapter):
         """Send email notification"""
         try:
             config = channel.config
-            
-            # Extract configuration
-            smtp_host = config.get('smtp_host')
-            smtp_port = config.get('smtp_port', 587)
-            from_email = config.get('from_email')
             to_emails = config.get('to_emails', [])
-            use_tls = config.get('use_tls', True)
-            username = config.get('username')
-            password = config.get('password')
-            
-            if not all([smtp_host, from_email, to_emails]):
+            if not to_emails:
                 return {
                     'success': False,
-                    'error': 'Missing required email configuration'
+                    'error': 'Missing required email configuration (to_emails)',
                 }
-            
-            # Build email content
+
+            use_system = bool(config.get('use_system_smtp'))
+            if use_system:
+                from core.email_service import get_system_email_connection, resolve_default_from_email
+
+                from_email = (config.get('from_email') or '').strip() or resolve_default_from_email()
+                conn = get_system_email_connection()
+            else:
+                smtp_host = config.get('smtp_host')
+                smtp_port = config.get('smtp_port', 587)
+                from_email = config.get('from_email')
+                use_tls = config.get('use_tls', True)
+                use_ssl = config.get('use_ssl', False)
+                username = config.get('username')
+                password = config.get('password')
+                if not all([smtp_host, from_email]):
+                    return {
+                        'success': False,
+                        'error': 'Missing required email configuration',
+                    }
+                conn = get_connection(
+                    backend='django.core.mail.backends.smtp.EmailBackend',
+                    host=smtp_host,
+                    port=int(smtp_port),
+                    username=username or None,
+                    password=password or None,
+                    use_tls=use_tls,
+                    use_ssl=use_ssl,
+                    fail_silently=False,
+                )
+
             subject = self._build_subject(event, severity, payload)
             message = self._build_message(event, payload, severity)
-            
-            # Configure Django email settings temporarily
-            original_email_backend = settings.EMAIL_BACKEND
-            original_email_host = getattr(settings, 'EMAIL_HOST', None)
-            original_email_port = getattr(settings, 'EMAIL_PORT', None)
-            original_email_use_tls = getattr(settings, 'EMAIL_USE_TLS', None)
-            original_email_host_user = getattr(settings, 'EMAIL_HOST_USER', None)
-            original_email_host_password = getattr(settings, 'EMAIL_HOST_PASSWORD', None)
-            
-            try:
-                # Set email settings
-                settings.EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-                settings.EMAIL_HOST = smtp_host
-                settings.EMAIL_PORT = smtp_port
-                settings.EMAIL_USE_TLS = use_tls
-                if username:
-                    settings.EMAIL_HOST_USER = username
-                if password:
-                    settings.EMAIL_HOST_PASSWORD = password
-                
-                # Send email
-                send_mail(
-                    subject=subject,
-                    message=message,
-                    from_email=from_email,
-                    recipient_list=to_emails,
-                    fail_silently=False
-                )
-                
-                return {
-                    'success': True,
-                    'response': f"Email sent to {len(to_emails)} recipient(s)"
-                }
-                
-            finally:
-                # Restore original settings
-                settings.EMAIL_BACKEND = original_email_backend
-                if original_email_host:
-                    settings.EMAIL_HOST = original_email_host
-                if original_email_port:
-                    settings.EMAIL_PORT = original_email_port
-                if original_email_use_tls is not None:
-                    settings.EMAIL_USE_TLS = original_email_use_tls
-                if original_email_host_user:
-                    settings.EMAIL_HOST_USER = original_email_host_user
-                if original_email_host_password:
-                    settings.EMAIL_HOST_PASSWORD = original_email_host_password
+
+            msg = EmailMultiAlternatives(
+                subject=subject,
+                body=message,
+                from_email=from_email,
+                to=to_emails,
+                connection=conn,
+            )
+            msg.send(fail_silently=False)
+
+            return {
+                'success': True,
+                'response': f"Email sent to {len(to_emails)} recipient(s)",
+            }
                     
         except Exception as e:
             error_msg = str(e)

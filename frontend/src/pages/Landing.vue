@@ -1,5 +1,5 @@
 <template>
-  <div class="landing-page">
+  <div class="landing-page" :class="{ 'landing-menu-open': sectionMenuOpen }">
     <!-- Scroll Progress Indicator -->
     <div class="fixed top-0 left-0 right-0 h-1 z-50">
       <div 
@@ -11,10 +11,28 @@
     <!-- Starfield Background -->
     <div class="fixed inset-0 starfield-background pointer-events-none z-0"></div>
 
-    <!-- Compact top bar: logo + auth only (section jumps via side dots / scroll) -->
-    <nav class="landing-nav fixed top-0 left-0 right-0 z-40 backdrop-blur-xl bg-black/20 border-b border-white/10">
+    <!-- Top bar: burger (mobile) + logo + auth -->
+    <nav class="landing-nav fixed top-0 left-0 right-0 z-40 backdrop-blur-xl bg-black/20 border-b border-white/10 safe-area-pt">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
-        <div class="flex items-center justify-between gap-3 min-h-[2.5rem]">
+        <div class="flex items-center justify-between gap-2 sm:gap-3 min-h-[2.5rem]">
+          <div class="flex items-center gap-2 min-w-0 shrink">
+          <!-- Wrapper hides entire control on lg+ so .landing-burger display:inline-flex cannot override lg:hidden -->
+          <div class="shrink-0 lg:hidden">
+            <button
+              id="landing-section-menu-trigger"
+              type="button"
+              class="landing-burger"
+              :class="{ 'is-open': sectionMenuOpen }"
+              :aria-expanded="sectionMenuOpen"
+              aria-controls="landing-section-menu"
+              aria-label="Open menu"
+              @click="toggleSectionMenu"
+            >
+              <span class="landing-burger-bar" aria-hidden="true" />
+              <span class="landing-burger-bar" aria-hidden="true" />
+              <span class="landing-burger-bar" aria-hidden="true" />
+            </button>
+          </div>
           <router-link
             to="/"
             class="flex items-center gap-2 min-w-0 shrink"
@@ -28,13 +46,15 @@
               PixelCast
             </span>
           </router-link>
-          <div class="flex flex-wrap items-center justify-end gap-x-2 gap-y-1 sm:gap-2.5 shrink-0 max-w-[min(100%,28rem)] sm:max-w-none">
-            <a
-              href="/documentation/index.html"
+          </div>
+          <!-- Desktop / large: full nav (mobile uses burger drawer only) -->
+          <div class="hidden lg:flex flex-wrap items-center justify-end gap-x-2 gap-y-1 xl:gap-2.5 shrink-0">
+            <router-link
+              to="/docs"
               class="px-2 py-1.5 text-xs sm:text-sm text-white/80 hover:text-white transition-colors whitespace-nowrap"
             >
               Docs
-            </a>
+            </router-link>
             <router-link
               to="/data-center"
               class="px-2 py-1.5 text-xs sm:text-sm text-white/80 hover:text-white transition-colors whitespace-nowrap"
@@ -68,27 +88,116 @@
       </div>
     </nav>
 
-    <!-- Bullet Navigation -->
-    <div class="fixed right-6 top-1/2 -translate-y-1/2 z-50 hidden lg:flex flex-col gap-4">
+    <!-- Mobile / tablet: backdrop + slide-out section menu (burger) -->
+    <Transition name="landing-fade">
       <button
-        v-for="(section, index) in sections"
-        :key="index"
-        @click="scrollToSection(index)"
-        class="nav-dot group relative"
-        :class="{ 'active': activeSection === index }"
-        :aria-label="`Go to ${section.name}`"
+        v-if="sectionMenuOpen"
+        type="button"
+        class="landing-menu-backdrop fixed inset-0 z-[100] bg-black/55 backdrop-blur-[2px] lg:hidden"
+        aria-label="Close menu"
+        @click="closeSectionMenu"
+      />
+    </Transition>
+    <Transition name="landing-drawer">
+      <aside
+        v-if="sectionMenuOpen"
+        id="landing-section-menu"
+        class="landing-section-drawer fixed top-0 right-0 z-[101] h-full w-[min(100%,20rem)] max-w-[100vw] border-l border-white/10 bg-slate-950/92 backdrop-blur-xl shadow-[-8px_0_40px_rgba(0,0,0,0.45)] lg:hidden safe-area-pt flex flex-col"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="landing-section-menu-title"
       >
-        <div class="dot-indicator"></div>
-        <span class="nav-dot-label">{{ section.name }}</span>
-      </button>
-    </div>
+        <div class="flex items-center justify-between gap-2 border-b border-white/10 px-4 py-3">
+          <h2 id="landing-section-menu-title" class="text-sm font-semibold uppercase tracking-wider text-white/90">
+            Menu
+          </h2>
+          <button
+            type="button"
+            class="rounded-lg p-2 text-white/70 hover:bg-white/10 hover:text-white transition-colors"
+            aria-label="Close menu"
+            @click="closeSectionMenu"
+          >
+            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        <nav class="flex-1 overflow-y-auto px-3 py-3" aria-label="Landing menu">
+          <!-- 1) Primary actions: conversion before secondary (Login only after Install / Get Started) -->
+          <p class="landing-drawer-section-label">
+            {{ isInstalled ? 'Get started' : 'Setup' }}
+          </p>
+          <ul class="mb-6 space-y-2">
+            <template v-if="isInstalled">
+              <li>
+                <router-link
+                  to="/signup"
+                  class="landing-drawer-cta"
+                  @click="closeSectionMenu"
+                >
+                  Get Started
+                </router-link>
+              </li>
+              <li>
+                <router-link to="/login" class="landing-drawer-quicklink" @click="closeSectionMenu">
+                  Log in
+                </router-link>
+              </li>
+            </template>
+            <template v-else>
+              <li>
+                <router-link
+                  to="/install"
+                  class="landing-drawer-cta"
+                  @click="closeSectionMenu"
+                >
+                  Install
+                </router-link>
+              </li>
+              <li class="px-1 pt-1">
+                <p class="text-[11px] leading-relaxed text-white/40">
+                  Log in and sign up are available after your installation completes.
+                </p>
+              </li>
+            </template>
+          </ul>
+
+          <p class="landing-drawer-section-label">Resources</p>
+          <ul class="space-y-1 mb-6">
+            <li>
+              <router-link to="/docs" class="landing-drawer-quicklink" @click="closeSectionMenu">
+                Documentation
+              </router-link>
+            </li>
+            <li>
+              <router-link to="/data-center" class="landing-drawer-quicklink" @click="closeSectionMenu">
+                Data Center
+              </router-link>
+            </li>
+          </ul>
+
+          <p class="landing-drawer-section-label">Legal</p>
+          <ul class="space-y-1 safe-area-pb pb-2">
+            <li>
+              <router-link to="/privacy" class="landing-drawer-quicklink" @click="closeSectionMenu">
+                Privacy Policy
+              </router-link>
+            </li>
+            <li>
+              <router-link to="/terms" class="landing-drawer-quicklink" @click="closeSectionMenu">
+                Terms of Service
+              </router-link>
+            </li>
+          </ul>
+        </nav>
+      </aside>
+    </Transition>
 
     <!-- Scroll Container with Sections -->
     <div class="scroll-container">
       <!-- Hero Section -->
       <section 
-        ref="sectionRefs"
-        data-section="0"
+        id="hero"
         class="section snap-section hero-section"
       >
         <div class="section-content">
@@ -118,12 +227,12 @@
                   >
                     {{ isInstalled ? 'Start Free Trial' : 'Start Installation' }}
                   </router-link>
-                  <a
-                    href="/documentation/index.html"
+                  <router-link
+                    to="/docs"
                     class="hero-cta-btn glass-card rounded-xl font-semibold !text-white visited:!text-white hover:!text-white border border-white/20 hover:border-white/40 transition-all duration-300 text-center inline-flex items-center justify-center w-full min-w-0 min-h-[3rem] sm:min-h-[3.25rem] px-2.5 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm md:text-base leading-tight"
                   >
                     Documentation
-                  </a>
+                  </router-link>
                   <router-link
                     to="/data-center"
                     class="hero-cta-btn glass-card rounded-xl font-semibold !text-white visited:!text-white hover:!text-white border border-white/20 hover:border-white/40 transition-all duration-300 text-center inline-flex items-center justify-center w-full min-w-0 min-h-[3rem] sm:min-h-[3.25rem] px-2.5 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm md:text-base leading-tight"
@@ -216,28 +325,27 @@
 
       <!-- Features Section -->
       <section 
-        ref="sectionRefs"
-        data-section="1"
+        id="features"
         class="section snap-section features-section"
       >
         <div class="section-content">
           <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
             <div class="text-center mb-8 lg:mb-12 section-fade-in">
-              <h2 class="text-2xl md:text-3xl lg:text-4xl font-bold mb-4 text-white">
+              <h2 class="text-3xl sm:text-3xl md:text-4xl lg:text-4xl font-bold mb-4 text-white">
                 Powerful <span class="bg-gradient-to-r from-cyan-400 to-purple-500 bg-clip-text text-transparent">Features</span>
               </h2>
-              <p class="text-lg md:text-xl text-white/60 max-w-2xl mx-auto">
-                Everything you need to manage your digital signage network at scale
+              <p class="text-base sm:text-lg md:text-xl text-white/60 max-w-3xl mx-auto leading-relaxed">
+                Template editing, scheduling, remote control, and player pairing—everything you need to run screens at scale from one dashboard.
               </p>
             </div>
-            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
+            <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-6">
               <div 
                 v-for="(feature, index) in features" 
                 :key="index"
-                class="glass-card p-6 lg:p-8 rounded-xl group hover:scale-105 transition-transform duration-300 feature-card"
+                class="glass-card p-6 lg:p-8 rounded-xl group feature-card feature-card-interactive"
                 :style="{ animationDelay: `${index * 0.1}s` }"
               >
-                <div class="w-12 lg:w-14 h-12 lg:h-14 rounded-xl bg-gradient-to-br from-cyan-400/20 to-purple-500/20 flex items-center justify-center mb-4 lg:mb-6 group-hover:scale-110 transition-transform duration-300">
+                <div class="w-12 lg:w-14 h-12 lg:h-14 rounded-xl bg-gradient-to-br from-cyan-400/20 to-purple-500/20 flex items-center justify-center mb-4 lg:mb-6 feature-icon-wrap">
                   <svg class="w-6 lg:w-7 h-6 lg:h-7 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="feature.iconPath" />
                   </svg>
@@ -252,19 +360,17 @@
 
       <!-- Live Pulse Section -->
       <section 
-        ref="sectionRefs"
-        data-section="2"
         id="pulse"
         class="section snap-section pulse-section"
       >
         <div class="section-content">
           <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
             <div class="text-center mb-8 lg:mb-12 section-fade-in">
-              <h2 class="text-3xl md:text-4xl lg:text-5xl font-bold mb-4 text-white">
+              <h2 class="text-3xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-4 text-white">
                 Live <span class="bg-gradient-to-r from-cyan-400 to-purple-500 bg-clip-text text-transparent">Pulse</span>
               </h2>
-              <p class="text-lg md:text-xl text-white/60 max-w-2xl mx-auto">
-                Monitor your entire network in real-time from anywhere in the universe
+              <p class="text-base sm:text-lg md:text-xl text-white/60 max-w-2xl mx-auto leading-relaxed">
+                See uptime, last sync, and what is playing—live from your control room, for every screen in your fleet.
               </p>
             </div>
             <div class="grid md:grid-cols-3 gap-4 lg:gap-6">
@@ -310,31 +416,83 @@
         </div>
       </section>
 
+      <!-- Plans & billing -->
+      <section
+        id="plans"
+        class="section snap-section plans-section"
+      >
+        <div class="section-content">
+          <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
+            <div class="text-center mb-8 lg:mb-10 section-fade-in">
+              <h2 class="text-3xl sm:text-3xl md:text-4xl font-bold mb-4 text-white">
+                Plans &amp; <span class="bg-gradient-to-r from-cyan-400 to-purple-500 bg-clip-text text-transparent">billing</span>
+              </h2>
+              <p class="text-base sm:text-lg md:text-xl text-white/60 max-w-3xl mx-auto leading-relaxed">
+                Start with a full-featured trial, then scale with subscriptions sized to your fleet. Payments and invoices run on Stripe—secure, familiar, and built for recurring SaaS.
+              </p>
+            </div>
+            <div class="grid md:grid-cols-3 gap-4 lg:gap-6 mb-8">
+              <div class="glass-card rounded-xl p-6 lg:p-8 section-fade-in">
+                <div class="text-cyan-400 text-sm font-semibold uppercase tracking-wide mb-2">Trial</div>
+                <h3 class="text-xl font-bold text-white mb-3">14-day trial</h3>
+                <p class="text-slate-300 text-sm leading-relaxed">
+                  Explore the full product without a credit card. Invite your team, pair players, and publish real content before you commit.
+                </p>
+              </div>
+              <div class="glass-card rounded-xl p-6 lg:p-8 section-fade-in" style="animation-delay: 0.08s">
+                <div class="text-purple-400 text-sm font-semibold uppercase tracking-wide mb-2">Plans</div>
+                <h3 class="text-xl font-bold text-white mb-3">Sized to your screens</h3>
+                <p class="text-slate-300 text-sm leading-relaxed">
+                  Subscriptions can include device limits so you only pay for the capacity you need. Upgrade as you add locations or players.
+                </p>
+              </div>
+              <div class="glass-card rounded-xl p-6 lg:p-8 section-fade-in" style="animation-delay: 0.16s">
+                <div class="text-emerald-400/90 text-sm font-semibold uppercase tracking-wide mb-2">Stripe</div>
+                <h3 class="text-xl font-bold text-white mb-3">Cards &amp; invoices</h3>
+                <p class="text-slate-300 text-sm leading-relaxed">
+                  Checkout, renewals, and billing history are processed through Stripe. Your payment details stay with the industry standard for online commerce.
+                </p>
+              </div>
+            </div>
+            <div class="flex flex-col sm:flex-row items-center justify-center gap-4 section-fade-in" style="animation-delay: 0.2s">
+              <router-link
+                :to="isInstalled ? '/signup' : '/install'"
+                class="neon-button-large px-8 py-3.5 rounded-xl font-semibold text-white transition-all duration-300 text-center w-full sm:w-auto min-h-[3rem] inline-flex items-center justify-center"
+              >
+                {{ isInstalled ? 'Start free trial' : 'Start installation' }}
+              </router-link>
+              <p class="text-white/50 text-sm text-center sm:text-left max-w-md">
+                Self-hosted deployments can use license activation instead—see Docs and Data Center for your setup path.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <!-- Industry Use Cases Section -->
       <section 
-        ref="sectionRefs"
-        data-section="3"
-        id="use-cases"
+        id="industries"
         class="section snap-section industries-section"
       >
         <div class="section-content">
           <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
             <div class="text-center mb-8 lg:mb-12 section-fade-in">
-              <h2 class="text-2xl md:text-3xl lg:text-4xl font-bold mb-4 text-white">
+              <h2 class="text-3xl sm:text-3xl md:text-3xl lg:text-4xl font-bold mb-4 text-white">
                 Built for <span class="bg-gradient-to-r from-cyan-400 to-purple-500 bg-clip-text text-transparent">Every Industry</span>
               </h2>
-              <p class="text-lg md:text-xl text-white/60 max-w-2xl mx-auto">
-                See how PixelCast Signage transforms operations across different sectors
+              <p class="text-base sm:text-lg md:text-xl text-white/60 max-w-2xl mx-auto leading-relaxed">
+                From retail menus to hospital signage—one platform for every screen, with content that updates as fast as your business.
               </p>
             </div>
             <div class="glass-card rounded-2xl p-6 lg:p-8 section-fade-in" style="animation-delay: 0.2s">
-              <!-- Tabs -->
-              <div class="flex flex-wrap gap-3 lg:gap-4 mb-6 lg:mb-8 border-b border-white/10 pb-4">
+              <!-- Tabs: horizontal scroll on small screens -->
+              <div class="industry-tabs -mx-2 px-2 mb-6 lg:mb-8 border-b border-white/10 pb-4 overflow-x-auto flex flex-nowrap gap-2 lg:gap-4 lg:flex-wrap">
                 <button
                   v-for="(industry, index) in industries"
                   :key="index"
+                  type="button"
                   @click="activeTab = index"
-                  class="px-4 lg:px-6 py-2 lg:py-3 rounded-lg font-semibold text-sm lg:text-base transition-all duration-300"
+                  class="shrink-0 px-4 lg:px-6 py-2 lg:py-3 rounded-lg font-semibold text-sm lg:text-base transition-all duration-300 whitespace-nowrap"
                   :class="activeTab === index 
                     ? 'bg-gradient-to-r from-cyan-400 to-purple-500 !text-white shadow-[0_0_16px_rgba(6,182,212,0.25)]' 
                     : '!text-slate-300 hover:!text-slate-100 hover:bg-white/5'"
@@ -380,8 +538,7 @@
 
       <!-- Tech Stack & CTA Section -->
       <section 
-        ref="sectionRefs"
-        data-section="4"
+        id="cta"
         class="section snap-section cta-section"
       >
         <div class="section-content">
@@ -408,6 +565,12 @@
                   </svg>
                   <span class="font-semibold">Cloud Infrastructure</span>
                 </div>
+                <div class="flex items-center space-x-2 !text-slate-200 text-sm lg:text-base">
+                  <svg class="w-5 lg:w-6 h-5 lg:h-6 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                  </svg>
+                  <span class="font-semibold">Stripe</span>
+                </div>
               </div>
             </div>
             <!-- CTA -->
@@ -427,12 +590,12 @@
                 >
                   {{ isInstalled ? 'Start Free Trial' : 'Install Now' }}
                 </router-link>
-                <a
-                  href="/documentation/index.html"
+                <router-link
+                  to="/docs"
                   class="glass-card px-6 py-4 rounded-lg font-semibold text-base sm:text-lg text-white border border-white/20 hover:border-white/40 transition-all duration-300 text-center inline-flex items-center justify-center w-full min-h-[3.25rem]"
                 >
                   View Docs
-                </a>
+                </router-link>
                 <router-link
                   to="/data-center"
                   class="glass-card px-6 py-4 rounded-lg font-semibold text-base sm:text-lg text-white border border-white/20 hover:border-white/40 transition-all duration-300 text-center inline-flex items-center justify-center w-full min-h-[3.25rem]"
@@ -451,27 +614,43 @@
           </div>
         </div>
       </section>
+
+      <!-- Compact footer -->
+      <footer class="landing-footer border-t border-white/10 bg-black/20 backdrop-blur-md safe-area-pb">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col sm:flex-row flex-wrap items-center justify-between gap-4 text-sm text-white/55">
+          <p class="text-center sm:text-left">
+            © {{ footerYear }} PixelCast. All rights reserved.
+          </p>
+          <div class="flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
+            <router-link to="/privacy" class="hover:text-white transition-colors">Privacy</router-link>
+            <router-link to="/terms" class="hover:text-white transition-colors">Terms</router-link>
+            <router-link to="/docs" class="hover:text-white transition-colors">Docs</router-link>
+            <router-link to="/data-center" class="hover:text-white transition-colors">Data Center</router-link>
+          </div>
+        </div>
+      </footer>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { setupAPI } from '@/services/api'
 
 const scrollProgress = ref(0)
 const activeTab = ref(0)
-const activeSection = ref(0)
-const sectionRefs = ref([])
 const isInstalled = ref(true)
+const sectionMenuOpen = ref(false)
 
-const sections = ref([
-  { name: 'Hero', id: 'hero' },
-  { name: 'Features', id: 'features' },
-  { name: 'Pulse', id: 'pulse' },
-  { name: 'Industries', id: 'industries' },
-  { name: 'CTA', id: 'cta' }
-])
+const footerYear = computed(() => new Date().getFullYear())
+
+const closeSectionMenu = () => {
+  sectionMenuOpen.value = false
+}
+
+const toggleSectionMenu = () => {
+  sectionMenuOpen.value = !sectionMenuOpen.value
+}
 
 const liveScreens = ref([
   {
@@ -499,42 +678,53 @@ const liveScreens = ref([
 
 const features = ref([
   {
-    title: 'Visual Editor',
-    description: 'Drag, drop, and rotate with pixel precision. Create stunning content without coding.',
-    iconPath: 'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z'
+    title: 'Template editor',
+    description:
+      'Build layouts with widgets, layers, and precise placement—no code required. Design once, reuse across screens, and keep branding consistent everywhere.',
+    iconPath:
+      'M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z',
   },
   {
-    title: 'Global Push',
-    description: 'Update 1000 screens with one click. Deploy content instantly across your entire network.',
-    iconPath: 'M13 10V3L4 14h7v7l9-11h-7z'
+    title: 'Schedules',
+    description:
+      'Decide what plays when. Tie templates and content to time windows so promotions, menus, and dayparts switch automatically.',
+    iconPath: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z',
   },
   {
-    title: 'Media Vault',
-    description: 'Standalone cloud library for all your assets. Organize, search, and manage with ease.',
-    iconPath: 'M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z'
+    title: 'Remote commands',
+    description:
+      'Send commands to players from the dashboard—refresh, reboot, clear cache, or trigger updates without visiting the device.',
+    iconPath: 'M13 10V3L4 14h7v7l9-11h-7z',
   },
   {
-    title: 'Offline Mode',
-    description: 'Content keeps playing even without internet. Never miss a beat with intelligent caching.',
-    iconPath: 'M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0'
+    title: 'Web player & pairing',
+    description:
+      'Pair browsers and devices with a secure flow, then deliver your templates as a full-screen web player for kiosks and displays.',
+    iconPath:
+      'M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z',
   },
   {
-    title: 'Smart Logs',
-    description: 'Every heartbeat and command is tracked. Complete audit trail for compliance and debugging.',
-    iconPath: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'
+    title: 'Users & permissions',
+    description:
+      'Invite teammates and control who can edit templates, manage screens, or view logs—role-based access that matches how you run operations.',
+    iconPath:
+      'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z',
   },
   {
-    title: 'Group Management',
-    description: 'Organize screens by cities, tags, or sectors. Flexible hierarchy for any organization.',
-    iconPath: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z'
-  }
+    title: 'Logs & monitoring',
+    description:
+      'Audit activity, diagnose issues, and watch fleet health. Pair Live Pulse with detailed logs for compliance and faster support.',
+    iconPath:
+      'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z',
+  },
 ])
 
 const industries = ref([
   {
     name: 'Retail',
     title: 'Transform Retail Experiences',
-    description: 'Engage customers with dynamic displays, promotions, and wayfinding. Update pricing and content in real-time across all locations.',
+    description:
+      'Engage shoppers with dynamic displays, promotions, and wayfinding. Push template updates and pricing to every store from one dashboard.',
     benefits: [
       'Real-time price updates across all stores',
       'Dynamic promotional content scheduling',
@@ -546,7 +736,8 @@ const industries = ref([
   {
     name: 'Healthcare',
     title: 'Enhance Patient Communication',
-    description: 'Display wait times, appointment schedules, and health information. Keep patients informed and reduce anxiety.',
+    description:
+      'Show wait times, directions, and health messaging on lobby and ward screens. Update content safely when plans or policies change.',
     benefits: [
       'Real-time wait time displays',
       'Appointment scheduling integration',
@@ -558,7 +749,8 @@ const industries = ref([
   {
     name: 'F&B',
     title: 'Elevate Dining Experiences',
-    description: 'Showcase menus, specials, and promotions. Update offerings instantly and create immersive dining atmospheres.',
+    description:
+      'Showcase menus, dayparts, and specials on every display. Schedule breakfast versus dinner layouts and refresh items in seconds.',
     benefits: [
       'Dynamic menu displays',
       'Promotional content scheduling',
@@ -580,34 +772,33 @@ const scrollToSection = (index) => {
   }
 }
 
-// Update active section based on scroll position
-const updateActiveSection = () => {
+function onLandingKeydown(e) {
+  if (e.key === 'Escape') {
+    closeSectionMenu()
+  }
+}
+
+/** Close drawer when viewport crosses to desktop (lg) so scroll-lock is cleared */
+let desktopMenuMedia = null
+function onDesktopMenuBreakpoint() {
+  if (desktopMenuMedia?.matches) closeSectionMenu()
+}
+
+function updateScrollProgress() {
   const scrollContainer = document.querySelector('.scroll-container')
   if (!scrollContainer) return
-  
-  const sections = scrollContainer.querySelectorAll('.snap-section')
   const scrollTop = scrollContainer.scrollTop
-  const viewportHeight = window.innerHeight
-  
-  sections.forEach((section, index) => {
-    const sectionTop = section.offsetTop
-    const sectionHeight = section.offsetHeight
-    
-    // Check if section is in viewport center
-    if (scrollTop + viewportHeight / 2 >= sectionTop && scrollTop + viewportHeight / 2 < sectionTop + sectionHeight) {
-      activeSection.value = index
-    }
-  })
-  
-  // Update scroll progress
   const totalHeight = scrollContainer.scrollHeight - scrollContainer.clientHeight
   scrollProgress.value = totalHeight > 0 ? (scrollTop / totalHeight) * 100 : 0
 }
 
-// Intersection Observer for better section detection
-let observer = null
-
 onMounted(() => {
+  window.addEventListener('keydown', onLandingKeydown)
+  if (typeof window !== 'undefined' && window.matchMedia) {
+    desktopMenuMedia = window.matchMedia('(min-width: 1024px)')
+    desktopMenuMedia.addEventListener('change', onDesktopMenuBreakpoint)
+  }
+
   // Enable scrolling
   document.body.style.overflow = 'auto'
   document.body.style.height = 'auto'
@@ -628,29 +819,8 @@ onMounted(() => {
   
   const scrollContainer = document.querySelector('.scroll-container')
   if (scrollContainer) {
-    scrollContainer.addEventListener('scroll', updateActiveSection, { passive: true })
-    updateActiveSection()
-    
-    // Use Intersection Observer for more accurate section detection
-    observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting && entry.intersectionRatio > 0.5) {
-            const sectionIndex = parseInt(entry.target.getAttribute('data-section') || '0')
-            activeSection.value = sectionIndex
-          }
-        })
-      },
-      {
-        root: scrollContainer,
-        threshold: [0.5, 0.75, 1.0],
-        rootMargin: '-20% 0px -20% 0px'
-      }
-    )
-    
-    scrollContainer.querySelectorAll('.snap-section').forEach((section) => {
-      observer.observe(section)
-    })
+    scrollContainer.addEventListener('scroll', updateScrollProgress, { passive: true })
+    updateScrollProgress()
   }
 
   // Landing behavior: show Install CTA when setup is not completed.
@@ -665,13 +835,12 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  window.removeEventListener('keydown', onLandingKeydown)
+  desktopMenuMedia?.removeEventListener('change', onDesktopMenuBreakpoint)
+
   const scrollContainer = document.querySelector('.scroll-container')
   if (scrollContainer) {
-    scrollContainer.removeEventListener('scroll', updateActiveSection)
-  }
-  
-  if (observer) {
-    observer.disconnect()
+    scrollContainer.removeEventListener('scroll', updateScrollProgress)
   }
 })
 </script>
@@ -680,22 +849,157 @@ onUnmounted(() => {
 .landing-page {
   position: relative;
   width: 100%;
-  height: 100vh;
+  min-height: 100dvh;
+  height: 100dvh;
   overflow: hidden;
   background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 25%, #0f172a 50%, #1e293b 75%, #0a0e27 100%);
   background-size: 400% 400%;
   animation: gradientShift 20s ease infinite;
 }
 
+.safe-area-pt {
+  padding-top: max(0.5rem, env(safe-area-inset-top));
+}
+
+.safe-area-pb {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+
+/* Burger button (mobile / tablet) */
+.landing-burger {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 0.625rem;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.landing-burger:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.28);
+}
+
+.landing-burger-bar {
+  display: block;
+  height: 2px;
+  width: 1.125rem;
+  border-radius: 1px;
+  background: currentColor;
+  transition:
+    transform 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.2s ease;
+  transform-origin: center;
+}
+
+.landing-burger.is-open .landing-burger-bar:nth-child(1) {
+  transform: translateY(7px) rotate(45deg);
+}
+
+.landing-burger.is-open .landing-burger-bar:nth-child(2) {
+  opacity: 0;
+  transform: scaleX(0);
+}
+
+.landing-burger.is-open .landing-burger-bar:nth-child(3) {
+  transform: translateY(-7px) rotate(-45deg);
+}
+
+.landing-menu-open .scroll-container {
+  overflow: hidden !important;
+  touch-action: none;
+}
+
+.landing-drawer-section-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.4);
+  margin-bottom: 0.5rem;
+  padding-left: 0.35rem;
+}
+
+.landing-drawer-quicklink {
+  display: block;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.85);
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.landing-drawer-quicklink:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+}
+
+.landing-drawer-cta {
+  display: block;
+  text-align: center;
+  padding: 0.65rem 1rem;
+  border-radius: 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #fff !important;
+  background: linear-gradient(135deg, #06b6d4 0%, #8b5cf6 100%);
+  box-shadow: 0 0 18px rgba(6, 182, 212, 0.28);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .landing-drawer-cta:hover {
+    box-shadow: 0 0 26px rgba(6, 182, 212, 0.45);
+  }
+}
+
+.landing-fade-enter-active,
+.landing-fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.landing-fade-enter-from,
+.landing-fade-leave-to {
+  opacity: 0;
+}
+
+.landing-drawer-enter-active,
+.landing-drawer-leave-active {
+  transition:
+    transform 0.28s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.2s ease;
+}
+
+.landing-drawer-enter-from,
+.landing-drawer-leave-to {
+  transform: translateX(100%);
+  opacity: 0.96;
+}
+
 .scroll-container {
-  height: 100vh;
-  overflow-y: scroll;
+  height: 100dvh;
+  max-height: 100dvh;
+  overflow-y: auto;
   overflow-x: hidden;
   scroll-behavior: smooth;
-  scroll-snap-type: y mandatory;
-  -ms-overflow-style: none; /* IE and Edge */
-  scrollbar-width: none; /* Firefox */
+  scroll-snap-type: none;
+  scroll-padding-top: 5.75rem;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
   position: relative;
+}
+
+@media (min-width: 1024px) {
+  .scroll-container {
+    scroll-snap-type: y mandatory;
+    scroll-padding-top: 5.5rem;
+  }
 }
 
 .scroll-container::-webkit-scrollbar {
@@ -703,28 +1007,49 @@ onUnmounted(() => {
 }
 
 .section {
-  height: 100vh;
+  min-height: 100dvh;
+  height: auto;
   width: 100%;
   scroll-snap-align: start;
-  scroll-snap-stop: always;
+  scroll-snap-stop: normal;
   position: relative;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  padding-top: 5rem; /* Compact single-row nav */
-  padding-bottom: 40px;
+  padding-top: max(5.75rem, calc(env(safe-area-inset-top) + 4.5rem));
+  padding-bottom: max(2rem, env(safe-area-inset-bottom));
+}
+
+@media (min-width: 1024px) {
+  .section {
+    min-height: 100vh;
+    height: 100vh;
+    scroll-snap-stop: always;
+    padding-top: max(5rem, env(safe-area-inset-top));
+    padding-bottom: 40px;
+  }
 }
 
 .section-content {
   width: 100%;
-  height: 100%;
+  min-height: 0;
+  height: auto;
+  flex: 1 1 auto;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  max-height: calc(100vh - 100px);
-  overflow-y: auto;
+  max-height: none;
+  overflow-y: visible;
   overflow-x: hidden;
+}
+
+@media (min-width: 1024px) {
+  .section-content {
+    height: 100%;
+    max-height: calc(100vh - 100px);
+    overflow-y: auto;
+  }
 }
 
 .section-content::-webkit-scrollbar {
@@ -793,9 +1118,11 @@ onUnmounted(() => {
   transition: all 0.3s ease;
 }
 
-.neon-button:hover {
-  box-shadow: 0 0 30px rgba(6, 182, 212, 0.6), 0 0 50px rgba(139, 92, 246, 0.4);
-  transform: translateY(-2px);
+@media (hover: hover) and (pointer: fine) {
+  .neon-button:hover {
+    box-shadow: 0 0 30px rgba(6, 182, 212, 0.6), 0 0 50px rgba(139, 92, 246, 0.4);
+    transform: translateY(-2px);
+  }
 }
 
 .neon-button-large {
@@ -804,9 +1131,11 @@ onUnmounted(() => {
   transition: all 0.3s ease;
 }
 
-.neon-button-large:hover {
-  box-shadow: 0 0 40px rgba(6, 182, 212, 0.7), 0 0 60px rgba(139, 92, 246, 0.5);
-  transform: translateY(-3px) scale(1.02);
+@media (hover: hover) and (pointer: fine) {
+  .neon-button-large:hover {
+    box-shadow: 0 0 40px rgba(6, 182, 212, 0.7), 0 0 60px rgba(139, 92, 246, 0.5);
+    transform: translateY(-3px) scale(1.02);
+  }
 }
 
 /* Hero CTAs: body/link inherit would otherwise use --text-body (dark in light mode). */
@@ -884,56 +1213,54 @@ onUnmounted(() => {
    Features/Industries are content-heavy; top-align them on large screens
    to prevent heading clipping with fixed nav + snap sections. */
 .features-section .section-content,
-.industries-section .section-content {
+.industries-section .section-content,
+.plans-section .section-content {
   justify-content: flex-start;
   padding-top: 1rem;
 }
 
-/* Bullet Navigation */
-.nav-dot {
-  position: relative;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.3);
-  border: 2px solid rgba(255, 255, 255, 0.5);
-  cursor: pointer;
-  transition: all 0.3s ease;
-  padding: 0;
-  margin: 0;
+@media (max-width: 1023px) {
+  .features-section .section-content,
+  .industries-section .section-content,
+  .plans-section .section-content,
+  .pulse-section .section-content,
+  .cta-section .section-content {
+    justify-content: flex-start;
+    padding-top: 0.5rem;
+    padding-bottom: 1rem;
+  }
 }
 
-.nav-dot:hover {
-  background: rgba(255, 255, 255, 0.5);
-  transform: scale(1.2);
+.industry-tabs {
+  -ms-overflow-style: none;
+  scrollbar-width: thin;
 }
 
-.nav-dot.active {
-  background: rgba(6, 182, 212, 0.8);
-  border-color: #06b6d4;
-  box-shadow: 0 0 15px rgba(6, 182, 212, 0.6);
-  transform: scale(1.3);
+.industry-tabs::-webkit-scrollbar {
+  height: 4px;
 }
 
-.nav-dot-label {
-  position: absolute;
-  right: 24px;
-  top: 50%;
-  transform: translateY(-50%);
-  white-space: nowrap;
-  background: rgba(0, 0, 0, 0.8);
-  backdrop-filter: blur(10px);
-  padding: 4px 12px;
-  border-radius: 6px;
-  font-size: 12px;
-  color: white;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.3s ease;
+.industry-tabs::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
 }
 
-.nav-dot:hover .nav-dot-label {
-  opacity: 1;
+@media (hover: hover) and (pointer: fine) {
+  .feature-card-interactive {
+    transition: transform 0.3s ease;
+  }
+
+  .feature-card-interactive:hover {
+    transform: scale(1.03);
+  }
+
+  .feature-card-interactive:hover .feature-icon-wrap {
+    transform: scale(1.1);
+  }
+}
+
+.feature-icon-wrap {
+  transition: transform 0.3s ease;
 }
 
 /* Accessibility - Reduced Motion */
@@ -957,14 +1284,9 @@ onUnmounted(() => {
 }
 
 /* Mobile Optimizations */
-@media (max-width: 1024px) {
-  .section {
-    scroll-snap-type: y proximity; /* Less strict on mobile */
-  }
-  
+@media (max-width: 1023px) {
   .section-content {
-    max-height: calc(100vh - 100px);
-    padding: 20px 0;
+    padding: 12px 0 20px;
   }
 }
 
@@ -983,24 +1305,9 @@ onUnmounted(() => {
       padding: 0.75rem 0.875rem;
     }
   }
-  
-  .section {
-    padding-top: 4.75rem;
-    padding-bottom: 20px;
-  }
-  
-  .section-content {
-    max-height: calc(100vh - 90px);
-  }
-  
-  .nav-dot {
-    display: none; /* Hide on mobile */
-  }
-  
-  /* Allow internal scrolling on mobile if content is too tall */
-  .section-content {
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-  }
+}
+
+.landing-footer {
+  scroll-snap-align: none;
 }
 </style>

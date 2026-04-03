@@ -84,9 +84,9 @@ class ScreenStatusLogViewSet(viewsets.ReadOnlyModelViewSet):
         queryset = super().get_queryset()
         user = self.request.user
         
-        # Only Admin and SuperAdmin can access logs
+        # Operational logs: Developer-only data (sidebar Logs); others get empty list (no 403)
         if not user.has_full_access():
-            raise PermissionDenied("You do not have permission to view logs. Developer role required.")
+            return queryset.none()
         
         # Filter by screen if provided
         screen_id = self.request.query_params.get('screen_id')
@@ -134,7 +134,10 @@ class ScreenStatusLogViewSet(viewsets.ReadOnlyModelViewSet):
         - end_date: Filter to date (ISO or YYYY-MM-DD)
         """
         if not request.user.has_full_access():
-            raise PermissionDenied("You do not have permission to view log summaries. Developer role required.")
+            return Response({
+                'status': 'success',
+                'summary': {'total_count': 0},
+            }, status=status.HTTP_200_OK)
         
         screen_id = request.query_params.get('screen_id')
         start_date = parse_date_param(request.query_params.get('start_date'))
@@ -203,9 +206,8 @@ class ContentDownloadLogViewSet(viewsets.ReadOnlyModelViewSet):
         queryset = super().get_queryset()
         user = self.request.user
         
-        # Only Admin and SuperAdmin can access logs
         if not user.has_full_access():
-            raise PermissionDenied("You do not have permission to view logs. Developer role required.")
+            return queryset.none()
         
         # Filter by content if provided
         content_id = self.request.query_params.get('content_id')
@@ -268,7 +270,10 @@ class ContentDownloadLogViewSet(viewsets.ReadOnlyModelViewSet):
         - end_date: Filter to date (ISO or YYYY-MM-DD)
         """
         if not request.user.has_full_access():
-            raise PermissionDenied("You do not have permission to view log summaries. Developer role required.")
+            return Response({
+                'status': 'success',
+                'summary': {'total_count': 0},
+            }, status=status.HTTP_200_OK)
         
         content_id = request.query_params.get('content_id')
         screen_id = request.query_params.get('screen_id')
@@ -352,9 +357,8 @@ class CommandExecutionLogViewSet(viewsets.ReadOnlyModelViewSet):
         queryset = super().get_queryset()
         user = self.request.user
         
-        # Only Admin and SuperAdmin can access logs
         if not user.has_full_access():
-            raise PermissionDenied("You do not have permission to view logs. Developer role required.")
+            return queryset.none()
         
         # Filter by command if provided
         command_id = self.request.query_params.get('command_id')
@@ -427,7 +431,10 @@ class CommandExecutionLogViewSet(viewsets.ReadOnlyModelViewSet):
         - end_date: Filter to date (ISO or YYYY-MM-DD)
         """
         if not request.user.has_full_access():
-            raise PermissionDenied("You do not have permission to view log summaries. Developer role required.")
+            return Response({
+                'status': 'success',
+                'summary': {'total_count': 0},
+            }, status=status.HTTP_200_OK)
         
         command_id = request.query_params.get('command_id')
         screen_id = request.query_params.get('screen_id')

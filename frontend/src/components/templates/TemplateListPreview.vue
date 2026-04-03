@@ -46,8 +46,33 @@ const props = defineProps({
 const templatesStore = useTemplatesStore()
 const previewTemplate = ref(null)
 const loading = ref(false)
+/** One GET /templates/:id/ per component instance; avoids loops when layers stay "non-renderable". */
+const detailAttempted = ref(false)
 
 const hasActiveLayers = computed(() => templateHasRenderablePlayback(previewTemplate.value))
+
+function pickRenderableSourceForId(id) {
+  if (!id) return null
+  const fromStore = templatesStore.templates.find((t) => t.id === id)
+  if (fromStore && templateHasRenderablePlayback(fromStore)) return fromStore
+  if (props.template?.id === id && templateHasRenderablePlayback(props.template)) {
+    return props.template
+  }
+  if (
+    templatesStore.currentTemplate?.id === id &&
+    templateHasRenderablePlayback(templatesStore.currentTemplate)
+  ) {
+    return templatesStore.currentTemplate
+  }
+  return null
+}
+
+watch(
+  () => props.template?.id,
+  (newId, oldId) => {
+    if (newId !== oldId) detailAttempted.value = false
+  }
+)
 
 async function loadPreviewTemplate() {
   const id = props.template?.id
@@ -56,25 +81,20 @@ async function loadPreviewTemplate() {
     return
   }
 
-  if (templateHasRenderablePlayback(props.template)) {
-    previewTemplate.value = props.template
+  const ready = pickRenderableSourceForId(id)
+  if (ready) {
+    previewTemplate.value = ready
+    loading.value = false
     return
   }
 
-  const fromStore = templatesStore.templates.find((t) => t.id === id)
-  if (fromStore && templateHasRenderablePlayback(fromStore)) {
-    previewTemplate.value = fromStore
+  if (detailAttempted.value) {
+    previewTemplate.value = templatesStore.templates.find((t) => t.id === id) || props.template
+    loading.value = false
     return
   }
 
-  if (
-    templatesStore.currentTemplate?.id === id &&
-    templateHasRenderablePlayback(templatesStore.currentTemplate)
-  ) {
-    previewTemplate.value = templatesStore.currentTemplate
-    return
-  }
-
+  detailAttempted.value = true
   loading.value = true
   try {
     const { data } = await templatesAPI.detail(id)
@@ -90,15 +110,13 @@ async function loadPreviewTemplate() {
   }
 }
 
+// Id + store row for prefetch; do not watch layers.length (caused re-fetch storms).
 watch(
-  () => [
-    props.template?.id,
-    props.template?.layers?.length,
-    props.template?.config_json?.widgets?.length,
-  ],
-  () => {
-    loadPreviewTemplate()
-  },
-  { immediate: true }
+  () => ({
+    id: props.template?.id,
+    storeRow: templatesStore.templates.find((t) => t.id === props.template?.id),
+  }),
+  () => loadPreviewTemplate(),
+  { immediate: true, flush: 'post' }
 )
 </script>

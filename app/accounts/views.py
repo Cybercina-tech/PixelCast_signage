@@ -11,7 +11,7 @@ from django.core.exceptions import PermissionDenied, ValidationError
 from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import never_cache
-from django.core.mail import send_mail
+from core.email_service import send_system_email
 from django.conf import settings
 
 from .models import User
@@ -26,6 +26,9 @@ from core.audit import AuditLogger
 from core.api_errors import error_response
 from django.core.cache import cache
 import logging
+
+from .api_auth_extras import issue_login_or_2fa_challenge
+from .jwt_sessions import blacklist_all_refresh_for_user, list_refresh_sessions_for_user
 
 logger = logging.getLogger(__name__)
 
@@ -49,14 +52,20 @@ class UserViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         """Filter queryset based on user permissions"""
-        queryset = super().get_queryset()
+        queryset = super().get_queryset().select_related('tenant')
         user = self.request.user
 
         if user.is_developer():
+            tid = self.request.query_params.get('tenant_id')
+            if tid:
+                queryset = queryset.filter(tenant_id=tid)
+            no_tenant = self.request.query_params.get('no_tenant')
+            if no_tenant and no_tenant.lower() == 'true':
+                queryset = queryset.filter(tenant__isnull=True)
             return queryset
 
         if user.is_manager():
-            q = queryset.filter(role='Employee')
+            q = queryset.filter(role__in=['Employee', 'Visitor'])
             if user.organization_name:
                 q = q.filter(organization_name=user.organization_name)
             return q
@@ -71,8 +80,10 @@ class UserViewSet(viewsets.ModelViewSet):
             raise PermissionDenied("You do not have permission to create users.")
         if not (user.is_developer() or user.is_manager()):
             raise PermissionDenied("You do not have permission to create users.")
-        if user.is_manager() and serializer.validated_data.get('role', 'Employee') != 'Employee':
-            raise PermissionDenied("Managers can only create Employee accounts.")
+        if user.is_manager():
+            new_role = serializer.validated_data.get('role', 'Employee')
+            if new_role not in ('Employee', 'Visitor'):
+                raise PermissionDenied("Managers can only create Employee or Visitor accounts.")
 
         # Sanitize input
         validated_data = serializer.validated_data
@@ -147,10 +158,13 @@ class UserViewSet(viewsets.ModelViewSet):
 
             return
 
-        if user.is_manager() and target_user.role == 'Employee' and user.id != target_user.id:
-            if 'role' in validated_data and validated_data.get('role') != 'Employee':
-                raise PermissionDenied("Managers can only manage Employee accounts.")
-            validated_data['role'] = 'Employee'
+        if (
+            user.is_manager()
+            and target_user.role in ('Employee', 'Visitor')
+            and user.id != target_user.id
+        ):
+            if 'role' in validated_data and validated_data.get('role') not in ('Employee', 'Visitor'):
+                raise PermissionDenied("Managers can only assign Employee or Visitor roles.")
 
             updated_user = serializer.save()
             try:
@@ -198,8 +212,8 @@ class UserViewSet(viewsets.ModelViewSet):
             raise PermissionDenied("You do not have permission to delete users.")
 
         if user.is_manager():
-            if instance.role != 'Employee':
-                raise PermissionDenied("You can only delete Employee accounts.")
+            if instance.role not in ('Employee', 'Visitor'):
+                raise PermissionDenied("You can only delete Employee or Visitor accounts.")
         elif not user.is_developer():
             raise PermissionDenied("You do not have permission to delete users.")
 
@@ -228,6 +242,142 @@ class UserViewSet(viewsets.ModelViewSet):
             )
         except Exception as e:
             logger.error(f'Failed to log user deletion audit: {e}')
+
+    @action(detail=True, methods=['post'])
+    def lock(self, request, id=None):
+        """Developer-only hard lock for a user account."""
+        actor = request.user
+        target_user = self.get_object()
+        if not actor.is_developer():
+            raise PermissionDenied("Only a Developer can lock user accounts.")
+        if actor.id == target_user.id:
+            raise PermissionDenied("You cannot lock your own account.")
+
+        reason = (request.data.get('reason') or '').strip()[:255]
+        lock_until = request.data.get('lock_until')
+        parsed_lock_until = None
+        if lock_until:
+            from django.utils.dateparse import parse_datetime
+
+            parsed_lock_until = parse_datetime(str(lock_until))
+            if parsed_lock_until is None:
+                return Response({'detail': 'lock_until must be a valid ISO datetime.'}, status=400)
+            if timezone.is_naive(parsed_lock_until):
+                parsed_lock_until = timezone.make_aware(parsed_lock_until, timezone.get_current_timezone())
+
+        target_user.is_admin_locked = True
+        target_user.admin_lock_reason = reason
+        target_user.admin_lock_until = parsed_lock_until
+        target_user.save(update_fields=['is_admin_locked', 'admin_lock_reason', 'admin_lock_until'])
+
+        revoked = blacklist_all_refresh_for_user(target_user)
+        try:
+            AuditLogger.log_action(
+                action_type='update',
+                user=actor,
+                resource=target_user,
+                description=f'Locked user account: {target_user.username}',
+                changes={
+                    'is_admin_locked': True,
+                    'admin_lock_reason': reason,
+                    'admin_lock_until': parsed_lock_until.isoformat() if parsed_lock_until else None,
+                    'revoked_sessions': revoked,
+                },
+                severity='critical',
+                request=request,
+            )
+        except Exception as e:
+            logger.error(f'Failed to log user lock audit: {e}')
+        return Response(
+            {
+                'status': 'locked',
+                'user_id': str(target_user.id),
+                'revoked_sessions': revoked,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    @action(detail=True, methods=['post'])
+    def unlock(self, request, id=None):
+        """Developer-only unlock for a user account."""
+        actor = request.user
+        target_user = self.get_object()
+        if not actor.is_developer():
+            raise PermissionDenied("Only a Developer can unlock user accounts.")
+
+        target_user.is_admin_locked = False
+        target_user.admin_lock_reason = ''
+        target_user.admin_lock_until = None
+        target_user.save(update_fields=['is_admin_locked', 'admin_lock_reason', 'admin_lock_until'])
+        try:
+            AuditLogger.log_action(
+                action_type='update',
+                user=actor,
+                resource=target_user,
+                description=f'Unlocked user account: {target_user.username}',
+                changes={'is_admin_locked': False},
+                severity='high',
+                request=request,
+            )
+        except Exception as e:
+            logger.error(f'Failed to log user unlock audit: {e}')
+        return Response({'status': 'unlocked', 'user_id': str(target_user.id)}, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['post'])
+    def revoke_sessions(self, request, id=None):
+        """Developer-only session revoke for incident response."""
+        actor = request.user
+        target_user = self.get_object()
+        if not actor.is_developer():
+            raise PermissionDenied("Only a Developer can revoke user sessions.")
+        revoked = blacklist_all_refresh_for_user(target_user)
+        try:
+            AuditLogger.log_action(
+                action_type='update',
+                user=actor,
+                resource=target_user,
+                description=f'Revoked all sessions for user: {target_user.username}',
+                changes={'revoked_sessions': revoked},
+                severity='high',
+                request=request,
+            )
+        except Exception as e:
+            logger.error(f'Failed to log revoke-sessions audit: {e}')
+        return Response({'status': 'sessions_revoked', 'count': revoked}, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=['post'])
+    def admin_set_password(self, request, id=None):
+        """Developer-only credential reset without old password."""
+        actor = request.user
+        target_user = self.get_object()
+        if not actor.is_developer():
+            raise PermissionDenied("Only a Developer can set passwords for other users.")
+        new_password = request.data.get('new_password')
+        if not isinstance(new_password, str) or not new_password:
+            return Response({'detail': 'new_password is required.'}, status=400)
+        from django.contrib.auth.password_validation import validate_password
+
+        try:
+            validate_password(new_password, user=target_user)
+        except ValidationError as e:
+            return Response({'new_password': list(e.messages)}, status=400)
+
+        target_user.set_password(new_password)
+        target_user.save(update_fields=['password'])
+        revoked = blacklist_all_refresh_for_user(target_user)
+        try:
+            AuditLogger.log_action(
+                action_type='password_change',
+                user=actor,
+                resource=target_user,
+                description=f'Admin reset password for user: {target_user.username}',
+                changes={'revoked_sessions': revoked},
+                severity='critical',
+                request=request,
+            )
+        except Exception as e:
+            logger.error(f'Failed to log admin-set-password audit: {e}')
+        return Response({'status': 'password_reset', 'revoked_sessions': revoked}, status=status.HTTP_200_OK)
     
     @action(detail=False, methods=['get', 'put', 'patch'])
     def me(self, request):
@@ -415,10 +565,6 @@ class UserViewSet(viewsets.ModelViewSet):
         if not request.user.is_developer():
             raise PermissionDenied("Only a Developer can change user roles.")
 
-        # Don't allow changing your own role
-        if request.user.id == target_user.id:
-            raise PermissionDenied("You cannot change your own role.")
-
         serializer = RoleSerializer(data=request.data)
         if serializer.is_valid():
             old_role = target_user.role
@@ -511,19 +657,39 @@ def login_view(request):
     
     if serializer.is_valid():
         user = serializer.validated_data['user']
-        
+
+        if getattr(user, 'is_admin_locked', False):
+            lock_until = getattr(user, 'admin_lock_until', None)
+            still_locked = True
+            if lock_until:
+                if lock_until <= timezone.now():
+                    still_locked = False
+            if still_locked:
+                return Response({
+                    'error': 'Your account has been locked by an administrator.',
+                    'restriction': {
+                        'kind': 'user_admin_lock',
+                        'reason': getattr(user, 'admin_lock_reason', '') or '',
+                    },
+                }, status=status.HTTP_401_UNAUTHORIZED)
+
+        tenant = getattr(user, 'tenant', None)
+        if tenant and hasattr(tenant, 'is_access_lock_active') and tenant.is_access_lock_active():
+            if not user.is_developer():
+                return Response({
+                    'error': 'Your company account has been suspended. Contact support.',
+                    'restriction': {
+                        'kind': 'tenant_access_lock',
+                        'reason': tenant.access_lock_reason or '',
+                    },
+                }, status=status.HTTP_401_UNAUTHORIZED)
+
         # Clear any failed attempts
         AccountLockoutManager.clear_failed_attempts(username)
         AccountLockoutManager.clear_failed_attempts(user.email)
         AccountLockoutManager.clear_failed_attempts(client_ip)
         
-        # Update last_seen
-        user.update_last_seen()
-        
-        # Generate JWT tokens (access + refresh include role claim)
-        refresh = ScreenGramRefreshToken.for_user(user)
-        
-        # Log successful login
+        # Log successful password verification (tokens issued after 2FA if enabled)
         try:
             AuditLogger.log_authentication(
                 action='login',
@@ -533,24 +699,8 @@ def login_view(request):
             )
         except Exception as e:
             logger.error(f'Failed to log login audit: {e}')
-        
-        return Response({
-            'status': 'success',
-            'user': {
-                'id': str(user.id),
-                'username': user.username,
-                'email': user.email,
-                'full_name': user.full_name,
-                'role': user.role,
-                'role_display': user.get_role_display(),
-                'is_staff': user.is_staff,
-                'is_superuser': user.is_superuser,
-            },
-            'tokens': {
-                'refresh': str(refresh),
-                'access': str(refresh.access_token),
-            }
-        }, status=status.HTTP_200_OK)
+
+        return issue_login_or_2fa_challenge(user, request)
     
     # Authentication failed - record attempt (prevent user enumeration)
     # Don't reveal whether username exists or password is wrong
@@ -600,13 +750,11 @@ def login_view(request):
             'lockout_seconds': max(username_lockout_seconds, ip_lockout_seconds)
         }, status=status.HTTP_429_TOO_MANY_REQUESTS)  # Using 429 as Django doesn't have 423
     
-    # Use serializer error message if available, otherwise generic message
-    # Extract error from serializer.errors (non_field_errors or first field error)
     serializer_errors = serializer.errors if hasattr(serializer, 'errors') else {}
     error_message = 'Invalid credentials'
+    restriction = serializer_errors.get('restriction')
     
     if serializer_errors:
-        # Check for non_field_errors first
         if 'non_field_errors' in serializer_errors:
             non_field_errors = serializer_errors['non_field_errors']
             if isinstance(non_field_errors, list) and len(non_field_errors) > 0:
@@ -614,8 +762,9 @@ def login_view(request):
             elif isinstance(non_field_errors, str):
                 error_message = non_field_errors
         else:
-            # Get first field error
             for field, errors in serializer_errors.items():
+                if field == 'restriction':
+                    continue
                 if isinstance(errors, list) and len(errors) > 0:
                     error_message = errors[0]
                     break
@@ -623,9 +772,10 @@ def login_view(request):
                     error_message = errors
                     break
     
-    return Response({
-        'error': error_message
-    }, status=status.HTTP_401_UNAUTHORIZED)
+    payload = {'error': error_message}
+    if restriction:
+        payload['restriction'] = restriction
+    return Response(payload, status=status.HTTP_401_UNAUTHORIZED)
 
 
 @api_view(['POST'])
@@ -636,14 +786,14 @@ def signup_view(request):
     POST /api/auth/signup/
     Public endpoint to create a new user account.
     
-    Allows unauthenticated users to register. New users are created with Employee role by default.
+    Allows unauthenticated users to register. New users are created with Visitor role (read-mostly).
     """
     from .serializers import UserCreateSerializer
 
     serializer = UserCreateSerializer(data=request.data)
 
     if serializer.is_valid():
-        serializer.validated_data['role'] = 'Employee'
+        serializer.validated_data['role'] = 'Visitor'
 
         # Sanitize input
         if 'email' in serializer.validated_data:
@@ -652,6 +802,13 @@ def signup_view(request):
             serializer.validated_data['username'] = sanitize_input(serializer.validated_data['username'])
 
         user = serializer.save()
+
+        try:
+            from saas_platform.tenant_assignment import assign_tenant_for_new_user
+
+            assign_tenant_for_new_user(user)
+        except Exception as e:
+            logger.warning('assign_tenant_for_new_user failed: %s', e)
         
         # Log audit event (no user for unauthenticated signups)
         try:
@@ -666,8 +823,11 @@ def signup_view(request):
             logger.error(f'Failed to log signup audit: {e}')
         
         # Generate JWT tokens for auto-login
-        refresh = ScreenGramRefreshToken.for_user(user)
-        
+        ua = request.META.get('HTTP_USER_AGENT', '') or ''
+        xff = request.META.get('HTTP_X_FORWARDED_FOR')
+        ip = xff.split(',')[0].strip() if xff else (request.META.get('REMOTE_ADDR', '') or '')
+        refresh = ScreenGramRefreshToken.for_user(user, client_ua=ua, client_ip=ip)
+
         return Response({
             'status': 'success',
             'message': 'Account created successfully',
@@ -680,6 +840,7 @@ def signup_view(request):
                 'role_display': user.get_role_display(),
                 'is_staff': user.is_staff,
                 'is_superuser': user.is_superuser,
+                'is_2fa_enabled': getattr(user, 'is_2fa_enabled', False),
             },
             'tokens': {
                 'refresh': str(refresh),
@@ -737,36 +898,15 @@ def logout_view(request):
 def sessions_view(request):
     """
     GET /api/auth/sessions/
-    Get current user's active sessions (simplified - returns current session info)
-    
-    Note: JWT tokens are stateless. This returns information about the current session
-    based on the token. For full session management, consider implementing token storage.
+    List active refresh-token sessions (from token_blacklist OutstandingToken).
     """
-    from rest_framework_simplejwt.tokens import UntypedToken
-    from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
-    import jwt
-    from django.conf import settings
-    
-    token = request.META.get('HTTP_AUTHORIZATION', '').replace('Bearer ', '')
-    
-    sessions = []
-    if token:
-        try:
-            # Decode token to get info
-            decoded = jwt.decode(token, settings.SECRET_KEY, algorithms=['HS256'], verify=False)
-            sessions.append({
-                'id': 'current',
-                'device': request.META.get('HTTP_USER_AGENT', 'Unknown')[:100],
-                'ip_address': request.META.get('REMOTE_ADDR', 'Unknown'),
-                'last_activity': timezone.now().isoformat(),
-                'current': True,
-            })
-        except (InvalidToken, TokenError, jwt.DecodeError):
-            pass
-    
+    raw = request.META.get('HTTP_AUTHORIZATION', '') or ''
+    access = raw.replace('Bearer ', '').strip()
+    sessions = list_refresh_sessions_for_user(request.user, access)
     return Response({
         'sessions': sessions,
         'count': len(sessions),
+        'active_session_count': len(sessions),
     }, status=status.HTTP_200_OK)
 
 
@@ -794,18 +934,12 @@ def logout_all_view(request):
             )
         except Exception as e:
             logger.error(f'Failed to log logout-all audit: {e}')
-        
-        # In a real implementation, you would:
-        # 1. Store tokens in database with user_id
-        # 2. Mark all tokens for this user as invalid
-        # 3. Or use a token blacklist
-        
-        # For now, we'll just log the action
-        # The user will need to change password to invalidate all tokens
-        
+
+        n = blacklist_all_refresh_for_user(request.user)
         return Response({
             'status': 'success',
-            'message': 'All sessions logged out. Please change your password to fully invalidate all tokens.'
+            'message': f'Logged out from all sessions ({n} invalidated).',
+            'sessions_revoked': n,
         }, status=status.HTTP_200_OK)
     except Exception as e:
         logger.error(f'Logout-all error: {e}')
@@ -823,7 +957,7 @@ def roles_view(request):
     Roles available for assignment in the UI (filtered by caller).
     """
     user = request.user
-    if user.is_employee():
+    if not (user.is_developer() or user.is_manager()):
         raise PermissionDenied("You do not have permission to view roles.")
 
     if user.is_developer():
@@ -831,10 +965,12 @@ def roles_view(request):
             {'value': 'Developer', 'label': 'Developer', 'description': 'Full system access'},
             {'value': 'Manager', 'label': 'Manager', 'description': 'Manage team and content; no system settings'},
             {'value': 'Employee', 'label': 'Employee', 'description': 'Screens, playlists, and media only'},
+            {'value': 'Visitor', 'label': 'Visitor', 'description': 'Dashboard and templates (explore only; no save)'},
         ]
     else:
         roles = [
             {'value': 'Employee', 'label': 'Employee', 'description': 'Screens, playlists, and media only'},
+            {'value': 'Visitor', 'label': 'Visitor', 'description': 'Dashboard and templates (explore only; no save)'},
         ]
 
     return Response({'roles': roles}, status=status.HTTP_200_OK)
@@ -902,11 +1038,11 @@ PixelCast Signage Team
             from_email = settings.DEFAULT_FROM_EMAIL
             recipient_list = [user.email]
             
-            send_mail(
+            send_system_email(
                 subject=subject,
                 message=message,
-                from_email=from_email,
                 recipient_list=recipient_list,
+                from_email=from_email,
                 fail_silently=False,
             )
             

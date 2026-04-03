@@ -2,6 +2,10 @@ import axios from 'axios'
 import { getNotification } from '@/composables/useNotification'
 import { normalizeApiError } from '@/utils/apiError'
 
+/** Avoid stacking identical "Too many requests" toasts when many API calls hit 429 at once */
+let lastGlobal429ToastAt = 0
+const GLOBAL_429_TOAST_COOLDOWN_MS = 5000
+
 // API base URL - must be set via Vite env (e.g. /api behind Nginx/Traefik)
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
 
@@ -55,6 +59,21 @@ api.interceptors.response.use(
     const originalRequest = error.config
     const status = error.response?.status
     const errorData = error.response?.data || {}
+
+    // Single retry for GET on 429 after backoff (bursts from list prefetch / UI loops)
+    if (
+      status === 429 &&
+      originalRequest &&
+      !originalRequest._retry429 &&
+      String(originalRequest.method || 'get').toLowerCase() === 'get'
+    ) {
+      originalRequest._retry429 = true
+      const ra = error.response?.headers?.['retry-after'] ?? error.response?.headers?.['Retry-After']
+      const sec = parseInt(ra, 10)
+      const delay = Number.isFinite(sec) && sec > 0 ? sec * 1000 : 1500
+      await new Promise((r) => setTimeout(r, Math.min(delay, 10_000)))
+      return api(originalRequest)
+    }
     
     // Handle installation required (503 with installation_required error)
     if (status === 503 && (errorData.error === 'installation_required' || errorData.status === 'not_installed')) {
@@ -66,6 +85,26 @@ api.interceptors.response.use(
       }
     }
 
+    // Handle restriction payloads (user/tenant locked by admin)
+    if (errorData.restriction) {
+      try {
+        const { useAuthStore } = await import('@/stores/auth')
+        const authStore = useAuthStore()
+        authStore.restriction = errorData.restriction
+        const { getNotification } = await import('@/composables/useNotification')
+        const notify = getNotification()
+        if (notify) {
+          notify.error(errorData.restriction.message || 'Access Restricted', { title: 'Access Restricted', duration: 6000 })
+        }
+        if (!window.location.pathname.startsWith('/login') && !window.location.pathname.startsWith('/403')) {
+          window.location.href = '/403'
+        }
+      } catch {
+        /* store not yet initialized */
+      }
+      return Promise.reject(error)
+    }
+
     // Handle license enforcement responses
     if ((status === 402 || status === 403) && typeof errorData.error === 'string' && errorData.error.startsWith('license_')) {
       if (window.location.pathname !== '/settings/license') {
@@ -75,9 +114,11 @@ api.interceptors.response.use(
     }
     
     // Don't try to refresh token for auth endpoints (login, signup, etc.)
-    const isAuthEndpoint = originalRequest.url?.includes('/auth/login/') || 
-                          originalRequest.url?.includes('/auth/signup/') ||
-                          originalRequest.url?.includes('/auth/token/')
+    const isAuthEndpoint =
+      originalRequest.url?.includes('/auth/login/') ||
+      originalRequest.url?.includes('/auth/login/2fa/') ||
+      originalRequest.url?.includes('/auth/signup/') ||
+      originalRequest.url?.includes('/auth/token/')
     
     // Handle 401 - try to refresh token (but not for auth endpoints)
     if (status === 401 && !originalRequest._retry && !isAuthEndpoint) {
@@ -181,14 +222,23 @@ api.interceptors.response.use(
           notify.error(userMessage, { title: 'Server Error', duration: 5000 })
         } else if (status === 403) {
           notify.error(userMessage, { title: 'Access Denied', duration: 4000 })
-          // Redirect to 403 page if not already there
-          if (!window.location.pathname.startsWith('/403')) {
+          // Optional: opt-in redirect for specific calls (default: no redirect; router guards handle page-level 403).
+          if (
+            originalRequest?.meta?.redirectOn403 === true &&
+            !window.location.pathname.startsWith('/403')
+          ) {
             setTimeout(() => {
               window.location.href = '/403'
             }, 2000)
           }
         } else if (status === 401) {
           notify.error(userMessage, { title: 'Authentication Required', duration: 3000 })
+        } else if (status === 429) {
+          const now = Date.now()
+          if (now - lastGlobal429ToastAt >= GLOBAL_429_TOAST_COOLDOWN_MS) {
+            lastGlobal429ToastAt = now
+            notify.error(userMessage, { title: 'Too many requests', duration: 4000 })
+          }
         } else {
           // 4xx errors (400, 404, 413, 422, etc.)
           notify.error(userMessage, { title: 'Request Error', duration: 4000 })
@@ -209,8 +259,21 @@ api.interceptors.response.use(
 
 // Authentication API
 export const authAPI = {
-  signup: (data) => api.post('/auth/signup/', data),
-  login: (credentials) => api.post('/auth/login/', credentials),
+  signup: (data) =>
+    api.post('/auth/signup/', data, { meta: { suppressGlobalErrorToast: true } }),
+  login: (credentials) =>
+    api.post('/auth/login/', credentials, { meta: { suppressGlobalErrorToast: true } }),
+  login2fa: (data) =>
+    api.post('/auth/login/2fa/', data, { meta: { suppressGlobalErrorToast: true } }),
+  passwordResetRequest: (data) =>
+    api.post('/auth/password-reset/request/', data, { meta: { suppressGlobalErrorToast: true } }),
+  passwordResetConfirm: (data) =>
+    api.post('/auth/password-reset/confirm/', data, { meta: { suppressGlobalErrorToast: true } }),
+  twofaSetupStart: () => api.post('/auth/2fa/setup/start/'),
+  twofaSetupConfirm: (data) => api.post('/auth/2fa/setup/confirm/', data),
+  twofaDisable: (data) => api.post('/auth/2fa/disable/', data),
+  revokeSession: (outstandingId) =>
+    api.post('/auth/sessions/revoke/', { outstanding_id: outstandingId }),
   logout: (data) => api.post('/auth/logout/', data),
   logoutAll: () => api.post('/auth/logout-all/'),
   sessions: () => api.get('/auth/sessions/'),
@@ -228,6 +291,72 @@ export const authAPI = {
 }
 
 // Users API
+export const teamAPI = {
+  invitations: () => api.get('/team/invitations/'),
+  createInvitation: (data) => api.post('/team/invitations/', data),
+  acceptInvitation: (data) => api.post('/team/invitations/accept/', data),
+}
+
+export const supportAPI = {
+  tickets: () => api.get('/core/support/tickets/'),
+  createTicket: (data) => api.post('/core/support/tickets/', data),
+}
+
+export const ticketsAPI = {
+  list: (params) => api.get('/tickets/', { params }),
+  detail: (id) => api.get(`/tickets/${id}/`),
+  create: (data) => api.post('/tickets/', data),
+  reply: (id, data) => api.post(`/tickets/${id}/reply/`, data),
+  upload: (id, formData) => api.post(`/tickets/${id}/upload/`, formData),
+  csat: (id, data) => api.post(`/tickets/${id}/csat/`, data),
+}
+
+export const platformTicketsAPI = {
+  list: (params) => api.get('/platform/tickets/queue/', { params }),
+  detail: (id) => api.get(`/platform/tickets/queue/${id}/`),
+  create: (data) => api.post('/platform/tickets/queue/', data),
+  users: (params) => api.get('/platform/tickets/queue/users/', { params }),
+  tenants: (params) => api.get('/platform/tickets/queue/tenants/', { params }),
+  assign: (id, data) => api.post(`/platform/tickets/queue/${id}/assign/`, data),
+  transition: (id, data) => api.post(`/platform/tickets/queue/${id}/transition/`, data),
+  reply: (id, data) => api.post(`/platform/tickets/queue/${id}/reply/`, data),
+  merge: (id, data) => api.post(`/platform/tickets/queue/${id}/merge/`, data),
+  upload: (id, formData) => api.post(`/platform/tickets/queue/${id}/upload/`, formData),
+
+  queues: (params) => api.get('/platform/tickets/queues/', { params }),
+  createQueue: (data) => api.post('/platform/tickets/queues/', data),
+  updateQueue: (id, data) => api.patch(`/platform/tickets/queues/${id}/`, data),
+  deleteQueue: (id) => api.delete(`/platform/tickets/queues/${id}/`),
+
+  slaPolicies: (params) => api.get('/platform/tickets/sla-policies/', { params }),
+  createSlaPolicy: (data) => api.post('/platform/tickets/sla-policies/', data),
+  updateSlaPolicy: (id, data) => api.patch(`/platform/tickets/sla-policies/${id}/`, data),
+  deleteSlaPolicy: (id) => api.delete(`/platform/tickets/sla-policies/${id}/`),
+
+  routingRules: (params) => api.get('/platform/tickets/routing-rules/', { params }),
+  createRoutingRule: (data) => api.post('/platform/tickets/routing-rules/', data),
+  updateRoutingRule: (id, data) => api.patch(`/platform/tickets/routing-rules/${id}/`, data),
+  deleteRoutingRule: (id) => api.delete(`/platform/tickets/routing-rules/${id}/`),
+
+  cannedResponses: (params) => api.get('/platform/tickets/canned-responses/', { params }),
+  createCannedResponse: (data) => api.post('/platform/tickets/canned-responses/', data),
+  updateCannedResponse: (id, data) => api.patch(`/platform/tickets/canned-responses/${id}/`, data),
+  deleteCannedResponse: (id) => api.delete(`/platform/tickets/canned-responses/${id}/`),
+
+  tags: (params) => api.get('/platform/tickets/tags/', { params }),
+  createTag: (data) => api.post('/platform/tickets/tags/', data),
+  deleteTag: (id) => api.delete(`/platform/tickets/tags/${id}/`),
+
+  roles: (params) => api.get('/platform/tickets/roles/', { params }),
+  createRole: (data) => api.post('/platform/tickets/roles/', data),
+  updateRole: (id, data) => api.patch(`/platform/tickets/roles/${id}/`, data),
+  deleteRole: (id) => api.delete(`/platform/tickets/roles/${id}/`),
+
+  analytics: (params) => api.get('/platform/tickets/analytics/', { params }),
+  agentPerformance: (params) => api.get('/platform/tickets/agent-performance/', { params }),
+  exportCsv: (params) => api.get('/platform/tickets/export.csv', { params, responseType: 'blob' }),
+}
+
 export const usersAPI = {
   list: (params) => api.get('/users/', { params }),
   detail: (id) => api.get(`/users/${id}/`),
@@ -243,7 +372,12 @@ export const usersAPI = {
   changeRole: (id, data) => api.post(`/users/${id}/change_role/`, data),
   sendVerificationEmail: () => api.post('/send-verification-email/'),
   verifyEmail: (data) => api.post('/verify-email/', data),
-  sidebarItems: () => api.get('/sidebar-items/'),
+  sidebarItems: () =>
+    api.get('/sidebar-items/', { meta: { suppressGlobalErrorToast: true } }),
+  lock: (id, data) => api.post(`/users/${id}/lock/`, data),
+  unlock: (id) => api.post(`/users/${id}/unlock/`),
+  revokeSessions: (id) => api.post(`/users/${id}/revoke_sessions/`),
+  adminSetPassword: (id, data) => api.post(`/users/${id}/admin_set_password/`, data),
 }
 
 // Roles API
@@ -271,17 +405,33 @@ export const screensAPI = {
   healthCheck: (params) => api.get('/screens/health-check/', { params }),
 }
 
-// Pairing API
+// Pairing API (public player — errors handled inline in PairingFlow; suppress spam toasts on poll)
 export const pairingAPI = {
   generate: () => api.post('/pairing/generate/'),
-  status: (params) => api.get('/pairing/status/', { params }),
+  status: (params) =>
+    api.get('/pairing/status/', {
+      params,
+      meta: { suppressGlobalErrorToast: true },
+    }),
   bind: (data) => api.post('/pairing/bind/', data),
 }
 
 // Templates API
+/** Deduplicate concurrent GET /templates/:id/ (list prefetch + card previews). */
+const _templateDetailInflight = new Map()
+
 export const templatesAPI = {
   list: (params) => api.get('/templates/', { params }),
-  detail: (id) => api.get(`/templates/${id}/`),
+  detail: (id) => {
+    const key = String(id)
+    if (_templateDetailInflight.has(key)) {
+      return _templateDetailInflight.get(key)
+    }
+    const req = api.get(`/templates/${id}/`)
+    _templateDetailInflight.set(key, req)
+    req.finally(() => _templateDetailInflight.delete(key))
+    return req
+  },
   create: (data) => api.post('/templates/', data),
   update: (id, data) => api.put(`/templates/${id}/`, data),
   patch: (id, data) => api.patch(`/templates/${id}/`, data),
@@ -509,6 +659,11 @@ export const contentValidationAPI = {
 
 // Core Infrastructure API
 export const coreAPI = {
+  systemEmail: {
+    get: () => api.get('/core/system-email-settings/'),
+    patch: (data) => api.patch('/core/system-email-settings/', data),
+    test: (to) => api.post('/core/system-email-settings/test/', { to }),
+  },
   // Audit Logs
   auditLogs: {
     list: (params) => api.get('/core/audit-logs/', { params }),
@@ -550,13 +705,60 @@ export const tvCatalogAPI = {
 
 // Notification Center API
 export const notificationCenterAPI = {
-  list: (params) => api.get('/core/notifications/', { params }),
+  list: (params) =>
+    api.get('/core/notifications/', {
+      params,
+      meta: { suppressGlobalErrorToast: true },
+    }),
   markAsRead: (id) => api.post(`/core/notifications/${id}/mark_as_read/`),
   markAllAsRead: () => api.post('/core/notifications/mark_all_as_read/'),
   dismiss: (id) => api.delete(`/core/notifications/${id}/dismiss/`),
   clear: () => api.delete('/core/notifications/clear/'),
   getPreferences: () => api.get('/core/notification-preferences/me/'),
   savePreferences: (data) => api.put('/core/notification-preferences/me/', data),
+}
+
+// Platform SaaS (super-admin — requires PLATFORM_SAAS_ENABLED on server)
+export const platformAPI = {
+  overview: () => api.get('/platform/overview/'),
+  tenants: {
+    list: (params) => api.get('/platform/tenants/', { params }),
+    retrieve: (id) => api.get(`/platform/tenants/${id}/`),
+    create: (data) => api.post('/platform/tenants/', data),
+    update: (id, data) => api.put(`/platform/tenants/${id}/`, data),
+    patch: (id, data) => api.patch(`/platform/tenants/${id}/`, data),
+    remove: (id) => api.delete(`/platform/tenants/${id}/`),
+    manualOverride: (id, data) => api.post(`/platform/tenants/${id}/manual-override/`, data),
+    syncStripe: (id) => api.post(`/platform/tenants/${id}/sync-stripe/`),
+    auditLog: (id) => api.get(`/platform/tenants/${id}/audit-log/`),
+    accessLock: (id, data) => api.post(`/platform/tenants/${id}/access-lock/`, data),
+    accessUnlock: (id) => api.post(`/platform/tenants/${id}/access-unlock/`),
+  },
+  tenantFeatureFlags: {
+    get: (tenantId) => api.get(`/platform/tenants/${tenantId}/feature-flags/`),
+    update: (tenantId, data) => api.put(`/platform/tenants/${tenantId}/feature-flags/`, data),
+  },
+  impersonate: (userId) => api.post('/platform/impersonate/', { user_id: userId }),
+  impersonateStop: (adminRefreshToken) =>
+    api.post('/platform/impersonate/stop/', { admin_refresh_token: adminRefreshToken }),
+  billingCheckout: (data) => api.post('/platform/billing/checkout-session/', data || {}),
+  billingPortal: (data) => api.post('/platform/billing/portal-session/', data || {}),
+  tenantApiKeys: () => api.get('/platform/integrations/api-keys/'),
+  createTenantApiKey: (data) => api.post('/platform/integrations/api-keys/', data || {}),
+  revokeTenantApiKey: (id) => api.post(`/platform/integrations/api-keys/${id}/revoke/`),
+  tenantWebhooks: () => api.get('/platform/integrations/webhooks/'),
+  createTenantWebhook: (data) => api.post('/platform/integrations/webhooks/', data || {}),
+  tenantLicense: {
+    get: (tenantId) => api.get(`/platform/tenants/${tenantId}/license/`),
+    update: (tenantId, data) => api.put(`/platform/tenants/${tenantId}/license/`, data),
+    enforcementLogs: (tenantId) => api.get(`/platform/tenants/${tenantId}/license/enforcement-logs/`),
+  },
+  expenses: {
+    list: (params) => api.get('/platform/billing/expenses/', { params }),
+    create: (data) => api.post('/platform/billing/expenses/', data),
+    update: (id, data) => api.put(`/platform/billing/expenses/${id}/`, data),
+    remove: (id) => api.delete(`/platform/billing/expenses/${id}/`),
+  },
 }
 
 // Licensing API
@@ -576,6 +778,18 @@ export const adminAPI = {
     resolve: (id) => api.patch(`/admin/errors/${id}/resolve/`),
     stats: (params) => api.get('/admin/errors/stats/', { params }),
   },
+}
+
+// Public (no auth) — download URLs for player apps + deployment flags
+export const publicAPI = {
+  downloads: () =>
+    api.get('/public/downloads/', {
+      meta: { suppressGlobalErrorToast: true },
+    }),
+  deployment: () =>
+    axios.get(`${API_BASE_URL}/public/deployment/`, {
+      headers: { 'Content-Type': 'application/json' },
+    }),
 }
 
 // Setup/Installation API

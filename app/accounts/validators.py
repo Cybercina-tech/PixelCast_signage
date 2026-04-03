@@ -4,30 +4,41 @@ Custom validators for user management.
 Provides additional validation beyond Django's built-in validators.
 """
 from django.core.exceptions import ValidationError
+from django.core.validators import EmailValidator
 from django.utils.translation import gettext_lazy as _
 import re
+
+_email_validator = EmailValidator()
 
 
 def validate_username_format(value):
     """
     Validate username format.
-    
-    Rules:
-    - 3-150 characters
-    - Only letters, numbers, and @/./+/-/_ characters
-    - Cannot start with number
+
+    If the value contains ``@``, treat it as email-as-username (signup uses email for ``username``)
+    and validate with Django's email validator (Unicode, ``+``, etc.).
+    Otherwise apply legacy ASCII username rules.
     """
+    if not value:
+        return
+
+    value = value.strip()
     if len(value) < 3:
         raise ValidationError(_('Username must be at least 3 characters long.'))
-    
+
     if len(value) > 150:
         raise ValidationError(_('Username is too long (maximum 150 characters).'))
-    
-    # Must start with letter
+
+    if '@' in value:
+        try:
+            _email_validator(value)
+        except ValidationError as e:
+            raise ValidationError(e.messages)
+        return
+
     if value[0].isdigit():
         raise ValidationError(_('Username cannot start with a number.'))
-    
-    # Allowed characters: letters, digits, @ . + - _
+
     pattern = r'^[a-zA-Z][a-zA-Z0-9@.+_-]*$'
     if not re.match(pattern, value):
         raise ValidationError(_('Username can only contain letters, numbers, and @/./+/-/_ characters.'))

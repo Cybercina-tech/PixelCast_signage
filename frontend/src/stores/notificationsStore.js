@@ -28,7 +28,7 @@ export const useNotificationsStore = defineStore('notifications', {
     /**
      * Fetch notifications from the backend
      */
-    async fetchNotifications(limit = 10) {
+    async fetchNotifications(limit = 25) {
       this.loading = true
       this.error = null
       
@@ -121,7 +121,7 @@ export const useNotificationsStore = defineStore('notifications', {
     /**
      * Start polling for new notifications
      */
-    startPolling(intervalMs = 60000) {
+    startPolling(intervalMs = 30000) {
       // Clear existing interval if any
       this.stopPolling()
       

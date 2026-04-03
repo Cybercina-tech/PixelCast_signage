@@ -20,6 +20,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.views.static import serve
 from django.http import JsonResponse
+from core.public_views import public_deployment as public_deployment_view
 from rest_framework.routers import DefaultRouter
 from log.views import ErrorLogViewSet
 from templates.views import qr_action_redirect
@@ -28,6 +29,13 @@ from templates.views import qr_action_redirect
 admin_router = DefaultRouter()
 admin_router.register(r'errors', ErrorLogViewSet, basename='error-log')
 
+
+def public_downloads(request):
+    """Public JSON for player app download URLs (no authentication)."""
+    apk_url = getattr(settings, 'ANDROID_TV_APK_URL', None) or ''
+    return JsonResponse({'android_tv_apk_url': apk_url})
+
+
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('qr/<slug:slug>/', qr_action_redirect, name='qr-action-redirect'),
@@ -35,6 +43,7 @@ urlpatterns = [
     # Setup/Installation endpoints (must be before other API routes)
     path('api/setup/', include('setup.urls')),
     path('api/license/', include('licensing.urls')),
+    path('api/platform/', include('saas_platform.urls')),
     
     # THE IoT ESCAPE PLAN: IoT endpoints outside /api/ namespace to bypass strict security filters
     # This allows IoT devices to communicate without authentication middleware interference
@@ -45,6 +54,8 @@ urlpatterns = [
     
     # Lightweight health probe used by frontend footer/status checks.
     path('api/health/', lambda request: JsonResponse({'status': 'ok'})),
+    path('api/public/downloads/', public_downloads, name='public-downloads'),
+    path('api/public/deployment/', public_deployment_view, name='public-deployment'),
 
     path('api/', include('accounts.urls')),
     path('api/', include('commands.urls')),
@@ -53,6 +64,8 @@ urlpatterns = [
     path('api/', include('bulk_operations.urls')),  # Bulk operations endpoints
     path('api/', include('content_validation.urls')),  # Content validation endpoints
     path('api/', include('analytics.urls')),  # Analytics dashboard endpoints
+    path('api/tickets/', include('tickets.urls')),  # Requester ticket API
+    path('api/platform/tickets/', include('tickets.platform_urls')),  # Platform ticket admin
     path('api/core/', include('core.urls')),  # Core infrastructure (audit, backup)
     path('api/logs/', include('log.urls')),
     path('api/admin/', include(admin_router.urls)),  # Admin-only endpoints (errors)

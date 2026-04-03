@@ -1,6 +1,8 @@
 import { defineStore } from 'pinia'
 import { screensAPI, commandsAPI, contentsAPI, logsAPI, coreAPI } from '../services/api'
 import { smartUpdateObject, smartUpdateArray } from '../utils/deepCompare'
+import { hasPermission } from '../utils/permissions'
+import { useAuthStore } from './auth'
 
 export const useDashboardStore = defineStore('dashboard', {
   state: () => ({
@@ -152,6 +154,12 @@ export const useDashboardStore = defineStore('dashboard', {
     async fetchMetrics() {
       this.loading = true
       this.error = null
+      const authStore = useAuthStore()
+      if (!hasPermission(authStore.user, 'view_logs')) {
+        this.metrics = { cpu: [], memory: [], latency: [] }
+        this.loading = false
+        return
+      }
       try {
         // Fetch recent screen status logs for metrics
         const response = await logsAPI.screenStatus.list({ page_size: 100 })
@@ -238,9 +246,12 @@ export const useDashboardStore = defineStore('dashboard', {
         } catch (e) {
           console.warn('Failed to fetch audit logs, falling back to logs:', e)
         }
+
+        const authStore = useAuthStore()
+        const canViewOperationalLogs = hasPermission(authStore.user, 'view_logs')
         
         // Fallback: Recent command executions (if audit logs not available)
-        if (activities.length < 10) {
+        if (canViewOperationalLogs && activities.length < 10) {
           try {
             const cmdLogs = await logsAPI.commandExecution.list({ page_size: 10, ordering: '-created_at' })
             const cmdLogsData = cmdLogs.data.results || cmdLogs.data || []
@@ -269,7 +280,7 @@ export const useDashboardStore = defineStore('dashboard', {
         }
         
         // Recent content downloads - GLOBAL (no screen_id)
-        if (activities.length < 15) {
+        if (canViewOperationalLogs && activities.length < 15) {
           try {
             // Use global list endpoint - no screen_id parameter
             const contentLogs = await logsAPI.contentDownload.list({ page_size: 10, ordering: '-created_at' })
@@ -299,7 +310,7 @@ export const useDashboardStore = defineStore('dashboard', {
         }
         
         // Recent screen status changes - GLOBAL (no screen_id filter)
-        if (activities.length < 20) {
+        if (canViewOperationalLogs && activities.length < 20) {
           try {
             // Use global list endpoint - no screen_id parameter
             const statusLogs = await logsAPI.screenStatus.list({ page_size: 10, ordering: '-recorded_at' })

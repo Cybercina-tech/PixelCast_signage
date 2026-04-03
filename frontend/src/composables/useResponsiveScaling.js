@@ -67,6 +67,8 @@ export function useResponsiveScaling(template) {
     const scaleY = viewportHeight.value / templateHeight
     let scale = Math.min(scaleX, scaleY)
     scale *= 1 - 1e-6
+    // Slight inset so the full canvas stays visible (overscan / safe area on TVs)
+    scale *= 0.96
 
     return Math.max(0.01, Math.min(scale, 10))
   })

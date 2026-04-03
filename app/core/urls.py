@@ -11,6 +11,8 @@ from core.views import (
     TVBrandViewSet,
 )
 from core.deploy_views import github_webhook, deployment_status
+from core.system_email_views import SystemEmailSettingsView, SystemEmailTestView
+from core.support_views import support_tickets
 
 router = DefaultRouter()
 router.register(r'audit-logs', AuditLogViewSet, basename='audit-log')
@@ -20,7 +22,10 @@ router.register(r'notification-preferences', NotificationPreferenceViewSet, base
 router.register(r'tv-brands', TVBrandViewSet, basename='tv-brand')
 
 urlpatterns = [
+    path('support/tickets/', support_tickets, name='support-tickets'),
     path('', include(router.urls)),
+    path('system-email-settings/', SystemEmailSettingsView.as_view(), name='system-email-settings'),
+    path('system-email-settings/test/', SystemEmailTestView.as_view(), name='system-email-test'),
     # Deployment webhook endpoints
     path('deploy/webhook/', github_webhook, name='github-webhook'),
     path('deploy/status/', deployment_status, name='deployment-status'),
