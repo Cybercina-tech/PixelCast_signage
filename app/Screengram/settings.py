@@ -96,6 +96,7 @@ try:
 except ImportError:
     Fernet = None
 
+from .notification_key import default_notification_encryption_key
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
@@ -581,15 +582,9 @@ CONTENT_STORAGE = {
 NOTIFICATIONS_ASYNC = True  # Use Celery for async delivery (set False for sync in development)
 _notif_key = (os.environ.get('NOTIFICATION_ENCRYPTION_KEY') or '').strip()
 if Fernet:
-    if _notif_key:
-        NOTIFICATION_ENCRYPTION_KEY = _notif_key
-    elif DEBUG or _LOADING_TEST_SETTINGS:
-        NOTIFICATION_ENCRYPTION_KEY = Fernet.generate_key().decode()
-    else:
-        raise ImproperlyConfigured(
-            'NOTIFICATION_ENCRYPTION_KEY must be set when DEBUG is False. '
-            'Generate one with: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"'
-        )
+    NOTIFICATION_ENCRYPTION_KEY = (
+        _notif_key if _notif_key else default_notification_encryption_key()
+    )
 else:
     NOTIFICATION_ENCRYPTION_KEY = _notif_key or None
     if not DEBUG and not _LOADING_TEST_SETTINGS and not NOTIFICATION_ENCRYPTION_KEY:
