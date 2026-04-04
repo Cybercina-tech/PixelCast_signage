@@ -353,6 +353,20 @@ def test_platform_overview(superadmin_user):
 
 @pytest.mark.django_db
 @override_settings(PLATFORM_SAAS_ENABLED=True)
+def test_platform_reports_summary(superadmin_user):
+    client = APIClient()
+    client.force_authenticate(user=superadmin_user)
+    r = client.get('/api/platform/reports/summary/')
+    assert r.status_code == 200
+    assert 'self_hosted' in r.data
+    assert 'saas' in r.data
+    assert 'usage' in r.data
+    assert 'revenue' in r.data
+    assert 'purchases_count' in r.data['self_hosted']
+
+
+@pytest.mark.django_db
+@override_settings(PLATFORM_SAAS_ENABLED=True)
 def test_platform_cohorts(superadmin_user):
     client = APIClient()
     client.force_authenticate(user=superadmin_user)

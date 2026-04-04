@@ -72,11 +72,20 @@ class CommandViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         """Check permissions before creating command"""
         user = self.request.user
-        
-        # Only SuperAdmin, Admin, and Operator can create commands
+
         if not user.can_execute_commands():
             raise PermissionDenied("You do not have permission to create commands.")
-        
+
+        screen_id = serializer.validated_data.get('screen_id')
+        if screen_id:
+            from signage.models import Screen
+            try:
+                screen = Screen.objects.get(id=screen_id)
+            except Screen.DoesNotExist:
+                raise PermissionDenied("Screen not found.")
+            if not RolePermissions.can_view_resource(user, screen):
+                raise PermissionDenied("You do not have permission to create commands for this screen.")
+
         serializer.save()
     
     def perform_update(self, serializer):
@@ -84,7 +93,11 @@ class CommandViewSet(viewsets.ModelViewSet):
         command = self.get_object()
         user = self.request.user
         
-        if not (user.is_developer() or user.is_manager()):
+        if not (
+            user.is_developer()
+            or user.is_manager()
+            or (user.is_employee() and command.created_by_id == user.id)
+        ):
             raise PermissionDenied("You do not have permission to update commands.")
         
         # Don't allow updating executing or done commands
@@ -97,7 +110,11 @@ class CommandViewSet(viewsets.ModelViewSet):
         """Check permissions before delete"""
         user = self.request.user
         
-        if not (user.is_developer() or user.is_manager()):
+        if not (
+            user.is_developer()
+            or user.is_manager()
+            or (user.is_employee() and instance.created_by_id == user.id)
+        ):
             raise PermissionDenied("You do not have permission to delete commands.")
         
         instance.delete()

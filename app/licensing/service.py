@@ -15,6 +15,7 @@ from .client import (
     post_license_validation,
 )
 from .models import LicenseState
+from .plan_features import normalize_plan_type
 
 logger = logging.getLogger(__name__)
 PURCHASE_CODE_RE = re.compile(
@@ -74,6 +75,63 @@ def _build_payload(state: LicenseState):
 
 def get_or_create_state() -> LicenseState:
     return LicenseState.get_solo()
+
+
+def merge_gateway_license_payload(state: LicenseState, data: dict, *, touch_contact: bool = True) -> None:
+    """Apply plan_type / features / last contact from license gateway JSON."""
+    if touch_contact:
+        state.last_gateway_contact_at = timezone.now()
+    pt = normalize_plan_type(data.get("plan_type"))
+    if pt:
+        state.plan_type = pt
+    feat = data.get("features")
+    if feat is None:
+        feat = data.get("features_snapshot")
+    if isinstance(feat, dict):
+        state.features_snapshot = feat
+    elif isinstance(feat, list):
+        state.features_snapshot = {str(k): True for k in feat}
+    state.touch_signature()
+
+
+def apply_heartbeat_gateway_response(state: LicenseState, data: dict) -> None:
+    if not data.get("ok", True):
+        return
+    merge_gateway_license_payload(state, data, touch_contact=True)
+    state.save(
+        update_fields=[
+            "plan_type",
+            "features_snapshot",
+            "last_gateway_contact_at",
+            "validation_signature",
+            "updated_at",
+        ]
+    )
+    cache.delete(_cache_key())
+
+
+def heartbeat_stale_contact_tier() -> str | None:
+    """warn | readonly | admin_only based on last successful gateway sync (active licenses only)."""
+    if not bool(getattr(settings, "LICENSE_ENFORCEMENT_ENABLED", False)):
+        return None
+    if not bool(getattr(settings, "LICENSE_STALE_CONTACT_ENFORCEMENT_ENABLED", True)):
+        return None
+    state = LicenseState.get_solo()
+    if state.license_status != LicenseState.STATUS_ACTIVE:
+        return None
+    contact = state.last_gateway_contact_at
+    if contact is None:
+        return None
+    days = (timezone.now() - contact).total_seconds() / 86400.0
+    warn_end = float(getattr(settings, "LICENSE_STALE_CONTACT_WARN_DAYS", 7) or 7)
+    ro_end = float(getattr(settings, "LICENSE_STALE_CONTACT_READONLY_DAYS", 14) or 14)
+    if days <= 0:
+        return None
+    if days <= warn_end:
+        return "warn"
+    if days <= ro_end:
+        return "readonly"
+    return "admin_only"
 
 
 def _masked_token_preview(token: str) -> str:
@@ -151,8 +209,10 @@ def activate_license(purchase_code: str, domain: str = "", override_product_id: 
         state.purchase_code = ""
         state.activation_token = token
         state.last_error = ""
+        merge_gateway_license_payload(state, data, touch_contact=True)
         state.touch_signature()
         state.save()
+        cache.delete(_cache_key())
         return validate_license(force=True)
 
     state.purchase_code = code
@@ -183,6 +243,10 @@ def current_status_payload():
         "uses_activation_token": bool((state.activation_token or "").strip()),
         "masked_activation_token": _masked_token_preview(state.activation_token),
         "masked_purchase_code": state.masked_purchase_code(),
+        "plan_type": state.plan_type or "",
+        "features_snapshot": state.features_snapshot or {},
+        "last_gateway_contact_at": state.last_gateway_contact_at,
+        "heartbeat_stale_tier": heartbeat_stale_contact_tier() or "",
     }
 
 
@@ -290,6 +354,7 @@ def validate_license(force: bool = False) -> LicenseDecision:
             dom = (data.get("domain") or "").strip()
             if not state.activated_domain and dom:
                 state.activated_domain = dom
+            merge_gateway_license_payload(state, data, touch_contact=True)
         else:
             state.grace_until = now
 

@@ -70,10 +70,30 @@ class ScreenAnalyticsService:
         Returns:
             Dictionary with screen statistics
         """
+        if screen_ids is not None and len(screen_ids) == 0:
+            return {
+                'total_screens': 0,
+                'status_breakdown': {'online': 0, 'offline': 0, 'total': 0},
+                'health_metrics': {
+                    'avg_cpu_usage': 0.0,
+                    'avg_memory_usage': 0.0,
+                    'avg_latency_ms': 0.0,
+                    'max_cpu_usage': 0.0,
+                    'max_memory_usage': 0.0,
+                    'max_latency_ms': 0.0,
+                    'min_latency_ms': 0.0,
+                },
+                'health_score': 0.0,
+                'period': {
+                    'start_date': start_date.isoformat() if start_date else None,
+                    'end_date': end_date.isoformat() if end_date else None,
+                },
+            }
+
         # Base queryset
         screens = Screen.objects.all()
         
-        if screen_ids:
+        if screen_ids is not None:
             screens = screens.filter(id__in=screen_ids)
         
         # Get online/offline counts
@@ -83,7 +103,7 @@ class ScreenAnalyticsService:
         
         # Get recent status logs for metrics
         status_logs = ScreenStatusLog.objects.all()
-        if screen_ids:
+        if screen_ids is not None:
             status_logs = status_logs.filter(screen_id__in=screen_ids)
         if start_date:
             status_logs = status_logs.filter(recorded_at__gte=start_date)
@@ -95,7 +115,7 @@ class ScreenAnalyticsService:
         # If the selected date range has no logs, fallback to latest known metrics overall.
         if not recent_logs_list:
             fallback_logs = ScreenStatusLog.objects.all()
-            if screen_ids:
+            if screen_ids is not None:
                 fallback_logs = fallback_logs.filter(screen_id__in=screen_ids)
             recent_logs_list = ScreenAnalyticsService._latest_status_logs_per_screen(fallback_logs)
         
@@ -278,8 +298,11 @@ class CommandAnalyticsService:
         try:
             commands = Command.objects.all()
             
-            if screen_ids:
-                commands = commands.filter(screen_id__in=screen_ids)
+            if screen_ids is not None:
+                if len(screen_ids) == 0:
+                    commands = Command.objects.none()
+                else:
+                    commands = commands.filter(screen_id__in=screen_ids)
             if start_date:
                 commands = commands.filter(created_at__gte=start_date)
             if end_date:
@@ -377,7 +400,8 @@ class ContentAnalyticsService:
     @staticmethod
     def get_content_statistics(
         start_date: Optional[datetime] = None,
-        end_date: Optional[datetime] = None
+        end_date: Optional[datetime] = None,
+        screen_ids: Optional[List[str]] = None,
     ) -> Dict[str, Any]:
         """
         Get content download and usage statistics.
@@ -385,6 +409,7 @@ class ContentAnalyticsService:
         Args:
             start_date: Optional start date for time range
             end_date: Optional end date for time range
+            screen_ids: When set, restrict download logs (and type stats) to these screens
             
         Returns:
             Dictionary with content statistics
@@ -392,6 +417,11 @@ class ContentAnalyticsService:
         try:
             # Content download logs
             download_logs = ContentDownloadLog.objects.all()
+            if screen_ids is not None:
+                if len(screen_ids) == 0:
+                    download_logs = ContentDownloadLog.objects.none()
+                else:
+                    download_logs = download_logs.filter(screen_id__in=screen_ids)
             if start_date:
                 download_logs = download_logs.filter(created_at__gte=start_date)
             if end_date:
@@ -405,10 +435,15 @@ class ContentAnalyticsService:
                 in_progress=Count('id', filter=Q(status='in_progress')),
             )
             
-            # Statistics by content type
-            content_types = list(Content.objects.values('type').annotate(
-                count=Count('id'),
-            ).order_by('-count'))
+            # Statistics by content type (global, or from scoped download logs only)
+            if screen_ids is not None:
+                content_types = list(download_logs.values('content__type').annotate(
+                    count=Count('id'),
+                ).order_by('-count'))
+            else:
+                content_types = list(Content.objects.values('type').annotate(
+                    count=Count('id'),
+                ).order_by('-count'))
             
             # Download statistics by content type
             type_download_stats = []
@@ -429,10 +464,13 @@ class ContentAnalyticsService:
                 error_rate = (failed_count / total_downloads) * 100
             
             # Content type distribution
-            total_content = Content.objects.count()
+            if screen_ids is not None:
+                total_content = sum(item.get('count', 0) for item in content_types)
+            else:
+                total_content = Content.objects.count()
             type_distribution = [
                 {
-                    'type': item.get('type', 'unknown'),
+                    'type': item.get('content__type' if screen_ids is not None else 'type', 'unknown'),
                     'count': item.get('count', 0),
                     'percentage': round((item.get('count', 0) / total_content * 100), 2) if total_content > 0 else 0,
                 }
@@ -457,7 +495,11 @@ class ContentAnalyticsService:
                     }
                     for item in type_download_stats
                 ],
-                'total_content_items': total_content,
+                'total_content_items': (
+                    Content.objects.count()
+                    if screen_ids is None
+                    else download_logs.values('content_id').distinct().count()
+                ),
             }
         except Exception as e:
             logger.error(f"Error in get_content_statistics: {str(e)}", exc_info=True)
@@ -470,7 +512,8 @@ class TemplateAnalyticsService:
     @staticmethod
     def get_template_statistics(
         start_date: Optional[datetime] = None,
-        end_date: Optional[datetime] = None
+        end_date: Optional[datetime] = None,
+        screen_ids: Optional[List[str]] = None,
     ) -> Dict[str, Any]:
         """
         Get template usage statistics.
@@ -478,24 +521,47 @@ class TemplateAnalyticsService:
         Args:
             start_date: Optional start date for time range
             end_date: Optional end date for time range
+            screen_ids: When set, limit to templates active on these screens
             
         Returns:
             Dictionary with template statistics
         """
         try:
             templates = Template.objects.all()
+            if screen_ids is not None:
+                if len(screen_ids) == 0:
+                    templates = Template.objects.none()
+                else:
+                    templates = Template.objects.filter(active_screens__id__in=screen_ids).distinct()
             
-            # Template usage statistics - count active screens per template
-            template_stats = templates.annotate(
-                active_screen_count=Count('active_screens', distinct=True),
-            ).order_by('-active_screen_count')
+            # Template usage statistics - count active screens per template (scoped when screen_ids set)
+            if screen_ids is None:
+                template_stats = templates.annotate(
+                    active_screen_count=Count('active_screens', distinct=True),
+                ).order_by('-active_screen_count')
+            else:
+                template_stats = templates.annotate(
+                    active_screen_count=Count(
+                        'active_screens',
+                        filter=Q(active_screens__id__in=screen_ids),
+                        distinct=True,
+                    ),
+                ).order_by('-active_screen_count')
             
             # Most active templates (currently on screens)
             most_active = list(template_stats[:10])
             
             # Total templates and active screens
             total_templates = templates.count()
-            total_active_screens = Screen.objects.filter(active_template__isnull=False).count()
+            if screen_ids is None:
+                total_active_screens = Screen.objects.filter(active_template__isnull=False).count()
+            elif len(screen_ids) == 0:
+                total_active_screens = 0
+            else:
+                total_active_screens = Screen.objects.filter(
+                    id__in=screen_ids,
+                    active_template__isnull=False,
+                ).count()
             
             # Templates by orientation
             orientation_stats = list(templates.values('orientation').annotate(
@@ -532,7 +598,9 @@ class ActivityAnalyticsService:
     @staticmethod
     def get_activity_trends(
         period: str = 'day',
-        days: int = 30
+        days: int = 30,
+        screen_ids: Optional[List[str]] = None,
+        scope_user=None,
     ) -> Dict[str, Any]:
         """
         Get activity trends over time.
@@ -540,6 +608,8 @@ class ActivityAnalyticsService:
         Args:
             period: Aggregation period ('day', 'week', 'month')
             days: Number of days to look back
+            screen_ids: When set (Employee analytics), restrict screens/commands to these IDs
+            scope_user: When set with screen_ids, limit template/content trends to this user
             
         Returns:
             Dictionary with activity trends
@@ -547,6 +617,17 @@ class ActivityAnalyticsService:
         try:
             end_date = timezone.now()
             start_date = end_date - timedelta(days=days)
+
+            if screen_ids is not None and len(screen_ids) == 0:
+                return {
+                    'period': period,
+                    'start_date': start_date.isoformat(),
+                    'end_date': end_date.isoformat(),
+                    'screen_registrations': [],
+                    'commands_created': [],
+                    'templates_created': [],
+                    'content_uploads': [],
+                }
             
             trunc_func = TruncDate('created_at')
             if period == 'week':
@@ -558,7 +639,10 @@ class ActivityAnalyticsService:
             screen_registrations = Screen.objects.filter(
                 registration_date__gte=start_date,
                 registration_date__lte=end_date
-            ).annotate(
+            )
+            if screen_ids is not None:
+                screen_registrations = screen_registrations.filter(id__in=screen_ids)
+            screen_registrations = screen_registrations.annotate(
                 period=trunc_func
             ).values('period').annotate(
                 count=Count('id')
@@ -568,7 +652,10 @@ class ActivityAnalyticsService:
             commands_created = Command.objects.filter(
                 created_at__gte=start_date,
                 created_at__lte=end_date
-            ).annotate(
+            )
+            if screen_ids is not None:
+                commands_created = commands_created.filter(screen_id__in=screen_ids)
+            commands_created = commands_created.annotate(
                 period=trunc_func
             ).values('period').annotate(
                 count=Count('id')
@@ -578,7 +665,10 @@ class ActivityAnalyticsService:
             templates_created = Template.objects.filter(
                 created_at__gte=start_date,
                 created_at__lte=end_date
-            ).annotate(
+            )
+            if screen_ids is not None and scope_user is not None:
+                templates_created = templates_created.filter(created_by=scope_user)
+            templates_created = templates_created.annotate(
                 period=trunc_func
             ).values('period').annotate(
                 count=Count('id')
@@ -588,7 +678,10 @@ class ActivityAnalyticsService:
             content_uploads = Content.objects.filter(
                 created_at__gte=start_date,
                 created_at__lte=end_date
-            ).annotate(
+            )
+            if screen_ids is not None and scope_user is not None:
+                content_uploads = content_uploads.filter(created_by=scope_user)
+            content_uploads = content_uploads.annotate(
                 period=trunc_func
             ).values('period').annotate(
                 count=Count('id')

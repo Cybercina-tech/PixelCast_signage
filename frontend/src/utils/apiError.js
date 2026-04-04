@@ -62,7 +62,7 @@ export function normalizeApiError(error) {
   ]
 
   const rawMessage = data.message || data.detail || data.error
-  const userMessage = String(
+  let userMessage = String(
     rawMessage ||
       nonField[0] ||
       Object.values(fieldErrors)[0]?.[0] ||
@@ -70,6 +70,9 @@ export function normalizeApiError(error) {
       error?.message ||
       'An unexpected error occurred.'
   )
+  if (status === 503 && data.error === 'installation_required') {
+    userMessage = `${userMessage} Open /install to complete setup.`
+  }
 
   return {
     status,

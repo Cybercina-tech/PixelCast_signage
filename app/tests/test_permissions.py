@@ -42,7 +42,7 @@ class PermissionTests(BaseAPITestCase):
         manager = self.create_user(role='Manager')
         employee = self.create_user(role='Employee')
         self.assertTrue(manager.can_execute_commands())
-        self.assertFalse(employee.can_execute_commands())
+        self.assertTrue(employee.can_execute_commands())
 
 
 class APIPermissionTests(BaseAPITestCase):
@@ -91,9 +91,9 @@ class APIPermissionTests(BaseAPITestCase):
         self.assertIn(response.status_code, [201, 400])
 
     def test_manager_can_create_commands(self):
-        manager = self.create_user(role='Manager')
+        manager = self.create_user(role='Manager', organization_name='TestOrg')
         self.client.force_authenticate(user=manager)
-        screen = self.create_screen()
+        screen = self.create_screen(owner=manager)
         from django.urls import reverse
         url = reverse('command-list')
         data = {
@@ -105,7 +105,8 @@ class APIPermissionTests(BaseAPITestCase):
         response = self.client.post(url, data, format='json')
         self.assertIn(response.status_code, [201, 400])
 
-    def test_employee_cannot_create_commands(self):
+    def test_employee_cannot_create_commands_for_inaccessible_screen(self):
+        """Employee without org access cannot target another user's screen."""
         employee = self.create_user(role='Employee')
         self.client.force_authenticate(user=employee)
         screen = self.create_screen()
@@ -119,3 +120,18 @@ class APIPermissionTests(BaseAPITestCase):
         }
         response = self.client.post(url, data, format='json')
         self.assertEqual(response.status_code, 403)
+
+    def test_employee_can_create_commands_for_org_screen(self):
+        employee = self.create_user(role='Employee', organization_name='TestOrg')
+        self.client.force_authenticate(user=employee)
+        screen = self.create_screen()
+        from django.urls import reverse
+        url = reverse('command-list')
+        data = {
+            'name': 'Test Command',
+            'type': 'refresh',
+            'screen_id': str(screen.id),
+            'payload': {}
+        }
+        response = self.client.post(url, data, format='json')
+        self.assertIn(response.status_code, [201, 400])

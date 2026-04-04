@@ -18,6 +18,33 @@ from .serializers import (
 logger = logging.getLogger(__name__)
 
 
+def _operational_logs_visible(user):
+    """Developer sees all; others need sidebar view_logs (e.g. Employee)."""
+    from accounts.sidebar_config import has_permission
+
+    return bool(
+        user
+        and user.is_authenticated
+        and (user.has_full_access() or has_permission(user, 'view_logs'))
+    )
+
+
+def _accessible_screens_qs(user):
+    """Screens whose operational logs a scoped user may read (org + own)."""
+    from django.db.models import Q
+    from signage.models import Screen
+
+    if not user.is_authenticated:
+        return Screen.objects.none()
+    if user.has_full_access():
+        return Screen.objects.all()
+    org = (getattr(user, 'organization_name', None) or '').strip()
+    q = Q(owner=user)
+    if org:
+        q |= Q(owner__organization_name=org)
+    return Screen.objects.filter(q)
+
+
 class LogPagination(PageNumberPagination):
     """Custom pagination for log endpoints - 50 items per page"""
     page_size = 50
@@ -83,11 +110,12 @@ class ScreenStatusLogViewSet(viewsets.ReadOnlyModelViewSet):
         """
         queryset = super().get_queryset()
         user = self.request.user
-        
-        # Operational logs: Developer-only data (sidebar Logs); others get empty list (no 403)
-        if not user.has_full_access():
+
+        if not _operational_logs_visible(user):
             return queryset.none()
-        
+        if not user.has_full_access():
+            queryset = queryset.filter(screen__in=_accessible_screens_qs(user))
+
         # Filter by screen if provided
         screen_id = self.request.query_params.get('screen_id')
         if screen_id:
@@ -133,12 +161,16 @@ class ScreenStatusLogViewSet(viewsets.ReadOnlyModelViewSet):
         - start_date: Filter from date (ISO or YYYY-MM-DD)
         - end_date: Filter to date (ISO or YYYY-MM-DD)
         """
-        if not request.user.has_full_access():
+        if not _operational_logs_visible(request.user):
             return Response({
                 'status': 'success',
                 'summary': {'total_count': 0},
             }, status=status.HTTP_200_OK)
-        
+
+        base_qs = None
+        if not request.user.has_full_access():
+            base_qs = ScreenStatusLog.objects.filter(screen__in=_accessible_screens_qs(request.user))
+
         screen_id = request.query_params.get('screen_id')
         start_date = parse_date_param(request.query_params.get('start_date'))
         end_date = parse_date_param(request.query_params.get('end_date'))
@@ -150,9 +182,15 @@ class ScreenStatusLogViewSet(viewsets.ReadOnlyModelViewSet):
         screen = None
         if screen_id:
             from signage.models import Screen
+            from accounts.permissions import RolePermissions
             try:
                 screen = Screen.objects.get(id=screen_id)
             except Screen.DoesNotExist:
+                return Response(
+                    {'error': 'Screen not found'},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            if not request.user.has_full_access() and not RolePermissions.can_view_resource(request.user, screen):
                 return Response(
                     {'error': 'Screen not found'},
                     status=status.HTTP_404_NOT_FOUND
@@ -161,7 +199,8 @@ class ScreenStatusLogViewSet(viewsets.ReadOnlyModelViewSet):
         stats = ScreenStatusLog.get_summary_stats(
             screen=screen,
             start_date=start_date,
-            end_date=end_date
+            end_date=end_date,
+            base_queryset=base_qs,
         )
         
         serializer = LogSummarySerializer(stats)
@@ -205,9 +244,11 @@ class ContentDownloadLogViewSet(viewsets.ReadOnlyModelViewSet):
         """
         queryset = super().get_queryset()
         user = self.request.user
-        
-        if not user.has_full_access():
+
+        if not _operational_logs_visible(user):
             return queryset.none()
+        if not user.has_full_access():
+            queryset = queryset.filter(screen__in=_accessible_screens_qs(user))
         
         # Filter by content if provided
         content_id = self.request.query_params.get('content_id')
@@ -269,11 +310,15 @@ class ContentDownloadLogViewSet(viewsets.ReadOnlyModelViewSet):
         - start_date: Filter from date (ISO or YYYY-MM-DD)
         - end_date: Filter to date (ISO or YYYY-MM-DD)
         """
-        if not request.user.has_full_access():
+        if not _operational_logs_visible(request.user):
             return Response({
                 'status': 'success',
                 'summary': {'total_count': 0},
             }, status=status.HTTP_200_OK)
+
+        base_qs = None
+        if not request.user.has_full_access():
+            base_qs = ContentDownloadLog.objects.filter(screen__in=_accessible_screens_qs(request.user))
         
         content_id = request.query_params.get('content_id')
         screen_id = request.query_params.get('screen_id')
@@ -298,9 +343,15 @@ class ContentDownloadLogViewSet(viewsets.ReadOnlyModelViewSet):
         screen = None
         if screen_id:
             from signage.models import Screen
+            from accounts.permissions import RolePermissions
             try:
                 screen = Screen.objects.get(id=screen_id)
             except Screen.DoesNotExist:
+                return Response(
+                    {'error': 'Screen not found'},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            if not request.user.has_full_access() and not RolePermissions.can_view_resource(request.user, screen):
                 return Response(
                     {'error': 'Screen not found'},
                     status=status.HTTP_404_NOT_FOUND
@@ -310,7 +361,8 @@ class ContentDownloadLogViewSet(viewsets.ReadOnlyModelViewSet):
             content=content,
             screen=screen,
             start_date=start_date,
-            end_date=end_date
+            end_date=end_date,
+            base_queryset=base_qs,
         )
         
         serializer = LogSummarySerializer(stats)
@@ -356,9 +408,11 @@ class CommandExecutionLogViewSet(viewsets.ReadOnlyModelViewSet):
         """
         queryset = super().get_queryset()
         user = self.request.user
-        
-        if not user.has_full_access():
+
+        if not _operational_logs_visible(user):
             return queryset.none()
+        if not user.has_full_access():
+            queryset = queryset.filter(screen__in=_accessible_screens_qs(user))
         
         # Filter by command if provided
         command_id = self.request.query_params.get('command_id')
@@ -430,11 +484,15 @@ class CommandExecutionLogViewSet(viewsets.ReadOnlyModelViewSet):
         - start_date: Filter from date (ISO or YYYY-MM-DD)
         - end_date: Filter to date (ISO or YYYY-MM-DD)
         """
-        if not request.user.has_full_access():
+        if not _operational_logs_visible(request.user):
             return Response({
                 'status': 'success',
                 'summary': {'total_count': 0},
             }, status=status.HTTP_200_OK)
+
+        base_qs = None
+        if not request.user.has_full_access():
+            base_qs = CommandExecutionLog.objects.filter(screen__in=_accessible_screens_qs(request.user))
         
         command_id = request.query_params.get('command_id')
         screen_id = request.query_params.get('screen_id')
@@ -459,9 +517,15 @@ class CommandExecutionLogViewSet(viewsets.ReadOnlyModelViewSet):
         screen = None
         if screen_id:
             from signage.models import Screen
+            from accounts.permissions import RolePermissions
             try:
                 screen = Screen.objects.get(id=screen_id)
             except Screen.DoesNotExist:
+                return Response(
+                    {'error': 'Screen not found'},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            if not request.user.has_full_access() and not RolePermissions.can_view_resource(request.user, screen):
                 return Response(
                     {'error': 'Screen not found'},
                     status=status.HTTP_404_NOT_FOUND
@@ -471,7 +535,8 @@ class CommandExecutionLogViewSet(viewsets.ReadOnlyModelViewSet):
             command=command,
             screen=screen,
             start_date=start_date,
-            end_date=end_date
+            end_date=end_date,
+            base_queryset=base_qs,
         )
         
         serializer = LogSummarySerializer(stats)

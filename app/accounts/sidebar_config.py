@@ -108,8 +108,12 @@ ROLE_PERMISSIONS = {
         'view_dashboard',
         'view_screens', 'create_screens', 'edit_screens',
         'view_templates', 'create_templates', 'edit_templates',
-        'view_schedules', 'create_schedules', 'edit_schedules',
+        'view_schedules', 'create_schedules', 'edit_schedules', 'delete_schedules',
         'view_contents', 'create_contents', 'edit_contents',
+        'view_commands', 'create_commands', 'execute_commands',
+        'view_logs',
+        'view_analytics',
+        'view_settings', 'edit_settings',
         'view_tickets', 'create_tickets',
     ],
     'Visitor': [

@@ -7,6 +7,7 @@ conversation threads, attachments, CSAT, and audit trail.
 import uuid
 from django.conf import settings
 from django.db import models
+from django.db.models import Q
 from django.utils import timezone
 
 
@@ -144,6 +145,20 @@ class Ticket(models.Model):
 
     category = models.CharField(max_length=128, blank=True, default='')
     language = models.CharField(max_length=8, blank=True, default='en')
+    client_version = models.CharField(
+        max_length=64,
+        blank=True,
+        default='',
+        db_index=True,
+        help_text='Optional app version reported on the ticket (for support correlation)',
+    )
+    deployment_context = models.CharField(
+        max_length=32,
+        blank=True,
+        default='',
+        db_index=True,
+        help_text='Optional: saas | self_hosted — how the customer runs the product',
+    )
 
     first_response_due_at = models.DateTimeField(null=True, blank=True)
     resolution_due_at = models.DateTimeField(null=True, blank=True)
@@ -158,12 +173,35 @@ class Ticket(models.Model):
     )
     is_deleted = models.BooleanField(default=False)
 
+    registry_installation = models.ForeignKey(
+        'licensing.LicenseRegistryInstallation',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='bridged_tickets',
+        help_text='Operator registry row when this ticket was ingested from a self-hosted site',
+    )
+    remote_ticket_id = models.UUIDField(
+        null=True,
+        blank=True,
+        help_text='Ticket UUID on the self-hosted instance (idempotency / replies)',
+    )
+    bridge_requester_name = models.CharField(max_length=255, blank=True, default='')
+    bridge_requester_email = models.CharField(max_length=254, blank=True, default='')
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ['-created_at']
         unique_together = [('tenant', 'number')]
+        constraints = [
+            models.UniqueConstraint(
+                fields=['registry_installation', 'remote_ticket_id'],
+                condition=Q(registry_installation__isnull=False, remote_ticket_id__isnull=False),
+                name='tickets_ticket_registry_install_remote_uid',
+            ),
+        ]
         indexes = [
             models.Index(fields=['tenant', 'status']),
             models.Index(fields=['tenant', 'assignee']),

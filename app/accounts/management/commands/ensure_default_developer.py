@@ -18,6 +18,28 @@ from django.core.management.base import BaseCommand
 from accounts.models import User
 
 
+def _apply_demo_profile(user: User) -> None:
+    """Fill optional profile and security fields for a local admin Developer account."""
+    user.first_name = 'Admin'
+    user.last_name = 'PixelCast'
+    user.full_name = 'Admin PixelCast'
+    user.phone_number = '+15551234567'
+    user.organization_name = 'PixelCast'
+    user.is_email_verified = True
+    user.failed_login_attempts = 0
+    user.locked_until = None
+    user.verification_code = None
+    user.verification_code_expiry = None
+    user.totp_secret = ''
+    user.is_2fa_enabled = False
+    user.backup_codes_hash = ''
+    user.sso_provider = ''
+    user.sso_subject = ''
+    user.is_admin_locked = False
+    user.admin_lock_reason = ''
+    user.admin_lock_until = None
+
+
 class Command(BaseCommand):
     help = 'Create default Developer user if missing (idempotent by email).'
 
@@ -29,7 +51,7 @@ class Command(BaseCommand):
         )
         parser.add_argument(
             '--password',
-            default='adminadmina',
+            default='adminadmin',
             help='Plain password (stored hashed; not validated for strength)',
         )
         parser.add_argument(
@@ -60,6 +82,7 @@ class Command(BaseCommand):
             existing.is_superuser = True
             existing.is_active = True
             existing.set_password(password)
+            _apply_demo_profile(existing)
             existing.save()
             self.stdout.write(
                 self.style.SUCCESS(
@@ -78,6 +101,7 @@ class Command(BaseCommand):
             is_active=True,
         )
         user.set_password(password)
+        _apply_demo_profile(user)
         user.save()
 
         self.stdout.write(

@@ -37,6 +37,19 @@ class LicenseState(models.Model):
 
     codecanyon_product_id_override = models.CharField(max_length=64, blank=True, default="")
     validation_signature = models.CharField(max_length=128, blank=True, default="")
+    plan_type = models.CharField(
+        max_length=16,
+        blank=True,
+        default="",
+        db_index=True,
+        help_text="basic | saas — from license gateway (Envato item mapping)",
+    )
+    features_snapshot = models.JSONField(default=dict, blank=True)
+    last_gateway_contact_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Last successful validate/heartbeat sync with operator gateway",
+    )
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -162,6 +175,13 @@ class LicenseRegistryPurchase(models.Model):
     sold_at = models.DateTimeField(null=True, blank=True)
     support_until = models.DateTimeField(null=True, blank=True)
     license_type = models.CharField(max_length=64, blank=True, default="")
+    plan_type = models.CharField(
+        max_length=16,
+        blank=True,
+        default="",
+        db_index=True,
+        help_text="basic | saas — derived from Envato item id (or operator override on install)",
+    )
     raw_sale = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -201,11 +221,22 @@ class LicenseRegistryInstallation(models.Model):
     token_hash = models.CharField(max_length=64, unique=True, db_index=True)
     app_version = models.CharField(max_length=128, blank=True, default="")
     last_heartbeat_at = models.DateTimeField(null=True, blank=True)
+    last_screen_count = models.PositiveIntegerField(null=True, blank=True)
+    last_user_count = models.PositiveIntegerField(null=True, blank=True)
+    last_timezone = models.CharField(max_length=64, blank=True, default="")
+    telemetry_at = models.DateTimeField(null=True, blank=True)
+    last_reported_country = models.CharField(max_length=2, blank=True, default="")
     activated_at = models.DateTimeField(auto_now_add=True)
     suspended = models.BooleanField(default=False)
     suspended_reason = models.TextField(blank=True, default="")
     suspicious = models.BooleanField(default=False, db_index=True)
     notes = models.TextField(blank=True, default="")
+    plan_type_override = models.CharField(
+        max_length=16,
+        blank=True,
+        default="",
+        help_text="If set (basic|saas), overrides purchase.plan_type for this installation",
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

@@ -61,21 +61,27 @@
         aria-label="Next steps"
       >
         <h2 class="text-base font-semibold text-cyan-100 mb-2">Next steps with PixelCast</h2>
+        <p
+          v-if="isInstalled"
+          class="text-emerald-200/90 text-sm font-medium mb-2"
+        >
+          PixelCast is already installed on this server.
+        </p>
         <p class="text-white/75 text-sm sm:text-base leading-relaxed mb-4">
           Manage templates, schedules, and players from one place — built for serious display networks.
         </p>
         <div class="flex flex-wrap gap-3">
           <router-link
-            to="/install"
+            to="/signup"
             class="inline-flex items-center justify-center rounded-lg bg-gradient-to-r from-cyan-500 to-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-cyan-500/20 hover:opacity-95"
           >
-            Start installation
+            Create account
           </router-link>
           <router-link
-            to="/signup"
+            to="/login"
             class="inline-flex items-center justify-center rounded-lg border border-white/20 bg-white/5 px-4 py-2.5 text-sm font-semibold text-white hover:border-white/40"
           >
-            Create account
+            Log in
           </router-link>
         </div>
       </section>
@@ -84,10 +90,10 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useHead, useSeoMeta } from '@unhead/vue'
-import { publicAPI } from '@/services/api'
+import { publicAPI, setupAPI } from '@/services/api'
 import { renderMarkdown } from '@/utils/renderMarkdown'
 import { SITE_NAME, getSiteOrigin } from '@/seo/siteConfig'
 import { buildBlogPostingGraph } from '@/seo/jsonLd'
@@ -96,6 +102,8 @@ const route = useRoute()
 const post = ref(null)
 const loading = ref(true)
 const error = ref('')
+/** When true, this instance has completed install (installed.lock / env). */
+const isInstalled = ref(true)
 
 const htmlBody = computed(() => renderMarkdown(post.value?.body || ''))
 
@@ -186,6 +194,17 @@ watch(
   () => load(),
   { immediate: true }
 )
+
+onMounted(() => {
+  setupAPI
+    .status()
+    .then((response) => {
+      isInstalled.value = Boolean(response?.data?.installed)
+    })
+    .catch(() => {
+      isInstalled.value = true
+    })
+})
 </script>
 
 <style scoped>

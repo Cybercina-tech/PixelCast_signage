@@ -3,7 +3,7 @@ from django.conf import settings
 from django.http import JsonResponse
 from django.utils.deprecation import MiddlewareMixin
 
-from .service import validate_license
+from .service import heartbeat_stale_contact_tier, validate_license
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +42,36 @@ class LicenseEnforcementMiddleware(MiddlewareMixin):
         if decision.allow:
             if decision.status == "grace":
                 request.META["HTTP_X_LICENSE_STATUS"] = "grace"
+            else:
+                tier = heartbeat_stale_contact_tier()
+                if tier == "warn":
+                    request.META["HTTP_X_LICENSE_HEARTBEAT_STALE"] = "warn"
+                elif tier == "readonly":
+                    if request.method not in ("GET", "HEAD", "OPTIONS"):
+                        return JsonResponse(
+                            {
+                                "error": "license_readonly",
+                                "message": (
+                                    "License gateway contact is stale; only read operations are allowed "
+                                    "until validation or heartbeat succeeds."
+                                ),
+                                "license_heartbeat_stale_tier": tier,
+                            },
+                            status=403,
+                        )
+                elif tier == "admin_only":
+                    if not user.is_developer():
+                        return JsonResponse(
+                            {
+                                "error": "license_admin_only",
+                                "message": (
+                                    "License gateway contact is overdue; only Developer users may use the API "
+                                    "until connectivity is restored."
+                                ),
+                                "license_heartbeat_stale_tier": tier,
+                            },
+                            status=403,
+                        )
             return None
 
         logger.warning(

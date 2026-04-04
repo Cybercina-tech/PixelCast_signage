@@ -102,7 +102,7 @@ class ScreenStatusLog(models.Model):
         return queryset
     
     @classmethod
-    def get_summary_stats(cls, screen=None, start_date=None, end_date=None):
+    def get_summary_stats(cls, screen=None, start_date=None, end_date=None, base_queryset=None):
         """
         Get summary statistics for screen status logs.
         
@@ -110,11 +110,12 @@ class ScreenStatusLog(models.Model):
             screen: Optional Screen instance to filter by
             start_date: Optional start date for filtering
             end_date: Optional end date for filtering
+            base_queryset: Optional queryset to start from (e.g. org-scoped logs)
             
         Returns:
             dict: Summary statistics
         """
-        queryset = cls.objects.all()
+        queryset = base_queryset if base_queryset is not None else cls.objects.all()
         
         if screen:
             queryset = queryset.filter(screen=screen)
@@ -262,7 +263,7 @@ class ContentDownloadLog(models.Model):
         return queryset
     
     @classmethod
-    def get_summary_stats(cls, content=None, screen=None, start_date=None, end_date=None):
+    def get_summary_stats(cls, content=None, screen=None, start_date=None, end_date=None, base_queryset=None):
         """
         Get summary statistics for content download logs.
         
@@ -271,11 +272,12 @@ class ContentDownloadLog(models.Model):
             screen: Optional Screen instance to filter by
             start_date: Optional start date for filtering
             end_date: Optional end date for filtering
+            base_queryset: Optional queryset to start from (e.g. org-scoped logs)
             
         Returns:
             dict: Summary statistics
         """
-        queryset = cls.objects.all()
+        queryset = base_queryset if base_queryset is not None else cls.objects.all()
         
         if content:
             queryset = queryset.filter(content=content)
@@ -437,7 +439,7 @@ class CommandExecutionLog(models.Model):
         return queryset
     
     @classmethod
-    def get_summary_stats(cls, command=None, screen=None, start_date=None, end_date=None):
+    def get_summary_stats(cls, command=None, screen=None, start_date=None, end_date=None, base_queryset=None):
         """
         Get summary statistics for command execution logs.
         
@@ -446,11 +448,12 @@ class CommandExecutionLog(models.Model):
             screen: Optional Screen instance to filter by
             start_date: Optional start date for filtering
             end_date: Optional end date for filtering
+            base_queryset: Optional queryset to start from (e.g. org-scoped logs)
             
         Returns:
             dict: Summary statistics
         """
-        queryset = cls.objects.all()
+        queryset = base_queryset if base_queryset is not None else cls.objects.all()
         
         if command:
             queryset = queryset.filter(command=command)

@@ -18,6 +18,13 @@ from .models import (
     LicenseRegistryInstallation,
     LicenseRegistryPurchase,
 )
+from .plan_features import (
+    PLAN_BASIC,
+    PLAN_SAAS,
+    features_for_plan,
+    features_snapshot_list,
+    normalize_plan_type,
+)
 
 def purchase_code_fingerprint(code: str) -> str:
     normalized = (code or "").strip().lower()
@@ -54,6 +61,80 @@ def item_id_allowed(item_id: int | None) -> bool:
     return str(item_id) in allowed
 
 
+def parse_comma_id_set(raw: str | None) -> set[str]:
+    return {x.strip() for x in (raw or "").split(",") if x.strip()}
+
+
+def resolve_plan_type_for_item_id(item_id: int | None) -> str:
+    """Map Envato item id to basic | saas using explicit lists or default."""
+    basic_ids = parse_comma_id_set(getattr(settings, "CODECANYON_BASIC_ITEM_IDS", ""))
+    saas_ids = parse_comma_id_set(getattr(settings, "CODECANYON_SAAS_ITEM_IDS", ""))
+    sid = str(item_id) if item_id is not None else ""
+    if sid and sid in saas_ids:
+        return PLAN_SAAS
+    if sid and sid in basic_ids:
+        return PLAN_BASIC
+    default = (getattr(settings, "CODECANYON_DEFAULT_SELF_HOSTED_PLAN_TYPE", "") or PLAN_SAAS).strip().lower()
+    if default not in (PLAN_BASIC, PLAN_SAAS):
+        default = PLAN_SAAS
+    if basic_ids or saas_ids:
+        return default
+    return default
+
+
+def effective_plan_type_for_installation(inst: LicenseRegistryInstallation) -> str:
+    o = normalize_plan_type(inst.plan_type_override)
+    if o:
+        return o
+    p = normalize_plan_type(inst.purchase.plan_type)
+    if p:
+        return p
+    return resolve_plan_type_for_item_id(inst.purchase.envato_item_id)
+
+
+def _version_tuple(v: str) -> tuple[int, ...]:
+    out: list[int] = []
+    for part in (v or "").strip().split("."):
+        acc = ""
+        for c in part:
+            if c.isdigit():
+                acc += c
+            else:
+                break
+        out.append(int(acc) if acc else 0)
+    pad = out + [0, 0, 0]
+    return tuple(pad[:4])
+
+
+def compute_update_available(client_version: str) -> bool:
+    latest = (getattr(settings, "LICENSE_REGISTRY_LATEST_VERSION", None) or "").strip()
+    cv = (client_version or "").strip()
+    if not latest or not cv:
+        return False
+    return _version_tuple(cv) < _version_tuple(latest)
+
+
+def public_payload_for_installation(
+    inst: LicenseRegistryInstallation,
+    *,
+    app_version: str = "",
+) -> dict:
+    plan = effective_plan_type_for_installation(inst)
+    feats = features_for_plan(plan)
+    derived = compute_display_status(inst)
+    status_str = (
+        "active" if derived == LicenseRegistryInstallation.STATUS_ACTIVE else derived
+    )
+    return {
+        "plan_type": plan,
+        "features": feats,
+        "features_snapshot": features_snapshot_list(plan),
+        "update_available": compute_update_available(app_version),
+        "registry_status": derived,
+        "status": status_str,
+    }
+
+
 def _parse_dt(value):
     if not value:
         return None
@@ -66,6 +147,65 @@ def _parse_dt(value):
         return dt if timezone.is_aware(dt) else timezone.make_aware(dt)
     except Exception:
         return None
+
+
+def parse_positive_int(value) -> int | None:
+    if value is None or value == "":
+        return None
+    try:
+        n = int(value)
+        return n if n >= 0 else None
+    except (TypeError, ValueError):
+        return None
+
+
+def _country_from_ip(ip: str | None) -> str:
+    if not ip or ip in ("127.0.0.1", "::1", "unknown"):
+        return ""
+    path = (getattr(settings, "GEOIP2_COUNTRY_DATABASE", None) or "").strip()
+    if not path:
+        return ""
+    try:
+        import geoip2.errors
+        import geoip2.database
+    except ImportError:
+        return ""
+    try:
+        with geoip2.database.Reader(path) as reader:
+            rec = reader.country(ip)
+            return (rec.country.iso_code or "")[:2].upper()
+    except (geoip2.errors.AddressNotFoundError, ValueError, OSError):
+        return ""
+
+
+def _telemetry_update_fields(
+    inst: LicenseRegistryInstallation,
+    *,
+    screen_count: int | None,
+    user_count: int | None,
+    tz_name: str,
+    client_ip: str | None,
+) -> list[str]:
+    now = timezone.now()
+    fields: list[str] = []
+    if screen_count is not None:
+        inst.last_screen_count = min(screen_count, 2_000_000_000)
+        fields.append("last_screen_count")
+    if user_count is not None:
+        inst.last_user_count = min(user_count, 2_000_000_000)
+        fields.append("last_user_count")
+    tz = (tz_name or "").strip()[:64]
+    if tz:
+        inst.last_timezone = tz
+        fields.append("last_timezone")
+    cc = _country_from_ip(client_ip)
+    if cc:
+        inst.last_reported_country = cc
+        fields.append("last_reported_country")
+    if fields:
+        inst.telemetry_at = now
+        fields.append("telemetry_at")
+    return fields
 
 
 def _mark_suspicious_siblings(purchase: LicenseRegistryPurchase, domain: str) -> None:
@@ -81,6 +221,10 @@ def activate_installation(
     product_id: str = "",
     app_version: str = "",
     client_ip: str | None = None,
+    *,
+    screen_count: int | None = None,
+    user_count: int | None = None,
+    tz_name: str = "",
 ) -> tuple[LicenseRegistryInstallation, str, dict]:
     """
     Verify with Envato, upsert purchase + installation, return (installation, plaintext_token, response_extra).
@@ -108,6 +252,7 @@ def activate_installation(
     if isinstance(buyer, dict):
         buyer = buyer.get("username") or buyer.get("name") or ""
 
+    resolved_plan = resolve_plan_type_for_item_id(item_id)
     purchase, _ = LicenseRegistryPurchase.objects.update_or_create(
         code_fingerprint=fingerprint,
         defaults={
@@ -116,6 +261,7 @@ def activate_installation(
             "sold_at": _parse_dt(sale.get("sold_at")),
             "support_until": _parse_dt(sale.get("support_until")),
             "license_type": str(sale.get("license") or "")[:64],
+            "plan_type": resolved_plan,
             "raw_sale": sale if isinstance(sale, dict) else {},
         },
     )
@@ -135,6 +281,13 @@ def activate_installation(
         existing.last_heartbeat_at = timezone.now()
         existing.suspended = False
         existing.suspended_reason = ""
+        extra_tf = _telemetry_update_fields(
+            existing,
+            screen_count=screen_count,
+            user_count=user_count,
+            tz_name=tz_name,
+            client_ip=client_ip,
+        )
         existing.save(
             update_fields=[
                 "token_hash",
@@ -143,6 +296,7 @@ def activate_installation(
                 "suspended",
                 "suspended_reason",
                 "updated_at",
+                *extra_tf,
             ]
         )
         inst = existing
@@ -154,6 +308,15 @@ def activate_installation(
             app_version=(app_version or "")[:128],
             last_heartbeat_at=timezone.now(),
         )
+        extra_tf = _telemetry_update_fields(
+            inst,
+            screen_count=screen_count,
+            user_count=user_count,
+            tz_name=tz_name,
+            client_ip=client_ip,
+        )
+        if extra_tf:
+            inst.save(update_fields=[*extra_tf, "updated_at"])
 
     LicenseRegistryHeartbeatLog.objects.create(
         installation=inst,
@@ -164,7 +327,7 @@ def activate_installation(
     extra = {
         "buyer_username": purchase.buyer_username,
         "envato_item_id": purchase.envato_item_id,
-        "registry_status": compute_display_status(inst),
+        **public_payload_for_installation(inst, app_version=app_version),
     }
     return inst, token, extra
 
@@ -174,6 +337,10 @@ def record_heartbeat(
     domain: str,
     app_version: str = "",
     client_ip: str | None = None,
+    *,
+    screen_count: int | None = None,
+    user_count: int | None = None,
+    tz_name: str = "",
 ) -> LicenseRegistryInstallation:
     if not registry_enabled():
         raise PermissionError("License registry API is disabled")
@@ -192,7 +359,15 @@ def record_heartbeat(
     inst.last_heartbeat_at = timezone.now()
     if app_version:
         inst.app_version = app_version[:128]
-    inst.save(update_fields=["last_heartbeat_at", "app_version", "suspicious", "updated_at"])
+    extra_tf = _telemetry_update_fields(
+        inst,
+        screen_count=screen_count,
+        user_count=user_count,
+        tz_name=tz_name,
+        client_ip=client_ip,
+    )
+    update_fields = ["last_heartbeat_at", "app_version", "suspicious", "updated_at", *extra_tf]
+    inst.save(update_fields=update_fields)
 
     LicenseRegistryHeartbeatLog.objects.create(
         installation=inst,
@@ -202,7 +377,12 @@ def record_heartbeat(
     return inst
 
 
-def validate_by_token(token: str, domain: str | None = None) -> tuple[bool, dict]:
+def validate_by_token(
+    token: str,
+    domain: str | None = None,
+    *,
+    app_version: str = "",
+) -> tuple[bool, dict]:
     """
     Return (is_valid, payload_dict) for self-hosted validate call.
     """
@@ -215,8 +395,15 @@ def validate_by_token(token: str, domain: str | None = None) -> tuple[bool, dict
     except LicenseRegistryInstallation.DoesNotExist:
         return False, {"valid": False, "status": "invalid", "message": "Unknown activation token"}
 
+    pub = public_payload_for_installation(inst, app_version=app_version)
+
     if inst.suspended:
-        return False, {"valid": False, "status": "suspended", "message": "License suspended by operator"}
+        return False, {
+            "valid": False,
+            "status": "suspended",
+            "message": "License suspended by operator",
+            **{k: pub[k] for k in ("plan_type", "features", "features_snapshot") if k in pub},
+        }
 
     if domain and (domain or "").strip().lower() != inst.domain:
         return False, {"valid": False, "status": "invalid", "message": "Domain mismatch"}
@@ -237,7 +424,33 @@ def validate_by_token(token: str, domain: str | None = None) -> tuple[bool, dict
         "status": "active" if derived == LicenseRegistryInstallation.STATUS_ACTIVE else derived,
         "license_status": derived,
         "message": "OK",
+        **pub,
     }
+
+
+def resolve_installation_for_ticket_ingest(
+    token: str,
+    domain: str | None = None,
+    *,
+    app_version: str = "",
+) -> LicenseRegistryInstallation:
+    """
+    Resolve registry installation for self-hosted ticket ingest (Bearer activation token).
+
+    Raises PermissionError if registry disabled or license suspended.
+    Raises LookupError if the token is unknown or validation fails.
+    """
+    if not registry_enabled():
+        raise PermissionError("License registry API is disabled")
+    ok, payload = validate_by_token(token, domain=domain or None, app_version=app_version)
+    if not ok:
+        msg = (payload or {}).get("message") or "Invalid token"
+        st = (payload or {}).get("status") or ""
+        if st == "suspended":
+            raise PermissionError(msg)
+        raise LookupError(msg)
+    th = hash_activation_token(token)
+    return LicenseRegistryInstallation.objects.select_related("purchase").get(token_hash=th)
 
 
 def compute_display_status(inst: LicenseRegistryInstallation) -> str:

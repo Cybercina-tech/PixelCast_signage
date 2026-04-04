@@ -7,8 +7,12 @@ go through this module so validation happens in one place.
 from __future__ import annotations
 
 import logging
+import uuid
 from datetime import timedelta
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from licensing.models import LicenseRegistryInstallation
 
 from django.db import models, transaction
 from django.utils import timezone
@@ -75,6 +79,8 @@ def create_ticket(
     source: str = 'web',
     category: str = '',
     language: str = 'en',
+    client_version: str = '',
+    deployment_context: str = '',
     attachments=None,
 ) -> Ticket:
     ticket = Ticket(
@@ -85,6 +91,8 @@ def create_ticket(
         requester=requester,
         category=category,
         language=language,
+        client_version=(client_version or '')[:64],
+        deployment_context=(deployment_context or '')[:32],
     )
     ticket.save()
 
@@ -101,6 +109,8 @@ def create_ticket(
     _apply_sla(ticket)
     _auto_route(ticket)
     _audit(ticket, requester, 'created')
+
+    _schedule_operator_bridge_new_ticket(ticket.id)
     return ticket
 
 
@@ -212,6 +222,7 @@ def add_reply(
         ticket.save(update_fields=['first_responded_at'])
         _mark_sla_achieved(ticket, 'first_response')
     _audit(ticket, author, 'internal_note' if is_internal else 'reply')
+    _schedule_operator_bridge_customer_reply(ticket, author, is_internal, body)
     return msg
 
 
@@ -343,3 +354,142 @@ def _least_busy_assign(ticket: Ticket, queue):
         if ticket.status == 'open':
             ticket.status = 'assigned'
         ticket.save(update_fields=['assignee', 'status'])
+
+
+def _schedule_operator_bridge_new_ticket(ticket_id: uuid.UUID) -> None:
+    def _run():
+        from . import operator_bridge
+
+        operator_bridge.push_new_ticket_if_configured(ticket_id)
+
+    transaction.on_commit(_run)
+
+
+def _schedule_operator_bridge_customer_reply(ticket, author, is_internal: bool, body: str) -> None:
+    if is_internal or not author or not getattr(ticket, 'requester_id', None):
+        return
+    if ticket.requester_id != author.id:
+        return
+
+    def _run():
+        from . import operator_bridge
+
+        operator_bridge.push_customer_reply_if_configured(ticket.id, body)
+
+    transaction.on_commit(_run)
+
+
+def ensure_registry_bridge_tenant(installation: LicenseRegistryInstallation):
+    """One Tenant per registry installation for operator-side bridged tickets."""
+    from django.utils.text import slugify
+
+    from saas_platform.models import Tenant
+    from saas_platform.pricing_models import PlatformBillingSettings
+
+    key = f'__registry_install__{installation.pk}'
+    existing = Tenant.objects.filter(organization_name_key=key).first()
+    if existing:
+        return existing
+
+    solo = PlatformBillingSettings.get_solo()
+    free_limit = solo.default_free_screen_limit
+    dom = slugify((installation.domain or 'install').replace('.', '-'))[:40] or 'install'
+    uid = str(installation.pk).replace('-', '')[:12]
+    base = f'{dom}-{uid}'.lower()[:80]
+    slug = base
+    n = 0
+    while Tenant.objects.filter(slug=slug).exists():
+        n += 1
+        slug = f'{base}-{n}'[:80]
+
+    return Tenant.objects.create(
+        name=(installation.domain or str(installation.pk))[:255],
+        slug=slug,
+        organization_name_key=key,
+        device_limit=free_limit,
+    )
+
+
+@transaction.atomic
+def ingest_remote_support_ticket(
+    installation: LicenseRegistryInstallation,
+    remote_ticket_id: uuid.UUID,
+    body: str,
+    *,
+    subject: str = '',
+    priority: str = 'medium',
+    category: str = '',
+    language: str = 'en',
+    requester_name: str = '',
+    requester_email: str = '',
+    client_version: str = '',
+) -> tuple[Ticket, str]:
+    """
+    Create or append a self-hosted ticket mirrored on the operator DB.
+
+    Returns (ticket, event) where event is 'created', 'appended', or 'noop'.
+    """
+    valid_pri = {c[0] for c in Ticket.PRIORITY_CHOICES}
+    pri = priority if priority in valid_pri else 'medium'
+
+    body = (body or '').strip()
+    tenant = ensure_registry_bridge_tenant(installation)
+    existing = (
+        Ticket.objects.select_for_update()
+        .filter(
+            registry_installation_id=installation.pk,
+            remote_ticket_id=remote_ticket_id,
+            is_deleted=False,
+        )
+        .first()
+    )
+    if existing:
+        if not body:
+            return existing, 'noop'
+        msg = TicketMessage.objects.create(
+            ticket=existing,
+            author=None,
+            body=body,
+            is_internal=False,
+            source='api',
+        )
+        existing.last_message_at = msg.created_at
+        existing.save(update_fields=['last_message_at', 'updated_at'])
+        _audit(existing, None, 'reply')
+        return existing, 'appended'
+
+    subject = (subject or '').strip()
+    if not subject:
+        raise ValueError('subject is required for a new remote ticket')
+    if not body:
+        raise ValueError('body is required')
+
+    ticket = Ticket(
+        tenant=tenant,
+        subject=subject[:255],
+        priority=pri,
+        source='api',
+        requester=None,
+        category=(category or '')[:128],
+        language=(language or 'en')[:8],
+        client_version=(client_version or '')[:64],
+        deployment_context='self_hosted',
+        registry_installation=installation,
+        remote_ticket_id=remote_ticket_id,
+        bridge_requester_name=(requester_name or '')[:255],
+        bridge_requester_email=(requester_email or '')[:254],
+    )
+    ticket.save()
+    msg = TicketMessage.objects.create(
+        ticket=ticket,
+        author=None,
+        body=body,
+        is_internal=False,
+        source='api',
+    )
+    ticket.last_message_at = msg.created_at
+    ticket.save(update_fields=['last_message_at'])
+    _apply_sla(ticket)
+    _auto_route(ticket)
+    _audit(ticket, None, 'created')
+    return ticket, 'created'

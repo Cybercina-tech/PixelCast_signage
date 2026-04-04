@@ -77,6 +77,7 @@ services:
       - CELERY_BROKER_URL=${CELERY_BROKER_URL:-redis://redis:6379/0}
       - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND:-redis://redis:6379/0}
       - ENABLE_HOT_RELOAD=false
+      - BOOTSTRAP_DEFAULT_ADMIN=false
       - INSTALLATION_STATE_DIR=/app/installation_state
       - GUNICORN_WORKERS=${GUNICORN_WORKERS:-4}
     volumes:

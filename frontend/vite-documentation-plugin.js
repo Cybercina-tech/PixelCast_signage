@@ -1,6 +1,7 @@
 /**
- * Serves repo-root `documentation/` at /documentation/* during Vite dev.
- * Production uses nginx (see frontend/Dockerfile + nginx.conf).
+ * Short URLs `/docs` → static HTML during Vite dev.
+ * Static files are served from `frontend/public/documentation/` (same as production dist).
+ * Repo-root `documentation/` is mirrored there so dev works without bind-mounting the monorepo parent.
  */
 import fs from 'node:fs'
 import path from 'node:path'

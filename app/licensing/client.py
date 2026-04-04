@@ -115,6 +115,48 @@ def post_gateway_heartbeat(base_url: str, bearer: str, body: dict | None = None,
         raise LicenseServerError(f"License gateway returned {response.status_code}")
 
     try:
-        return response.json()
+        data = response.json()
     except ValueError as exc:
         raise LicenseServerError("License gateway returned non-JSON response") from exc
+
+    if response.status_code >= 400:
+        msg = data.get("message") or data.get("detail") or response.text
+        raise LicenseServerError(msg or f"License heartbeat failed ({response.status_code})")
+
+    return data
+
+
+def post_gateway_ticket_ingest(
+    base_url: str,
+    bearer: str,
+    body: dict | None = None,
+    timeout_seconds: int = 15,
+) -> dict:
+    """POST self-hosted ticket payload to operator /tickets/ingest/."""
+    url = f"{base_url.rstrip('/')}/tickets/ingest/"
+    try:
+        response = requests.post(
+            url,
+            json=body or {},
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {bearer}",
+            },
+            timeout=timeout_seconds,
+        )
+    except requests.RequestException as exc:
+        raise LicenseServerError(f"Ticket ingest request failed: {exc}") from exc
+
+    if response.status_code >= 500:
+        raise LicenseServerError(f"License gateway returned {response.status_code}")
+
+    try:
+        data = response.json()
+    except ValueError as exc:
+        raise LicenseServerError("License gateway returned non-JSON response") from exc
+
+    if response.status_code >= 400:
+        msg = data.get("message") or data.get("detail") or response.text
+        raise LicenseServerError(msg or f"Ticket ingest failed ({response.status_code})")
+
+    return data

@@ -7,7 +7,53 @@
       <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-80 bg-purple-200 rounded-full mix-blend-multiply filter blur-xl opacity-30 animate-blob animation-delay-4000"></div>
     </div>
 
-    <div class="w-full max-w-3xl relative z-10">
+    <div v-if="statusChecking" class="w-full max-w-md relative z-10 text-center">
+      <div class="bg-card backdrop-blur-lg rounded-2xl shadow-2xl border border-border-color px-8 py-12">
+        <p class="text-secondary">Checking installation status…</p>
+      </div>
+    </div>
+
+    <div v-else-if="alreadyInstalled" class="w-full max-w-lg relative z-10">
+      <div
+        v-motion
+        :initial="{ opacity: 0, y: 20 }"
+        :enter="{ opacity: 1, y: 0 }"
+        :transition="{ duration: 500 }"
+        class="bg-card backdrop-blur-lg rounded-2xl shadow-2xl border border-border-color overflow-hidden text-center px-8 py-12"
+      >
+        <div class="inline-flex items-center justify-center w-16 h-16 bg-emerald-500/15 rounded-full mb-6 border border-emerald-500/30">
+          <svg class="w-9 h-9 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
+        <h1 class="text-2xl sm:text-3xl font-bold text-primary mb-3">PixelCast is already installed</h1>
+        <p class="text-secondary text-sm sm:text-base mb-8 max-w-md mx-auto">
+          Setup on this server is complete. The installation wizard is not available. Sign in or create an account to use the dashboard.
+        </p>
+        <div class="flex flex-col sm:flex-row gap-3 justify-center">
+          <router-link
+            to="/login"
+            class="btn-primary inline-flex items-center justify-center py-3 px-6 rounded-xl font-semibold"
+          >
+            Log in
+          </router-link>
+          <router-link
+            to="/signup"
+            class="btn-secondary inline-flex items-center justify-center py-3 px-6 rounded-xl font-semibold border border-border-color"
+          >
+            Create account
+          </router-link>
+          <router-link
+            to="/"
+            class="inline-flex items-center justify-center py-3 px-6 rounded-xl text-sm font-medium text-secondary hover:text-primary"
+          >
+            Home
+          </router-link>
+        </div>
+      </div>
+    </div>
+
+    <div v-else class="w-full max-w-3xl relative z-10">
       <!-- Installation Card -->
       <div 
         v-motion
@@ -454,10 +500,10 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
 import { setupAPI } from '@/services/api'
 
-const router = useRouter()
+const statusChecking = ref(true)
+const alreadyInstalled = ref(false)
 
 const currentStep = ref(1)
 const totalSteps = 5
@@ -535,7 +581,7 @@ const createSuperuser = async () => {
   errors.value = {}
   
   try {
-    await setupAPI.createSuperuser(superuserForm.value)
+    await setupAPI.createAdmin(superuserForm.value)
     stepsStatus.value.superuser = 'success'
   } catch (error) {
     stepsStatus.value.superuser = 'error'
@@ -557,7 +603,7 @@ const completeSetup = async () => {
   completeError.value = ''
   
   try {
-    await setupAPI.complete()
+    await setupAPI.finalize()
     stepsStatus.value.complete = 'success'
   } catch (error) {
     stepsStatus.value.complete = 'error'
@@ -566,19 +612,17 @@ const completeSetup = async () => {
 }
 
 onMounted(async () => {
-  // Check setup status on mount
   try {
     const response = await setupAPI.status()
     const status = response.data
-    
-    // If setup is already completed, redirect to login
-    if (status.setup_completed) {
-      router.push('/login')
+
+    if (status.installed) {
+      alreadyInstalled.value = true
       return
     }
-    
-    // Auto-advance to first incomplete step
-    if (status.database_connected && status.migrations_applied && status.superuser_exists) {
+
+    // Auto-advance to first incomplete step (API uses admin_exists)
+    if (status.database_connected && status.migrations_applied && status.admin_exists) {
       currentStep.value = 5
     } else if (status.database_connected && status.migrations_applied) {
       currentStep.value = 4
@@ -590,6 +634,8 @@ onMounted(async () => {
     }
   } catch (error) {
     console.error('Failed to check setup status:', error)
+  } finally {
+    statusChecking.value = false
   }
 })
 </script>

@@ -215,8 +215,18 @@ DEPLOYMENT_STATUS_SECRET = env('DEPLOYMENT_STATUS_SECRET', default='')
 LICENSE_SERVER_URL = env('LICENSE_SERVER_URL', default='')
 CODECANYON_TOKEN = env('CODECANYON_TOKEN', default='')
 CODECANYON_PRODUCT_ID = env('CODECANYON_PRODUCT_ID', default='')
+# Comma-separated Envato item IDs → self-hosted plan tier (gateway). Empty BASIC/SAAS = use default only.
+CODECANYON_BASIC_ITEM_IDS = env('CODECANYON_BASIC_ITEM_IDS', default='')
+CODECANYON_SAAS_ITEM_IDS = env('CODECANYON_SAAS_ITEM_IDS', default='')
+CODECANYON_DEFAULT_SELF_HOSTED_PLAN_TYPE = env('CODECANYON_DEFAULT_SELF_HOSTED_PLAN_TYPE', default='saas')
 LICENSE_ENFORCEMENT_ENABLED = env('LICENSE_ENFORCEMENT_ENABLED', default=True, cast=bool)
 LICENSE_OFFLINE_GRACE_HOURS = env('LICENSE_OFFLINE_GRACE_HOURS', default=72, cast=int)
+# When last_gateway_contact_at ages without successful validate/heartbeat sync (self-hosted + enforcement).
+LICENSE_STALE_CONTACT_ENFORCEMENT_ENABLED = env(
+    'LICENSE_STALE_CONTACT_ENFORCEMENT_ENABLED', default=True, cast=bool
+)
+LICENSE_STALE_CONTACT_WARN_DAYS = env('LICENSE_STALE_CONTACT_WARN_DAYS', default=7, cast=float)
+LICENSE_STALE_CONTACT_READONLY_DAYS = env('LICENSE_STALE_CONTACT_READONLY_DAYS', default=14, cast=float)
 LICENSE_CACHE_TTL_SECONDS = env('LICENSE_CACHE_TTL_SECONDS', default=900, cast=int)
 LICENSE_SERVER_TIMEOUT_SECONDS = env('LICENSE_SERVER_TIMEOUT_SECONDS', default=8, cast=int)
 # Self-hosted → operator gateway: base URL for /activate/, /heartbeat/, /validate/ (v1).
@@ -231,6 +241,15 @@ LICENSE_REGISTRY_INACTIVE_AFTER_HOURS = env('LICENSE_REGISTRY_INACTIVE_AFTER_HOU
 LICENSE_REGISTRY_ACTIVATE_RATE_PER_MINUTE = env('LICENSE_REGISTRY_ACTIVATE_RATE_PER_MINUTE', default=20, cast=int)
 LICENSE_REGISTRY_HEARTBEAT_RATE_PER_MINUTE = env('LICENSE_REGISTRY_HEARTBEAT_RATE_PER_MINUTE', default=60, cast=int)
 LICENSE_REGISTRY_VALIDATE_RATE_PER_MINUTE = env('LICENSE_REGISTRY_VALIDATE_RATE_PER_MINUTE', default=120, cast=int)
+LICENSE_REGISTRY_TICKET_INGEST_RATE_PER_MINUTE = env(
+    'LICENSE_REGISTRY_TICKET_INGEST_RATE_PER_MINUTE', default=30, cast=int
+)
+# Super-admin reports: semver string for "on latest version" checks (e.g. 1.4.0). Empty = use max seen.
+LICENSE_REGISTRY_LATEST_VERSION = env('LICENSE_REGISTRY_LATEST_VERSION', default='')
+# Optional revenue display: cents × unique registry purchases when Envato price is unknown (0 = omit estimate).
+LICENSE_REVENUE_ESTIMATE_UNIT_CENTS = env('LICENSE_REVENUE_ESTIMATE_UNIT_CENTS', default=0, cast=int)
+# Optional MaxMind GeoLite2 Country mmdb path for install geography (empty = skip GeoIP).
+GEOIP2_COUNTRY_DATABASE = env('GEOIP2_COUNTRY_DATABASE', default='')
 # Reported to the license gateway on activate/heartbeat/validate (optional).
 SCREENGRAM_APP_VERSION = env('SCREENGRAM_APP_VERSION', default='')
 
@@ -241,6 +260,8 @@ from core.deployment import normalize_deployment_mode, resolve_effective_platfor
 DEPLOYMENT_MODE = normalize_deployment_mode(env('DEPLOYMENT_MODE', default='hybrid'))
 _PLATFORM_SAAS_ENV = env('PLATFORM_SAAS_ENABLED', default=True, cast=bool)
 PLATFORM_SAAS_ENABLED = resolve_effective_platform_saas(DEPLOYMENT_MODE, _PLATFORM_SAAS_ENV)
+# Self-hosted only: POST new tickets / customer replies to operator LICENSE_GATEWAY_BASE_URL …/tickets/ingest/
+TICKET_OPERATOR_BRIDGE_ENABLED = env('TICKET_OPERATOR_BRIDGE_ENABLED', default=False, cast=bool)
 STRIPE_SECRET_KEY = env('STRIPE_SECRET_KEY', default='')
 STRIPE_PUBLISHABLE_KEY = env('STRIPE_PUBLISHABLE_KEY', default='')
 STRIPE_WEBHOOK_SECRET = env('STRIPE_WEBHOOK_SECRET', default='')

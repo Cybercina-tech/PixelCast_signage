@@ -17,6 +17,7 @@ from .overview_views import (
     platform_overview,
     platform_system_health,
 )
+from .reporting_views import platform_reports_summary
 from .license_views import tenant_license_enforcement_logs, tenant_license_view
 from licensing.registry_admin_views import (
     self_hosted_license_detail,
@@ -36,6 +37,7 @@ router.register(r'pricing/promotions', BillingPromotionViewSet, basename='platfo
 
 urlpatterns = [
     path('overview/', platform_overview, name='platform-overview'),
+    path('reports/summary/', platform_reports_summary, name='platform-reports-summary'),
     path('cohorts/', platform_cohorts, name='platform-cohorts'),
     path('exports/users.xlsx', export_users_xlsx, name='platform-export-users-xlsx'),
     path('capacity/', platform_capacity, name='platform-capacity'),

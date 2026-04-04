@@ -753,6 +753,7 @@ export const platformAPI = {
     },
   },
   overview: () => api.get('/platform/overview/'),
+  reportsSummary: (params) => api.get('/platform/reports/summary/', { params }),
   tenants: {
     list: (params) => api.get('/platform/tenants/', { params }),
     retrieve: (id) => api.get(`/platform/tenants/${id}/`),
@@ -804,8 +805,9 @@ export const platformAPI = {
     enforcementLogs: (tenantId) => api.get(`/platform/tenants/${tenantId}/license/enforcement-logs/`),
   },
   selfHostedLicenses: {
-    list: () => api.get('/platform/self-hosted-licenses/'),
+    list: (params) => api.get('/platform/self-hosted-licenses/', { params }),
     detail: (id) => api.get(`/platform/self-hosted-licenses/${id}/`),
+    patch: (id, data) => api.patch(`/platform/self-hosted-licenses/${id}/`, data),
     suspend: (id, data) => api.post(`/platform/self-hosted-licenses/${id}/suspend/`, data || {}),
     reactivate: (id) => api.post(`/platform/self-hosted-licenses/${id}/reactivate/`),
     setSuspicious: (id, data) => api.post(`/platform/self-hosted-licenses/${id}/suspicious/`, data || {}),

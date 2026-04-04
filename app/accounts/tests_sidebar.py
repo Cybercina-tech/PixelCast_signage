@@ -81,6 +81,11 @@ class SidebarConfigTests(TestCase):
         self.assertTrue(has_permission(self.employee, 'view_screens'))
         self.assertTrue(has_permission(self.employee, 'create_templates'))
         self.assertFalse(has_permission(self.employee, 'delete_templates'))
+        self.assertTrue(has_permission(self.employee, 'create_commands'))
+        self.assertTrue(has_permission(self.employee, 'execute_commands'))
+        self.assertTrue(has_permission(self.employee, 'view_logs'))
+        self.assertTrue(has_permission(self.employee, 'view_analytics'))
+        self.assertTrue(has_permission(self.employee, 'view_settings'))
         self.assertFalse(has_permission(self.employee, 'view_users'))
 
         self.assertTrue(has_permission(self.visitor, 'view_dashboard'))
@@ -104,6 +109,10 @@ class SidebarConfigTests(TestCase):
         self.assertIn('templates', item_ids)
         self.assertIn('contents', item_ids)
         self.assertIn('schedules', item_ids)
+        self.assertIn('commands', item_ids)
+        self.assertIn('logs', item_ids)
+        self.assertIn('analytics', item_ids)
+        self.assertIn('settings', item_ids)
         self.assertNotIn('users', item_ids)
 
     def test_filter_sidebar_items_visitor(self):
@@ -176,7 +185,8 @@ class SidebarItemsAPITests(TestCase):
     def test_sidebar_items_cache_invalidation(self):
         self.client.force_authenticate(user=self.employee)
         response1 = self.client.get('/api/sidebar-items/')
-        viewer_items_count = len(response1.data['items'])
+        before_ids = {item['id'] for item in response1.data['items']}
+        self.assertNotIn('users', before_ids)
 
         self.employee.role = 'Manager'
         self.employee.is_staff = True
@@ -184,5 +194,5 @@ class SidebarItemsAPITests(TestCase):
         cache.clear()
 
         response2 = self.client.get('/api/sidebar-items/')
-        admin_items_count = len(response2.data['items'])
-        self.assertGreater(admin_items_count, viewer_items_count)
+        after_ids = {item['id'] for item in response2.data['items']}
+        self.assertIn('users', after_ids)

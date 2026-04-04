@@ -116,7 +116,8 @@ class TicketListSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'number', 'subject', 'status', 'priority', 'source',
             'requester', 'requester_name', 'assignee', 'assignee_name',
-            'category', 'created_at', 'updated_at', 'last_message_at',
+            'category', 'client_version', 'deployment_context',
+            'created_at', 'updated_at', 'last_message_at',
             'first_response_due_at', 'resolution_due_at', 'tags',
         ]
         read_only_fields = fields
@@ -124,6 +125,14 @@ class TicketListSerializer(serializers.ModelSerializer):
     def get_requester_name(self, obj):
         if obj.requester:
             return obj.requester.full_name or obj.requester.username
+        if getattr(obj, 'registry_installation_id', None) and (
+            (obj.bridge_requester_name or '').strip() or (obj.bridge_requester_email or '').strip()
+        ):
+            name = (obj.bridge_requester_name or '').strip()
+            em = (obj.bridge_requester_email or '').strip()
+            if name and em:
+                return f'{name} <{em}>'
+            return name or em or None
         return None
 
     def get_assignee_name(self, obj):
@@ -181,6 +190,8 @@ class PlatformTicketCreateSerializer(serializers.Serializer):
     priority = TicketPriorityField()
     category = serializers.CharField(max_length=128, required=False, default='')
     language = serializers.CharField(max_length=8, required=False, default='en')
+    client_version = serializers.CharField(max_length=64, required=False, default='')
+    deployment_context = serializers.CharField(max_length=32, required=False, default='')
 
 
 class TicketReplySerializer(serializers.Serializer):
@@ -195,12 +206,19 @@ class TicketReplySerializer(serializers.Serializer):
 
 class PlatformTicketListSerializer(TicketListSerializer):
     tenant_name = serializers.SerializerMethodField()
+    registry_install_domain = serializers.SerializerMethodField()
 
     class Meta(TicketListSerializer.Meta):
-        fields = TicketListSerializer.Meta.fields + ['tenant_name', 'queue']
+        fields = TicketListSerializer.Meta.fields + ['tenant_name', 'queue', 'registry_install_domain']
 
     def get_tenant_name(self, obj):
         return obj.tenant.name if obj.tenant else None
+
+    def get_registry_install_domain(self, obj):
+        inst = getattr(obj, 'registry_installation', None)
+        if inst is not None:
+            return inst.domain or ''
+        return ''
 
 
 class TicketAssignSerializer(serializers.Serializer):

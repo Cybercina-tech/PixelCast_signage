@@ -1,8 +1,8 @@
 <template>
-  <AppLayout>
+  <component :is="embedded ? 'div' : AppLayout">
     <div class="space-y-6">
       <!-- Header -->
-      <div class="flex justify-between items-center">
+      <div v-if="!embedded" class="flex justify-between items-center">
         <div>
           <h1 class="text-2xl font-bold text-primary">System Backups</h1>
           <p class="text-sm text-gray-600 mt-1">Manage database and media backups</p>
@@ -21,6 +21,20 @@
             Cleanup Expired
           </button>
         </div>
+      </div>
+      <div v-else class="flex justify-end gap-3 flex-wrap">
+        <button
+          @click="showTriggerModal = true"
+          class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
+        >
+          Trigger Backup
+        </button>
+        <button
+          @click="handleCleanup"
+          class="px-4 py-2 bg-slate-600 dark:bg-slate-700 text-white rounded-lg hover:bg-slate-700 dark:hover:bg-slate-600 transition"
+        >
+          Cleanup Expired
+        </button>
       </div>
 
       <!-- Filters -->
@@ -282,7 +296,7 @@
         </div>
       </Modal>
     </div>
-  </AppLayout>
+  </component>
 </template>
 
 <script setup>
@@ -292,6 +306,10 @@ import { useCoreStore } from '@/stores/core'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import Card from '@/components/common/Card.vue'
 import Modal from '@/components/common/Modal.vue'
+
+defineProps({
+  embedded: { type: Boolean, default: false },
+})
 
 const coreStore = useCoreStore()
 

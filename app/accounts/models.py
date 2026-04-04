@@ -256,8 +256,8 @@ class User(AbstractUser):
         return self.is_visitor()
 
     def can_execute_commands(self):
-        """Developer and Manager may execute commands; not Employee."""
-        return self.is_developer() or self.is_manager()
+        """Developer, Manager, and Employee may create and execute commands (screen access still enforced per request)."""
+        return self.is_developer() or self.is_manager() or self.is_employee()
 
     def can_manage_templates(self):
         """Legacy helper: Developer/Manager full template management. Employees use create_templates/edit_templates + own-resource checks."""

@@ -169,8 +169,8 @@ class ScreenAnalyticsTests(AnalyticsAPITestCase):
         
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
     
-    def test_screen_statistics_insufficient_permissions(self):
-        """Test screen statistics with viewer role (insufficient permissions)."""
+    def test_screen_statistics_employee_allowed(self):
+        """Employees with view_analytics may load statistics (scoped to org screens)."""
         viewer_user = self.create_user(
             username='viewer',
             role='Employee',
@@ -182,7 +182,8 @@ class ScreenAnalyticsTests(AnalyticsAPITestCase):
         url = reverse('analytics:screen-statistics')
         response = viewer_client.get(url)
         
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['status'], 'success')
 
 
 @pytest.mark.analytics

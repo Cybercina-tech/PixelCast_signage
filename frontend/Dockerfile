@@ -29,9 +29,6 @@ RUN apk add --no-cache wget
 
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Static HTML documentation (served at /documentation/; /docs redirects in nginx.conf)
-COPY documentation /usr/share/nginx/html/documentation
-
 COPY frontend/nginx.conf /etc/nginx/conf.d/default.conf
 
 EXPOSE 80

@@ -16,7 +16,7 @@ from django.core.exceptions import ValidationError
 from django.core.cache import cache
 from typing import Optional
 
-from accounts.permissions import RolePermissions
+from .access_scope import employee_may_view_screen_analytics, merge_analytics_screen_ids
 
 logger = logging.getLogger(__name__)
 from .services import (
@@ -44,9 +44,7 @@ from .serializers import (
 
 def check_analytics_permission(request):
     """
-    Check if user has permission to access analytics.
-    
-    Developer and Manager roles can access analytics.
+    Check if user has permission to access analytics (view_analytics or Developer/Manager).
     
     Raises:
         PermissionDenied: If user doesn't have permission
@@ -63,7 +61,7 @@ def check_analytics_permission(request):
         has_role = request.user.is_developer() or request.user.is_manager()
         
         if not has_perm and not has_role:
-            raise PermissionDenied("Developer or Manager role required to access analytics")
+            raise PermissionDenied("You do not have permission to access analytics")
     except AttributeError as e:
         logger.error(f"Error checking analytics permission: {str(e)}", exc_info=True)
         raise PermissionDenied("Error checking permissions")
@@ -127,6 +125,8 @@ def screen_statistics(request):
         if 'screen_ids' in request.query_params:
             screen_id_list = request.query_params['screen_ids'].split(',')
             screen_ids = validate_uuid_list([s.strip() for s in screen_id_list], "screen_ids")
+
+        screen_ids = merge_analytics_screen_ids(request.user, screen_ids)
         
         start_date_str = request.query_params.get('start_date')
         end_date_str = request.query_params.get('end_date')
@@ -190,6 +190,13 @@ def screen_detail(request, screen_id):
         # Validate screen_id (URL converter may pass uuid.UUID; validator expects strings)
         screen_id_str = str(screen_id)
         validate_uuid_list([screen_id_str], "screen_id")
+
+        if not employee_may_view_screen_analytics(request.user, screen_id_str):
+            return Response({
+                'status': 'error',
+                'error': 'Screen not found',
+                'timestamp': timezone.now().isoformat(),
+            }, status=status.HTTP_404_NOT_FOUND)
         
         # Get detailed statistics
         details = ScreenAnalyticsService.get_screen_details(screen_id_str)
@@ -261,6 +268,8 @@ def command_statistics(request):
         if 'screen_ids' in request.query_params:
             screen_id_list = request.query_params['screen_ids'].split(',')
             screen_ids = validate_uuid_list([s.strip() for s in screen_id_list], "screen_ids")
+
+        screen_ids = merge_analytics_screen_ids(request.user, screen_ids)
         
         start_date_str = request.query_params.get('start_date')
         end_date_str = request.query_params.get('end_date')
@@ -333,11 +342,14 @@ def content_statistics(request):
         start_date_str = request.query_params.get('start_date')
         end_date_str = request.query_params.get('end_date')
         start_date, end_date = validate_date_range(start_date_str, end_date_str)
+
+        screen_ids = merge_analytics_screen_ids(request.user, None)
         
         # Get statistics
         stats = ContentAnalyticsService.get_content_statistics(
             start_date=start_date,
-            end_date=end_date
+            end_date=end_date,
+            screen_ids=screen_ids,
         )
         
         return Response({
@@ -397,11 +409,14 @@ def template_statistics(request):
         start_date_str = request.query_params.get('start_date')
         end_date_str = request.query_params.get('end_date')
         start_date, end_date = validate_date_range(start_date_str, end_date_str)
+
+        screen_ids = merge_analytics_screen_ids(request.user, None)
         
         # Get statistics
         stats = TemplateAnalyticsService.get_template_statistics(
             start_date=start_date,
-            end_date=end_date
+            end_date=end_date,
+            screen_ids=screen_ids,
         )
         
         return Response({
@@ -468,11 +483,16 @@ def activity_trends(request):
                     raise ValidationError("days must be between 1 and 365")
             except ValueError:
                 raise ValidationError("days must be a valid integer")
+
+        screen_ids = merge_analytics_screen_ids(request.user, None)
+        scope_user = request.user if screen_ids is not None else None
         
         # Get trends
         trends = ActivityAnalyticsService.get_activity_trends(
             period=period,
-            days=days
+            days=days,
+            screen_ids=screen_ids,
+            scope_user=scope_user,
         )
         
         return Response({

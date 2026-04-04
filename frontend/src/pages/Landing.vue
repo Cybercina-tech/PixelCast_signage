@@ -49,12 +49,12 @@
           </div>
           <!-- Desktop / large: full nav (mobile uses burger drawer only) -->
           <div class="hidden lg:flex flex-wrap items-center justify-end gap-x-2 gap-y-1 xl:gap-2.5 shrink-0">
-            <router-link
-              to="/docs"
+            <a
+              :href="productDocsUrl"
               class="px-2 py-1.5 text-xs sm:text-sm text-white/80 hover:text-white transition-colors whitespace-nowrap"
             >
               Docs
-            </router-link>
+            </a>
             <router-link
               to="/blog"
               class="px-2 py-1.5 text-xs sm:text-sm text-white/80 hover:text-white transition-colors whitespace-nowrap"
@@ -186,9 +186,9 @@
           <p class="landing-drawer-section-label">Resources</p>
           <ul class="space-y-1 mb-6">
             <li>
-              <router-link to="/docs" class="landing-drawer-quicklink" @click="closeSectionMenu">
+              <a :href="productDocsUrl" class="landing-drawer-quicklink" @click="closeSectionMenu">
                 Documentation
-              </router-link>
+              </a>
             </li>
             <li>
               <router-link to="/blog" class="landing-drawer-quicklink" @click="closeSectionMenu">
@@ -268,13 +268,13 @@
                   >
                     {{ isInstalled ? 'Start Free Trial' : 'Start Installation' }}
                   </router-link>
-                  <router-link
-                    to="/docs"
+                  <a
+                    :href="productDocsUrl"
                     class="hero-cta-btn glass-card rounded-xl font-semibold !text-white visited:!text-white hover:!text-white border border-white/20 hover:border-white/40 transition-all duration-300 text-center inline-flex items-center justify-center w-full min-w-0 min-h-[3rem] sm:min-h-[3.25rem] px-2.5 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm md:text-base leading-tight"
                     @click="trackLandingCta('hero_docs', 'Documentation')"
                   >
                     Documentation
-                  </router-link>
+                  </a>
                   <router-link
                     to="/data-center"
                     class="hero-cta-btn glass-card rounded-xl font-semibold !text-white visited:!text-white hover:!text-white border border-white/20 hover:border-white/40 transition-all duration-300 text-center inline-flex items-center justify-center w-full min-w-0 min-h-[3rem] sm:min-h-[3.25rem] px-2.5 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm md:text-base leading-tight"
@@ -388,7 +388,7 @@
                     feature set—paired with license activation instead of cloud billing.
                   </p>
                   <p class="text-on-starfield text-sm leading-relaxed">
-                    Use <router-link to="/docs" class="text-cyan-400 hover:text-cyan-300 underline underline-offset-2">Documentation</router-link>
+                    Use <a :href="productDocsUrl" class="text-cyan-400 hover:text-cyan-300 underline underline-offset-2">Documentation</a>
                     and the <router-link to="/data-center" class="text-cyan-400 hover:text-cyan-300 underline underline-offset-2">Data Center</router-link>
                     for install images, players, and operations.
                   </p>
@@ -588,7 +588,7 @@
             </div>
             <p class="text-white/45 text-sm text-center mt-5 max-w-lg mx-auto">
               Self-hosted? Use license activation—see
-              <router-link to="/docs" class="text-cyan-400/90 hover:text-cyan-300 underline underline-offset-2">Docs</router-link>
+              <a :href="productDocsUrl" class="text-cyan-400/90 hover:text-cyan-300 underline underline-offset-2">Docs</a>
               and
               <router-link to="/data-center" class="text-cyan-400/90 hover:text-cyan-300 underline underline-offset-2">Data Center</router-link>,
               or the CodeCanyon section above.
@@ -743,12 +743,12 @@
                 >
                   {{ isInstalled ? 'Start Free Trial' : 'Install Now' }}
                 </router-link>
-                <router-link
-                  to="/docs"
+                <a
+                  :href="productDocsUrl"
                   class="glass-card px-6 py-4 rounded-lg font-semibold text-base sm:text-lg text-white border border-white/20 hover:border-white/40 transition-all duration-300 text-center inline-flex items-center justify-center w-full min-h-[3.25rem]"
                 >
                   View Docs
-                </router-link>
+                </a>
                 <router-link
                   to="/data-center"
                   class="glass-card px-6 py-4 rounded-lg font-semibold text-base sm:text-lg text-white border border-white/20 hover:border-white/40 transition-all duration-300 text-center inline-flex items-center justify-center w-full min-h-[3.25rem]"
@@ -777,7 +777,7 @@
           <div class="flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
             <router-link to="/privacy" class="hover:text-white transition-colors">Privacy</router-link>
             <router-link to="/terms" class="hover:text-white transition-colors">Terms</router-link>
-            <router-link to="/docs" class="hover:text-white transition-colors">Docs</router-link>
+            <a :href="productDocsUrl" class="hover:text-white transition-colors">Docs</a>
             <router-link to="/blog" class="hover:text-white transition-colors">Blog</router-link>
             <router-link to="/data-center" class="hover:text-white transition-colors">Data Center</router-link>
           </div>
@@ -795,6 +795,9 @@ import { pushCtaClick } from '@/analytics/dataLayer'
 function trackLandingCta(ctaId, label) {
   pushCtaClick(ctaId, label, { page: 'landing' })
 }
+
+/** Static HTML product docs (Vite `public/documentation/` → `/documentation/index.html`). */
+const productDocsUrl = '/documentation/index.html'
 
 const scrollProgress = ref(0)
 const activeTab = ref(0)

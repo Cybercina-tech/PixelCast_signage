@@ -16,6 +16,10 @@ class LicenseStatusSerializer(serializers.Serializer):
     uses_activation_token = serializers.BooleanField(required=False)
     masked_activation_token = serializers.CharField(required=False, allow_blank=True)
     masked_purchase_code = serializers.CharField(required=False, allow_blank=True)
+    plan_type = serializers.CharField(required=False, allow_blank=True)
+    features_snapshot = serializers.JSONField(required=False)
+    last_gateway_contact_at = serializers.DateTimeField(allow_null=True, required=False)
+    heartbeat_stale_tier = serializers.CharField(required=False, allow_blank=True)
 
 
 class LicenseActivateSerializer(serializers.Serializer):

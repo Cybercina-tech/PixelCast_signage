@@ -184,7 +184,7 @@ class PlatformTicketViewSet(viewsets.ViewSet):
 
     def _base_qs(self):
         return Ticket.objects.filter(is_deleted=False).select_related(
-            'tenant', 'requester', 'assignee', 'queue',
+            'tenant', 'requester', 'assignee', 'queue', 'registry_installation',
         )
 
     # -- create on behalf of a user --
@@ -203,6 +203,8 @@ class PlatformTicketViewSet(viewsets.ViewSet):
             priority=d.get('priority', 'medium'),
             category=d.get('category', ''),
             language=d.get('language', 'en'),
+            client_version=d.get('client_version', ''),
+            deployment_context=d.get('deployment_context', ''),
         )
         return Response(
             TicketDetailSerializer(ticket, context={'request': request}).data,

@@ -68,6 +68,8 @@ services:
       - CELERY_BROKER_URL=${CELERY_BROKER_URL:-redis://redis:6379/0}
       - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND:-redis://redis:6379/0}
       - ENABLE_HOT_RELOAD=${ENABLE_HOT_RELOAD:-true}
+      # Create admin@pixelcast.com / adminadmin on first boot if that email is missing (local dev only).
+      - BOOTSTRAP_DEFAULT_ADMIN=${BOOTSTRAP_DEFAULT_ADMIN:-true}
       # Vite proxies to http://backend:8000. If .env has BASE_URL=https://..., Django infers
       # SECURE_SSL_REDIRECT=True and responds 301 to HTTPS — POST /api/auth/login/ then fails.
       # Force off for this local Compose stack (TLS terminates on Traefik/nginx in prod, not here).

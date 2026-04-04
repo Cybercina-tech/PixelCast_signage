@@ -1013,12 +1013,12 @@ def roles_view(request):
         roles = [
             {'value': 'Developer', 'label': 'Developer', 'description': 'Full system access'},
             {'value': 'Manager', 'label': 'Manager', 'description': 'Manage team and content; no system settings'},
-            {'value': 'Employee', 'label': 'Employee', 'description': 'Screens, playlists, and media only'},
+            {'value': 'Employee', 'label': 'Employee', 'description': 'Screens, playlists, templates, content, commands, logs, analytics, settings (org scope)'},
             {'value': 'Visitor', 'label': 'Visitor', 'description': 'Dashboard and templates (explore only; no save)'},
         ]
     else:
         roles = [
-            {'value': 'Employee', 'label': 'Employee', 'description': 'Screens, playlists, and media only'},
+            {'value': 'Employee', 'label': 'Employee', 'description': 'Screens, playlists, templates, content, commands, logs, analytics, settings (org scope)'},
             {'value': 'Visitor', 'label': 'Visitor', 'description': 'Dashboard and templates (explore only; no save)'},
         ]
 

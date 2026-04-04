@@ -228,6 +228,17 @@ main() {
         else
             log_warning "TV catalog seed failed or skipped (tables may be missing)."
         fi
+
+        # Optional: create default Developer (admin@pixelcast.com) if no user with that email exists.
+        # Does not reset passwords on existing accounts. For password reset: ensure_default_developer --update
+        if [ "${BOOTSTRAP_DEFAULT_ADMIN:-false}" = "true" ]; then
+            log_info "BOOTSTRAP_DEFAULT_ADMIN=true: ensure_default_developer (create-if-missing)..."
+            if python manage.py ensure_default_developer; then
+                log_success "Default Developer bootstrap OK (or user already existed)"
+            else
+                log_warning "ensure_default_developer failed (non-fatal)."
+            fi
+        fi
     else
         log_warning "PostgreSQL is not available. Skipping database operations."
         log_warning "The container will start, but database features will not work."

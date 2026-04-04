@@ -188,9 +188,22 @@ function iconFor(name) {
   return iconMap[name] || Squares2X2Icon
 }
 
+function isTicketsQueueNavActive(path) {
+  const p = path.replace(/\/$/, '') || '/'
+  if (p === '/super-admin/tickets') return true
+  if (!p.startsWith('/super-admin/tickets/')) return false
+  const first = p.slice('/super-admin/tickets/'.length).split('/')[0]
+  if (!first) return false
+  if (first === 'analytics' || first === 'settings') return false
+  return true
+}
+
 function isNavActive(link) {
   if (link.match === 'exact') {
     return route.path === link.to || route.path === `${link.to}/`
+  }
+  if (link.match === 'tickets-queue') {
+    return isTicketsQueueNavActive(route.path)
   }
   return route.path === link.to || route.path.startsWith(`${link.to}/`)
 }

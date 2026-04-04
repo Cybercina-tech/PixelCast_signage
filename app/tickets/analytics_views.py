@@ -11,7 +11,8 @@ import io
 import logging
 from datetime import timedelta
 
-from django.db.models import Avg, Count, F, Q
+from django.db.models import Avg, Count, DurationField, F, Q
+from django.db.models.expressions import ExpressionWrapper
 from django.http import HttpResponse
 from django.utils import timezone
 from rest_framework import status
@@ -96,11 +97,60 @@ def ticket_analytics(request):
             .order_by('-count')[:20]
         )
 
+    by_category = list(
+        base.values('category').annotate(count=Count('id')).order_by('-count')[:40]
+    )
+
+    by_client_version = list(
+        base.exclude(client_version='')
+        .values('client_version')
+        .annotate(count=Count('id'))
+        .order_by('-count')[:30]
+    )
+
+    dur_expr = ExpressionWrapper(
+        F('resolved_at') - F('created_at'),
+        output_field=DurationField(),
+    )
+    resolved_with_dur = base.filter(resolved_at__isnull=False).annotate(dur=dur_expr)
+
+    resolution_by_client_version = []
+    rv_qs = (
+        resolved_with_dur.exclude(client_version='')
+        .values('client_version')
+        .annotate(avg_resolution=Avg('dur'))
+        .order_by('-avg_resolution')[:20]
+    )
+    for row in rv_qs:
+        td = row['avg_resolution']
+        mins = round(td.total_seconds() / 60, 1) if td else None
+        resolution_by_client_version.append(
+            {'client_version': row['client_version'], 'avg_resolution_min': mins}
+        )
+
+    resolution_by_deployment = []
+    dep_qs = (
+        resolved_with_dur.exclude(deployment_context='')
+        .values('deployment_context')
+        .annotate(avg_resolution=Avg('dur'))
+        .order_by('deployment_context')
+    )
+    for row in dep_qs:
+        td = row['avg_resolution']
+        mins = round(td.total_seconds() / 60, 1) if td else None
+        resolution_by_deployment.append(
+            {'deployment_context': row['deployment_context'], 'avg_resolution_min': mins}
+        )
+
     return Response({
         'total': total,
         'open_count': open_count,
         'by_status': by_status,
         'by_priority': by_priority,
+        'by_category': by_category,
+        'by_client_version': by_client_version,
+        'resolution_by_client_version': resolution_by_client_version,
+        'resolution_by_deployment': resolution_by_deployment,
         'avg_first_response_min': round(avg_first_response_min, 1) if avg_first_response_min else None,
         'avg_resolution_min': round(avg_resolution_min, 1) if avg_resolution_min else None,
         'sla_compliance_pct': sla_compliance_pct,

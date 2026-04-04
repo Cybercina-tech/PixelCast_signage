@@ -1,12 +1,20 @@
 <template>
-  <AppLayout>
+  <component :is="embedded ? 'div' : AppLayout">
     <div class="space-y-6">
       <!-- Header -->
-      <div class="flex justify-between items-center">
+      <div v-if="!embedded" class="flex justify-between items-center">
         <div>
           <h1 class="text-2xl font-bold text-primary">Audit Logs</h1>
           <p class="text-sm text-secondary mt-1">Comprehensive audit trail of all system actions</p>
         </div>
+        <button
+          @click="loadSummary"
+          class="btn-primary px-4 py-2 rounded-lg"
+        >
+          View Summary
+        </button>
+      </div>
+      <div v-else class="flex justify-end">
         <button
           @click="loadSummary"
           class="btn-primary px-4 py-2 rounded-lg"
@@ -311,7 +319,7 @@
         </div>
       </Modal>
     </div>
-  </AppLayout>
+  </component>
 </template>
 
 <script setup>
@@ -321,6 +329,10 @@ import { useCoreStore } from '@/stores/core'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import Card from '@/components/common/Card.vue'
 import Modal from '@/components/common/Modal.vue'
+
+defineProps({
+  embedded: { type: Boolean, default: false },
+})
 
 const coreStore = useCoreStore()
 

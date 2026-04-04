@@ -362,7 +362,7 @@ class RoleSerializer(serializers.Serializer):
         descriptions = {
             'Developer': 'Full system access including settings, logs, and license management',
             'Manager': 'Manage team (Employees), screens, and content; no system-level settings',
-            'Employee': 'Screens, playlists, and media library only',
+            'Employee': 'Screens, playlists, templates, content, commands, logs, analytics, and settings for your organization',
             'Visitor': 'Dashboard and template exploration; changes are not saved',
         }
         return descriptions.get(role, '')

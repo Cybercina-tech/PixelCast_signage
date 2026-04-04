@@ -333,13 +333,25 @@ const routes = [
         path: 'audit-logs',
         name: 'super-admin-audit-logs',
         component: AuditLogs,
-        meta: { requiresAuth: true, requiresRole: ['Developer'] },
+        props: { embedded: true },
+        meta: {
+          requiresAuth: true,
+          requiresRole: ['Developer'],
+          superAdminTitle: 'Audit log',
+          superAdminSubtitle: 'Comprehensive audit trail of all system actions',
+        },
       },
       {
         path: 'backups',
         name: 'super-admin-backups',
         component: Backups,
-        meta: { requiresAuth: true, requiresRole: ['Developer'] },
+        props: { embedded: true },
+        meta: {
+          requiresAuth: true,
+          requiresRole: ['Developer'],
+          superAdminTitle: 'Backups',
+          superAdminSubtitle: 'Database and media backup management',
+        },
       },
       {
         path: 'tickets',
@@ -535,7 +547,7 @@ const routes = [
     path: '/analytics',
     name: 'analytics',
     component: AnalyticsDashboard,
-    meta: { requiresAuth: true, requiresRole: ['Developer', 'Manager'] },
+    meta: { requiresAuth: true },
   },
   {
     path: '/core/audit-logs',

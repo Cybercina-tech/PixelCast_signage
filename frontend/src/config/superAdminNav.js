@@ -31,7 +31,13 @@ export const SUPER_ADMIN_NAV_GROUPS = [
     id: 'support',
     label: 'Support',
     items: [
-      { label: 'Ticket queue', to: '/super-admin/tickets', icon: 'ChatBubbleLeftRightIcon' },
+      {
+        label: 'Ticket queue',
+        to: '/super-admin/tickets',
+        icon: 'ChatBubbleLeftRightIcon',
+        // Avoid prefix match: /super-admin/tickets/settings and …/analytics also start with …/tickets/
+        match: 'tickets-queue',
+      },
       { label: 'Ticket analytics', to: '/super-admin/tickets/analytics', icon: 'ChartBarIcon' },
       { label: 'Ticket settings', to: '/super-admin/tickets/settings', icon: 'Cog6ToothIcon' },
     ],
