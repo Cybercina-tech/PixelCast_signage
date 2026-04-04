@@ -54,7 +54,6 @@ import SystemEmailSettings from '../pages/core/SystemEmailSettings.vue'
 
 // Settings
 import Settings from '../pages/Settings.vue'
-import LicenseSettings from '../pages/LicenseSettings.vue'
 
 // Platform (SaaS super-admin)
 import PlatformTenantsList from '../pages/platform/TenantsList.vue'
@@ -575,9 +574,7 @@ const routes = [
   },
   {
     path: '/settings/license',
-    name: 'settings-license',
-    component: LicenseSettings,
-    meta: { requiresAuth: true },
+    redirect: { path: '/settings', query: { tab: 'license' } },
   },
   {
     path: '/profile',

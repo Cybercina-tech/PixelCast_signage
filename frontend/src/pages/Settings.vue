@@ -249,21 +249,33 @@
                 </div>
                 <div>
                   <label class="label-base block text-sm mb-3">Active Sessions</label>
-                  <div class="space-y-3">
+                  <div v-if="loadingSessions" class="flex items-center justify-center py-8 rounded-xl border border-border-color bg-surface-inset">
+                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-brand" />
+                  </div>
+                  <div
+                    v-else-if="sessionsError"
+                    class="rounded-xl border border-error/20 bg-error/10 p-4 text-error text-sm break-words"
+                  >
+                    {{ sessionsError }}
+                  </div>
+                  <div v-else-if="sessions.length === 0" class="text-center py-8 text-muted text-sm rounded-xl border border-border-color bg-surface-inset">
+                    No active sessions found
+                  </div>
+                  <div v-else class="space-y-3">
                     <div
-                      v-for="session in activeSessions"
+                      v-for="session in sessions"
                       :key="session.id"
                       class="flex flex-wrap items-center justify-between gap-4 p-4 rounded-xl border border-border-color bg-surface-inset"
                     >
                       <div class="flex items-start gap-3 min-w-0">
-                        <component :is="session.deviceIcon" class="w-5 h-5 text-muted shrink-0 mt-0.5" />
+                        <component :is="sessionDeviceIcon(session.device)" class="w-5 h-5 text-muted shrink-0 mt-0.5" />
                         <div>
-                          <p class="text-sm font-medium text-primary">{{ session.device }}</p>
-                          <p class="text-xs text-muted">{{ session.location }}</p>
+                          <p class="text-sm font-medium text-primary">{{ session.device || 'Unknown device' }}</p>
+                          <p class="text-xs text-muted">IP: {{ session.ip_address || '—' }}</p>
+                          <p class="text-xs text-muted mt-0.5">Last activity: {{ formatSessionDate(session.last_activity) }}</p>
                         </div>
                       </div>
                       <div class="flex items-center gap-3 shrink-0">
-                        <span class="text-xs text-muted">{{ session.lastActive }}</span>
                         <span
                           v-if="session.current"
                           class="px-2 py-0.5 rounded text-xs font-medium bg-forest-green/15 text-forest-green border border-forest-green/30"
@@ -273,12 +285,26 @@
                         <button
                           v-if="!session.current"
                           type="button"
-                          class="btn-outline px-3 py-1.5 rounded-lg text-sm text-error border-error/30 hover:bg-error/10"
+                          class="btn-outline px-3 py-1.5 rounded-lg text-sm text-error border-error/30 hover:bg-error/10 disabled:opacity-50"
+                          :disabled="terminatingSession === session.id"
                           @click="revokeSession(session.id)"
                         >
-                          Revoke
+                          <span v-if="terminatingSession === session.id">Revoking…</span>
+                          <span v-else>Revoke</span>
                         </button>
                       </div>
+                    </div>
+                    <div class="pt-2 border-t border-border-color">
+                      <button
+                        type="button"
+                        class="btn-outline px-3 py-2 rounded-lg text-sm text-error border-error/30 hover:bg-error/10 disabled:opacity-50"
+                        :disabled="loggingOutAllSessions"
+                        @click="logoutAllSessions"
+                      >
+                        <span v-if="loggingOutAllSessions">Logging out…</span>
+                        <span v-else>Log out from all sessions</span>
+                      </button>
+                      <p class="text-xs text-muted mt-2">You will need to sign in again on every device.</p>
                     </div>
                   </div>
                 </div>
@@ -352,20 +378,22 @@
             <Card
               v-else-if="activeTab === 'license'"
               key="license"
-              title="License Management"
-              subtitle="Activate and monitor your CodeCanyon license"
+              title="License"
+              subtitle="High-level license state for this installation"
             >
               <div class="space-y-4">
-                <p class="text-sm text-muted">
-                  Use the dedicated license page to activate purchase code, configure product ID override, and revalidate license status.
-                </p>
-                <button
-                  type="button"
-                  class="btn-primary px-4 py-2 rounded-lg text-sm"
-                  @click="$router.push('/settings/license')"
-                >
-                  Open License Settings
-                </button>
+                <p v-if="licenseLoadError" class="text-sm text-amber-600">{{ licenseLoadError }}</p>
+                <div v-else-if="licenseLoading" class="text-sm text-muted">Loading…</div>
+                <dl v-else class="grid gap-4 sm:grid-cols-2">
+                  <div class="rounded-xl border border-border-color bg-surface-inset/40 px-4 py-3">
+                    <dt class="text-xs text-muted mb-1">License active</dt>
+                    <dd class="text-sm font-semibold text-primary">{{ licenseActiveLabel }}</dd>
+                  </div>
+                  <div class="rounded-xl border border-border-color bg-surface-inset/40 px-4 py-3">
+                    <dt class="text-xs text-muted mb-1">Confirmed by license server</dt>
+                    <dd class="text-sm font-semibold text-primary">{{ licenseServerVerifiedLabel }}</dd>
+                  </div>
+                </dl>
               </div>
             </Card>
           </Transition>
@@ -403,11 +431,12 @@
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useThemeStore } from '@/stores/theme'
 import { useNotification } from '@/composables/useNotification'
-import { notificationCenterAPI } from '@/services/api'
+import { authAPI, licenseAPI, notificationCenterAPI } from '@/services/api'
 import { getBrowserApiBaseUrl } from '@/utils/apiBaseUrl'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import Card from '@/components/common/Card.vue'
@@ -428,6 +457,8 @@ import {
 } from '@heroicons/vue/24/outline'
 
 const avatarInput = ref(null)
+const route = useRoute()
+const router = useRouter()
 const authStore = useAuthStore()
 const themeStore = useThemeStore()
 const notify = useNotification()
@@ -533,24 +564,77 @@ const systemSettings = ref({
   s3Region: 'us-east-1',
 })
 
-const activeSessions = ref([
-  {
-    id: 1,
-    device: 'Chrome on Windows',
-    location: 'New York, US',
-    lastActive: '2 minutes ago',
-    current: true,
-    deviceIcon: ComputerDesktopIcon,
-  },
-  {
-    id: 2,
-    device: 'Safari on iPhone',
-    location: 'New York, US',
-    lastActive: '1 hour ago',
-    current: false,
-    deviceIcon: DevicePhoneMobileIcon,
-  },
-])
+const sessions = ref([])
+const loadingSessions = ref(false)
+const sessionsError = ref(null)
+
+/** Raw status string from `/license/status/` — only used to derive the two summary labels below. */
+const licenseStatusRaw = ref(null)
+const licenseLoading = ref(false)
+const licenseLoadError = ref(null)
+
+const licenseActiveLabel = computed(() => {
+  const s = licenseStatusRaw.value
+  if (s == null) return '—'
+  if (s === 'active' || s === 'grace') return 'Yes'
+  return 'No'
+})
+
+/** Server accepted the latest validation (not operating on offline grace only). */
+const licenseServerVerifiedLabel = computed(() => {
+  const s = licenseStatusRaw.value
+  if (s == null) return '—'
+  return s === 'active' ? 'Yes' : 'No'
+})
+const terminatingSession = ref(null)
+const loggingOutAllSessions = ref(false)
+
+function sessionDeviceIcon(deviceLabel) {
+  const d = (deviceLabel || '').toLowerCase()
+  if (/iphone|ipad|ipod|android|mobile/.test(d)) {
+    return DevicePhoneMobileIcon
+  }
+  return ComputerDesktopIcon
+}
+
+function formatSessionDate(dateString) {
+  if (!dateString) return 'Never'
+  try {
+    return new Date(dateString).toLocaleString()
+  } catch {
+    return dateString
+  }
+}
+
+async function loadLicenseSummary() {
+  licenseLoading.value = true
+  licenseLoadError.value = null
+  try {
+    const { data } = await licenseAPI.status()
+    licenseStatusRaw.value = data?.license_status ?? null
+  } catch (err) {
+    licenseStatusRaw.value = null
+    licenseLoadError.value =
+      err.response?.data?.detail || err.response?.data?.message || 'Could not load license status'
+  } finally {
+    licenseLoading.value = false
+  }
+}
+
+async function loadSessions() {
+  loadingSessions.value = true
+  sessionsError.value = null
+  try {
+    const { data } = await authAPI.sessions()
+    sessions.value = data.sessions || []
+  } catch (err) {
+    sessionsError.value =
+      err.response?.data?.detail || err.response?.data?.error || 'Failed to load sessions'
+    console.error('Failed to load sessions:', err)
+  } finally {
+    loadingSessions.value = false
+  }
+}
 
 const originalSettings = ref({
   profile: JSON.parse(JSON.stringify(profileSettings.value)),
@@ -655,9 +739,34 @@ const handleAvatarUpload = (event) => {
   }
 }
 
-const revokeSession = (sessionId) => {
-  activeSessions.value = activeSessions.value.filter(s => s.id !== sessionId)
-  notify.success('Session revoked')
+async function revokeSession(sessionId) {
+  terminatingSession.value = sessionId
+  try {
+    const oid = parseInt(sessionId, 10)
+    await authAPI.revokeSession(Number.isFinite(oid) ? oid : sessionId)
+    notify.success('Session revoked')
+    await loadSessions()
+  } catch (err) {
+    notify.error(err.response?.data?.error || err.response?.data?.detail || 'Could not revoke session')
+  } finally {
+    terminatingSession.value = null
+  }
+}
+
+async function logoutAllSessions() {
+  loggingOutAllSessions.value = true
+  try {
+    await authAPI.logoutAll()
+    notify.success('Logged out from all sessions')
+    authStore.logout()
+    router.push('/login')
+  } catch (err) {
+    notify.error(
+      err.response?.data?.detail || err.response?.data?.error || 'Failed to log out from all sessions',
+    )
+  } finally {
+    loggingOutAllSessions.value = false
+  }
 }
 
 const loadSettings = () => {
@@ -689,8 +798,29 @@ const loadNotificationPreferences = async () => {
   }
 }
 
-watch(activeTab, () => {
+function syncTabFromRoute() {
+  const t = route.query.tab
+  if (typeof t === 'string' && tabs.some((x) => x.id === t)) {
+    activeTab.value = t
+  }
+}
+
+watch(activeTab, (tab) => {
   hasChanges.value = false
+  if (tab === 'security') {
+    loadSessions()
+  }
+  if (tab === 'license') {
+    loadLicenseSummary()
+  }
+})
+
+watch(() => route.query.tab, () => {
+  syncTabFromRoute()
+})
+
+onMounted(() => {
+  syncTabFromRoute()
 })
 
 loadSettings()

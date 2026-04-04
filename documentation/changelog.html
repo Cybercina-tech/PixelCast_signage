@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>PixelCast — Changelog</title>
   <meta name="description" content="PixelCast digital signage release notes and version history." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="./assets/style.css" />
 </head>
 <body>
-  <main class="content" style="max-width: 980px; margin: 0 auto; padding-top: 18px;">
+  <main class="content doc-standalone">
     <header class="hero">
       <p class="badge">Release notes</p>
       <h1>PixelCast changelog</h1>
@@ -21,6 +21,20 @@
         <a class="btn-sidebar" href="/">Home</a>
       </p>
     </header>
+
+    <section class="section-panel">
+      <h2>Version 1.0.3 — April 2026</h2>
+      <article class="card">
+        <ul>
+          <li>Product documentation updated to match current Django URLconf, app packages, and <code>frontend/public/documentation</code> deployment path</li>
+          <li>Clarified production port mapping (<code>8080:80</code>), license env vars, and SPA routes (analytics, commands, super-admin, auth recovery)</li>
+        </ul>
+        <div class="pill-grid">
+          <span class="pill">Docs</span>
+          <span class="pill">Accuracy</span>
+        </div>
+      </article>
+    </section>
 
     <section class="section-panel">
       <h2>Version 1.0.2 — April 2026</h2>

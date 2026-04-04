@@ -843,7 +843,7 @@ async function activateLicenseAfterInstall() {
     })
     if (loginResult?.needs2fa) {
       postInstallLicenseError.value =
-        'Two-factor authentication is required. Log in manually, then open License settings.'
+        'Two-factor authentication is required. Log in manually, then open Settings → License.'
       return
     }
     const host =

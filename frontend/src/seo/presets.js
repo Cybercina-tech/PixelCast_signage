@@ -125,7 +125,6 @@ export const SEO_BY_ROUTE_NAME = {
   backups: appPage('Backups'),
   'system-email-settings': appPage('Email settings'),
   settings: appPage('Settings'),
-  'settings-license': appPage('License'),
   profile: appPage('Profile'),
   security: appPage('Security'),
   sessions: appPage('Sessions'),

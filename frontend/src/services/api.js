@@ -121,8 +121,10 @@ api.interceptors.response.use(
 
     // Handle license enforcement responses
     if ((status === 402 || status === 403) && typeof errorData.error === 'string' && errorData.error.startsWith('license_')) {
-      if (window.location.pathname !== '/settings/license') {
-        window.location.href = '/settings/license'
+      const params = new URLSearchParams(window.location.search)
+      const onLicenseTab = window.location.pathname === '/settings' && params.get('tab') === 'license'
+      if (!onLicenseTab) {
+        window.location.href = '/settings?tab=license'
       }
       return Promise.reject(error)
     }
