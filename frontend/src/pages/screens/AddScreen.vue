@@ -86,28 +86,78 @@
                 <li>Or paste the pairing URL from the QR code below</li>
               </ul>
 
-              <!-- Camera input (if supported) -->
-              <div v-if="cameraSupported" class="mb-4">
-                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <!-- Camera / image scan -->
+              <div class="mb-4 space-y-3">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Scan QR Code
                 </label>
-                <div class="relative">
-                  <input
-                    ref="qrFileInput"
-                    type="file"
-                    accept="image/*"
-                    capture="environment"
-                    @change="handleQRFileUpload"
-                    class="hidden"
-                  />
+                <p v-if="!cameraScanSupported" class="text-xs text-amber-700 dark:text-amber-300">
+                  Live camera scan needs a secure connection (HTTPS) or localhost. You can still paste the URL below or upload a photo of the QR code.
+                </p>
+                <div class="flex flex-col sm:flex-row gap-2">
                   <button
-                    @click="$refs.qrFileInput?.click()"
-                    class="btn-secondary w-full py-3"
+                    v-if="cameraScanSupported"
+                    type="button"
+                    class="btn-primary flex-1 py-3"
+                    @click="openCameraScanner"
                   >
-                    📷 Take Photo or Choose Image
+                    Use camera
                   </button>
+                  <div class="flex-1">
+                    <input
+                      ref="qrFileInput"
+                      type="file"
+                      accept="image/*"
+                      class="hidden"
+                      @change="handleQRFileUpload"
+                    />
+                    <button
+                      type="button"
+                      class="btn-secondary w-full py-3"
+                      @click="qrFileInput?.click()"
+                    >
+                      Upload QR image
+                    </button>
+                  </div>
                 </div>
+                <p v-if="scanHint" class="text-xs text-gray-500 dark:text-gray-400">{{ scanHint }}</p>
               </div>
+
+              <!-- Live scanner modal -->
+              <Teleport to="body">
+                <div
+                  v-if="scannerOpen"
+                  class="fixed inset-0 z-[100] flex flex-col bg-black/90"
+                  role="dialog"
+                  aria-modal="true"
+                  aria-label="Scan pairing QR code"
+                >
+                  <div
+                    class="flex items-center justify-between gap-2 px-4 py-3 bg-black/80 text-white"
+                    style="padding-top: max(0.75rem, env(safe-area-inset-top))"
+                  >
+                    <span class="text-sm font-medium">Point your camera at the QR on the TV</span>
+                    <button
+                      type="button"
+                      class="rounded-lg px-3 py-1.5 text-sm bg-white/10 hover:bg-white/20"
+                      @click="closeCameraScanner"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                  <div class="relative flex-1 min-h-0 flex items-center justify-center p-2">
+                    <video
+                      ref="scannerVideoRef"
+                      class="max-h-full max-w-full object-contain"
+                      playsinline
+                      muted
+                    />
+                  </div>
+                  <p v-if="scannerError" class="px-4 pb-4 text-center text-sm text-red-300">
+                    {{ scannerError }}
+                  </p>
+                </div>
+              </Teleport>
 
               <!-- Manual URL input -->
               <div>
@@ -194,11 +244,17 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { pairingAPI } from '@/services/api'
 import { useScreensStore } from '@/stores/screens'
 import { normalizeApiError } from '@/utils/apiError'
+import {
+  createLiveQrScanner,
+  decodeQrFromImageFile,
+  pairingUrlFromDecodedText,
+  isCameraScanSupported,
+} from '@/composables/usePairingQrScan'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import Card from '@/components/common/Card.vue'
 
@@ -221,8 +277,13 @@ const statusMessage = ref('')
 const statusMessageClass = ref('')
 const codeError = ref('')
 const qrUrlError = ref('')
-const cameraSupported = ref(false)
+const cameraScanSupported = ref(false)
 const qrFileInput = ref(null)
+const scannerOpen = ref(false)
+const scannerVideoRef = ref(null)
+const scannerError = ref('')
+const scanHint = ref('')
+let liveScanner = null
 
 // Computed
 const canPair = computed(() => {
@@ -260,19 +321,77 @@ function handleQRUrlInput() {
   }
 }
 
-function handleQRFileUpload(event) {
+async function handleQRFileUpload(event) {
   const file = event.target.files?.[0]
-  if (!file) return
-  
-  // For now, we'll just show a message
-  // In a production app, you'd use a QR code scanning library like jsQR
-  statusMessage.value = 'QR code scanning from image is not yet implemented. Please use the URL input or manual code entry.'
-  statusMessageClass.value = 'bg-yellow-50 text-yellow-800'
-  
-  // Reset file input
   if (qrFileInput.value) {
     qrFileInput.value.value = ''
   }
+  if (!file) return
+
+  statusMessage.value = ''
+  scanHint.value = ''
+  try {
+    const raw = await decodeQrFromImageFile(file)
+    if (!raw) {
+      statusMessage.value = 'No QR code found in that image. Try a clearer photo or paste the URL.'
+      statusMessageClass.value = 'bg-amber-50 text-amber-900 dark:bg-amber-950/40 dark:text-amber-200'
+      return
+    }
+    const url = pairingUrlFromDecodedText(raw)
+    if (!url) {
+      statusMessage.value =
+        'That QR code is not a ScreenGram pairing link. Scan the code shown on the Player Connect screen.'
+      statusMessageClass.value = 'bg-amber-50 text-amber-900 dark:bg-amber-950/40 dark:text-amber-200'
+      return
+    }
+    qrUrlInput.value = url
+    handleQRUrlInput()
+    statusMessage.value = 'Pairing link read from image. Tap "Pair Screen" to finish.'
+    statusMessageClass.value = 'bg-green-50 text-green-800 dark:bg-green-950/40 dark:text-green-200'
+  } catch (e) {
+    console.error('QR image decode:', e)
+    statusMessage.value = 'Could not read that image. Try another file or paste the URL.'
+    statusMessageClass.value = 'bg-red-50 text-red-800 dark:bg-red-950/40 dark:text-red-200'
+  }
+}
+
+function closeCameraScanner() {
+  scannerError.value = ''
+  if (liveScanner) {
+    liveScanner.stop()
+    liveScanner = null
+  }
+  scannerOpen.value = false
+}
+
+async function openCameraScanner() {
+  scannerError.value = ''
+  scanHint.value = ''
+  scannerOpen.value = true
+  await nextTick()
+  const video = scannerVideoRef.value
+  if (!video) {
+    closeCameraScanner()
+    return
+  }
+
+  liveScanner = createLiveQrScanner()
+  await liveScanner.start(video, {
+    onDecoded: (data) => {
+      const url = pairingUrlFromDecodedText(data)
+      if (!url) return
+      qrUrlInput.value = url
+      handleQRUrlInput()
+      statusMessage.value = 'Pairing link captured. Tap "Pair Screen" to finish.'
+      statusMessageClass.value = 'bg-green-50 text-green-800 dark:bg-green-950/40 dark:text-green-200'
+      closeCameraScanner()
+    },
+    onError: (err) => {
+      scannerError.value = err.message || 'Camera failed to start.'
+      liveScanner?.stop()
+      liveScanner = null
+    },
+  })
 }
 
 async function pairScreen() {
@@ -391,8 +510,11 @@ onMounted(() => {
     window.history.replaceState({}, document.title, window.location.pathname)
   }
   
-  // Check camera support
-  cameraSupported.value = 'mediaDevices' in navigator && 'getUserMedia' in navigator.mediaDevices
+  cameraScanSupported.value = isCameraScanSupported()
+})
+
+onBeforeUnmount(() => {
+  closeCameraScanner()
 })
 </script>
 

@@ -95,9 +95,14 @@ services:
 
   frontend:
     # Context = repo root; Vue SPA includes /docs (product documentation).
+    # VITE_* are build-time: must be /api so the browser hits Nginx, which proxies to backend:8000.
+    # Do not rely on host .env for these — wrong values (e.g. https://backend:8000/api) break the browser.
     build:
       context: .
       dockerfile: frontend/Dockerfile
+      args:
+        VITE_API_BASE_URL: /api
+        VITE_IOT_BASE_URL: /iot
     volumes:
       - backend_media:/app/media:ro
     depends_on:

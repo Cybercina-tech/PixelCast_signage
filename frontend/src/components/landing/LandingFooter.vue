@@ -1,11 +1,11 @@
 <template>
-  <footer class="bg-slate-950 text-slate-400 py-12 border-t border-slate-800">
+  <footer class="bg-slate-950 text-on-starfield-muted py-12 border-t border-slate-800">
     <div class="container mx-auto px-4 sm:px-6 lg:px-8">
       <div class="grid md:grid-cols-4 gap-8 mb-8">
         <!-- Product Info -->
         <div class="md:col-span-2">
           <h3 class="text-lg font-bold text-white mb-3">PixelCast Signage</h3>
-          <p class="text-sm text-slate-500 leading-relaxed max-w-md">
+          <p class="text-sm text-white/75 leading-relaxed max-w-md">
             Enterprise digital signage management platform for controlling and monitoring displays at scale.
           </p>
         </div>
@@ -45,7 +45,7 @@
               </a>
             </li>
             <li>
-              <span class="text-sm text-slate-500">Contact Support</span>
+              <span class="text-sm text-white/75">Contact Support</span>
             </li>
           </ul>
         </div>
@@ -53,10 +53,10 @@
       
       <!-- Bottom Bar -->
       <div class="pt-8 border-t border-slate-800 flex flex-col md:flex-row justify-between items-center gap-4">
-        <p class="text-sm text-slate-500">
+        <p class="text-sm text-white/70">
           © {{ currentYear }} PixelCast Signage. All rights reserved.
         </p>
-        <p class="text-xs text-slate-600">
+        <p class="text-xs text-white/55">
           Version 1.0.0
         </p>
       </div>

@@ -1,19 +1,33 @@
 import axios from 'axios'
 import { getNotification } from '@/composables/useNotification'
 import { normalizeApiError } from '@/utils/apiError'
+import {
+  getBrowserApiBaseUrl,
+  ensureBrowserReachableApiBase,
+  normalizeApiBaseForBrowser,
+  rewriteAxiosConfigIfDockerInternalHost,
+} from '@/utils/apiBaseUrl'
 
 /** Avoid stacking identical "Too many requests" toasts when many API calls hit 429 at once */
 let lastGlobal429ToastAt = 0
 const GLOBAL_429_TOAST_COOLDOWN_MS = 5000
 
-// API base URL - must be set via Vite env (e.g. /api behind Nginx/Traefik)
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
+// API base URL — Docker-only hostnames (backend:8000) are rewritten for the browser (see apiBaseUrl.js)
+const API_BASE_URL = normalizeApiBaseForBrowser(ensureBrowserReachableApiBase(getBrowserApiBaseUrl(), '/api'))
 
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
+})
+
+// Always resolve API base in the browser (env may wrongly point at Docker-only hosts like backend:8000)
+api.interceptors.request.use((config) => {
+  const next = normalizeApiBaseForBrowser(ensureBrowserReachableApiBase(getBrowserApiBaseUrl(), '/api'))
+  config.baseURL = next
+  api.defaults.baseURL = next
+  return rewriteAxiosConfigIfDockerInternalHost(config)
 })
 
 // Request interceptor to add auth token and handle FormData
@@ -281,7 +295,7 @@ export const authAPI = {
   refreshToken: (refresh) => {
     // Use a separate axios instance without interceptors to avoid infinite loop
     const refreshApi = axios.create({
-      baseURL: API_BASE_URL,
+      baseURL: normalizeApiBaseForBrowser(ensureBrowserReachableApiBase(getBrowserApiBaseUrl(), '/api')),
       headers: {
         'Content-Type': 'application/json',
       },
@@ -378,6 +392,7 @@ export const usersAPI = {
   unlock: (id) => api.post(`/users/${id}/unlock/`),
   revokeSessions: (id) => api.post(`/users/${id}/revoke_sessions/`),
   adminSetPassword: (id, data) => api.post(`/users/${id}/admin_set_password/`, data),
+  setTenant: (id, data) => api.post(`/users/${id}/set_tenant/`, data),
 }
 
 // Roles API
@@ -720,6 +735,23 @@ export const notificationCenterAPI = {
 
 // Platform SaaS (super-admin — requires PLATFORM_SAAS_ENABLED on server)
 export const platformAPI = {
+  blog: {
+    posts: {
+      list: (params) => api.get('/platform/blog/posts/', { params }),
+      retrieve: (id) => api.get(`/platform/blog/posts/${id}/`),
+      create: (data) => api.post('/platform/blog/posts/', data),
+      update: (id, data) => api.put(`/platform/blog/posts/${id}/`, data),
+      patch: (id, data) => api.patch(`/platform/blog/posts/${id}/`, data),
+      remove: (id) => api.delete(`/platform/blog/posts/${id}/`),
+      publish: (id) => api.post(`/platform/blog/posts/${id}/publish/`),
+    },
+    ai: {
+      getSettings: () => api.get('/platform/blog/ai/settings/'),
+      patchSettings: (data) => api.patch('/platform/blog/ai/settings/', data),
+      generate: (data) => api.post('/platform/blog/ai/generate/', data || {}),
+      logs: (params) => api.get('/platform/blog/ai/logs/', { params }),
+    },
+  },
   overview: () => api.get('/platform/overview/'),
   tenants: {
     list: (params) => api.get('/platform/tenants/', { params }),
@@ -743,6 +775,24 @@ export const platformAPI = {
     api.post('/platform/impersonate/stop/', { admin_refresh_token: adminRefreshToken }),
   billingCheckout: (data) => api.post('/platform/billing/checkout-session/', data || {}),
   billingPortal: (data) => api.post('/platform/billing/portal-session/', data || {}),
+  pricingPlans: {
+    list: () => api.get('/platform/pricing/plans/'),
+    retrieve: (key) => api.get(`/platform/pricing/plans/${key}/`),
+    create: (data) => api.post('/platform/pricing/plans/', data),
+    update: (key, data) => api.put(`/platform/pricing/plans/${key}/`, data),
+    patch: (key, data) => api.patch(`/platform/pricing/plans/${key}/`, data),
+    remove: (key) => api.delete(`/platform/pricing/plans/${key}/`),
+  },
+  pricingSettings: {
+    get: () => api.get('/platform/pricing/settings/'),
+    patch: (data) => api.patch('/platform/pricing/settings/', data),
+  },
+  pricingPromotions: {
+    list: () => api.get('/platform/pricing/promotions/'),
+    create: (data) => api.post('/platform/pricing/promotions/', data),
+    patch: (id, data) => api.patch(`/platform/pricing/promotions/${id}/`, data),
+    remove: (id) => api.delete(`/platform/pricing/promotions/${id}/`),
+  },
   tenantApiKeys: () => api.get('/platform/integrations/api-keys/'),
   createTenantApiKey: (data) => api.post('/platform/integrations/api-keys/', data || {}),
   revokeTenantApiKey: (id) => api.post(`/platform/integrations/api-keys/${id}/revoke/`),
@@ -752,6 +802,14 @@ export const platformAPI = {
     get: (tenantId) => api.get(`/platform/tenants/${tenantId}/license/`),
     update: (tenantId, data) => api.put(`/platform/tenants/${tenantId}/license/`, data),
     enforcementLogs: (tenantId) => api.get(`/platform/tenants/${tenantId}/license/enforcement-logs/`),
+  },
+  selfHostedLicenses: {
+    list: () => api.get('/platform/self-hosted-licenses/'),
+    detail: (id) => api.get(`/platform/self-hosted-licenses/${id}/`),
+    suspend: (id, data) => api.post(`/platform/self-hosted-licenses/${id}/suspend/`, data || {}),
+    reactivate: (id) => api.post(`/platform/self-hosted-licenses/${id}/reactivate/`),
+    setSuspicious: (id, data) => api.post(`/platform/self-hosted-licenses/${id}/suspicious/`, data || {}),
+    heartbeats: (id) => api.get(`/platform/self-hosted-licenses/${id}/heartbeats/`),
   },
   expenses: {
     list: (params) => api.get('/platform/billing/expenses/', { params }),
@@ -787,9 +845,26 @@ export const publicAPI = {
       meta: { suppressGlobalErrorToast: true },
     }),
   deployment: () =>
-    axios.get(`${API_BASE_URL}/public/deployment/`, {
+    axios.get(`${normalizeApiBaseForBrowser(ensureBrowserReachableApiBase(getBrowserApiBaseUrl(), '/api'))}/public/deployment/`, {
       headers: { 'Content-Type': 'application/json' },
     }),
+  pricing: () =>
+    api.get('/public/pricing/', {
+      meta: { suppressGlobalErrorToast: true },
+    }),
+  blog: {
+    posts: {
+      list: (params) =>
+        api.get('/public/blog/posts/', {
+          params,
+          meta: { suppressGlobalErrorToast: true },
+        }),
+      retrieve: (slug) =>
+        api.get(`/public/blog/posts/${encodeURIComponent(slug)}/`, {
+          meta: { suppressGlobalErrorToast: true },
+        }),
+    },
+  },
 }
 
 // Setup/Installation API

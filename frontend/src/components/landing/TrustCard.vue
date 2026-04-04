@@ -14,7 +14,7 @@
       </div>
       <div class="ml-4 flex-1">
         <h3 class="text-xl font-semibold mb-4 text-white">{{ title }}</h3>
-        <p class="text-slate-300 leading-relaxed">{{ description }}</p>
+        <p class="text-on-starfield leading-relaxed">{{ description }}</p>
       </div>
     </div>
   </div>

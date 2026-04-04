@@ -1,26 +1,28 @@
-/**
- * Origin used for API-relative dev setups (e.g. VITE_API_BASE_URL=/api).
- */
-function isInternalDockerHostname(hostname) {
-  if (!hostname) return false
-  const normalized = String(hostname).toLowerCase()
-  return ['backend', 'django', 'web', 'api'].includes(normalized)
-}
+import { getBrowserApiBaseUrl, isDockerServiceHostname } from '@/utils/apiBaseUrl'
 
 export function getBackendOrigin() {
+  if (typeof window !== 'undefined') {
+    try {
+      const apiBase = getBrowserApiBaseUrl()
+      const u = new URL(apiBase, window.location.origin)
+      return `${u.protocol}//${u.host}`
+    } catch {
+      return window.location.origin
+    }
+  }
   const apiBase = import.meta.env.VITE_API_BASE_URL || '/api'
   if (apiBase.startsWith('http://') || apiBase.startsWith('https://')) {
     try {
       const parsed = new URL(apiBase)
-      if (isInternalDockerHostname(parsed.hostname)) {
-        return typeof window !== 'undefined' ? window.location.origin : 'http://localhost:8000'
+      if (isDockerServiceHostname(parsed.hostname)) {
+        return 'http://localhost:8000'
       }
       return `${parsed.protocol}//${parsed.host}`
     } catch {
       return 'http://localhost:8000'
     }
   }
-  return typeof window !== 'undefined' ? window.location.origin : 'http://localhost:8000'
+  return 'http://localhost:8000'
 }
 
 /**
@@ -40,7 +42,7 @@ export function resolveMediaFileUrl(fileUrl) {
   if (url.startsWith('http://') || url.startsWith('https://')) {
     try {
       const parsed = new URL(url)
-      if (!isInternalDockerHostname(parsed.hostname)) {
+      if (!isDockerServiceHostname(parsed.hostname)) {
         return url
       }
       const publicOrigin = getBackendOrigin()

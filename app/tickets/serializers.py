@@ -11,6 +11,24 @@ from .models import (
 )
 
 
+class TicketPriorityField(serializers.ChoiceField):
+    """Accepts API codes plus UI aliases: normal→medium, urgent→critical."""
+
+    def __init__(self, **kwargs):
+        kwargs.setdefault('choices', Ticket.PRIORITY_CHOICES)
+        kwargs.setdefault('default', 'medium')
+        super().__init__(**kwargs)
+
+    def to_internal_value(self, data):
+        if isinstance(data, str):
+            key = data.strip().lower()
+            if key == 'normal':
+                data = 'medium'
+            elif key == 'urgent':
+                data = 'critical'
+        return super().to_internal_value(data)
+
+
 # ---------------------------------------------------------------
 # Shared / nested
 # ---------------------------------------------------------------
@@ -149,7 +167,7 @@ class TicketDetailSerializer(TicketListSerializer):
 class TicketCreateSerializer(serializers.Serializer):
     subject = serializers.CharField(max_length=255)
     body = serializers.CharField()
-    priority = serializers.ChoiceField(choices=Ticket.PRIORITY_CHOICES, default='medium')
+    priority = TicketPriorityField()
     category = serializers.CharField(max_length=128, required=False, default='')
     language = serializers.CharField(max_length=8, required=False, default='en')
 
@@ -160,7 +178,7 @@ class PlatformTicketCreateSerializer(serializers.Serializer):
     requester_id = serializers.IntegerField()
     subject = serializers.CharField(max_length=255)
     body = serializers.CharField()
-    priority = serializers.ChoiceField(choices=Ticket.PRIORITY_CHOICES, default='medium')
+    priority = TicketPriorityField()
     category = serializers.CharField(max_length=128, required=False, default='')
     language = serializers.CharField(max_length=8, required=False, default='en')
 
@@ -219,6 +237,23 @@ class TicketSlaPolicySerializer(serializers.ModelSerializer):
             'resolution_minutes', 'warning_threshold_pct', 'is_active', 'created_at',
         ]
         read_only_fields = ['id', 'created_at']
+
+    def validate_priority(self, value):
+        if value in (None, ''):
+            return value
+        key = str(value).strip().lower()
+        if key == 'normal':
+            value = 'medium'
+        elif key == 'urgent':
+            value = 'critical'
+        else:
+            value = key
+        allowed = {c[0] for c in TicketSlaPolicy.PRIORITY_CHOICES}
+        if value not in allowed:
+            raise serializers.ValidationError(
+                f'"{value}" is not a valid choice.',
+            )
+        return value
 
 
 class TicketRoutingRuleSerializer(serializers.ModelSerializer):

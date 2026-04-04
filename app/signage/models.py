@@ -399,7 +399,14 @@ class Screen(models.Model):
         Returns:
             bool: True if authentication successful, False otherwise
         """
-        return self.auth_token == auth_token and self.secret_key == secret_key
+        at = str(self.auth_token or '')
+        sk = str(self.secret_key or '')
+        ot = str(auth_token or '')
+        ok = str(secret_key or '')
+        try:
+            return secrets.compare_digest(at, ot) and secrets.compare_digest(sk, ok)
+        except (TypeError, ValueError):
+            return False
     
     def activate_template(self, template, sync_content=True):
         """

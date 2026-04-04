@@ -93,6 +93,31 @@ a:hover { text-decoration: underline; }
   font-size: 0.85rem;
 }
 
+.sidebar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 14px;
+}
+
+.btn-sidebar {
+  display: inline-block;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--line-500);
+  color: var(--text-200);
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-decoration: none;
+  background: rgba(12, 19, 43, 0.5);
+}
+
+.btn-sidebar:hover {
+  border-color: rgba(137, 179, 255, 0.55);
+  color: #fff;
+  text-decoration: none;
+}
+
 .toc-mobile {
   display: none;
   margin-bottom: 12px;

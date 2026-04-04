@@ -8,6 +8,7 @@ from .models import (
     TenantInvoice,
     TenantWebhookEndpoint,
 )
+from .pricing_models import BillingPromotion, PlatformBillingSettings, SubscriptionPlan
 
 
 @admin.register(Tenant)
@@ -52,3 +53,20 @@ class TenantWebhookEndpointAdmin(admin.ModelAdmin):
 class TenantAuditLogAdmin(admin.ModelAdmin):
     list_display = ('action', 'tenant', 'actor', 'created_at')
     list_filter = ('action',)
+
+
+@admin.register(PlatformBillingSettings)
+class PlatformBillingSettingsAdmin(admin.ModelAdmin):
+    list_display = ('id', 'default_free_screen_limit', 'trial_days_display', 'checkout_allow_promotion_codes')
+
+
+@admin.register(SubscriptionPlan)
+class SubscriptionPlanAdmin(admin.ModelAdmin):
+    list_display = ('key', 'label', 'kind', 'is_active', 'sort_order', 'stripe_price_id')
+    list_filter = ('kind', 'is_active')
+    search_fields = ('key', 'label', 'stripe_price_id')
+
+
+@admin.register(BillingPromotion)
+class BillingPromotionAdmin(admin.ModelAdmin):
+    list_display = ('label', 'stripe_promotion_code_id', 'is_active', 'sort_order')

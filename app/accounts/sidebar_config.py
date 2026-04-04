@@ -107,6 +107,7 @@ ROLE_PERMISSIONS = {
     'Employee': [
         'view_dashboard',
         'view_screens', 'create_screens', 'edit_screens',
+        'view_templates', 'create_templates', 'edit_templates',
         'view_schedules', 'create_schedules', 'edit_schedules',
         'view_contents', 'create_contents', 'edit_contents',
         'view_tickets', 'create_tickets',
@@ -173,15 +174,6 @@ SIDEBAR_ITEMS = [
         'icon': 'HomeIcon',
         'path': '/dashboard',
         'required_permissions': ['view_dashboard'],
-        'badge': None,
-        'children': None,
-    },
-    {
-        'id': 'super-admin',
-        'title': 'Super Admin',
-        'icon': 'ShieldCheckIcon',
-        'path': '/super-admin',
-        'required_permissions': ['view_platform'],
         'badge': None,
         'children': None,
     },
@@ -277,28 +269,6 @@ SIDEBAR_ITEMS = [
     },
 ]
 
-# Injected when settings.PLATFORM_SAAS_ENABLED is True (see filter_sidebar_items).
-PLATFORM_SIDEBAR_ITEMS = [
-    {
-        'id': 'platform',
-        'title': 'SaaS customers',
-        'icon': 'BuildingOffice2Icon',
-        'path': None,
-        'required_permissions': ['view_platform'],
-        'badge': None,
-        'children': [
-            {
-                'id': 'platform-tenants',
-                'title': 'Customers',
-                'icon': 'UsersIcon',
-                'path': '/super-admin/customers',
-                'required_permissions': ['view_platform'],
-                'badge': None,
-            },
-        ],
-    },
-]
-
 
 def filter_sidebar_items(user):
     """
@@ -310,15 +280,10 @@ def filter_sidebar_items(user):
     Returns:
         list: Filtered sidebar items that user has access to
     """
-    from django.conf import settings
-
     if not user or not user.is_authenticated:
         return []
 
     items_source = list(SIDEBAR_ITEMS)
-    if getattr(settings, 'PLATFORM_SAAS_ENABLED', False):
-        items_source = items_source + PLATFORM_SIDEBAR_ITEMS
-
     user_permissions = get_user_permissions(user)
     filtered_items = []
     

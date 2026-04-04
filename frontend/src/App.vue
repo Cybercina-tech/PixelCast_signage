@@ -1,5 +1,10 @@
 <template>
-  <div :class="['w-screen', route.name === 'landing' ? 'min-h-screen overflow-x-hidden' : 'h-screen overflow-hidden']">
+  <div
+    :class="[
+      'w-full max-w-[100vw]',
+      shellClass,
+    ]"
+  >
     <RouterView />
     <NotificationContainer />
     <DeleteConfirmation />
@@ -7,7 +12,7 @@
 </template>
 
 <script setup>
-import { onBeforeMount, onMounted, watch } from 'vue'
+import { computed, onBeforeMount, onMounted, watch } from 'vue'
 import { RouterView, useRoute } from 'vue-router'
 import { useAuthStore } from './stores/auth'
 import { useThemeStore } from './stores/theme'
@@ -15,8 +20,25 @@ import { useSidebarStore } from './stores/sidebar'
 import { useNotificationStore } from './stores/notification'
 import NotificationContainer from './components/common/NotificationContainer.vue'
 import DeleteConfirmation from './components/common/DeleteConfirmation.vue'
+import { useRouteHead } from '@/composables/useRouteHead'
+
+useRouteHead()
 
 const route = useRoute()
+const isPlayerRoute = computed(() => {
+  const n = route.name
+  if (n === 'player-connect' || n === 'player-screen' || n === 'player') return true
+  return typeof route.path === 'string' && route.path.startsWith('/player')
+})
+const shellClass = computed(() => {
+  if (route.name === 'landing') {
+    return 'min-h-screen min-h-[100dvh] overflow-x-hidden'
+  }
+  if (isPlayerRoute.value) {
+    return 'min-h-[100dvh] h-[100dvh] overflow-hidden overscroll-none'
+  }
+  return 'min-h-[100dvh] h-[100dvh] overflow-hidden'
+})
 const authStore = useAuthStore()
 const themeStore = useThemeStore()
 const sidebarStore = useSidebarStore()
@@ -32,7 +54,7 @@ onBeforeMount(() => {
 
 onMounted(async () => {
   // Skip auth initialization on player route (player uses its own authentication)
-  if (route.name !== 'player') {
+  if (!isPlayerRoute.value) {
     // Initialize auth state on app startup (restore session if token exists)
     await authStore.initialize()
     
@@ -46,7 +68,7 @@ onMounted(async () => {
 // Watch for user changes and update sidebar (skip on player route)
 watch(() => authStore.user, async (newUser) => {
   // Skip sidebar updates on player route
-  if (route.name === 'player') return
+  if (isPlayerRoute.value) return
   
   if (newUser) {
     await sidebarStore.fetchSidebarItems()

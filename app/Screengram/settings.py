@@ -16,6 +16,8 @@ from urllib.parse import urlparse
 from dotenv import load_dotenv
 from typing import Any, Optional, Union
 
+from django.core.exceptions import ImproperlyConfigured
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -99,11 +101,17 @@ except ImportError:
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-# In production, set SECRET_KEY as an environment variable
-SECRET_KEY = env('SECRET_KEY', default='django-insecure-7szgl4mmm9n0!&u3d4-=iut39ffowsvlr^r9img3r!izj=n3tq')
+_DEFAULT_DJANGO_SECRET_KEY = 'django-insecure-7szgl4mmm9n0!&u3d4-=iut39ffowsvlr^r9img3r!izj=n3tq'
+SECRET_KEY = env('SECRET_KEY', default=_DEFAULT_DJANGO_SECRET_KEY)
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env('DEBUG', default=False, cast=bool)
+
+_LOADING_TEST_SETTINGS = (os.environ.get('DJANGO_SETTINGS_MODULE') or '').endswith('test_settings')
+if not DEBUG and not _LOADING_TEST_SETTINGS and SECRET_KEY == _DEFAULT_DJANGO_SECRET_KEY:
+    raise ImproperlyConfigured(
+        'SECRET_KEY must be set to a unique value in the environment when DEBUG is False.'
+    )
 
 # Allowed hosts - safe default for development
 ALLOWED_HOSTS = env('ALLOWED_HOSTS', default='localhost,127.0.0.1,backend,frontend', cast=list)
@@ -124,13 +132,50 @@ if not CSRF_TRUSTED_ORIGINS:
         if parsed_base_url.scheme in ('http', 'https') and parsed_base_url.netloc:
             CSRF_TRUSTED_ORIGINS = [f"{parsed_base_url.scheme}://{parsed_base_url.netloc}"]
 
-# CORS Configuration
+# HTTPS / cookie security (see also: BASE_URL, USE_BEHIND_PROXY)
+_tls_flag = os.environ.get('SECURE_SSL_REDIRECT', '').strip().lower()
+_base_for_tls = env('BASE_URL', default='')
+_https_from_base = isinstance(_base_for_tls, str) and _base_for_tls.lower().startswith('https://')
+if _tls_flag in ('true', '1', 'yes', 'on'):
+    SECURE_SSL_REDIRECT = True
+elif _tls_flag in ('false', '0', 'no', 'off'):
+    SECURE_SSL_REDIRECT = False
+else:
+    SECURE_SSL_REDIRECT = _https_from_base
+
+_scookie = os.environ.get('SESSION_COOKIE_SECURE', '').strip().lower()
+if _scookie in ('true', '1', 'yes', 'on'):
+    SESSION_COOKIE_SECURE = True
+elif _scookie in ('false', '0', 'no', 'off'):
+    SESSION_COOKIE_SECURE = False
+else:
+    SESSION_COOKIE_SECURE = SECURE_SSL_REDIRECT
+
+_ccookie = os.environ.get('CSRF_COOKIE_SECURE', '').strip().lower()
+if _ccookie in ('true', '1', 'yes', 'on'):
+    CSRF_COOKIE_SECURE = True
+elif _ccookie in ('false', '0', 'no', 'off'):
+    CSRF_COOKIE_SECURE = False
+else:
+    CSRF_COOKIE_SECURE = SECURE_SSL_REDIRECT
+
+SECURE_HSTS_SECONDS = env('SECURE_HSTS_SECONDS', default=0, cast=int)
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_REFERRER_POLICY = 'same-origin'
+
+if env('USE_BEHIND_PROXY', default=False, cast=bool):
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+# CORS Configuration — localhost defaults; add production SPA origins via CORS_ALLOWED_ORIGINS (comma-separated)
+_cors_from_env = env('CORS_ALLOWED_ORIGINS', default='', cast=list)
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",  # Vite dev server
-    "http://127.0.0.1:5173",
-    "http://localhost:3000",  # Alternative dev port
-    "http://127.0.0.1:3000",
+    'http://localhost:5173',  # Vite dev server
+    'http://127.0.0.1:5173',
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
 ]
+if _cors_from_env:
+    CORS_ALLOWED_ORIGINS = list(dict.fromkeys([*CORS_ALLOWED_ORIGINS, *_cors_from_env]))
 
 # Allow credentials (cookies, authorization headers, etc.)
 CORS_ALLOW_CREDENTIALS = True
@@ -163,6 +208,9 @@ ACCOUNT_LOCKOUT_ENABLED = os.environ.get('ACCOUNT_LOCKOUT_ENABLED', 'True').lowe
 MAX_LOGIN_ATTEMPTS = int(os.environ.get('MAX_LOGIN_ATTEMPTS', '5'))
 LOCKOUT_DURATION = int(os.environ.get('LOCKOUT_DURATION', '900'))  # 15 minutes
 
+# GET /api/core/deploy/status/ — requires header X-Deployment-Status-Secret when set; empty = disabled
+DEPLOYMENT_STATUS_SECRET = env('DEPLOYMENT_STATUS_SECRET', default='')
+
 # Licensing Configuration
 LICENSE_SERVER_URL = env('LICENSE_SERVER_URL', default='')
 CODECANYON_TOKEN = env('CODECANYON_TOKEN', default='')
@@ -171,6 +219,20 @@ LICENSE_ENFORCEMENT_ENABLED = env('LICENSE_ENFORCEMENT_ENABLED', default=True, c
 LICENSE_OFFLINE_GRACE_HOURS = env('LICENSE_OFFLINE_GRACE_HOURS', default=72, cast=int)
 LICENSE_CACHE_TTL_SECONDS = env('LICENSE_CACHE_TTL_SECONDS', default=900, cast=int)
 LICENSE_SERVER_TIMEOUT_SECONDS = env('LICENSE_SERVER_TIMEOUT_SECONDS', default=8, cast=int)
+# Self-hosted → operator gateway: base URL for /activate/, /heartbeat/, /validate/ (v1).
+# If empty, derived from LICENSE_SERVER_URL by stripping a trailing /validate path when possible.
+LICENSE_GATEWAY_BASE_URL = env('LICENSE_GATEWAY_BASE_URL', default='')
+# When True and PLATFORM_SAAS_ENABLED, expose /api/license-registry/v1/* and Envato-backed activate.
+LICENSE_REGISTRY_API_ENABLED = env('LICENSE_REGISTRY_API_ENABLED', default=True, cast=bool)
+# Optional: reject validate-by-token if last registry heartbeat is older than this (0 = disabled).
+LICENSE_REGISTRY_HEARTBEAT_MAX_AGE_HOURS = env('LICENSE_REGISTRY_HEARTBEAT_MAX_AGE_HOURS', default=0, cast=int)
+# Super-admin list: mark installation inactive if no heartbeat for this long.
+LICENSE_REGISTRY_INACTIVE_AFTER_HOURS = env('LICENSE_REGISTRY_INACTIVE_AFTER_HOURS', default=72, cast=int)
+LICENSE_REGISTRY_ACTIVATE_RATE_PER_MINUTE = env('LICENSE_REGISTRY_ACTIVATE_RATE_PER_MINUTE', default=20, cast=int)
+LICENSE_REGISTRY_HEARTBEAT_RATE_PER_MINUTE = env('LICENSE_REGISTRY_HEARTBEAT_RATE_PER_MINUTE', default=60, cast=int)
+LICENSE_REGISTRY_VALIDATE_RATE_PER_MINUTE = env('LICENSE_REGISTRY_VALIDATE_RATE_PER_MINUTE', default=120, cast=int)
+# Reported to the license gateway on activate/heartbeat/validate (optional).
+SCREENGRAM_APP_VERSION = env('SCREENGRAM_APP_VERSION', default='')
 
 # Platform SaaS (multi-tenant super-admin, Stripe billing). Off by default for self-hosted license installs.
 # DEPLOYMENT_MODE: saas | self_hosted | hybrid — see core.deployment.resolve_effective_platform_saas
@@ -215,6 +277,7 @@ INSTALLED_APPS = [
     'content_validation',  # App for content validation
     'analytics',  # App for analytics dashboard
     'tickets',  # Helpdesk ticket system (SaaS multi-tenant)
+    'blog',  # Marketing blog (public + platform admin API)
     'drf_spectacular',  # OpenAPI/Swagger documentation
     'api_docs',  # API documentation configuration
 ]
@@ -495,11 +558,23 @@ CONTENT_STORAGE = {
 
 # Notification System Configuration
 NOTIFICATIONS_ASYNC = True  # Use Celery for async delivery (set False for sync in development)
-# Generate encryption key if not set (for development only - use env var in production)
+_notif_key = (os.environ.get('NOTIFICATION_ENCRYPTION_KEY') or '').strip()
 if Fernet:
-    NOTIFICATION_ENCRYPTION_KEY = os.environ.get('NOTIFICATION_ENCRYPTION_KEY', Fernet.generate_key().decode())
+    if _notif_key:
+        NOTIFICATION_ENCRYPTION_KEY = _notif_key
+    elif DEBUG or _LOADING_TEST_SETTINGS:
+        NOTIFICATION_ENCRYPTION_KEY = Fernet.generate_key().decode()
+    else:
+        raise ImproperlyConfigured(
+            'NOTIFICATION_ENCRYPTION_KEY must be set when DEBUG is False. '
+            'Generate one with: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"'
+        )
 else:
-    NOTIFICATION_ENCRYPTION_KEY = os.environ.get('NOTIFICATION_ENCRYPTION_KEY', None)
+    NOTIFICATION_ENCRYPTION_KEY = _notif_key or None
+    if not DEBUG and not _LOADING_TEST_SETTINGS and not NOTIFICATION_ENCRYPTION_KEY:
+        raise ImproperlyConfigured(
+            'Install cryptography and set NOTIFICATION_ENCRYPTION_KEY when DEBUG is False.'
+        )
 
 # Celery Configuration (for async notifications)
 _celery_redis_host = env('REDIS_HOST', default='127.0.0.1')

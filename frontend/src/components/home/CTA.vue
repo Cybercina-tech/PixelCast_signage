@@ -15,7 +15,7 @@
           :initial="{ opacity: 0, y: 30 }"
           :visible="{ opacity: 1, y: 0 }"
           :delay="100"
-          class="text-xl text-slate-300 mb-10 leading-relaxed"
+          class="text-xl text-on-starfield mb-10 leading-relaxed"
         >
           Join organizations using PixelCast Signage to streamline their digital signage operations
         </p>

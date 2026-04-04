@@ -55,9 +55,10 @@
     </div>
     <!-- Take Screenshot Button -->
     <button
-      @click="$emit('take-screenshot')"
-      class="mt-4 w-full px-4 py-2 bg-blue-600/80 hover:bg-blue-600 text-white rounded-lg transition-all duration-200 flex items-center justify-center gap-2 backdrop-blur-sm border border-blue-500/30"
+      type="button"
+      class="mt-4 w-full min-h-[44px] px-4 py-3 bg-blue-600/80 hover:bg-blue-600 text-white rounded-lg transition-all duration-200 flex items-center justify-center gap-2 backdrop-blur-sm border border-blue-500/30"
       :disabled="!isOnline || loading"
+      @click="$emit('take-screenshot')"
     >
       <svg
         v-if="!loading"

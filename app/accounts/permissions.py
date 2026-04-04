@@ -54,13 +54,13 @@ class RolePermissions:
         if user.is_developer():
             return True
 
-        if user.is_manager():
-            # Manager can edit their own resources
+        if user.is_manager() or user.is_employee():
+            # Manager / Employee: only resources they own or created
             if hasattr(resource, 'owner') and resource.owner == user:
                 return True
             if hasattr(resource, 'created_by') and resource.created_by == user:
                 return True
-        
+
         return False
     
     @staticmethod

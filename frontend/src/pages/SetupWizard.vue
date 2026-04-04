@@ -14,7 +14,7 @@
         to="/"
         class="exit-btn cosmic-exit inline-flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2.5 rounded-xl bg-white/5 border border-white/10 backdrop-blur-md text-slate-300 hover:bg-white/10 hover:border-indigo-500/60 hover:text-indigo-200 transition-all duration-300 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:ring-offset-2 focus:ring-offset-[#0B0E14]"
         title="All installation progress will be lost."
-        aria-label="Back to landing page. All installation progress will be lost."
+        aria-label="Back to Home. All installation progress will be lost."
       >
         <ArrowLeftIcon class="w-5 h-5 flex-shrink-0 cosmic-icon" aria-hidden="true" />
         <span class="hidden sm:inline text-sm font-medium tracking-wide">Back to Base</span>
@@ -571,7 +571,42 @@
                     <CheckCircleIcon class="w-10 h-10 text-emerald-400 cosmic-icon" />
                   </div>
                   <h3 class="cosmic-heading text-2xl font-bold text-white mb-2">Installation Complete!</h3>
-                  <p class="text-slate-400 mb-6">Your PixelCast command center is ready.</p>
+                  <p class="text-slate-400 mb-4">Your PixelCast command center is ready.</p>
+
+                  <div
+                    v-if="!postInstallLicenseDone"
+                    class="max-w-md mx-auto mb-6 rounded-xl border border-white/10 bg-white/5 p-4 text-left"
+                  >
+                    <p class="text-xs text-slate-400 mb-2">Optional: activate your CodeCanyon license now (uses your new admin account).</p>
+                    <label class="block text-[11px] text-slate-500 mb-1">Purchase code</label>
+                    <input
+                      v-model="postInstallPurchaseCode"
+                      type="text"
+                      class="cosmic-input w-full px-3 py-2 rounded-lg bg-black/40 border border-white/10 text-white text-sm mb-3"
+                      placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                      autocomplete="off"
+                    />
+                    <div class="flex flex-wrap gap-2 justify-center">
+                      <button
+                        type="button"
+                        class="px-4 py-2 rounded-lg text-sm text-slate-200 border border-white/20 bg-white/5 hover:bg-white/10 transition-colors"
+                        :disabled="postInstallLicenseLoading"
+                        @click="activateLicenseAfterInstall"
+                      >
+                        {{ postInstallLicenseLoading ? 'Activating…' : 'Activate license' }}
+                      </button>
+                      <button
+                        type="button"
+                        class="text-xs text-slate-500 underline px-2 py-2"
+                        @click="postInstallLicenseDone = true"
+                      >
+                        Skip
+                      </button>
+                    </div>
+                    <p v-if="postInstallLicenseError" class="text-red-400 text-xs mt-2 text-center">{{ postInstallLicenseError }}</p>
+                  </div>
+                  <p v-else class="text-emerald-400/90 text-sm mb-4">License step skipped or completed.</p>
+
                   <router-link
                     to="/login"
                     class="cosmic-btn inline-flex items-center px-8 py-3.5 rounded-xl text-base font-semibold text-white"
@@ -607,8 +642,19 @@ import {
 import axios from 'axios'
 import { setupAPI } from '@/services/api'
 import { normalizeApiError } from '@/utils/apiError'
+import {
+  getBrowserApiBaseUrl,
+  ensureBrowserReachableApiBase,
+  normalizeApiBaseForBrowser,
+} from '@/utils/apiBaseUrl'
 
 const router = useRouter()
+const authStore = useAuthStore()
+
+const postInstallPurchaseCode = ref('')
+const postInstallLicenseLoading = ref(false)
+const postInstallLicenseError = ref('')
+const postInstallLicenseDone = ref(false)
 
 // Steps configuration
 const steps = [
@@ -782,6 +828,40 @@ const createAdmin = async () => {
   }
 }
 
+async function activateLicenseAfterInstall() {
+  const code = postInstallPurchaseCode.value.trim()
+  if (!code) {
+    postInstallLicenseError.value = 'Enter your purchase code'
+    return
+  }
+  postInstallLicenseLoading.value = true
+  postInstallLicenseError.value = ''
+  try {
+    const loginResult = await authStore.login({
+      username: setupData.admin.username.trim().toLowerCase(),
+      password: setupData.admin.password,
+    })
+    if (loginResult?.needs2fa) {
+      postInstallLicenseError.value =
+        'Two-factor authentication is required. Log in manually, then open License settings.'
+      return
+    }
+    const host =
+      typeof window !== 'undefined' && window.location?.host ? window.location.host : ''
+    await licenseAPI.activate({ purchase_code: code, domain: host })
+    postInstallLicenseDone.value = true
+  } catch (e) {
+    const msg =
+      e?.response?.data?.message ||
+      e?.response?.data?.detail ||
+      e?.message ||
+      'Activation failed'
+    postInstallLicenseError.value = typeof msg === 'string' ? msg : 'Activation failed'
+  } finally {
+    postInstallLicenseLoading.value = false
+  }
+}
+
 const startInstallation = async () => {
   // Step 1: Run migrations
   progressSteps[0].status = 'loading'
@@ -831,7 +911,9 @@ const startInstallation = async () => {
 
 onMounted(async () => {
   // Check installation status with retry to survive transient 502 during backend startup.
-  const apiBase = import.meta.env.VITE_API_BASE_URL || '/api'
+  const apiBase = normalizeApiBaseForBrowser(
+    ensureBrowserReachableApiBase(getBrowserApiBaseUrl(), '/api')
+  )
   const statusClient = axios.create({
     baseURL: apiBase,
     timeout: 4000,
@@ -851,8 +933,11 @@ onMounted(async () => {
       setupData.db.port = Number(response.data.db_port || setupData.db.port)
       setupData.db.name = response.data.db_name || setupData.db.name
       setupData.db.user = response.data.db_user || setupData.db.user
-      const serverPassword = String(response.data.db_password || '').trim()
-      setupData.db.password = serverPassword || DEFAULT_DB_PASSWORD
+      if (response.data.db_password_configured) {
+        setupData.db.password = ''
+      } else {
+        setupData.db.password = DEFAULT_DB_PASSWORD
+      }
       break
     } catch (error) {
       const statusCode = error?.response?.status

@@ -4,6 +4,8 @@ export const SUPER_ADMIN_NAV_GROUPS = [
     label: 'Overview',
     items: [
       { label: 'Dashboard', to: '/super-admin', icon: 'ChartBarIcon', match: 'exact' },
+      { label: 'Blog', to: '/super-admin/blog', icon: 'NewspaperIcon' },
+      { label: 'Blog AI', to: '/super-admin/blog/ai', icon: 'SparklesIcon' },
       { label: 'Reports & cohorts', to: '/super-admin/reports', icon: 'ChartBarIcon' },
     ],
   },
@@ -21,6 +23,8 @@ export const SUPER_ADMIN_NAV_GROUPS = [
     label: 'Revenue',
     items: [
       { label: 'Billing', to: '/super-admin/billing', icon: 'CurrencyDollarIcon' },
+      { label: 'Pricing catalog', to: '/super-admin/pricing', icon: 'TagIcon' },
+      { label: 'Self-hosted licenses', to: '/super-admin/self-hosted-licenses', icon: 'KeyIcon' },
     ],
   },
   {

@@ -420,6 +420,13 @@ class ChangePasswordSerializer(serializers.Serializer):
 class ScreenGramTokenObtainPairSerializer(TokenObtainPairSerializer):
     token_class = ScreenGramRefreshToken
 
+    def validate(self, attrs):
+        data = super().validate(attrs)
+        from saas_platform.tenant_assignment import ensure_user_tenant
+
+        ensure_user_tenant(self.user)
+        return data
+
 
 class ScreenGramTokenRefreshSerializer(TokenRefreshSerializer):
     token_class = ScreenGramRefreshToken

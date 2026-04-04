@@ -142,6 +142,7 @@ import {
   BuildingOffice2Icon,
   UsersIcon,
   CurrencyDollarIcon,
+  TagIcon,
   ArrowPathIcon,
   BellAlertIcon,
   ChartBarIcon,
@@ -152,6 +153,9 @@ import {
   FlagIcon,
   Cog6ToothIcon,
   EnvelopeIcon,
+  NewspaperIcon,
+  SparklesIcon,
+  KeyIcon,
 } from '@heroicons/vue/24/outline'
 import { SUPER_ADMIN_NAV_GROUPS } from '@/config/superAdminNav'
 
@@ -164,6 +168,7 @@ const iconMap = {
   BuildingOffice2Icon,
   UsersIcon,
   CurrencyDollarIcon,
+  TagIcon,
   ArrowPathIcon,
   BellAlertIcon,
   ChartBarIcon,
@@ -174,6 +179,9 @@ const iconMap = {
   FlagIcon,
   Cog6ToothIcon,
   EnvelopeIcon,
+  NewspaperIcon,
+  SparklesIcon,
+  KeyIcon,
 }
 
 function iconFor(name) {

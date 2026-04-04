@@ -8,6 +8,7 @@
  * - Real-time event handling
  */
 import { ref } from 'vue'
+import { isDockerServiceHostname } from '@/utils/apiBaseUrl'
 
 /**
  * Base WebSocket origin (no path): ws(s)://host[:port]
@@ -21,9 +22,13 @@ function getWebSocketOrigin() {
     try {
       const s = String(raw).trim()
       const u = new URL(s.includes('://') ? s : `http://${s}`)
-      const proto =
-        u.protocol === 'https:' || u.protocol === 'wss:' ? 'wss:' : 'ws:'
-      return `${proto}//${u.host}`
+      if (isDockerServiceHostname(u.hostname)) {
+        /* browser cannot resolve Docker service names */
+      } else {
+        const proto =
+          u.protocol === 'https:' || u.protocol === 'wss:' ? 'wss:' : 'ws:'
+        return `${proto}//${u.host}`
+      }
     } catch {
       /* fall through */
     }

@@ -408,6 +408,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useThemeStore } from '@/stores/theme'
 import { useNotification } from '@/composables/useNotification'
 import { notificationCenterAPI } from '@/services/api'
+import { getBrowserApiBaseUrl } from '@/utils/apiBaseUrl'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import Card from '@/components/common/Card.vue'
 import NeonToggle from '@/components/common/NeonToggle.vue'
@@ -525,7 +526,7 @@ const securitySettings = ref({
 })
 
 const systemSettings = ref({
-  apiBaseUrl: import.meta.env.VITE_API_BASE_URL || '/api',
+  apiBaseUrl: getBrowserApiBaseUrl(),
   wsUrl: import.meta.env.VITE_WS_HOST || 'ws://localhost:8000/ws/dashboard/',
   storageBackend: 'local',
   s3Bucket: '',

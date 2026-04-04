@@ -122,6 +122,9 @@ class SetupStatusSerializer(serializers.Serializer):
     admin_exists = serializers.BooleanField(read_only=True)
     db_name = serializers.CharField(read_only=True, required=False)
     db_user = serializers.CharField(read_only=True, required=False)
-    db_password = serializers.CharField(read_only=True, required=False)
+    db_password_configured = serializers.BooleanField(
+        read_only=True,
+        help_text='True if DATABASES password is non-empty (value is never returned).',
+    )
     db_host = serializers.CharField(read_only=True, required=False)
     db_port = serializers.CharField(read_only=True, required=False)

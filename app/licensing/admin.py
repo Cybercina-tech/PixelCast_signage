@@ -1,5 +1,29 @@
 from django.contrib import admin
-from .models import LicenseState
+
+from .models import (
+    LicenseRegistryHeartbeatLog,
+    LicenseRegistryInstallation,
+    LicenseRegistryPurchase,
+    LicenseState,
+)
+
+
+@admin.register(LicenseRegistryPurchase)
+class LicenseRegistryPurchaseAdmin(admin.ModelAdmin):
+    list_display = ("code_fingerprint", "buyer_username", "envato_item_id", "sold_at", "updated_at")
+    search_fields = ("buyer_username", "code_fingerprint")
+
+
+@admin.register(LicenseRegistryInstallation)
+class LicenseRegistryInstallationAdmin(admin.ModelAdmin):
+    list_display = ("domain", "purchase", "suspended", "suspicious", "last_heartbeat_at", "app_version")
+    list_filter = ("suspended", "suspicious")
+    search_fields = ("domain", "notes")
+
+
+@admin.register(LicenseRegistryHeartbeatLog)
+class LicenseRegistryHeartbeatLogAdmin(admin.ModelAdmin):
+    list_display = ("installation", "received_at", "app_version", "ip_address")
 
 
 @admin.register(LicenseState)

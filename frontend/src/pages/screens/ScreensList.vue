@@ -174,7 +174,6 @@
           v-for="screen in paginatedScreens"
           :key="screen.id"
           :screen="screen"
-          @refresh="handleRefresh"
           @identify="handleIdentify"
           @edit="handleEdit"
         />
@@ -234,13 +233,6 @@
                 <td class="px-6 py-4 whitespace-nowrap text-right">
                   <div class="flex items-center justify-end gap-2">
                     <button
-                      @click="handleRefresh(screen)"
-                      class="action-btn-edit p-2 rounded-lg transition-all duration-400"
-                      title="Refresh"
-                    >
-                      <ArrowPathIcon class="w-4 h-4" />
-                    </button>
-                    <button
                       @click="handleIdentify(screen)"
                       class="action-btn-view p-2 rounded-lg transition-all duration-400"
                       title="Identify"
@@ -250,7 +242,7 @@
                     <button
                       @click="handleEdit(screen)"
                       class="action-btn-edit p-2 rounded-lg transition-all duration-400"
-                      title="Edit"
+                      title="Manage"
                     >
                       <PencilIcon class="w-4 h-4" />
                     </button>
@@ -401,20 +393,6 @@ async function prefetchActiveTemplates() {
       }
     })
   )
-}
-
-const handleRefresh = async (screen) => {
-  try {
-    await commandsStore.createCommand({
-      screen_id: screen.id,
-      type: 'refresh',
-      payload: {},
-      priority: 5,
-    })
-    notify.success(`Refresh command sent to ${screen.name || 'screen'}`)
-  } catch (error) {
-    notify.error(error.response?.data?.detail || 'Failed to send refresh command')
-  }
 }
 
 const handleIdentify = async (screen) => {

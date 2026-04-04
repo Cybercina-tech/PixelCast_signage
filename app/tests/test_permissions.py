@@ -32,6 +32,11 @@ class PermissionTests(BaseAPITestCase):
         employee = self.create_user(role='Employee')
         own_screen = self.create_screen(owner=employee)
         self.assertTrue(RolePermissions.can_view_resource(employee, own_screen))
+        own_template = self.create_template(created_by=employee)
+        self.assertTrue(RolePermissions.can_edit_resource(employee, own_template))
+        other = self.create_user(role='Employee')
+        other_template = self.create_template(created_by=other)
+        self.assertFalse(RolePermissions.can_edit_resource(employee, other_template))
 
     def test_command_execution_roles(self):
         manager = self.create_user(role='Manager')

@@ -6,7 +6,7 @@
           <p class="text-cyan-300 text-xs font-semibold tracking-[0.16em] uppercase">PixelCast Data Center</p>
           <h1 class="text-xl sm:text-2xl font-bold">TV Catalog</h1>
         </div>
-        <router-link to="/" class="btn-outline px-4 py-2 rounded-lg text-sm">Back to Landing</router-link>
+        <router-link to="/" class="btn-outline px-4 py-2 rounded-lg text-sm">Back to Home</router-link>
       </div>
     </header>
 
@@ -282,7 +282,6 @@ async function fetchCatalog() {
 }
 
 onMounted(() => {
-  document.title = 'Data Center - PixelCast Signage'
   loadApkDownloadUrl()
   fetchCatalog()
 })

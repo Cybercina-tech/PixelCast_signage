@@ -27,7 +27,7 @@
           <slot />
         </div>
       </main>
-      <Footer />
+      <Footer :class="{ 'hidden lg:block': isEditorRoute }" />
     </div>
   </div>
 </template>

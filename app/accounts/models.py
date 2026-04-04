@@ -260,7 +260,7 @@ class User(AbstractUser):
         return self.is_developer() or self.is_manager()
 
     def can_manage_templates(self):
-        """Developer and Manager may manage templates."""
+        """Legacy helper: Developer/Manager full template management. Employees use create_templates/edit_templates + own-resource checks."""
         return self.is_developer() or self.is_manager()
 
     def can_view_reports(self):

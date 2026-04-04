@@ -26,7 +26,7 @@
               {{ formatStatus(ticket.status) }}
             </span>
             <span class="text-xs px-2.5 py-1 rounded-full border capitalize" :class="priorityClass(ticket.priority)">
-              {{ ticket.priority }}
+              {{ formatPriority(ticket.priority) }}
             </span>
           </div>
         </div>
@@ -235,11 +235,16 @@ function statusClass(status) {
 function priorityClass(priority) {
   const map = {
     low: 'border-slate-500/30 bg-slate-500/10 text-slate-400',
-    normal: 'border-blue-500/30 bg-blue-500/10 text-blue-300',
+    medium: 'border-blue-500/30 bg-blue-500/10 text-blue-300',
     high: 'border-orange-500/30 bg-orange-500/10 text-orange-300',
-    urgent: 'border-red-500/30 bg-red-500/10 text-red-300',
+    critical: 'border-red-500/30 bg-red-500/10 text-red-300',
   }
   return map[priority] || 'border-border-color/70 bg-card text-muted'
+}
+
+function formatPriority(p) {
+  const labels = { low: 'Low', medium: 'Normal', high: 'High', critical: 'Critical' }
+  return labels[p] || p
 }
 
 function formatStatus(s) {

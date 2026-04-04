@@ -10,6 +10,7 @@ import hmac
 import hashlib
 import json
 import logging
+import secrets
 from pathlib import Path
 from django.conf import settings
 from django.http import JsonResponse, HttpResponse, HttpResponseForbidden
@@ -185,9 +186,26 @@ def github_webhook(request):
 def deployment_status(request):
     """
     Get deployment status from log file.
-    
-    Returns the last N lines of deploy_log.txt for monitoring.
+
+    Requires ``DEPLOYMENT_STATUS_SECRET`` in Django settings and the same value in
+    header ``X-Deployment-Status-Secret`` (timing-safe compare). Disabled when
+    the secret is unset to avoid leaking deploy logs publicly.
     """
+    configured = getattr(settings, 'DEPLOYMENT_STATUS_SECRET', '') or ''
+    if not str(configured).strip():
+        logger.warning('deployment_status: DEPLOYMENT_STATUS_SECRET is not set; access denied.')
+        return JsonResponse(
+            {'detail': 'Deployment status endpoint is not configured.'},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+    provided = request.headers.get('X-Deployment-Status-Secret', '')
+    if not secrets.compare_digest(str(configured), str(provided)):
+        logger.warning(
+            'deployment_status: invalid or missing secret from %s',
+            request.META.get('REMOTE_ADDR'),
+        )
+        return JsonResponse({'detail': 'Forbidden.'}, status=status.HTTP_403_FORBIDDEN)
+
     try:
         project_root = Path(settings.BASE_DIR).parent
         log_file = project_root / 'deploy_log.txt'

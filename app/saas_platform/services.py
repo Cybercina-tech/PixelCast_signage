@@ -27,6 +27,32 @@ def _ts_to_aware_dt(ts: Any) -> Optional[datetime]:
         return None
 
 
+def _device_limit_from_stripe_subscription(sub: dict[str, Any], line_items: list | None) -> Any:
+    """
+    Return None to leave tenant.device_limit unchanged, 'unlimited', or a positive int.
+    Prefer subscription metadata from Checkout; fall back to per-screen quantity.
+    """
+    meta = sub.get('metadata') or {}
+    raw = meta.get('device_limit')
+    if raw is not None and str(raw).strip() != '':
+        s = str(raw).strip().lower()
+        if s == 'unlimited':
+            return 'unlimited'
+        if s.isdigit():
+            return int(s)
+
+    plan_key = (meta.get('plan_key') or '').strip()
+    if plan_key == 'per_screen' and line_items:
+        row0 = line_items[0]
+        q = row0.get('quantity') if isinstance(row0, dict) else getattr(row0, 'quantity', None)
+        if q is not None:
+            try:
+                return max(1, int(q))
+            except (TypeError, ValueError):
+                pass
+    return None
+
+
 def sync_tenant_from_stripe_subscription(tenant: Tenant, sub: dict[str, Any]) -> None:
     """Update tenant fields from a Stripe Subscription object (dict or StripeObject)."""
     status = sub.get('status') or 'none'
@@ -48,24 +74,32 @@ def sync_tenant_from_stripe_subscription(tenant: Tenant, sub: dict[str, Any]) ->
             tenant.plan_interval = getattr(rec, 'interval', '') if rec else ''
             tenant.plan_name = getattr(price, 'nickname', None) or getattr(price, 'id', '') or tenant.plan_name
 
+    dl = _device_limit_from_stripe_subscription(sub, list(data) if data else None)
+    if dl == 'unlimited':
+        tenant.device_limit = None
+    elif isinstance(dl, int):
+        tenant.device_limit = dl
+
     tenant.current_period_start = _ts_to_aware_dt(sub.get('current_period_start'))
     tenant.current_period_end = _ts_to_aware_dt(sub.get('current_period_end'))
     tenant.trial_end = _ts_to_aware_dt(sub.get('trial_end'))
     tenant.cancel_at_period_end = bool(sub.get('cancel_at_period_end'))
 
-    tenant.save(
-        update_fields=[
-            'stripe_subscription_id',
-            'subscription_status',
-            'plan_name',
-            'plan_interval',
-            'current_period_start',
-            'current_period_end',
-            'trial_end',
-            'cancel_at_period_end',
-            'updated_at',
-        ]
-    )
+    update_fields = [
+        'stripe_subscription_id',
+        'subscription_status',
+        'plan_name',
+        'plan_interval',
+        'current_period_start',
+        'current_period_end',
+        'trial_end',
+        'cancel_at_period_end',
+        'updated_at',
+    ]
+    if dl is not None:
+        update_fields.append('device_limit')
+
+    tenant.save(update_fields=update_fields)
 
 
 def upsert_invoice_from_stripe(tenant: Tenant, inv: dict[str, Any]) -> TenantInvoice:

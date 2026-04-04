@@ -1,7 +1,8 @@
 import logging
-from typing import Dict, Tuple
-import requests
+from typing import Any, Dict, Tuple
 
+import requests
+from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
@@ -10,23 +11,42 @@ class LicenseServerError(Exception):
     pass
 
 
+def license_gateway_base_url() -> str:
+    """Return operator gateway base (…/api/license-registry/v1) without trailing slash.
+
+    Only ``LICENSE_GATEWAY_BASE_URL`` enables activate/heartbeat; do not infer from
+    ``LICENSE_SERVER_URL`` so legacy validate URLs keep working unchanged.
+    """
+    return (getattr(settings, "LICENSE_GATEWAY_BASE_URL", None) or "").strip().rstrip("/")
+
+
+def license_validate_url() -> str:
+    base = license_gateway_base_url()
+    if base:
+        return f"{base}/validate/"
+    return (getattr(settings, "LICENSE_SERVER_URL", None) or "").strip()
+
+
 def post_license_validation(
     license_server_url: str,
-    payload: Dict[str, str],
+    payload: Dict[str, Any] | None = None,
     token: str = "",
+    auth_bearer: str = "",
     timeout_seconds: int = 8,
 ) -> Tuple[bool, Dict]:
     if not license_server_url:
         raise LicenseServerError("LICENSE_SERVER_URL is not configured")
 
     headers = {"Content-Type": "application/json"}
-    if token:
+    if auth_bearer:
+        headers["Authorization"] = f"Bearer {auth_bearer}"
+    elif token:
         headers["Authorization"] = f"Bearer {token}"
 
     try:
         response = requests.post(
             license_server_url,
-            json=payload,
+            json=payload if payload is not None else {},
             headers=headers,
             timeout=timeout_seconds,
         )
@@ -41,10 +61,60 @@ def post_license_validation(
     except ValueError as exc:
         raise LicenseServerError("License server returned non-JSON response") from exc
 
-    # Normalize several response formats
     is_valid = bool(
         data.get("valid")
         or data.get("is_valid")
         or str(data.get("status", "")).lower() in {"active", "valid"}
     )
     return is_valid, data
+
+
+def post_gateway_activate(base_url: str, body: dict, timeout_seconds: int = 25) -> dict:
+    url = f"{base_url.rstrip('/')}/activate/"
+    try:
+        response = requests.post(
+            url,
+            json=body,
+            headers={"Content-Type": "application/json"},
+            timeout=timeout_seconds,
+        )
+    except requests.RequestException as exc:
+        raise LicenseServerError(f"License activation request failed: {exc}") from exc
+
+    if response.status_code >= 500:
+        raise LicenseServerError(f"License gateway returned {response.status_code}")
+
+    try:
+        data = response.json()
+    except ValueError as exc:
+        raise LicenseServerError("License gateway returned non-JSON response") from exc
+
+    if response.status_code >= 400:
+        msg = data.get("message") or data.get("detail") or response.text
+        raise LicenseServerError(msg or f"Activation failed ({response.status_code})")
+
+    return data
+
+
+def post_gateway_heartbeat(base_url: str, bearer: str, body: dict | None = None, timeout_seconds: int = 15) -> dict:
+    url = f"{base_url.rstrip('/')}/heartbeat/"
+    try:
+        response = requests.post(
+            url,
+            json=body or {},
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {bearer}",
+            },
+            timeout=timeout_seconds,
+        )
+    except requests.RequestException as exc:
+        raise LicenseServerError(f"License heartbeat request failed: {exc}") from exc
+
+    if response.status_code >= 500:
+        raise LicenseServerError(f"License gateway returned {response.status_code}")
+
+    try:
+        return response.json()
+    except ValueError as exc:
+        raise LicenseServerError("License gateway returned non-JSON response") from exc

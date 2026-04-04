@@ -1,14 +1,20 @@
 import logging
 import re
-from datetime import timedelta
 from dataclasses import dataclass
+from datetime import timedelta
+
 from django.conf import settings
 from django.core.cache import cache
 from django.utils import timezone
 
-from .client import LicenseServerError, post_license_validation
+from .client import (
+    LicenseServerError,
+    license_gateway_base_url,
+    license_validate_url,
+    post_gateway_activate,
+    post_license_validation,
+)
 from .models import LicenseState
-
 
 logger = logging.getLogger(__name__)
 PURCHASE_CODE_RE = re.compile(
@@ -49,7 +55,8 @@ def _normalize_status(is_valid: bool, data: dict) -> str:
     if is_valid:
         return LicenseState.STATUS_ACTIVE
 
-    if str(data.get("status", "")).lower() in {"invalid", "expired", "revoked"}:
+    st = str(data.get("status", "") or data.get("license_status", "")).lower()
+    if st in {"invalid", "expired", "revoked", "suspended", "inactive"}:
         return LicenseState.STATUS_INVALID
 
     return LicenseState.STATUS_INVALID
@@ -69,25 +76,96 @@ def get_or_create_state() -> LicenseState:
     return LicenseState.get_solo()
 
 
+def _masked_token_preview(token: str) -> str:
+    t = (token or "").strip()
+    if len(t) <= 12:
+        return "****" if t else ""
+    return f"{t[:4]}…{t[-4:]}"
+
+
 def activate_license(purchase_code: str, domain: str = "", override_product_id: str = ""):
     state = get_or_create_state()
-    state.purchase_code = (purchase_code or "").strip()
-    if domain:
-        state.activated_domain = domain.strip()
+    code = (purchase_code or "").strip()
     if override_product_id is not None:
         state.codecanyon_product_id_override = (override_product_id or "").strip()
+    if domain:
+        state.activated_domain = domain.strip()
     state.activated_at = timezone.now()
     state.license_status = LicenseState.STATUS_INACTIVE
     state.last_error = ""
+    cache.delete(_cache_key())
+
+    base = license_gateway_base_url()
+    if base:
+        if not _purchase_code_shape_valid(code):
+            state.last_error = "Purchase code format is invalid"
+            state.touch_signature()
+            state.save()
+            return LicenseDecision(
+                allow=False,
+                status=LicenseState.STATUS_INVALID,
+                error_code="license_invalid",
+                message="Purchase code format is invalid",
+            )
+
+        product_id, _ = resolve_product_id(state)
+        app_version = (getattr(settings, "SCREENGRAM_APP_VERSION", "") or "").strip()
+        try:
+            data = post_gateway_activate(
+                base,
+                {
+                    "purchase_code": code,
+                    "domain": state.activated_domain or "",
+                    "product_id": product_id,
+                    "app_version": app_version,
+                },
+            )
+        except LicenseServerError as exc:
+            logger.warning("License gateway activation failed: %s", exc)
+            state.purchase_code = code
+            state.activation_token = ""
+            state.last_error = str(exc)
+            state.touch_signature()
+            state.save()
+            return LicenseDecision(
+                allow=False,
+                status=LicenseState.STATUS_INACTIVE,
+                error_code="license_activation_failed",
+                message=str(exc),
+            )
+
+        token = (data.get("activation_token") or "").strip()
+        if not token:
+            state.purchase_code = code
+            state.activation_token = ""
+            state.last_error = data.get("message") or "Gateway did not return an activation token"
+            state.touch_signature()
+            state.save()
+            return LicenseDecision(
+                allow=False,
+                status=LicenseState.STATUS_INACTIVE,
+                error_code="license_activation_failed",
+                message=state.last_error,
+            )
+
+        state.purchase_code = ""
+        state.activation_token = token
+        state.last_error = ""
+        state.touch_signature()
+        state.save()
+        return validate_license(force=True)
+
+    state.purchase_code = code
+    state.activation_token = ""
     state.touch_signature()
     state.save()
-    cache.delete(_cache_key())
     return validate_license(force=True)
 
 
 def current_status_payload():
     state = get_or_create_state()
     product_id, source = resolve_product_id(state)
+    gw = bool(license_gateway_base_url())
     return {
         "status": "success",
         "message": "License status fetched",
@@ -101,6 +179,10 @@ def current_status_payload():
         "enforcement_enabled": bool(
             getattr(settings, "LICENSE_ENFORCEMENT_ENABLED", False)
         ),
+        "license_gateway_configured": gw,
+        "uses_activation_token": bool((state.activation_token or "").strip()),
+        "masked_activation_token": _masked_token_preview(state.activation_token),
+        "masked_purchase_code": state.masked_purchase_code(),
     }
 
 
@@ -115,49 +197,88 @@ def validate_license(force: bool = False) -> LicenseDecision:
 
     state = get_or_create_state()
     now = timezone.now()
+    token_secret = (state.activation_token or "").strip()
+    purchase = (state.purchase_code or "").strip()
 
-    if not state.purchase_code:
+    if not token_secret and not purchase:
         state.license_status = LicenseState.STATUS_INACTIVE
-        state.last_error = "Purchase code is not set"
+        state.last_error = "Purchase code or activation token is not set"
         state.last_validation_at = now
         state.touch_signature()
-        state.save(update_fields=["license_status", "last_error", "last_validation_at", "validation_signature", "updated_at"])
+        state.save(
+            update_fields=[
+                "license_status",
+                "last_error",
+                "last_validation_at",
+                "validation_signature",
+                "updated_at",
+            ]
+        )
         decision = LicenseDecision(
             allow=False,
             status=state.license_status,
             error_code="license_required",
-            message="Purchase code is required",
+            message="Activate your license with a purchase code",
         )
         cache.set(_cache_key(), decision, cache_ttl)
         return decision
 
-    if not _purchase_code_shape_valid(state.purchase_code):
-        state.license_status = LicenseState.STATUS_INVALID
-        state.last_error = "Purchase code format is invalid"
-        state.last_validation_at = now
-        state.touch_signature()
-        state.save(update_fields=["license_status", "last_error", "last_validation_at", "validation_signature", "updated_at"])
-        decision = LicenseDecision(
-            allow=False,
-            status=state.license_status,
-            error_code="license_invalid",
-            message="Purchase code format is invalid",
-        )
-        cache.set(_cache_key(), decision, cache_ttl)
-        return decision
-
-    payload, product_source = _build_payload(state)
-    token = getattr(settings, "CODECANYON_TOKEN", "")
-    url = getattr(settings, "LICENSE_SERVER_URL", "")
     timeout_seconds = int(getattr(settings, "LICENSE_SERVER_TIMEOUT_SECONDS", 8))
+    app_version = (getattr(settings, "SCREENGRAM_APP_VERSION", "") or "").strip()
 
     try:
-        is_valid, data = post_license_validation(
-            license_server_url=url,
-            payload=payload,
-            token=token,
-            timeout_seconds=timeout_seconds,
-        )
+        if token_secret:
+            vurl = license_validate_url()
+            if not vurl:
+                raise LicenseServerError("LICENSE_GATEWAY_BASE_URL or LICENSE_SERVER_URL is not configured")
+
+            is_valid, data = post_license_validation(
+                license_server_url=vurl,
+                payload={
+                    "domain": state.activated_domain or "",
+                    "app_version": app_version,
+                },
+                auth_bearer=token_secret,
+                timeout_seconds=timeout_seconds,
+            )
+            product_source = "gateway_token"
+        else:
+            if not _purchase_code_shape_valid(purchase):
+                state.license_status = LicenseState.STATUS_INVALID
+                state.last_error = "Purchase code format is invalid"
+                state.last_validation_at = now
+                state.touch_signature()
+                state.save(
+                    update_fields=[
+                        "license_status",
+                        "last_error",
+                        "last_validation_at",
+                        "validation_signature",
+                        "updated_at",
+                    ]
+                )
+                decision = LicenseDecision(
+                    allow=False,
+                    status=state.license_status,
+                    error_code="license_invalid",
+                    message="Purchase code format is invalid",
+                )
+                cache.set(_cache_key(), decision, cache_ttl)
+                return decision
+
+            payload, product_source = _build_payload(state)
+            codecanyon_token = getattr(settings, "CODECANYON_TOKEN", "")
+            url = license_validate_url()
+            if not url:
+                raise LicenseServerError("LICENSE_SERVER_URL is not configured")
+
+            is_valid, data = post_license_validation(
+                license_server_url=url,
+                payload=payload,
+                token=codecanyon_token,
+                timeout_seconds=timeout_seconds,
+            )
+
         mapped_status = _normalize_status(is_valid, data)
         state.license_status = mapped_status
         state.last_validation_at = now
@@ -166,10 +287,10 @@ def validate_license(force: bool = False) -> LicenseDecision:
         if mapped_status == LicenseState.STATUS_ACTIVE:
             state.last_successful_validation_at = now
             state.grace_until = now + timedelta(hours=grace_hours)
-            if not state.activated_domain and payload.get("domain"):
-                state.activated_domain = payload.get("domain")
+            dom = (data.get("domain") or "").strip()
+            if not state.activated_domain and dom:
+                state.activated_domain = dom
         else:
-            # hard-fail if server explicitly invalidated it
             state.grace_until = now
 
         state.touch_signature()

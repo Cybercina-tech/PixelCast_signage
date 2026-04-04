@@ -213,6 +213,14 @@ main() {
             log_warning "Explicit core migrate failed (check logs)."
         fi
 
+        # Marketing blog (public API /api/public/blog/); same rationale as core — avoids 5xx when migrate was partial
+        log_info "Applying blog app migrations explicitly..."
+        if python manage.py migrate blog --noinput; then
+            log_success "Blog migrations OK"
+        else
+            log_warning "Explicit blog migrate failed (check logs)."
+        fi
+
         # Idempotent seed so Data Center has rows after fresh migrate
         log_info "Seeding TV catalog (safe to repeat)..."
         if python manage.py seed_tv_catalog; then

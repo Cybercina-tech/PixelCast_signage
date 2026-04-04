@@ -19,106 +19,110 @@
         </div>
       </div>
 
-      <!-- Pairing State -->
+      <!-- Pairing State — single viewport, no scroll (TV / browser chrome) -->
       <div v-else-if="status === 'pairing'" class="pairing-state">
-        <!-- Title -->
-        <h1 class="main-title">Activate Your Screen</h1>
-        
-        <!-- 6-Digit Code Display -->
-        <div class="code-section">
-          <div class="code-label">Activation Code</div>
-          <div class="code-container">
-            <div 
-              v-for="(digit, index) in codeDigits" 
-              :key="index"
-              class="digit-card"
-            >
-              <span class="digit-text">{{ digit }}</span>
-            </div>
-          </div>
-        </div>
+        <div class="pairing-body">
+          <!-- Title -->
+          <h1 class="main-title">Activate Your Screen</h1>
 
-        <!-- QR Code Section -->
-        <div class="qr-section">
-          <div class="qr-wrapper">
-            <div class="qr-ring"></div>
-            <div class="qr-inner">
-              <img 
-                v-if="qrCodeDataUrl" 
-                :src="qrCodeDataUrl" 
-                alt="QR Code" 
-                class="qr-image"
-              />
-              <div v-else class="qr-placeholder">
-                <div class="qr-spinner"></div>
+          <!-- 6-Digit Code Display -->
+          <div class="code-section">
+            <div class="code-label">Activation Code</div>
+            <div class="code-container">
+              <div
+                v-for="(digit, index) in codeDigits"
+                :key="index"
+                class="digit-card"
+              >
+                <span class="digit-text">{{ digit }}</span>
               </div>
             </div>
           </div>
-          <p class="qr-label">Scan with your device</p>
-        </div>
 
-        <!-- Step-by-Step Instructions -->
-        <div class="instructions-section">
-          <div class="instruction-card">
-            <div class="instruction-icon step-1">
-              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
-              </svg>
+          <!-- QR Code Section -->
+          <div class="qr-section">
+            <div class="qr-wrapper">
+              <div class="qr-ring"></div>
+              <div class="qr-inner">
+                <img
+                  v-if="qrCodeDataUrl"
+                  :src="qrCodeDataUrl"
+                  alt="QR Code"
+                  class="qr-image"
+                />
+                <div v-else class="qr-placeholder">
+                  <div class="qr-spinner"></div>
+                </div>
+              </div>
             </div>
-            <div class="instruction-content">
-              <h3 class="instruction-title">Step 1</h3>
-              <p class="instruction-text">Scan the QR code or visit our URL</p>
-            </div>
+            <p class="qr-label">Scan with your device</p>
           </div>
 
-          <div class="instruction-card">
-            <div class="instruction-icon step-2">
-              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-              </svg>
+          <!-- Step-by-Step Instructions -->
+          <div class="instructions-section">
+            <div class="instruction-card">
+              <div class="instruction-icon step-1">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+                </svg>
+              </div>
+              <div class="instruction-content">
+                <h3 class="instruction-title">Step 1</h3>
+                <p class="instruction-text">Scan the QR code or visit our URL</p>
+              </div>
             </div>
-            <div class="instruction-content">
-              <h3 class="instruction-title">Step 2</h3>
-              <p class="instruction-text">Enter the code shown above</p>
-            </div>
-          </div>
 
-          <div class="instruction-card">
-            <div class="instruction-icon step-3">
-              <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
+            <div class="instruction-card">
+              <div class="instruction-icon step-2">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+              </div>
+              <div class="instruction-content">
+                <h3 class="instruction-title">Step 2</h3>
+                <p class="instruction-text">Enter the code shown above</p>
+              </div>
             </div>
-            <div class="instruction-content">
-              <h3 class="instruction-title">Step 3</h3>
-              <p class="instruction-text">Enjoy your smart screen!</p>
-            </div>
-          </div>
-        </div>
 
-        <!-- Countdown Timer -->
-        <div class="countdown-section">
-          <div class="countdown-card">
-            <span class="countdown-label">Code expires in</span>
-            <span class="countdown-value">{{ formattedCountdown }}</span>
-          </div>
-        </div>
-
-        <!-- Status Indicator -->
-        <div class="status-section">
-          <div class="status-indicator">
-            <span class="status-text">Waiting for connection</span>
-            <div class="status-dots">
-              <span></span>
-              <span></span>
-              <span></span>
+            <div class="instruction-card">
+              <div class="instruction-icon step-3">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <div class="instruction-content">
+                <h3 class="instruction-title">Step 3</h3>
+                <p class="instruction-text">Enjoy your smart screen!</p>
+              </div>
             </div>
           </div>
         </div>
 
-        <!-- Status Message -->
-        <div v-if="statusMessage" class="status-message" :class="statusMessageClass">
-          {{ statusMessage }}
+        <div class="pairing-footer">
+          <!-- Countdown Timer -->
+          <div class="countdown-section">
+            <div class="countdown-card">
+              <span class="countdown-label">Code expires in</span>
+              <span class="countdown-value">{{ formattedCountdown }}</span>
+            </div>
+          </div>
+
+          <!-- Status Indicator -->
+          <div class="status-section">
+            <div class="status-indicator">
+              <span class="status-text">Waiting for connection</span>
+              <div class="status-dots">
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Status Message -->
+          <div v-if="statusMessage" class="status-message" :class="statusMessageClass">
+            {{ statusMessage }}
+          </div>
         </div>
       </div>
 
@@ -382,14 +386,21 @@ onUnmounted(() => {
 
 <style scoped>
 .activation-page {
-  position: fixed;
+  position: absolute;
   inset: 0;
-  overflow-x: hidden;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  overscroll-behavior: none;
   background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 25%, #0f172a 50%, #1e293b 75%, #0a0e27 100%);
   background-size: 400% 400%;
   animation: gradientShift 20s ease infinite;
+  width: 100%;
+  max-width: 100%;
+  height: 100%;
+  max-height: 100%;
+  min-height: 0;
+  box-sizing: border-box;
 }
 
 @keyframes gradientShift {
@@ -450,24 +461,36 @@ onUnmounted(() => {
   50% { opacity: 0.8; transform: translate(-50%, -50%) scale(1.1); }
 }
 
-/* Main Container — start from top so short viewports see full flow (scroll if needed) */
+/* Main container — fills one viewport; pairing UI scales inside (no page scroll) */
 .activation-container {
   position: relative;
   z-index: 10;
-  min-height: 100%;
-  min-height: 100dvh;
+  flex: 1 1 auto;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: center;
   box-sizing: border-box;
-  padding: clamp(0.75rem, 3vmin, 2rem) clamp(1rem, 4vw, 2rem) 2rem;
+  width: 100%;
+  max-width: 100%;
+  padding:
+    max(clamp(0.35rem, 1.5vmin, 1rem), env(safe-area-inset-top))
+    max(clamp(0.5rem, 2vw, 1.25rem), env(safe-area-inset-right))
+    max(clamp(0.35rem, 1.5vmin, 1rem), env(safe-area-inset-bottom))
+    max(clamp(0.5rem, 2vw, 1.25rem), env(safe-area-inset-left));
   color: white;
 }
 
 /* Loading State */
 .loading-state {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   text-align: center;
+  min-height: 0;
 }
 
 .loading-spinner {
@@ -485,7 +508,7 @@ onUnmounted(() => {
 }
 
 .loading-text {
-  font-size: 2.5rem;
+  font-size: clamp(1.25rem, 6vmin, 2.5rem);
   font-weight: 700;
   margin-bottom: 1rem;
   background: linear-gradient(135deg, #06b6d4, #8b5cf6);
@@ -523,36 +546,68 @@ onUnmounted(() => {
 
 /* Main Title */
 .main-title {
-  font-size: clamp(1.75rem, 5.5vmin, 4rem);
+  font-size: clamp(1.1rem, 3.2vmin, 2.25rem);
   font-weight: 800;
   text-align: center;
-  margin-bottom: clamp(1rem, 3vmin, 3rem);
+  margin: 0;
+  line-height: 1.15;
   background: linear-gradient(135deg, #06b6d4, #8b5cf6);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
   text-shadow: 0 0 30px rgba(6, 182, 212, 0.5);
   letter-spacing: -0.02em;
+  flex-shrink: 0;
 }
 
 .pairing-state {
   width: 100%;
   max-width: 1200px;
+  height: 100%;
+  min-height: 0;
+  flex: 1 1 auto;
   display: flex;
   flex-direction: column;
   align-items: center;
+  overflow: hidden;
+}
+
+.pairing-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(0.15rem, 1vmin, 0.65rem);
+  overflow: hidden;
+}
+
+.pairing-footer {
+  flex: 0 0 auto;
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(0.35rem, 2vmin, 1.25rem);
+  row-gap: clamp(0.25rem, 1vmin, 0.5rem);
 }
 
 /* Code Section */
 .code-section {
-  margin-bottom: clamp(1.5rem, 4vmin, 4rem);
+  margin: 0;
   text-align: center;
+  flex-shrink: 1;
+  min-height: 0;
 }
 
 .code-label {
-  font-size: clamp(0.75rem, 2vmin, 1.5rem);
+  font-size: clamp(0.6rem, 1.5vmin, 0.95rem);
   font-weight: 600;
-  margin-bottom: clamp(0.75rem, 2vmin, 1.5rem);
+  margin: 0 0 clamp(0.2rem, 1vmin, 0.5rem);
   color: rgba(255, 255, 255, 0.7);
   text-transform: uppercase;
   letter-spacing: 0.1em;
@@ -560,14 +615,18 @@ onUnmounted(() => {
 
 .code-container {
   display: flex;
-  gap: 1rem;
+  gap: clamp(0.35rem, 2vmin, 1rem);
   justify-content: center;
   flex-wrap: wrap;
+  width: 100%;
+  max-width: 100%;
+  padding: 0 env(safe-area-inset-left) 0 env(safe-area-inset-right);
+  box-sizing: border-box;
 }
 
 .digit-card {
-  width: clamp(44px, 12vmin, 120px);
-  height: clamp(56px, 16vmin, 160px);
+  width: clamp(32px, 7vmin, 72px);
+  height: clamp(40px, 9vmin, 90px);
   background: rgba(255, 255, 255, 0.05);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
@@ -620,7 +679,7 @@ onUnmounted(() => {
 }
 
 .digit-text {
-  font-size: clamp(1.75rem, 8vmin, 5rem);
+  font-size: clamp(1.1rem, 5vmin, 2.75rem);
   font-weight: 700;
   font-family: 'Courier New', 'Monaco', monospace;
   color: #06b6d4;
@@ -634,14 +693,16 @@ onUnmounted(() => {
 
 /* QR Code Section */
 .qr-section {
-  margin-bottom: clamp(1.5rem, 4vmin, 4rem);
+  margin: 0;
   text-align: center;
+  flex-shrink: 3;
+  min-height: 0;
 }
 
 .qr-wrapper {
   position: relative;
   display: inline-block;
-  margin-bottom: 1rem;
+  margin-bottom: clamp(0.2rem, 1vmin, 0.5rem);
 }
 
 .qr-ring {
@@ -663,13 +724,14 @@ onUnmounted(() => {
   position: relative;
   z-index: 1;
   background: white;
-  padding: 1rem;
-  border-radius: 20px;
+  padding: clamp(0.35rem, 1.2vmin, 0.65rem);
+  border-radius: clamp(10px, 2vmin, 20px);
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
 }
 
 .qr-image {
-  width: min(300px, 70vmin);
+  /* Fit inside short viewports — cap by vh so footer + steps stay visible */
+  width: min(28vh, 42vmin, 88vw, 260px);
   max-width: 100%;
   height: auto;
   aspect-ratio: 1;
@@ -678,8 +740,8 @@ onUnmounted(() => {
 }
 
 .qr-placeholder {
-  width: min(300px, 70vmin);
-  height: min(300px, 70vmin);
+  width: min(28vh, 42vmin, 88vw, 260px);
+  height: min(28vh, 42vmin, 88vw, 260px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -695,7 +757,8 @@ onUnmounted(() => {
 }
 
 .qr-label {
-  font-size: 1.25rem;
+  font-size: clamp(0.75rem, 2vmin, 1.1rem);
+  margin: 0;
   color: rgba(255, 255, 255, 0.7);
   font-weight: 500;
 }
@@ -703,11 +766,13 @@ onUnmounted(() => {
 /* Instructions Section */
 .instructions-section {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
-  gap: clamp(0.75rem, 2vmin, 2rem);
-  margin-bottom: clamp(1.25rem, 3vmin, 4rem);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(0.35rem, 1.5vmin, 1rem);
+  margin: 0;
   max-width: 1200px;
   width: 100%;
+  flex-shrink: 1;
+  min-height: 0;
 }
 
 .instruction-card {
@@ -715,13 +780,14 @@ onUnmounted(() => {
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 20px;
-  padding: clamp(1rem, 2.5vmin, 2rem);
+  border-radius: clamp(10px, 2vmin, 20px);
+  padding: clamp(0.4rem, 1.5vmin, 1rem);
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
   transition: transform 0.3s, box-shadow 0.3s;
+  min-height: 0;
 }
 
 .instruction-card:hover {
@@ -730,20 +796,20 @@ onUnmounted(() => {
 }
 
 .instruction-icon {
-  width: 80px;
-  height: 80px;
+  width: clamp(36px, 7vmin, 56px);
+  height: clamp(36px, 7vmin, 56px);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 1.5rem;
+  margin-bottom: clamp(0.25rem, 1vmin, 0.65rem);
   background: rgba(255, 255, 255, 0.1);
   border: 2px solid;
 }
 
 .instruction-icon svg {
-  width: 40px;
-  height: 40px;
+  width: clamp(18px, 3.5vmin, 28px);
+  height: clamp(18px, 3.5vmin, 28px);
 }
 
 .instruction-icon.step-1 {
@@ -765,44 +831,47 @@ onUnmounted(() => {
 }
 
 .instruction-title {
-  font-size: 1.5rem;
+  font-size: clamp(0.85rem, 2.2vmin, 1.2rem);
   font-weight: 700;
-  margin-bottom: 0.5rem;
+  margin: 0 0 0.2rem;
   color: white;
 }
 
 .instruction-text {
-  font-size: 1.125rem;
+  font-size: clamp(0.65rem, 1.65vmin, 0.95rem);
   color: rgba(255, 255, 255, 0.7);
-  line-height: 1.6;
+  line-height: 1.35;
+  margin: 0;
 }
 
 /* Countdown Section */
 .countdown-section {
-  margin-bottom: 2rem;
+  margin: 0;
 }
 
 .countdown-card {
   background: rgba(255, 255, 255, 0.05);
   backdrop-filter: blur(20px);
   border: 1px solid rgba(6, 182, 212, 0.3);
-  border-radius: 16px;
-  padding: 1rem 2rem;
+  border-radius: 12px;
+  padding: clamp(0.35rem, 1.2vmin, 0.65rem) clamp(0.75rem, 2.5vmin, 1.25rem);
   display: inline-flex;
-  flex-direction: column;
+  flex-direction: row;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 0.5rem;
+  justify-content: center;
+  gap: clamp(0.35rem, 1.5vmin, 0.75rem);
 }
 
 .countdown-label {
-  font-size: 1rem;
+  font-size: clamp(0.65rem, 1.6vmin, 0.9rem);
   color: rgba(255, 255, 255, 0.6);
   text-transform: uppercase;
   letter-spacing: 0.1em;
 }
 
 .countdown-value {
-  font-size: 2rem;
+  font-size: clamp(1rem, 3vmin, 1.5rem);
   font-weight: 700;
   font-family: 'Courier New', monospace;
   color: #06b6d4;
@@ -811,18 +880,18 @@ onUnmounted(() => {
 
 /* Status Section */
 .status-section {
-  margin-bottom: 2rem;
+  margin: 0;
 }
 
 .status-indicator {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: clamp(0.35rem, 1.5vmin, 0.75rem);
   justify-content: center;
 }
 
 .status-text {
-  font-size: 1.25rem;
+  font-size: clamp(0.75rem, 2vmin, 1.05rem);
   color: rgba(255, 255, 255, 0.8);
   font-weight: 500;
 }
@@ -833,8 +902,8 @@ onUnmounted(() => {
 }
 
 .status-dots span {
-  width: 10px;
-  height: 10px;
+  width: clamp(6px, 1.2vmin, 10px);
+  height: clamp(6px, 1.2vmin, 10px);
   background: #06b6d4;
   border-radius: 50%;
   animation: dotPulse 1.4s ease-in-out infinite;
@@ -850,12 +919,13 @@ onUnmounted(() => {
 
 /* Status Message */
 .status-message {
-  padding: 1rem 2rem;
-  border-radius: 12px;
-  font-size: 1.125rem;
+  flex: 1 1 100%;
+  padding: clamp(0.35rem, 1vmin, 0.65rem) clamp(0.5rem, 2vmin, 1rem);
+  border-radius: 10px;
+  font-size: clamp(0.7rem, 1.8vmin, 0.95rem);
   text-align: center;
-  max-width: 600px;
-  margin: 0 auto;
+  max-width: min(600px, 100%);
+  margin: 0;
 }
 
 .status-message-info {
@@ -878,7 +948,14 @@ onUnmounted(() => {
 
 /* Error State */
 .error-state {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   text-align: center;
+  min-height: 0;
+  overflow: auto;
 }
 
 .error-icon {
@@ -933,6 +1010,9 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   z-index: 1000;
+  overflow: hidden;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  box-sizing: border-box;
 }
 
 .welcome-animation {
@@ -1033,60 +1113,43 @@ onUnmounted(() => {
   }
 }
 
-/* Responsive Design for TV/Large Displays */
+/* Large displays — stay within viewport (no oversized blocks that force scroll) */
 @media (min-width: 1920px) {
-  .main-title {
-    font-size: 5rem;
-  }
-  
-  .digit-card {
-    width: 150px;
-    height: 200px;
-  }
-  
-  .digit-text {
-    font-size: 6rem;
-  }
-  
   .qr-image {
-    width: min(400px, 55vmin);
-    height: auto;
-  }
-  
-  .instruction-title {
-    font-size: 2rem;
-  }
-  
-  .instruction-text {
-    font-size: 1.5rem;
+    width: min(32vh, 44vmin, 320px);
   }
 }
 
+/* Narrow phones — keep 3 columns but tighter; avoid a tall single column */
 @media (max-width: 768px) {
-  .main-title {
-    font-size: 2.5rem;
+  .instructions-section {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: clamp(0.2rem, 1vmin, 0.5rem);
   }
-  
-  .digit-card {
-    width: 80px;
-    height: 120px;
+
+  .instruction-card {
+    padding: clamp(0.3rem, 1vmin, 0.65rem);
   }
-  
-  .digit-text {
-    font-size: 3rem;
+
+  .code-container {
+    gap: clamp(0.2rem, 1vmin, 0.45rem);
   }
-  
-  .qr-image {
-    width: min(250px, 75vw);
+}
+
+/* Very short viewports — shrink QR further */
+@media (max-height: 520px) {
+  .qr-image,
+  .qr-placeholder {
+    width: min(22vh, 38vw, 200px);
     height: auto;
   }
-  
-  .instructions-section {
-    grid-template-columns: 1fr;
+
+  .qr-placeholder {
+    height: min(22vh, 38vw, 200px);
   }
-  
-  .code-container {
-    gap: 0.5rem;
+
+  .main-title {
+    font-size: clamp(1rem, 2.8vmin, 1.35rem);
   }
 }
 </style>

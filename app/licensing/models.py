@@ -21,6 +21,9 @@ class LicenseState(models.Model):
     ]
 
     purchase_code = models.CharField(max_length=128, blank=True, default="")
+    """Envato purchase code; optional after gateway activation if cleared locally."""
+    activation_token = models.TextField(blank=True, default="")
+    """Opaque token from the operator license gateway (SaaS); preferred over sending purchase_code."""
     activated_domain = models.CharField(max_length=255, blank=True, default="")
     activated_at = models.DateTimeField(null=True, blank=True)
 
@@ -61,6 +64,7 @@ class LicenseState(models.Model):
         payload = "|".join(
             [
                 self.purchase_code or "",
+                (self.activation_token or "")[:16],
                 self.activated_domain or "",
                 self.license_status or "",
                 str(int(self.last_successful_validation_at.timestamp()))
@@ -147,3 +151,89 @@ class LicenseEnforcementLog(models.Model):
 
     def __str__(self):
         return f"EnforcementLog({self.action}, {self.decision})"
+
+
+class LicenseRegistryPurchase(models.Model):
+    """Central registry (SaaS only): metadata for an Envato purchase code fingerprint."""
+
+    code_fingerprint = models.CharField(max_length=64, unique=True, db_index=True)
+    envato_item_id = models.BigIntegerField(null=True, blank=True)
+    buyer_username = models.CharField(max_length=191, blank=True, default="")
+    sold_at = models.DateTimeField(null=True, blank=True)
+    support_until = models.DateTimeField(null=True, blank=True)
+    license_type = models.CharField(max_length=64, blank=True, default="")
+    raw_sale = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "licensing_registry_purchase"
+        verbose_name = "Registry purchase"
+
+    def __str__(self):
+        return f"RegistryPurchase({self.code_fingerprint[:12]}…)"
+
+
+class LicenseRegistryInstallation(models.Model):
+    """One row per activated self-hosted site (domain + activation token)."""
+
+    STATUS_PENDING = "pending"
+    STATUS_ACTIVE = "active"
+    STATUS_INACTIVE = "inactive"
+    STATUS_SUSPENDED = "suspended"
+    STATUS_SUSPICIOUS = "suspicious"
+
+    STATUS_CHOICES = [
+        (STATUS_PENDING, "Pending"),
+        (STATUS_ACTIVE, "Active"),
+        (STATUS_INACTIVE, "Inactive"),
+        (STATUS_SUSPENDED, "Suspended"),
+        (STATUS_SUSPICIOUS, "Suspicious"),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    purchase = models.ForeignKey(
+        LicenseRegistryPurchase,
+        on_delete=models.CASCADE,
+        related_name="installations",
+    )
+    domain = models.CharField(max_length=255, db_index=True)
+    token_hash = models.CharField(max_length=64, unique=True, db_index=True)
+    app_version = models.CharField(max_length=128, blank=True, default="")
+    last_heartbeat_at = models.DateTimeField(null=True, blank=True)
+    activated_at = models.DateTimeField(auto_now_add=True)
+    suspended = models.BooleanField(default=False)
+    suspended_reason = models.TextField(blank=True, default="")
+    suspicious = models.BooleanField(default=False, db_index=True)
+    notes = models.TextField(blank=True, default="")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "licensing_registry_installation"
+        ordering = ["-last_heartbeat_at", "-activated_at"]
+        indexes = [
+            models.Index(fields=["purchase", "domain"]),
+        ]
+
+    def __str__(self):
+        return f"RegistryInstall({self.domain})"
+
+
+class LicenseRegistryHeartbeatLog(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    installation = models.ForeignKey(
+        LicenseRegistryInstallation,
+        on_delete=models.CASCADE,
+        related_name="heartbeat_logs",
+    )
+    received_at = models.DateTimeField(auto_now_add=True)
+    app_version = models.CharField(max_length=128, blank=True, default="")
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+
+    class Meta:
+        db_table = "licensing_registry_heartbeat_log"
+        ordering = ["-received_at"]
+        indexes = [
+            models.Index(fields=["installation", "received_at"]),
+        ]

@@ -1,8 +1,10 @@
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
+import { createHead } from '@unhead/vue/client'
 import { MotionPlugin } from '@vueuse/motion'
 import App from './App.vue'
 import router from './router'
+import { bootGtm } from './analytics/gtm'
 // App + widget fonts (bundled for TemplateEditor / WebPlayer text widgets)
 import '@fontsource/inter/400.css'
 import '@fontsource/inter/500.css'
@@ -41,6 +43,7 @@ import '@fontsource/oswald/600.css'
 import '@fontsource/oswald/700.css'
 
 import './style.css'
+import './styles/legal-document.css'
 
 // Initialize Chart.js plugin before app creation
 import './plugins/chartjs'
@@ -51,8 +54,11 @@ initClientLogger()
 
 const app = createApp(App)
 
+app.use(createHead())
 app.use(createPinia())
 app.use(router)
 app.use(MotionPlugin)
+
+bootGtm(import.meta.env.VITE_GTM_CONTAINER_ID)
 
 app.mount('#app')

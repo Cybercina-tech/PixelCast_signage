@@ -13,6 +13,7 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.cache import never_cache
 from core.email_service import send_system_email
 from django.conf import settings
+from django.shortcuts import get_object_or_404
 
 from .models import User
 from .serializers import (
@@ -94,7 +95,13 @@ class UserViewSet(viewsets.ModelViewSet):
         
         # Create user
         new_user = serializer.save()
-        
+        try:
+            from saas_platform.tenant_assignment import ensure_user_tenant
+
+            ensure_user_tenant(new_user)
+        except Exception as e:
+            logger.warning('ensure_user_tenant after admin user create failed: %s', e)
+
         # Log audit event
         try:
             AuditLogger.log_action(
@@ -378,7 +385,40 @@ class UserViewSet(viewsets.ModelViewSet):
         except Exception as e:
             logger.error(f'Failed to log admin-set-password audit: {e}')
         return Response({'status': 'password_reset', 'revoked_sessions': revoked}, status=status.HTTP_200_OK)
-    
+
+    @action(detail=True, methods=['post'], url_path='set_tenant')
+    def set_tenant(self, request, id=None):
+        """Developer-only: assign or clear the user's SaaS tenant (customer account)."""
+        from saas_platform.models import Tenant
+
+        actor = request.user
+        if not actor.is_developer():
+            raise PermissionDenied("Only a Developer can assign tenants.")
+        target_user = self.get_object()
+        raw = request.data.get('tenant_id')
+        old_tid = str(target_user.tenant_id) if target_user.tenant_id else None
+        if raw in (None, '', 'null'):
+            target_user.tenant = None
+        else:
+            tenant = get_object_or_404(Tenant, pk=raw)
+            target_user.tenant = tenant
+        target_user.save(update_fields=['tenant'])
+        new_tid = str(target_user.tenant_id) if target_user.tenant_id else None
+        try:
+            AuditLogger.log_action(
+                action_type='update',
+                user=actor,
+                resource=target_user,
+                description=f'Set tenant for user {target_user.username}',
+                changes={'tenant_id': {'before': old_tid, 'after': new_tid}},
+                severity='high',
+                request=request,
+            )
+        except Exception as e:
+            logger.error(f'Failed to log set-tenant audit: {e}')
+        serializer = self.get_serializer(target_user)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
     @action(detail=False, methods=['get', 'put', 'patch'])
     def me(self, request):
         """
@@ -658,6 +698,14 @@ def login_view(request):
     if serializer.is_valid():
         user = serializer.validated_data['user']
 
+        try:
+            from saas_platform.tenant_assignment import ensure_user_tenant
+
+            ensure_user_tenant(user)
+            user.refresh_from_db()
+        except Exception as e:
+            logger.warning('ensure_user_tenant on login failed: %s', e)
+
         if getattr(user, 'is_admin_locked', False):
             lock_until = getattr(user, 'admin_lock_until', None)
             still_locked = True
@@ -785,15 +833,16 @@ def signup_view(request):
     """
     POST /api/auth/signup/
     Public endpoint to create a new user account.
-    
-    Allows unauthenticated users to register. New users are created with Visitor role (read-mostly).
+
+    Allows unauthenticated users to register. New users are created as Employee so they can pair
+    screens and use standard dashboard features (own screens, not org-wide admin).
     """
     from .serializers import UserCreateSerializer
 
     serializer = UserCreateSerializer(data=request.data)
 
     if serializer.is_valid():
-        serializer.validated_data['role'] = 'Visitor'
+        serializer.validated_data['role'] = 'Employee'
 
         # Sanitize input
         if 'email' in serializer.validated_data:

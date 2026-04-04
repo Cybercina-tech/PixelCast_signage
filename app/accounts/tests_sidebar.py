@@ -79,6 +79,8 @@ class SidebarConfigTests(TestCase):
         self.assertFalse(has_permission(self.manager, 'view_logs'))
 
         self.assertTrue(has_permission(self.employee, 'view_screens'))
+        self.assertTrue(has_permission(self.employee, 'create_templates'))
+        self.assertFalse(has_permission(self.employee, 'delete_templates'))
         self.assertFalse(has_permission(self.employee, 'view_users'))
 
         self.assertTrue(has_permission(self.visitor, 'view_dashboard'))
@@ -92,13 +94,14 @@ class SidebarConfigTests(TestCase):
         item_ids = [item['id'] for item in items]
         self.assertIn('dashboard', item_ids)
         self.assertIn('settings', item_ids)
-        self.assertIn('core', item_ids)
+        self.assertNotIn('super-admin', item_ids)
 
     def test_filter_sidebar_items_employee(self):
         items = filter_sidebar_items(self.employee)
         item_ids = [item['id'] for item in items]
         self.assertIn('dashboard', item_ids)
         self.assertIn('screens', item_ids)
+        self.assertIn('templates', item_ids)
         self.assertIn('contents', item_ids)
         self.assertIn('schedules', item_ids)
         self.assertNotIn('users', item_ids)
@@ -116,13 +119,7 @@ class SidebarConfigTests(TestCase):
         self.assertIn('analytics', item_ids)
         self.assertNotIn('users', item_ids)
         self.assertNotIn('settings', item_ids)
-        self.assertNotIn('core', item_ids)
-
-    def test_filter_sidebar_items_with_children(self):
-        items = filter_sidebar_items(self.developer)
-        core_item = next((item for item in items if item['id'] == 'core'), None)
-        self.assertIsNotNone(core_item)
-        self.assertTrue(core_item.get('children'))
+        self.assertNotIn('super-admin', item_ids)
 
     def test_unauthenticated_user(self):
         items = filter_sidebar_items(None)

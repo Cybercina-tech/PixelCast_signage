@@ -238,19 +238,24 @@ watch(
   }
 )
 
+/** Fill dynamic viewport (mobile browser chrome); pixel box kept via composable for template scaling only */
 const containerStyle = computed(() => ({
   position: 'fixed',
-  top: 0,
-  left: 0,
-  width: `${viewportWidth.value}px`,
-  height: `${viewportHeight.value}px`,
-  overflow: 'visible',
+  inset: 0,
+  width: '100%',
+  maxWidth: '100%',
+  height: '100%',
+  minHeight: '100dvh',
+  overflow: 'hidden',
   backgroundColor: '#000000',
+  boxSizing: 'border-box',
 }))
 
 const templateContainerStyle = computed(() => ({
   width: `${viewportWidth.value}px`,
   height: `${viewportHeight.value}px`,
+  maxWidth: '100%',
+  maxHeight: '100%',
   position: 'relative',
   visibility: 'visible',
   opacity: 1,
@@ -369,14 +374,17 @@ onUnmounted(() => {
   margin: 0;
   padding: 0;
   position: fixed;
-  top: 0;
-  left: 0;
+  inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 100vw;
-  height: 100vh;
+  width: 100%;
+  max-width: 100%;
+  height: 100%;
+  min-height: 100dvh;
+  min-height: -webkit-fill-available;
   overflow: hidden;
+  box-sizing: border-box;
 }
 
 .no-template-screen,
@@ -454,10 +462,11 @@ onUnmounted(() => {
 
 .message-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
+  inset: 0;
+  width: 100%;
+  max-width: 100%;
+  height: 100%;
+  min-height: 100dvh;
   display: flex;
   align-items: center;
   justify-content: center;

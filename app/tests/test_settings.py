@@ -104,3 +104,9 @@ USE_S3_STORAGE = False
 
 # Avoid license middleware blocking API tests that expect 201/401/403 from auth alone
 LICENSE_ENFORCEMENT_ENABLED = False
+
+# Tests use http://testserver; do not redirect to HTTPS (BASE_URL may be https in developer .env)
+SECURE_SSL_REDIRECT = False
+SESSION_COOKIE_SECURE = False
+CSRF_COOKIE_SECURE = False
+SECURE_HSTS_SECONDS = 0

@@ -126,7 +126,7 @@ PixelCast/
 - Backup management
 - License enforcement with offline grace period
 - Installation wizard for first-run setup
-- In-app product documentation at `/docs`
+- Static HTML product documentation at `/documentation/` (short link `/docs` redirects)
 - OpenAPI / Swagger documentation at `/api/docs/`
 
 ---
@@ -212,9 +212,21 @@ See `.env.example` for the full list. Key sections:
 | Deployment mode | `DEPLOYMENT_MODE` (`saas`, `self_hosted`, `hybrid`) |
 | SaaS / Stripe | `PLATFORM_SAAS_ENABLED`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_ID` |
 | Weather widget | `OPENWEATHER_API_KEY` |
-| License | `LICENSE_SERVER_URL`, `LICENSE_ENFORCEMENT_ENABLED` |
+| License | `LICENSE_GATEWAY_BASE_URL` (self-hosted → operator), `LICENSE_SERVER_URL`, `LICENSE_ENFORCEMENT_ENABLED`, `CODECANYON_TOKEN` (SaaS gateway only) |
 | Email (fallback) | `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD` |
 | Ports | `BACKEND_PORT`, `FRONTEND_HOST_PORT`, `HTTP_PORT` |
+
+---
+
+## Troubleshooting (front-end API / login)
+
+If the browser shows **`net::ERR_NAME_NOT_RESOLVED`** for **`https://backend:8000`** (or similar), the SPA is trying to call a **Docker-only hostname** from the browser. Hostnames such as `backend` resolve inside the Compose network only; the browser must use **same-origin** paths like **`/api`** so Vite (dev) or Nginx (prod) proxies to Django.
+
+**What to check**
+
+- **`docker compose` dev:** The `frontend` service sets `VITE_API_BASE_URL=/api` in [`docker-compose.yml`](docker-compose.yml). Do not override it with `https://backend:8000/...` in a custom compose override or host `.env` meant for the browser.
+- **Rebuild / cache:** After changing any `VITE_*` variable, restart the `frontend` container and hard-refresh the app (or clear site data) so the dev server picks up env and the browser does not keep an old bundle.
+- **DevTools Network:** Login uses **`POST`** to **`/api/auth/login/`** on the **same origin** as the page (e.g. `http://localhost:5173`). If you still see a request whose URL host is `backend`, the environment or cached assets are wrong.
 
 ---
 
@@ -223,6 +235,9 @@ See `.env.example` for the full list. Key sections:
 ```bash
 # Back-end (pytest inside the backend container)
 docker compose exec backend pytest --cov
+
+# Front-end (Vitest unit tests)
+cd frontend && npm run test
 
 # Front-end (Playwright e2e)
 cd frontend && npx playwright test
@@ -234,6 +249,6 @@ cd frontend && npx playwright test
 
 **Back-end:** Python 3.12 · Django 5.2 · DRF · Django Channels · Celery · Redis · PostgreSQL · drf-spectacular · SimpleJWT · pyotp · Stripe SDK · cryptography · boto3 / django-storages
 
-**Front-end:** Vue 3 · Vite · Pinia · Vue Router · Tailwind CSS · Chart.js · Axios · Playwright · html2canvas · vue3-moveable · @vueuse/motion
+**Front-end:** Vue 3 · Vite · Pinia · Vue Router · Tailwind CSS · Chart.js · Axios · Vitest · Playwright · html2canvas · vue3-moveable · @vueuse/motion
 
 **Infrastructure:** Docker · Docker Compose · Nginx · Gunicorn + Uvicorn · Redis (cache + broker + channel layer)

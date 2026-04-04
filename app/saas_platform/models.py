@@ -230,3 +230,6 @@ class TenantAuditLog(models.Model):
 
     class Meta:
         ordering = ['-created_at']
+
+
+from .pricing_models import BillingPromotion, PlatformBillingSettings, SubscriptionPlan  # noqa: F401, E402

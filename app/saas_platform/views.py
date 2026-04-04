@@ -328,9 +328,34 @@ def impersonate_start(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def impersonate_stop(request):
-    """Return fresh tokens for the admin user (caller must send admin refresh in body)."""
+    """Return fresh tokens for the admin user (caller must send admin refresh in body).
+
+    Security: only allowed when the current access JWT is from an active impersonation
+    session (``impersonator_id`` claim present) and the supplied refresh token belongs
+    to that same Developer — prevents privilege escalation using a leaked admin refresh
+    while authenticated as an unrelated user.
+    """
     if not _saas_enabled():
         return Response({'detail': 'Platform SaaS features are disabled.'}, status=403)
+
+    auth = getattr(request, 'auth', None)
+    impersonator_id = None
+    if auth is not None:
+        try:
+            impersonator_id = auth.get('impersonator_id')
+        except (TypeError, AttributeError, KeyError):
+            impersonator_id = None
+    if not impersonator_id:
+        return Response(
+            {
+                'detail': (
+                    'Impersonation session required: access token must include impersonator_id '
+                    '(end impersonation only while viewing as the target user).'
+                )
+            },
+            status=403,
+        )
+
     admin_refresh = request.data.get('admin_refresh_token')
     if not admin_refresh:
         return Response({'detail': 'admin_refresh_token required.'}, status=400)
@@ -339,6 +364,11 @@ def impersonate_stop(request):
     except Exception:
         return Response({'detail': 'Invalid refresh token.'}, status=400)
     uid = token.get('user_id')
+    if str(uid) != str(impersonator_id):
+        return Response(
+            {'detail': 'admin_refresh_token does not match the active impersonation session.'},
+            status=403,
+        )
     admin_user = get_object_or_404(User, pk=uid)
     if not admin_user.is_developer():
         return Response({'detail': 'Refresh token is not for a Developer account.'}, status=403)

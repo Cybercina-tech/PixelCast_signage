@@ -9,7 +9,7 @@
   >
     <section
       v-if="show"
-      class="relative overflow-hidden rounded-2xl border border-border-color bg-card/90 backdrop-blur-sm shadow-lg shadow-black/5 dark:shadow-black/20"
+      class="onboarding-checklist relative isolate overflow-hidden rounded-2xl border border-border-color bg-card/90 backdrop-blur-sm shadow-lg shadow-black/5 dark:shadow-black/20 text-slate-600 dark:text-slate-300"
       role="region"
       aria-label="Getting started checklist"
     >
@@ -33,7 +33,7 @@
               >
                 <SparklesIcon class="h-4 w-4" />
               </span>
-              <h2 class="text-lg font-semibold tracking-tight text-primary sm:text-xl">
+              <h2 class="text-lg font-semibold tracking-tight text-slate-900 dark:text-white sm:text-xl">
                 Get started
               </h2>
             </div>
@@ -43,7 +43,7 @@
           </div>
           <button
             type="button"
-            class="group inline-flex shrink-0 items-center justify-center gap-1.5 self-end rounded-lg px-3 py-2 text-xs font-medium text-muted transition-colors hover:bg-slate-100 hover:text-primary dark:hover:bg-slate-800/80 sm:self-start"
+            class="group inline-flex shrink-0 items-center justify-center gap-1.5 self-end rounded-lg px-3 py-2 text-xs font-medium text-muted transition-colors hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800/80 dark:hover:text-white sm:self-start"
             @click="dismiss"
           >
             <span>Dismiss</span>
@@ -54,7 +54,7 @@
         <!-- Progress -->
         <div class="mt-5 space-y-2 sm:mt-6">
           <div class="flex items-center justify-between gap-3 text-xs sm:text-sm">
-            <span class="font-medium text-secondary tabular-nums">
+            <span class="font-medium text-slate-800 dark:text-slate-200 tabular-nums">
               {{ completedCount }} of {{ steps.length }} complete
             </span>
             <span class="tabular-nums text-muted">{{ progressPercent }}%</span>
@@ -80,7 +80,7 @@
             <RouterLink
               v-if="!step.done"
               :to="step.to"
-              class="group flex min-h-[3.25rem] items-center gap-3 rounded-xl border border-border-color bg-white/40 px-3 py-2.5 transition sm:gap-4 sm:px-4 dark:bg-slate-900/30 hover:border-emerald-500/40 hover:bg-emerald-500/[0.04] dark:hover:border-emerald-400/30 dark:hover:bg-emerald-500/[0.06] active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40"
+              class="onboarding-step-link group flex min-h-[3.25rem] items-center gap-3 rounded-xl border border-border-color bg-white/80 px-3 py-2.5 text-slate-900 transition sm:gap-4 sm:px-4 dark:bg-slate-900/30 dark:text-white hover:border-emerald-500/40 hover:bg-emerald-50/90 dark:hover:border-emerald-400/30 dark:hover:bg-emerald-500/[0.06] active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40"
             >
               <span class="flex h-9 w-9 shrink-0 items-center justify-center" aria-hidden="true">
                 <span
@@ -90,7 +90,7 @@
                 </span>
               </span>
               <div class="min-w-0 flex-1">
-                <p class="text-sm font-medium leading-snug text-primary sm:text-base">
+                <p class="text-sm font-medium leading-snug text-slate-900 dark:text-white sm:text-base">
                   {{ step.label }}
                 </p>
                 <p v-if="step.hint" class="mt-0.5 text-xs text-muted">
@@ -98,7 +98,7 @@
                 </p>
               </div>
               <span
-                class="inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400 sm:text-sm"
+                class="onboarding-step-cta inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400 sm:text-sm"
               >
                 <span class="hidden sm:inline">{{ step.cta }}</span>
                 <ArrowRightIcon class="h-4 w-4 transition group-hover:translate-x-0.5 sm:h-5 sm:w-5" aria-hidden="true" />
@@ -106,14 +106,14 @@
             </RouterLink>
             <div
               v-else
-              class="flex min-h-[3.25rem] items-center gap-3 rounded-xl border border-emerald-500/25 bg-emerald-500/[0.06] px-3 py-2.5 sm:gap-4 sm:px-4 dark:border-emerald-400/20 dark:bg-emerald-500/10"
+              class="onboarding-step-done flex min-h-[3.25rem] items-center gap-3 rounded-xl border border-emerald-500/25 bg-emerald-50/90 px-3 py-2.5 text-slate-900 sm:gap-4 sm:px-4 dark:border-emerald-400/20 dark:bg-emerald-500/10 dark:text-white"
             >
               <span class="flex h-9 w-9 shrink-0 items-center justify-center" aria-hidden="true">
                 <CheckCircleIcon class="h-9 w-9 text-emerald-500 dark:text-emerald-400" />
               </span>
               <div class="min-w-0 flex-1">
                 <p
-                  class="text-sm font-medium leading-snug line-through decoration-emerald-600/50 sm:text-base dark:decoration-emerald-400/50 text-muted"
+                  class="text-sm font-medium leading-snug line-through decoration-emerald-600/40 sm:text-base text-muted dark:decoration-emerald-400/50"
                 >
                   {{ step.label }}
                 </p>
@@ -247,3 +247,41 @@ function dismiss() {
   }
 }
 </script>
+
+<style scoped>
+/*
+ * Light mode: Tailwind does not set -webkit-text-fill-color; a wrong value can inherit from
+ * ancestor layers (blur / compositing) and paint white text. Force ink + fill on the card.
+ */
+html:not(.dark) .onboarding-checklist :deep(.onboarding-step-link),
+html:not(.dark) .onboarding-checklist :deep(h2) {
+  color: rgb(15 23 42) !important;
+  -webkit-text-fill-color: rgb(15 23 42) !important;
+}
+
+html.dark .onboarding-checklist :deep(.onboarding-step-link),
+html.dark .onboarding-checklist :deep(h2) {
+  color: rgb(255 255 255) !important;
+  -webkit-text-fill-color: rgb(255 255 255) !important;
+}
+
+html:not(.dark) .onboarding-checklist :deep(.onboarding-step-done) {
+  color: rgb(15 23 42) !important;
+  -webkit-text-fill-color: rgb(15 23 42) !important;
+}
+
+html.dark .onboarding-checklist :deep(.onboarding-step-done) {
+  color: rgb(255 255 255) !important;
+  -webkit-text-fill-color: rgb(255 255 255) !important;
+}
+
+html:not(.dark) .onboarding-checklist :deep(.onboarding-step-cta) {
+  color: rgb(5 150 105) !important;
+  -webkit-text-fill-color: rgb(5 150 105) !important;
+}
+
+html.dark .onboarding-checklist :deep(.onboarding-step-cta) {
+  color: rgb(52 211 153) !important;
+  -webkit-text-fill-color: rgb(52 211 153) !important;
+}
+</style>

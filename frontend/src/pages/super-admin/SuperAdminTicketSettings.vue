@@ -218,9 +218,9 @@
             <select v-model="modalForm.priority" class="select-base w-full px-3 py-2 rounded-lg">
               <option value="">Any</option>
               <option value="low">Low</option>
-              <option value="normal">Normal</option>
+              <option value="medium">Normal</option>
               <option value="high">High</option>
-              <option value="urgent">Urgent</option>
+              <option value="critical">Critical</option>
             </select>
           </div>
         </template>
@@ -237,7 +237,7 @@
           </div>
           <div>
             <label class="label-base block text-sm mb-1">Condition (JSON)</label>
-            <textarea v-model="modalForm.condition" rows="3" class="input-base w-full px-3 py-2 rounded-lg resize-y font-mono text-xs" placeholder='{"priority": "urgent"}' />
+            <textarea v-model="modalForm.condition" rows="3" class="input-base w-full px-3 py-2 rounded-lg resize-y font-mono text-xs" placeholder='{"priority": "critical"}' />
           </div>
           <div>
             <label class="label-base block text-sm mb-1">Target Queue ID</label>

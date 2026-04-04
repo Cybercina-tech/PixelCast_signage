@@ -58,7 +58,7 @@
             <input v-model="form.domain" type="text" class="input-base w-full px-3 py-2 rounded-lg" />
           </div>
           <p class="text-xs text-muted">
-            Product ID is read from the <code class="text-primary">CODECANYON_PRODUCT_ID</code> environment variable on the server, not from this form.
+            When <code class="text-primary">LICENSE_GATEWAY_BASE_URL</code> is set, activation goes through your operator gateway and returns an activation token (no Envato token is needed on this server). Otherwise the server uses <code class="text-primary">LICENSE_SERVER_URL</code> with the purchase code on each check. Product ID is read from <code class="text-primary">CODECANYON_PRODUCT_ID</code> in the environment.
           </p>
           <button type="button" class="btn-primary px-4 py-2 rounded-lg text-sm" @click="activate" :disabled="loading">
             Activate

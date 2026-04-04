@@ -27,6 +27,11 @@ class InstallationCheckMiddleware(MiddlewareMixin):
     # Paths that should be allowed even if installation is not completed
     ALLOWED_PATHS = [
         '/api/setup/',  # All setup endpoints
+        # Public marketing JSON (SPA may call these before installed.lock exists)
+        '/api/public/blog/',
+        '/api/public/pricing/',
+        '/api/public/deployment/',
+        '/api/public/downloads/',
         '/static/',
         '/media/',
         '/favicon.ico',

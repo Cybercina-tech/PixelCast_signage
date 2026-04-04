@@ -15,7 +15,7 @@
         <h2 class="text-3xl md:text-4xl lg:text-5xl font-bold mb-6">
           Start Managing Your Screens Today
         </h2>
-        <p class="text-xl text-slate-300 mb-10 leading-relaxed">
+        <p class="text-xl text-on-starfield mb-10 leading-relaxed">
           Join organizations using PixelCast Signage to streamline their digital signage operations.
         </p>
         <div class="flex flex-col sm:flex-row gap-4 justify-center items-center">

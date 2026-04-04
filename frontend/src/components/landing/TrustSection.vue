@@ -17,7 +17,7 @@
           <h2 class="text-3xl md:text-4xl lg:text-5xl font-bold mb-4">
             Built for Production Environments
           </h2>
-          <p class="text-lg text-slate-300 max-w-2xl mx-auto">
+          <p class="text-lg text-on-starfield max-w-2xl mx-auto">
             Enterprise-grade infrastructure designed for reliability, security, and scale
           </p>
         </div>
@@ -40,7 +40,7 @@
           :transition="{ delay: 400 }"
           class="text-center"
         >
-          <p class="text-slate-400 text-lg">
+          <p class="text-on-starfield text-lg">
             Trusted by enterprises requiring mission-critical reliability and security
           </p>
         </div>

@@ -62,6 +62,13 @@ def issue_login_or_2fa_challenge(user, request):
 
 
 def build_login_success_response(user, request):
+    try:
+        from saas_platform.tenant_assignment import ensure_user_tenant
+
+        ensure_user_tenant(user)
+        user.refresh_from_db()
+    except Exception as e:
+        logger.warning('ensure_user_tenant in build_login_success_response failed: %s', e)
     ua = request.META.get('HTTP_USER_AGENT', '') or ''
     ip = _client_ip(request)
     refresh = ScreenGramRefreshToken.for_user(user, client_ua=ua, client_ip=ip)

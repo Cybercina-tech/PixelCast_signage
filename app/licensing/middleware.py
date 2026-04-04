@@ -16,6 +16,7 @@ class LicenseEnforcementMiddleware(MiddlewareMixin):
         "/api/auth/token/",
         "/api/auth/token/refresh/",
         "/api/license/",
+        "/api/license-registry/",
         "/api/schema/",
         "/api/docs/",
         "/api/redoc/",

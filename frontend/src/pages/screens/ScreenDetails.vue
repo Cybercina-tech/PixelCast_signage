@@ -39,8 +39,22 @@
             </svg>
             Back
           </button>
-          <div class="min-w-0">
-            <h1 class="text-3xl font-bold text-primary mb-2">{{ screen.name || 'Unnamed Screen' }}</h1>
+          <div class="min-w-0 flex-1">
+            <div class="flex items-start gap-2 flex-wrap">
+              <h1 class="text-3xl font-bold text-primary mb-2">{{ screen.name || 'Unnamed Screen' }}</h1>
+              <button
+                v-if="playerUrl"
+                type="button"
+                class="btn-outline p-2 rounded-lg shrink-0 mt-1"
+                title="Copy player URL"
+                aria-label="Copy player URL"
+                @click="copyPlayerUrl"
+              >
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+              </button>
+            </div>
             <p class="text-secondary">{{ screen.device_id }}</p>
           </div>
         </div>
@@ -60,216 +74,248 @@
         </div>
       </div>
 
-      <!-- 3-Column Dashboard Layout -->
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-        <!-- Left Column: General Info -->
-        <div class="space-y-6">
-          <div class="card-base rounded-2xl p-6">
-            <h2 class="text-lg font-semibold text-primary mb-4">General Information</h2>
-            <dl class="space-y-4">
-              <div>
-                <dt class="text-xs font-medium text-muted uppercase tracking-wider mb-1">Device ID</dt>
-                <dd class="text-sm text-primary font-mono">{{ screen.device_id }}</dd>
-              </div>
-              <div>
-                <dt class="text-xs font-medium text-muted uppercase tracking-wider mb-1">Player URL</dt>
-                <dd class="text-sm text-primary break-all space-y-2">
-                  <div class="font-mono">{{ playerUrl }}</div>
-                  <button
-                    type="button"
-                    @click="copyPlayerUrl"
-                    class="btn-outline px-3 py-1 rounded-lg text-xs"
-                  >
-                    Copy URL
-                  </button>
-                </dd>
-              </div>
-              <div>
-                <dt class="text-xs font-medium text-muted uppercase tracking-wider mb-1">Name</dt>
-                <dd class="text-sm text-primary">
-                  <input
-                    v-if="editingName"
-                    v-model="editableName"
-                    @blur="handleSaveName"
-                    @keyup.enter="handleSaveName"
-                    @keyup.esc="cancelEditName"
-                    class="input-base w-full px-2 py-1 rounded"
-                    autofocus
-                  />
-                  <span v-else @click="startEditName" class="cursor-pointer hover:text-blue-400 transition-colors">
-                    {{ screen.name || 'Unnamed Screen' }}
-                    <svg class="inline w-4 h-4 ml-1 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                    </svg>
-                  </span>
-                </dd>
-              </div>
-              <div>
-                <dt class="text-xs font-medium text-muted uppercase tracking-wider mb-1">IP Address</dt>
-                <dd class="text-sm text-primary font-mono">{{ screen.last_ip || 'N/A' }}</dd>
-              </div>
-              <div>
-                <dt class="text-xs font-medium text-muted uppercase tracking-wider mb-1">OS Version</dt>
-                <dd class="text-sm text-primary">{{ screen.os_version || 'N/A' }}</dd>
-              </div>
-              <div>
-                <dt class="text-xs font-medium text-muted uppercase tracking-wider mb-1">App Version</dt>
-                <dd class="text-sm text-primary">{{ screen.app_version || 'N/A' }}</dd>
-              </div>
-            </dl>
-          </div>
-        </div>
-
-        <!-- Center Column: Live Status & Metrics -->
-        <div class="space-y-6">
-          <!-- Virtual Monitor Preview -->
-          <div class="card-base rounded-2xl p-6">
+      <!-- Row 1: Live preview + remote controls (side-by-side on xl) -->
+      <div class="grid grid-cols-1 xl:grid-cols-12 gap-4 md:gap-6">
+        <div class="xl:col-span-7 min-w-0">
+          <div class="card-base rounded-2xl p-6 h-full flex flex-col">
             <h2 class="text-lg font-semibold text-primary mb-4">Live Preview</h2>
-            <VirtualMonitor
-              ref="virtualMonitorRef"
-              :active-template="activeTemplatePreview"
-              :is-online="isOnline"
-              :loading="screenshotLoading"
-              @take-screenshot="handleTakeScreenshot"
-            />
-          </div>
-
-          <!-- Health Gauges -->
-          <div class="card-base rounded-2xl p-6">
-            <h2 class="text-lg font-semibold text-primary mb-4">Health Metrics</h2>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
-              <HealthGauge :value="healthMetrics.cpu_usage || 0" label="CPU" />
-              <HealthGauge :value="healthMetrics.memory_usage || 0" label="Memory" />
-            </div>
-            <div class="mt-6 space-y-3">
-              <div class="flex items-center justify-between">
-                <span class="text-sm text-muted">Latency</span>
-                <span class="text-sm font-semibold text-primary">{{ healthMetrics.latency || 0 }}ms</span>
-              </div>
-              <div class="flex items-center justify-between">
-                <span class="text-sm text-muted">Last Heartbeat</span>
-                <div class="flex items-center gap-2">
-                  <div
-                    :class="[
-                      'w-2 h-2 rounded-full',
-                      isOnline ? 'bg-green-500 animate-pulse' : 'bg-gray-500',
-                    ]"
-                  ></div>
-                  <span class="text-sm text-primary">{{ formatLastHeartbeat(screen.last_heartbeat_at) }}</span>
-                </div>
-              </div>
+            <div class="flex-1 min-h-0">
+              <VirtualMonitor
+                ref="virtualMonitorRef"
+                :active-template="activeTemplatePreview"
+                :is-online="isOnline"
+                :loading="screenshotLoading"
+                @take-screenshot="handleTakeScreenshot"
+              />
             </div>
           </div>
         </div>
-
-        <!-- Right Column: Command Center -->
-        <div class="space-y-6">
-          <!-- Remote Actions -->
-          <div class="card-base rounded-2xl p-6">
+        <div class="xl:col-span-5 min-w-0">
+          <div class="card-base rounded-2xl p-6 h-full flex flex-col">
             <h2 class="text-lg font-semibold text-primary mb-4">Remote Actions</h2>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <p class="text-sm text-muted mb-4">Control this display. Primary actions are available first.</p>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-auto">
               <button
-                @click="handleRefresh"
-                class="btn-primary px-4 py-2 rounded-lg transition-all duration-400 flex items-center justify-center gap-2"
+                type="button"
+                class="btn-primary min-h-[44px] px-4 py-3 rounded-lg transition-all duration-400 flex items-center justify-center gap-2"
                 :disabled="!isOnline || actionLoading"
+                @click="handleRefresh"
               >
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                 </svg>
                 <span>Refresh</span>
               </button>
               <button
-                @click="handleReboot"
-                class="btn-secondary px-4 py-2 rounded-lg transition-all duration-400 flex items-center justify-center gap-2"
-                :disabled="!isOnline || actionLoading"
+                type="button"
+                class="btn-primary min-h-[44px] px-4 py-3 rounded-lg transition-all duration-400 flex items-center justify-center gap-2"
+                :disabled="actionLoading"
+                @click="showTemplateModal = true"
               >
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>Template</span>
+              </button>
+              <button
+                type="button"
+                class="btn-secondary min-h-[44px] px-4 py-3 rounded-lg transition-all duration-400 flex items-center justify-center gap-2"
+                :disabled="!isOnline || actionLoading"
+                @click="handleReboot"
+              >
+                <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                 </svg>
                 <span>Reboot</span>
               </button>
               <button
-                @click="handleIdentify"
-                class="btn-secondary px-4 py-2 rounded-lg transition-all duration-400 flex items-center justify-center gap-2"
+                type="button"
+                class="btn-secondary min-h-[44px] px-4 py-3 rounded-lg transition-all duration-400 flex items-center justify-center gap-2"
                 :disabled="!isOnline || actionLoading"
+                @click="handleIdentify"
               >
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" />
                 </svg>
                 <span>Identify</span>
               </button>
-              <button
-                @click="showTemplateModal = true"
-                class="btn-primary px-4 py-2 rounded-lg transition-all duration-400 flex items-center justify-center gap-2"
-                :disabled="actionLoading"
-              >
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span>Template</span>
-              </button>
-            </div>
-          </div>
-
-          <!-- Live Command Queue -->
-          <div class="card-base rounded-2xl p-6">
-            <h2 class="text-lg font-semibold text-primary mb-4">Command Queue</h2>
-            <div class="max-h-96 overflow-y-auto custom-scrollbar">
-              <CommandTimeline :commands="allCommands" />
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Recent Logs (Full Width) -->
-      <div class="card-base rounded-2xl p-6">
-        <h2 class="text-lg font-semibold text-primary mb-4">Recent Logs</h2>
-        <div class="max-h-64 overflow-y-auto custom-scrollbar space-y-2">
-          <div
-            v-for="log in recentLogs"
-            :key="log.id"
-            class="p-3 bg-card rounded-lg border border-border-color hover:bg-card transition-colors duration-400"
-          >
-            <p class="text-sm text-primary">{{ log.message || `${log.status} - ${formatDate(log.recorded_at || log.created_at)}` }}</p>
-            <p class="text-xs text-muted mt-1">{{ formatDate(log.recorded_at || log.created_at) }}</p>
+      <!-- Row 2: General info + health -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+        <div class="card-base rounded-2xl p-6">
+          <h2 class="text-lg font-semibold text-primary mb-4">General Information</h2>
+          <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+            <div>
+              <dt class="text-xs font-medium text-muted uppercase tracking-wider mb-1">Device ID</dt>
+              <dd class="text-sm text-primary font-mono break-all">{{ screen.device_id }}</dd>
+            </div>
+            <div>
+              <dt class="text-xs font-medium text-muted uppercase tracking-wider mb-1">Name</dt>
+              <dd class="text-sm text-primary min-w-0">
+                <input
+                  v-if="editingName"
+                  v-model="editableName"
+                  class="input-base w-full px-2 py-1 rounded"
+                  autofocus
+                  @blur="handleSaveName"
+                  @keyup.enter="handleSaveName"
+                  @keyup.esc="cancelEditName"
+                />
+                <span v-else class="cursor-pointer hover:text-blue-400 transition-colors" @click="startEditName">
+                  {{ screen.name || 'Unnamed Screen' }}
+                  <svg class="inline w-4 h-4 ml-1 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                </span>
+              </dd>
+            </div>
+            <div class="sm:col-span-2">
+              <dt class="text-xs font-medium text-muted uppercase tracking-wider mb-1">Player URL</dt>
+              <dd class="text-sm text-primary break-all space-y-2">
+                <div class="font-mono text-xs sm:text-sm">{{ playerUrl }}</div>
+                <button type="button" class="btn-outline px-3 py-1.5 rounded-lg text-xs" @click="copyPlayerUrl">
+                  Copy URL
+                </button>
+              </dd>
+            </div>
+            <div>
+              <dt class="text-xs font-medium text-muted uppercase tracking-wider mb-1">IP Address</dt>
+              <dd class="text-sm text-primary font-mono">{{ screen.last_ip || 'N/A' }}</dd>
+            </div>
+            <div>
+              <dt class="text-xs font-medium text-muted uppercase tracking-wider mb-1">OS Version</dt>
+              <dd class="text-sm text-primary">{{ screen.os_version || 'N/A' }}</dd>
+            </div>
+            <div class="sm:col-span-2">
+              <dt class="text-xs font-medium text-muted uppercase tracking-wider mb-1">App Version</dt>
+              <dd class="text-sm text-primary">{{ screen.app_version || 'N/A' }}</dd>
+            </div>
+          </dl>
+        </div>
+
+        <div class="card-base rounded-2xl p-6">
+          <h2 class="text-lg font-semibold text-primary mb-4">Health Metrics</h2>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
+            <HealthGauge :value="healthMetrics.cpu_usage || 0" label="CPU" />
+            <HealthGauge :value="healthMetrics.memory_usage || 0" label="Memory" />
           </div>
-          <div v-if="recentLogs.length === 0" class="text-center text-muted py-8">
-            <p class="text-sm">No logs available</p>
+          <div class="mt-6 space-y-3">
+            <div class="flex items-center justify-between gap-2">
+              <span class="text-sm text-muted">Latency</span>
+              <span class="text-sm font-semibold text-primary tabular-nums">{{ healthMetrics.latency || 0 }}ms</span>
+            </div>
+            <div class="flex items-center justify-between gap-2">
+              <span class="text-sm text-muted">Last Heartbeat</span>
+              <div class="flex items-center gap-2 min-w-0">
+                <div
+                  :class="[
+                    'w-2 h-2 rounded-full shrink-0',
+                    isOnline ? 'bg-green-500 animate-pulse' : 'bg-gray-500',
+                  ]"
+                ></div>
+                <span class="text-sm text-primary truncate">{{ formatLastHeartbeat(screen.last_heartbeat_at) }}</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- Danger Zone -->
-      <div class="card-base rounded-2xl p-6 border-dusty-red/30 space-y-4">
-        <h3 class="text-lg font-semibold text-dusty-red mb-1">Danger Zone</h3>
-
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-sm text-primary font-medium">Revoke Device Token</p>
-            <p class="text-xs text-muted">Forces the TV back to pairing mode. It will need to be re-paired.</p>
+      <!-- Activity: commands vs logs -->
+      <div class="card-base rounded-2xl overflow-hidden">
+        <div class="px-4 pt-4 md:px-6 md:pt-6 border-b border-border-color/40">
+          <div class="flex gap-1 overflow-x-auto border-b border-border-color/40 pb-px -mb-px">
+            <button
+              type="button"
+              class="px-4 py-2 text-sm font-medium rounded-t-lg transition-colors whitespace-nowrap"
+              :class="activityTab === 'commands'
+                ? 'bg-card border border-b-0 border-border-color/70 text-primary'
+                : 'text-muted hover:text-primary'"
+              @click="activityTab = 'commands'"
+            >
+              Command Queue
+            </button>
+            <button
+              type="button"
+              class="px-4 py-2 text-sm font-medium rounded-t-lg transition-colors whitespace-nowrap"
+              :class="activityTab === 'logs'
+                ? 'bg-card border border-b-0 border-border-color/70 text-primary'
+                : 'text-muted hover:text-primary'"
+              @click="activityTab = 'logs'"
+            >
+              Recent Logs
+            </button>
           </div>
-          <button
-            @click="handleRevokeToken"
-            :disabled="revokingToken"
-            class="px-5 py-2 border-2 border-amber-500/50 hover:bg-amber-500/20 hover:border-amber-500 text-amber-400 rounded-lg transition-all duration-200 font-semibold disabled:opacity-50"
-          >
-            {{ revokingToken ? 'Revoking...' : 'Revoke Token' }}
-          </button>
         </div>
-
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-sm text-primary font-medium">Delete Screen</p>
-            <p class="text-xs text-muted">Permanently remove this screen from your system.</p>
+        <div class="p-4 md:p-6 pt-4">
+          <div v-show="activityTab === 'commands'" class="max-h-96 overflow-y-auto custom-scrollbar -mx-1 px-1">
+            <CommandTimeline :commands="allCommands" />
           </div>
-          <button
-            @click="handleDeleteScreen"
-            class="px-6 py-2 border-2 border-red-500/50 hover:bg-red-500/20 hover:border-red-500 text-red-400 rounded-lg transition-all duration-200 font-semibold"
-          >
-            Delete Screen
-          </button>
+          <div v-show="activityTab === 'logs'" class="max-h-96 overflow-y-auto custom-scrollbar space-y-2 -mx-1 px-1">
+            <div
+              v-for="log in recentLogs"
+              :key="log.id"
+              class="p-3 bg-card rounded-lg border border-border-color hover:bg-card transition-colors duration-400"
+            >
+              <p class="text-sm text-primary">{{ log.message || `${log.status} - ${formatDate(log.recorded_at || log.created_at)}` }}</p>
+              <p class="text-xs text-muted mt-1">{{ formatDate(log.recorded_at || log.created_at) }}</p>
+            </div>
+            <div v-if="recentLogs.length === 0" class="text-center text-muted py-8">
+              <p class="text-sm">No logs available</p>
+            </div>
+          </div>
         </div>
       </div>
+
+      <!-- Danger Zone (collapsed by default) -->
+      <details class="danger-zone-details card-base rounded-2xl border-dusty-red/30">
+        <summary
+          class="cursor-pointer list-none px-6 py-4 flex items-center justify-between gap-3 text-lg font-semibold text-dusty-red select-none [&::-webkit-details-marker]:hidden outline-none focus-visible:ring-2 focus-visible:ring-dusty-red/40 rounded-2xl"
+        >
+          <span>Danger Zone</span>
+          <svg
+            class="w-5 h-5 shrink-0 text-dusty-red/80 transition-transform duration-200"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+          </svg>
+        </summary>
+        <div class="px-6 pb-6 pt-0 space-y-6 border-t border-border-color/30">
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <p class="text-sm text-primary font-medium">Revoke Device Token</p>
+              <p class="text-xs text-muted">Forces the TV back to pairing mode. It will need to be re-paired.</p>
+            </div>
+            <button
+              type="button"
+              :disabled="revokingToken"
+              class="px-5 py-2 border-2 border-amber-500/50 hover:bg-amber-500/20 hover:border-amber-500 text-amber-400 rounded-lg transition-all duration-200 font-semibold disabled:opacity-50 shrink-0"
+              @click="handleRevokeToken"
+            >
+              {{ revokingToken ? 'Revoking...' : 'Revoke Token' }}
+            </button>
+          </div>
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <p class="text-sm text-primary font-medium">Delete Screen</p>
+              <p class="text-xs text-muted">Permanently remove this screen from your system.</p>
+            </div>
+            <button
+              type="button"
+              class="px-6 py-2 border-2 border-red-500/50 hover:bg-red-500/20 hover:border-red-500 text-red-400 rounded-lg transition-all duration-200 font-semibold shrink-0"
+              @click="handleDeleteScreen"
+            >
+              Delete Screen
+            </button>
+          </div>
+        </div>
+      </details>
 
       <!-- Modals -->
       <Modal :show="showCommandModal" title="Send Command" @close="showCommandModal = false">
@@ -409,6 +455,7 @@ const healthMetrics = ref({
   latency: 0,
 })
 
+const activityTab = ref('commands')
 const showCommandModal = ref(false)
 const showTemplateModal = ref(false)
 const editingName = ref(false)
@@ -849,5 +896,7 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-/* Additional custom styles if needed */
+.danger-zone-details[open] summary svg {
+  transform: rotate(180deg);
+}
 </style>

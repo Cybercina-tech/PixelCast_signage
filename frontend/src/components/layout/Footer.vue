@@ -93,20 +93,30 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+/* Light theme (default): match Antler surfaces — dark mode overrides below */
 .system-status-bar {
   position: relative;
   width: 100%;
   z-index: 20;
-  background: rgba(10, 10, 26, 0.4);
-  backdrop-filter: blur(5px);
-  -webkit-backdrop-filter: blur(5px);
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  background: var(--card-bg);
+  backdrop-filter: var(--card-bg-backdrop);
+  -webkit-backdrop-filter: var(--card-bg-backdrop);
+  border-top: 1px solid var(--border-color);
+  box-shadow: 0 -1px 0 rgba(15, 23, 42, 0.04);
   padding: 0.375rem 1.5rem;
   height: 30px;
   max-height: 30px;
   display: flex;
   align-items: center;
   flex-shrink: 0;
+}
+
+html.dark .system-status-bar {
+  background: rgba(10, 10, 26, 0.4);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: none;
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
 }
 
 .status-bar-container {
@@ -161,18 +171,27 @@ onUnmounted(() => {
 
 .status-text {
   font-size: 10px;
-  color: rgba(255, 255, 255, 0.5);
-  font-weight: 400;
+  color: var(--text-muted);
+  font-weight: 500;
   white-space: nowrap;
   letter-spacing: 0.05em;
+}
+
+html.dark .status-text {
+  color: rgba(255, 255, 255, 0.5);
+  font-weight: 400;
 }
 
 /* Copyright & Version */
 .status-meta {
   font-size: 10px;
-  color: rgba(255, 255, 255, 0.35);
+  color: var(--text-muted);
   font-weight: 400;
   letter-spacing: 0.03em;
+}
+
+html.dark .status-meta {
+  color: rgba(255, 255, 255, 0.35);
 }
 
 .status-version {
@@ -181,10 +200,16 @@ onUnmounted(() => {
 }
 
 .status-separator {
-  color: rgba(255, 255, 255, 0.15);
+  color: var(--text-muted);
+  opacity: 0.45;
   font-size: 9px;
   user-select: none;
   margin: 0 0.25rem;
+}
+
+html.dark .status-separator {
+  color: rgba(255, 255, 255, 0.15);
+  opacity: 1;
 }
 
 /* Clock & Latency */
@@ -192,21 +217,33 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 0.375rem;
+  color: var(--text-muted);
+}
+
+html.dark .status-time {
   color: rgba(255, 255, 255, 0.5);
 }
 
 .status-time svg {
-  color: rgba(255, 255, 255, 0.35);
+  color: var(--text-muted);
   width: 12px;
   height: 12px;
+}
+
+html.dark .status-time svg {
+  color: rgba(255, 255, 255, 0.35);
 }
 
 .time-text {
   font-size: 10px;
   font-family: 'Courier New', 'Consolas', monospace;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--text-main);
   font-weight: 500;
   letter-spacing: 0.05em;
+}
+
+html.dark .time-text {
+  color: rgba(255, 255, 255, 0.6);
 }
 
 .status-latency {
@@ -217,18 +254,26 @@ onUnmounted(() => {
 
 .latency-label {
   font-size: 9px;
-  color: rgba(255, 255, 255, 0.35);
+  color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.08em;
+}
+
+html.dark .latency-label {
+  color: rgba(255, 255, 255, 0.35);
 }
 
 .latency-value {
   font-size: 10px;
   font-family: 'Courier New', 'Consolas', monospace;
-  color: #00d2ff;
+  color: var(--accent-color);
   font-weight: 600;
-  text-shadow: 0 0 6px rgba(0, 210, 255, 0.4);
   letter-spacing: 0.05em;
+}
+
+html.dark .latency-value {
+  color: #00d2ff;
+  text-shadow: 0 0 6px rgba(0, 210, 255, 0.4);
 }
 
 /* Responsive */
@@ -249,7 +294,11 @@ onUnmounted(() => {
     width: 100%;
     justify-content: center;
     padding-top: 0.25rem;
-    border-top: 1px solid rgba(255, 255, 255, 0.03);
+    border-top: 1px solid var(--border-color);
+  }
+
+  html.dark .status-center {
+    border-top-color: rgba(255, 255, 255, 0.03);
   }
 
   .status-right {

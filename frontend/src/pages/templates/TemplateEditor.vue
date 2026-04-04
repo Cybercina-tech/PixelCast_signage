@@ -15,130 +15,165 @@
         Read-only: you can explore the canvas; changes are not saved to the server.
       </div>
       <!-- Top Toolbar -->
-      <div class="flex items-center justify-between px-4 py-3 bg-card border-b border-border-color">
-        <div class="flex items-center gap-3">
+      <div class="shrink-0 flex flex-col gap-2 px-3 py-2.5 sm:px-4 sm:py-3 bg-card border-b border-border-color">
+        <div class="flex items-center gap-2 min-w-0">
           <button
             @click="goBack"
-            class="btn-outline px-3 py-2 active:scale-95 rounded-lg text-sm font-medium transition-all duration-400 flex items-center gap-2"
+            class="btn-outline px-2.5 sm:px-3 py-2 active:scale-95 rounded-lg text-sm font-medium transition-all duration-400 flex items-center gap-2 shrink-0"
             title="Back to Templates List"
           >
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
             </svg>
-            Back to List
+            <span class="hidden sm:inline">Back to List</span>
           </button>
-          <h1 class="text-xl font-semibold text-primary">{{ templateName || 'Untitled Template' }}</h1>
+          <h1 class="text-base sm:text-xl font-semibold text-primary truncate min-w-0 flex-1">{{ templateName || 'Untitled Template' }}</h1>
           <button
             @click="saveTemplate"
             :disabled="saving || !canEditTemplates"
             :title="!canEditTemplates ? 'Your account cannot save templates' : ''"
-            class="btn-primary px-4 py-2 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-sm font-medium transition-all duration-400"
+            class="btn-primary px-3 sm:px-4 py-2 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-xs sm:text-sm font-medium transition-all duration-400 shrink-0"
           >
-            {{ saving ? 'Saving...' : 'Save Template' }}
+            {{ saving ? 'Saving...' : 'Save' }}
           </button>
+          <div class="hidden lg:flex items-center gap-2 flex-wrap">
+            <button
+              @click="exportJSON"
+              class="btn-outline px-3 sm:px-4 py-2 active:scale-95 rounded-lg text-sm font-medium transition-all duration-400"
+            >
+              Export JSON
+            </button>
+            <button
+              @click="deleteSelectedWidget"
+              :disabled="!selectedWidgetId"
+              class="px-3 sm:px-4 py-2 rounded-lg text-sm font-medium transition-all duration-400 border border-red-200 dark:border-red-500/60 text-red-600 dark:text-red-300 hover:bg-red-500/10 disabled:opacity-40 disabled:cursor-not-allowed"
+              title="Delete selected object"
+            >
+              Delete
+            </button>
+            <button
+              v-if="templateId && canEditTemplates"
+              @click="handlePushToScreen"
+              :disabled="saving || pushing"
+              class="btn-secondary px-3 sm:px-4 py-2 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-sm font-medium transition-all duration-400 flex items-center gap-2"
+            >
+              <svg v-if="!pushing" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+              <div v-else class="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+              {{ pushing ? 'Pushing...' : 'Push to Screen' }}
+            </button>
+          </div>
           <button
-            @click="exportJSON"
-            class="btn-outline px-4 py-2 active:scale-95 rounded-lg text-sm font-medium transition-all duration-400"
+            type="button"
+            class="lg:hidden btn-outline p-2 rounded-lg shrink-0"
+            aria-label="More actions"
+            @click="showMobileToolbarMore = !showMobileToolbarMore"
+          >
+            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" />
+            </svg>
+          </button>
+          <div class="hidden lg:flex items-center gap-2 text-sm text-muted ml-auto">
+            <button
+              type="button"
+              @click="rightPanelCollapsed = !rightPanelCollapsed"
+              class="btn-outline px-2 py-1 rounded text-xs"
+              :title="rightPanelCollapsed ? 'Expand inspector panel' : 'Collapse inspector panel'"
+            >
+              {{ rightPanelCollapsed ? 'Show Inspector' : 'Hide Inspector' }}
+            </button>
+          </div>
+        </div>
+        <div
+          v-if="showMobileToolbarMore"
+          class="lg:hidden flex flex-wrap gap-2 pt-2 border-t border-border-color/70"
+        >
+          <button
+            type="button"
+            @click="showMobileToolbarMore = false; exportJSON()"
+            class="btn-outline px-3 py-2 rounded-lg text-sm font-medium"
           >
             Export JSON
           </button>
           <button
-            @click="deleteSelectedWidget"
+            type="button"
+            @click="showMobileToolbarMore = false; deleteSelectedWidget()"
             :disabled="!selectedWidgetId"
-            class="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-400 border border-red-200 dark:border-red-500/60 text-red-600 dark:text-red-300 hover:bg-red-500/10 disabled:opacity-40 disabled:cursor-not-allowed"
-            title="Delete selected object"
+            class="px-3 py-2 rounded-lg text-sm font-medium border border-red-200 dark:border-red-500/60 text-red-600 dark:text-red-300 disabled:opacity-40"
           >
-            Delete Object
+            Delete
           </button>
           <button
             v-if="templateId && canEditTemplates"
-            @click="handlePushToScreen"
+            type="button"
+            @click="showMobileToolbarMore = false; handlePushToScreen()"
             :disabled="saving || pushing"
-            class="btn-secondary px-4 py-2 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-sm font-medium transition-all duration-400 flex items-center gap-2"
+            class="btn-secondary px-3 py-2 rounded-lg text-sm font-medium"
           >
-            <svg v-if="!pushing" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-            </svg>
-            <div v-else class="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-            {{ pushing ? 'Pushing...' : 'Push to Screen' }}
-          </button>
-        </div>
-        <div class="flex items-center gap-2 text-sm text-muted">
-          <button
-            @click="rightPanelCollapsed = !rightPanelCollapsed"
-            class="btn-outline px-2 py-1 rounded text-xs"
-            :title="rightPanelCollapsed ? 'Expand inspector panel' : 'Collapse inspector panel'"
-          >
-            {{ rightPanelCollapsed ? 'Show Inspector' : 'Hide Inspector' }}
+            Push to Screen
           </button>
         </div>
       </div>
 
       <!-- Main Editor Area -->
-      <div class="flex-1 flex overflow-hidden">
-        <!-- Left Sidebar: Widget Library -->
-        <div
-          class="hidden lg:flex lg:flex-col h-full w-56 bg-card border-r border-border-color transition-all duration-200"
-        >
-          <div class="bg-card border-b border-border-color px-4 py-3 shrink-0">
-            <h2 class="text-lg font-semibold text-primary">Widget Library</h2>
-          </div>
-          <div class="flex-1 min-h-0 overflow-y-auto custom-scrollbar scroll-container p-2 p-4">
-            <div class="space-y-3">
-              <div
-                v-for="section in widgetLibrarySections"
-                :key="section.id"
-                class="rounded-xl border border-border-color/80 bg-card/60 backdrop-blur-sm shadow-soft overflow-hidden"
-                :style="widgetSectionCardStyle(section.id)"
-              >
-                <button
-                  class="w-full px-3 py-2.5 flex items-center justify-between text-left transition-colors"
-                  :style="widgetSectionHeaderStyle(section.id)"
-                  @click="toggleWidgetSection(section.id)"
-                >
-                  <span class="text-[11px] uppercase tracking-wide text-muted font-semibold">
-                    {{ section.label }}
-                  </span>
-                  <svg
-                    class="w-4 h-4 text-muted transition-transform duration-200"
-                    :class="{ 'rotate-180': isWidgetSectionOpen(section.id) }"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
-
-                <transition name="widget-accordion">
-                  <div
-                    v-show="isWidgetSectionOpen(section.id)"
-                    class="space-y-2 p-2 pt-0"
-                  >
-                    <button
-                      v-for="item in section.items"
-                      :key="item.type"
-                      @click="addWidget(item.type)"
-                      class="w-full px-4 py-3 bg-card hover:bg-card active:scale-95 rounded-lg text-left text-primary transition-all duration-300 flex items-center gap-2 font-medium border border-border-color hover:border-accent-color/50"
-                      style="--accent-color: var(--accent-color);"
-                    >
-                      <svg class="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="item.iconPath" />
-                      </svg>
-                      <span>{{ item.label }}</span>
-                    </button>
-                  </div>
-                </transition>
-              </div>
-            </div>
-          </div>
+      <div class="flex-1 flex overflow-hidden min-h-0">
+        <!-- Left: Widget Library (desktop) -->
+        <div class="hidden lg:flex lg:flex-col h-full w-56 shrink-0 border-r border-border-color">
+          <WidgetLibraryPanel
+            :sections="widgetLibrarySections"
+            :widget-section-card-style="widgetSectionCardStyle"
+            :widget-section-header-style="widgetSectionHeaderStyle"
+            :is-widget-section-open="isWidgetSectionOpen"
+            :toggle-widget-section="toggleWidgetSection"
+            @add-widget="addWidget"
+          />
         </div>
+
+        <Teleport to="body">
+          <div
+            v-if="!isDesktopLayout && mobileLibraryOpen"
+            class="fixed inset-0 z-[56] lg:hidden"
+          >
+            <div
+              class="absolute inset-0 bg-black/50 backdrop-blur-sm"
+              aria-hidden="true"
+              @click="mobileLibraryOpen = false"
+            />
+            <aside
+              class="absolute left-0 top-0 bottom-0 w-[min(100%,20rem)] max-w-[100vw] flex flex-col shadow-2xl border-r border-border-color bg-card"
+              style="padding-top: max(0.5rem, env(safe-area-inset-top))"
+              role="dialog"
+              aria-modal="true"
+              aria-label="Widget library"
+            >
+              <WidgetLibraryPanel
+                :sections="widgetLibrarySections"
+                :widget-section-card-style="widgetSectionCardStyle"
+                :widget-section-header-style="widgetSectionHeaderStyle"
+                :is-widget-section-open="isWidgetSectionOpen"
+                :toggle-widget-section="toggleWidgetSection"
+                @add-widget="(t) => { addWidget(t); mobileLibraryOpen = false }"
+              >
+                <template #headerEnd>
+                  <button
+                    type="button"
+                    class="btn-outline px-2 py-1 rounded text-xs shrink-0"
+                    @click="mobileLibraryOpen = false"
+                  >
+                    Close
+                  </button>
+                </template>
+              </WidgetLibraryPanel>
+            </aside>
+          </div>
+        </Teleport>
 
         <!-- Center: Canvas Area -->
         <div class="flex-1 flex flex-col bg-editor-workspace dark:bg-gray-900 overflow-hidden">
           <div
             ref="canvasContainer"
-            class="relative flex-1 overflow-hidden bg-editor-matte dark:bg-gray-700 flex items-center justify-center"
+            class="relative flex-1 overflow-hidden bg-editor-matte dark:bg-gray-700 flex items-center justify-center touch-manipulation"
             @wheel.prevent="handleWheel"
           >
             <!-- Monitor Frame (Wall-Mounted Display) -->
@@ -231,7 +266,7 @@
                 />
               </div>
             </div>
-            <div class="absolute bottom-4 right-4 z-20 flex items-center gap-2 rounded-lg border border-border-color bg-card/95 px-3 py-2 text-xs text-muted">
+            <div class="absolute bottom-4 right-4 z-20 flex items-center gap-2 rounded-lg border border-border-color bg-card/95 px-3 py-2 text-xs text-muted max-w-[calc(100vw-1rem)] flex-wrap justify-end" style="bottom: max(1rem, env(safe-area-inset-bottom)); right: max(1rem, env(safe-area-inset-right))">
               <span>{{ canvasWidth }}×{{ canvasHeight }}</span>
               <span>|</span>
               <button class="btn-outline px-2 py-1 rounded" @click="zoomOut">-</button>
@@ -240,1506 +275,77 @@
               <button class="btn-outline px-2 py-1 rounded" @click="calculateScale">Fit</button>
             </div>
           </div>
+
+        <!-- Mobile: quick access dock -->
+        <div
+          class="lg:hidden shrink-0 flex border-t border-border-color bg-card/95 backdrop-blur-md z-[40]"
+          style="padding-bottom: max(0.5rem, env(safe-area-inset-bottom))"
+        >
+          <button
+            type="button"
+            class="flex-1 py-3 text-xs font-medium text-primary border-r border-border-color/80 active:bg-surface-inset"
+            @click="openMobileLibrary"
+          >
+            Widgets
+          </button>
+          <button
+            type="button"
+            class="flex-1 py-3 text-xs font-medium text-primary active:bg-surface-inset"
+            @click="openMobileInspector"
+          >
+            Inspector
+          </button>
         </div>
 
-        <!-- Right Sidebar: Properties Panel -->
+        </div>
+
+        <!-- Right: Inspector (desktop) -->
         <div
-          class="hidden lg:flex lg:flex-col h-full bg-card border-l border-border-color transition-all duration-200"
+          class="hidden lg:flex lg:flex-col h-full bg-card border-l border-border-color transition-all duration-200 shrink-0"
           :class="rightPanelCollapsed ? 'w-14' : 'w-80'"
         >
           <div class="bg-card border-b border-border-color px-4 py-3 shrink-0">
             <h2 v-if="!rightPanelCollapsed" class="text-lg font-semibold text-primary">Inspector</h2>
             <h2 v-else class="text-xs font-semibold text-primary uppercase tracking-wide">Panel</h2>
           </div>
-            <div v-if="!rightPanelCollapsed" class="flex-1 min-h-0 overflow-y-auto custom-scrollbar scroll-container p-4">
-            <div class="mb-4 grid grid-cols-2 editor-inspector-tabs">
-              <button
-                @click="rightPanelTab = 'properties'"
-                :class="rightPanelTab === 'properties' ? 'bg-accent-color text-white' : 'text-muted hover:text-primary'"
-                class="rounded-md px-3 py-1.5 text-xs font-medium transition-colors"
-              >
-                Properties
-              </button>
-              <button
-                @click="rightPanelTab = 'layers'"
-                :class="rightPanelTab === 'layers' ? 'bg-accent-color text-white' : 'text-muted hover:text-primary'"
-                class="rounded-md px-3 py-1.5 text-xs font-medium transition-colors"
-              >
-                Layers
-              </button>
-            </div>
-
-            <div v-if="rightPanelTab === 'properties' && selectedWidget" class="space-y-6">
-              <!-- Common Properties -->
-              <div>
-                <h3 class="text-sm font-semibold mb-3 text-muted uppercase">Position & Size</h3>
-                <div class="space-y-3">
-                  <div class="grid grid-cols-2 gap-2">
-                    <div>
-                      <label class="block text-xs font-medium text-muted mb-1.5">X (px)</label>
-                      <input
-                        :value="Math.round(selectedWidget.x)"
-                        type="number"
-                        class="input-base w-full px-3 py-2 text-sm"
-                        @input="updateWidgetProperty('x', $event.target.value)"
-                      />
-                    </div>
-                    <div>
-                      <label class="block text-xs font-medium text-muted mb-1.5">Y (px)</label>
-                      <input
-                        :value="Math.round(selectedWidget.y)"
-                        type="number"
-                        class="input-base w-full px-3 py-2 text-sm"
-                        @input="updateWidgetProperty('y', $event.target.value)"
-                      />
-                    </div>
-                  </div>
-                  <div class="grid grid-cols-2 gap-2">
-                    <div>
-                      <label class="block text-xs font-medium text-muted mb-1.5">Width (px)</label>
-                      <input
-                        :value="Math.round(selectedWidget.width)"
-                        type="number"
-                        class="input-base w-full px-3 py-2 text-sm"
-                        @input="updateWidgetProperty('width', $event.target.value)"
-                      />
-                    </div>
-                    <div>
-                      <label class="block text-xs font-medium text-muted mb-1.5">Height (px)</label>
-                      <input
-                        :value="Math.round(selectedWidget.height)"
-                        type="number"
-                        class="input-base w-full px-3 py-2 text-sm"
-                        @input="updateWidgetProperty('height', $event.target.value)"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label class="block text-xs font-medium text-muted mb-1.5">Rotation (°)</label>
-                    <input
-                      v-model.number="selectedWidget.rotation"
-                      type="number"
-                      step="1"
-                      class="input-base w-full px-3 py-2 text-sm"
-                      @input="updateWidgetProperty('rotation', $event.target.value)"
-                    />
-                  </div>
-                  <div>
-                    <label class="block text-xs font-medium text-muted mb-1.5">Z-Index</label>
-                    <input
-                      v-model.number="selectedWidget.zIndex"
-                      type="number"
-                      class="input-base w-full px-3 py-2 text-sm"
-                      @input="updateWidgetProperty('zIndex', $event.target.value)"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <!-- Text Widget Properties -->
-              <div v-if="selectedWidget.type === 'text'">
-                <h3 class="text-sm font-semibold mb-3 text-muted uppercase">Text Properties</h3>
-                <div class="space-y-3">
-                  <div>
-                    <label class="block text-xs font-medium text-muted mb-1.5">Content</label>
-                    <textarea
-                      v-model="selectedWidget.content"
-                      rows="3"
-                      class="textarea-base w-full px-3 py-2 text-sm"
-                      @input="updateWidgetProperty('content', $event.target.value)"
-                    />
-                  </div>
-                  <div>
-                    <label class="block text-xs font-medium text-muted mb-1.5">Font Family</label>
-                    <select
-                      v-model="selectedWidget.style.fontFamily"
-                      class="select-base w-full px-3 py-2 text-sm"
-                      @change="updateWidgetStyle('fontFamily', $event.target.value)"
-                    >
-                      <option v-for="font in WIDGET_FONT_OPTIONS" :key="font.value" :value="font.value">
-                        {{ font.label }}
-                      </option>
-                    </select>
-                  </div>
-                  <div>
-                    <label class="block text-xs font-medium text-muted mb-1.5">Font Size (px)</label>
-                    <div class="grid grid-cols-[1fr_auto] gap-2 items-center">
-                      <input
-                        type="range"
-                        min="8"
-                        max="240"
-                        step="1"
-                        :value="getFontSizeNumber(selectedWidget.style?.fontSize, 24)"
-                        class="w-full"
-                        @input="updateWidgetStyle('fontSize', `${$event.target.value}px`)"
-                      />
-                      <input
-                        type="number"
-                        min="8"
-                        max="240"
-                        :value="getFontSizeNumber(selectedWidget.style?.fontSize, 24)"
-                        class="input-base w-20 px-2 py-1 text-sm"
-                        @input="updateWidgetStyle('fontSize', `${$event.target.value || 24}px`)"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label class="block text-xs font-medium text-muted mb-1.5">Color</label>
-                    <input
-                      v-model="selectedWidget.style.color"
-                      type="color"
-                      class="editor-color-input"
-                      @input="updateWidgetStyle('color', $event.target.value)"
-                    />
-                  </div>
-                  <div>
-                    <label class="block text-xs font-medium text-muted mb-1.5">Background Color</label>
-                    <input
-                      :value="getBackgroundHex(selectedWidget.style?.backgroundColor, '#000000')"
-                      type="color"
-                      class="editor-color-input"
-                      :disabled="selectedWidget.style?.transparentBackground === true"
-                      @input="updateWidgetStyle('backgroundColor', $event.target.value)"
-                    />
-                    <label class="editor-switch-row mt-2">
-                      <span class="text-sm text-primary">Transparent background</span>
-                      <span class="editor-switch">
-                        <input
-                          type="checkbox"
-                          class="sr-only peer"
-                          :checked="selectedWidget.style?.transparentBackground === true"
-                          @change="updateWidgetStyle('transparentBackground', $event.target.checked)"
-                        />
-                        <span class="editor-switch-track">
-                          <span class="editor-switch-thumb"></span>
-                        </span>
-                      </span>
-                    </label>
-                  </div>
-                  <div>
-                    <label class="block text-xs font-medium text-muted mb-1.5">Text Align</label>
-                    <select
-                      v-model="selectedWidget.style.textAlign"
-                      class="editor-select"
-                      @change="updateWidgetStyle('textAlign', $event.target.value)"
-                    >
-                      <option value="left">Left</option>
-                      <option value="center">Center</option>
-                      <option value="right">Right</option>
-                      <option value="justify">Justify</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Marquee Widget Properties -->
-              <div v-if="selectedWidget.type === 'marquee'">
-                <h3 class="text-sm font-semibold mb-3 text-muted uppercase">Marquee Properties</h3>
-                <div class="space-y-3">
-                  <div>
-                    <label class="block text-xs font-medium text-muted mb-1.5">Content</label>
-                    <textarea
-                      v-model="selectedWidget.content"
-                      rows="3"
-                      class="textarea-base w-full px-3 py-2 text-sm"
-                      @input="updateWidgetProperty('content', $event.target.value)"
-                    />
-                  </div>
-                  <div>
-                    <label class="block text-xs font-medium text-muted mb-1.5">Built-in Style</label>
-                    <select
-                      :value="selectedWidget.style?.preset || 'breakingNews'"
-                      class="select-base w-full px-3 py-2 text-sm"
-                      @change="applyMarqueePreset($event.target.value)"
-                    >
-                      <option
-                        v-for="preset in marqueePresets"
-                        :key="preset.id"
-                        :value="preset.id"
-                      >
-                        {{ preset.label }}
-                      </option>
-                    </select>
-                  </div>
-                  <div class="grid grid-cols-2 gap-3">
-                    <div>
-                      <label class="block text-xs font-medium text-muted mb-1.5">Mode</label>
-                      <select
-                        :value="selectedWidget.style?.mode || 'continuous'"
-                        class="select-base w-full px-3 py-2 text-sm"
-                        @change="updateWidgetStyle('mode', $event.target.value)"
-                      >
-                        <option value="continuous">Continuous</option>
-                        <option value="step">Step</option>
-                        <option value="bounce">Bounce</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label class="block text-xs font-medium text-muted mb-1.5">Direction</label>
-                      <select
-                        :value="selectedWidget.style?.direction || 'left'"
-                        class="select-base w-full px-3 py-2 text-sm"
-                        @change="updateWidgetStyle('direction', $event.target.value)"
-                      >
-                        <option value="left">Left</option>
-                        <option value="right">Right</option>
-                        <option value="up">Up</option>
-                        <option value="down">Down</option>
-                      </select>
-                    </div>
-                  </div>
-                  <div class="grid grid-cols-2 gap-3">
-                    <div>
-                      <label class="block text-xs font-medium text-muted mb-1.5">Speed (px/s)</label>
-                      <input
-                        type="number"
-                        min="20"
-                        max="800"
-                        :value="normalizeRange(selectedWidget.style?.speed, 120, 20, 800)"
-                        class="input-base w-full px-3 py-2 text-sm"
-                        @input="updateWidgetStyle('speed', normalizeRange($event.target.value, 120, 20, 800))"
-                      />
-                    </div>
-                    <div>
-                      <label class="block text-xs font-medium text-muted mb-1.5">Gap (px)</label>
-                      <input
-                        type="number"
-                        min="16"
-                        max="500"
-                        :value="normalizeRange(selectedWidget.style?.gap, 80, 16, 500)"
-                        class="input-base w-full px-3 py-2 text-sm"
-                        @input="updateWidgetStyle('gap', normalizeRange($event.target.value, 80, 16, 500))"
-                      />
-                    </div>
-                  </div>
-                  <div class="grid grid-cols-2 gap-3">
-                    <div>
-                      <label class="block text-xs font-medium text-muted mb-1.5">Step Hold (s)</label>
-                      <input
-                        type="number"
-                        min="0.2"
-                        max="12"
-                        step="0.1"
-                        :value="normalizeRange(selectedWidget.style?.stepHold, 1.5, 0.2, 12)"
-                        class="input-base w-full px-3 py-2 text-sm"
-                        @input="updateWidgetStyle('stepHold', normalizeRange($event.target.value, 1.5, 0.2, 12))"
-                      />
-                    </div>
-                    <div>
-                      <label class="block text-xs font-medium text-muted mb-1.5">Bounce Hold (s)</label>
-                      <input
-                        type="number"
-                        min="0"
-                        max="5"
-                        step="0.1"
-                        :value="normalizeRange(selectedWidget.style?.bounceHold, 0.8, 0, 5)"
-                        class="input-base w-full px-3 py-2 text-sm"
-                        @input="updateWidgetStyle('bounceHold', normalizeRange($event.target.value, 0.8, 0, 5))"
-                      />
-                    </div>
-                  </div>
-                  <div class="grid grid-cols-2 gap-3">
-                    <label class="editor-switch-row">
-                      <span class="text-sm text-primary">Loop</span>
-                      <span class="editor-switch">
-                        <input
-                          type="checkbox"
-                          class="sr-only peer"
-                          :checked="selectedWidget.style?.loop !== false"
-                          @change="updateWidgetStyle('loop', $event.target.checked)"
-                        />
-                        <span class="editor-switch-track">
-                          <span class="editor-switch-thumb"></span>
-                        </span>
-                      </span>
-                    </label>
-                    <label class="editor-switch-row">
-                      <span class="text-sm text-primary">Fade Edge</span>
-                      <span class="editor-switch">
-                        <input
-                          type="checkbox"
-                          class="sr-only peer"
-                          :checked="selectedWidget.style?.fadeEdge !== false"
-                          @change="updateWidgetStyle('fadeEdge', $event.target.checked)"
-                        />
-                        <span class="editor-switch-track">
-                          <span class="editor-switch-thumb"></span>
-                        </span>
-                      </span>
-                    </label>
-                    <label class="editor-switch-row">
-                      <span class="text-sm text-primary">Uppercase</span>
-                      <span class="editor-switch">
-                        <input
-                          type="checkbox"
-                          class="sr-only peer"
-                          :checked="selectedWidget.style?.uppercase === true"
-                          @change="updateWidgetStyle('uppercase', $event.target.checked)"
-                        />
-                        <span class="editor-switch-track">
-                          <span class="editor-switch-thumb"></span>
-                        </span>
-                      </span>
-                    </label>
-                    <label class="editor-switch-row">
-                      <span class="text-sm text-primary">Reverse</span>
-                      <span class="editor-switch">
-                        <input
-                          type="checkbox"
-                          class="sr-only peer"
-                          :checked="selectedWidget.style?.reverse === true"
-                          @change="updateWidgetStyle('reverse', $event.target.checked)"
-                        />
-                        <span class="editor-switch-track">
-                          <span class="editor-switch-thumb"></span>
-                        </span>
-                      </span>
-                    </label>
-                  </div>
-                  <div>
-                    <label class="block text-xs font-medium text-muted mb-1.5">Separator</label>
-                    <input
-                      :value="selectedWidget.style?.separator || ' • '"
-                      type="text"
-                      class="input-base w-full px-3 py-2 text-sm"
-                      @input="updateWidgetStyle('separator', $event.target.value || ' • ')"
-                    />
-                  </div>
-                  <div class="grid grid-cols-2 gap-3">
-                    <div>
-                      <label class="block text-xs font-medium text-muted mb-1.5">Font Size (px)</label>
-                      <input
-                        type="number"
-                        min="12"
-                        max="220"
-                        :value="getFontSizeNumber(selectedWidget.style?.fontSize, 42)"
-                        class="input-base w-full px-3 py-2 text-sm"
-                        @input="updateWidgetStyle('fontSize', `${normalizeRange($event.target.value, 42, 12, 220)}px`)"
-                      />
-                    </div>
-                    <div>
-                      <label class="block text-xs font-medium text-muted mb-1.5">Font Weight</label>
-                      <select
-                        :value="selectedWidget.style?.fontWeight || '700'"
-                        class="select-base w-full px-3 py-2 text-sm"
-                        @change="updateWidgetStyle('fontWeight', $event.target.value)"
-                      >
-                        <option value="400">Regular</option>
-                        <option value="500">Medium</option>
-                        <option value="600">Semibold</option>
-                        <option value="700">Bold</option>
-                        <option value="800">Extra Bold</option>
-                      </select>
-                    </div>
-                  </div>
-                  <div class="grid grid-cols-2 gap-3">
-                    <div>
-                      <label class="block text-xs font-medium text-muted mb-1.5">Text Color</label>
-                      <input
-                        :value="selectedWidget.style?.color || '#ffffff'"
-                        type="color"
-                        class="editor-color-input"
-                        @input="updateWidgetStyle('color', $event.target.value)"
-                      />
-                    </div>
-                    <div>
-                      <label class="block text-xs font-medium text-muted mb-1.5">Background</label>
-                      <input
-                        :value="getBackgroundHex(selectedWidget.style?.backgroundColor, '#111111')"
-                        type="color"
-                        class="editor-color-input"
-                        :disabled="selectedWidget.style?.transparentBackground === true"
-                        @input="updateWidgetStyle('backgroundColor', $event.target.value)"
-                      />
-                    </div>
-                  </div>
-                  <label class="editor-switch-row">
-                    <span class="text-sm text-primary">Transparent background</span>
-                    <span class="editor-switch">
-                      <input
-                        type="checkbox"
-                        class="sr-only peer"
-                        :checked="selectedWidget.style?.transparentBackground === true"
-                        @change="updateWidgetStyle('transparentBackground', $event.target.checked)"
-                      />
-                      <span class="editor-switch-track">
-                        <span class="editor-switch-thumb"></span>
-                      </span>
-                    </span>
-                  </label>
-                </div>
-              </div>
-
-              <!-- Weather Widget Properties -->
-              <div v-if="selectedWidget.type === 'weather'">
-                <h3 class="text-sm font-semibold mb-3 text-muted uppercase">Weather Properties</h3>
-                <div class="space-y-3">
-                  <div>
-                    <label class="block text-xs font-medium text-muted mb-1.5">Location (City or City,CountryCode)</label>
-                    <input
-                      :value="selectedWidget.style?.location || selectedWidget.content || ''"
-                      type="text"
-                      class="input-base w-full px-3 py-2 text-sm"
-                      placeholder="e.g. Tehran,IR"
-                      @input="updateWidgetStyle('location', $event.target.value); updateWidgetProperty('content', $event.target.value)"
-                    />
-                  </div>
-                  <div class="grid grid-cols-2 gap-3">
-                    <div>
-                      <label class="block text-xs font-medium text-muted mb-1.5">Units</label>
-                      <select
-                        :value="selectedWidget.style?.units || 'celsius'"
-                        class="select-base w-full px-3 py-2 text-sm"
-                        @change="updateWidgetStyle('units', $event.target.value)"
-                      >
-                        <option value="celsius">Celsius (C)</option>
-                        <option value="fahrenheit">Fahrenheit (F)</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label class="block text-xs font-medium text-muted mb-1.5">Layout</label>
-                      <select
-                        :value="selectedWidget.style?.layout || 'compact'"
-                        class="select-base w-full px-3 py-2 text-sm"
-                        @change="updateWidgetStyle('layout', $event.target.value)"
-                      >
-                        <option value="compact">Compact</option>
-                        <option value="extended">Extended</option>
-                      </select>
-                    </div>
-                  </div>
-                  <div class="grid grid-cols-2 gap-3">
-                    <div>
-                      <label class="block text-xs font-medium text-muted mb-1.5">Forecast Days</label>
-                      <input
-                        type="number"
-                        min="3"
-                        max="5"
-                        :value="normalizeRange(selectedWidget.style?.forecastDays, 3, 3, 5)"
-                        class="input-base w-full px-3 py-2 text-sm"
-                        @input="updateWidgetStyle('forecastDays', normalizeRange($event.target.value, 3, 3, 5))"
-                      />
-                    </div>
-                    <div>
-                      <label class="block text-xs font-medium text-muted mb-1.5">Hide After Stale (h)</label>
-                      <input
-                        type="number"
-                        min="1"
-                        max="24"
-                        :value="normalizeRange(selectedWidget.style?.hideAfterHours, 6, 1, 24)"
-                        class="input-base w-full px-3 py-2 text-sm"
-                        @input="updateWidgetStyle('hideAfterHours', normalizeRange($event.target.value, 6, 1, 24))"
-                      />
-                    </div>
-                  </div>
-                  <div class="grid grid-cols-2 gap-3">
-                    <div>
-                      <label class="block text-xs font-medium text-muted mb-1.5">Text Color</label>
-                      <input
-                        :value="selectedWidget.style?.color || '#ffffff'"
-                        type="color"
-                        class="editor-color-input"
-                        @input="updateWidgetStyle('color', $event.target.value)"
-                      />
-                    </div>
-                    <div>
-                      <label class="block text-xs font-medium text-muted mb-1.5">Background</label>
-                      <input
-                        :value="getBackgroundHex(selectedWidget.style?.backgroundColor, '#0f172a')"
-                        type="color"
-                        class="editor-color-input"
-                        :disabled="selectedWidget.style?.transparentBackground === true"
-                        @input="updateWidgetStyle('backgroundColor', $event.target.value)"
-                      />
-                    </div>
-                  </div>
-                  <label class="editor-switch-row">
-                    <span class="text-sm text-primary">Transparent background</span>
-                    <span class="editor-switch">
-                      <input
-                        type="checkbox"
-                        class="sr-only peer"
-                        :checked="selectedWidget.style?.transparentBackground === true"
-                        @change="updateWidgetStyle('transparentBackground', $event.target.checked)"
-                      />
-                      <span class="editor-switch-track">
-                        <span class="editor-switch-thumb"></span>
-                      </span>
-                    </span>
-                  </label>
-                </div>
-              </div>
-
-              <div v-if="selectedWidget.type === 'qr_action'">
-                <h3 class="text-sm font-semibold mb-3 text-muted uppercase">QR Action Properties</h3>
-                <div class="space-y-3">
-                  <div>
-                    <label class="block text-xs font-medium text-muted mb-1.5">CTA Text</label>
-                    <input
-                      :value="selectedWidget.style?.ctaText || ''"
-                      type="text"
-                      class="input-base w-full px-3 py-2 text-sm"
-                      placeholder="Scan for discount"
-                      @input="updateWidgetStyle('ctaText', $event.target.value)"
-                    />
-                  </div>
-                  <div>
-                    <label class="block text-xs font-medium text-muted mb-1.5">Campaign ID</label>
-                    <input
-                      :value="selectedWidget.style?.campaignId || ''"
-                      type="text"
-                      class="input-base w-full px-3 py-2 text-sm"
-                      placeholder="branch-x-morning"
-                      @input="updateWidgetStyle('campaignId', $event.target.value)"
-                    />
-                  </div>
-                  <div>
-                    <label class="block text-xs font-medium text-muted mb-1.5">Default URL</label>
-                    <input
-                      :value="selectedWidget.style?.defaultUrl || selectedWidget.content || ''"
-                      type="url"
-                      class="input-base w-full px-3 py-2 text-sm"
-                      placeholder="https://example.com/menu"
-                      @input="updateWidgetStyle('defaultUrl', $event.target.value); updateWidgetProperty('content', $event.target.value)"
-                    />
-                  </div>
-                  <div class="grid grid-cols-2 gap-3">
-                    <div>
-                      <label class="block text-xs font-medium text-muted mb-1.5">Foreground</label>
-                      <input
-                        :value="selectedWidget.style?.foregroundColor || '#000000'"
-                        type="color"
-                        class="editor-color-input"
-                        @input="updateWidgetStyle('foregroundColor', $event.target.value)"
-                      />
-                    </div>
-                    <div>
-                      <label class="block text-xs font-medium text-muted mb-1.5">Background</label>
-                      <input
-                        :value="selectedWidget.style?.backgroundColor || '#ffffff'"
-                        type="color"
-                        class="editor-color-input"
-                        :disabled="selectedWidget.style?.transparentBackground === true"
-                        @input="updateWidgetStyle('backgroundColor', $event.target.value)"
-                      />
-                    </div>
-                  </div>
-                  <label class="editor-switch-row">
-                    <span class="text-sm text-primary">Transparent background</span>
-                    <span class="editor-switch">
-                      <input
-                        type="checkbox"
-                        class="sr-only peer"
-                        :checked="selectedWidget.style?.transparentBackground === true"
-                        @change="updateWidgetStyle('transparentBackground', $event.target.checked)"
-                      />
-                      <span class="editor-switch-track">
-                        <span class="editor-switch-thumb"></span>
-                      </span>
-                    </span>
-                  </label>
-                  <div class="grid grid-cols-2 gap-3">
-                    <div>
-                      <label class="block text-xs font-medium text-muted mb-1.5">Quiet Zone (modules)</label>
-                      <input
-                        type="number"
-                        min="4"
-                        max="12"
-                        :value="normalizeRange(selectedWidget.style?.quietZone, 4, 4, 12)"
-                        class="input-base w-full px-3 py-2 text-sm"
-                        @input="updateWidgetStyle('quietZone', normalizeRange($event.target.value, 4, 4, 12))"
-                      />
-                    </div>
-                    <div>
-                      <label class="block text-xs font-medium text-muted mb-1.5">Error Correction</label>
-                      <select
-                        :value="selectedWidget.style?.errorCorrectionLevel || 'H'"
-                        class="select-base w-full px-3 py-2 text-sm"
-                        @change="updateWidgetStyle('errorCorrectionLevel', $event.target.value)"
-                      >
-                        <option value="H">High (H)</option>
-                        <option value="Q">Quartile (Q)</option>
-                        <option value="M">Medium (M)</option>
-                        <option value="L">Low (L)</option>
-                      </select>
-                    </div>
-                  </div>
-                  <div>
-                    <label class="block text-xs font-medium text-muted mb-1.5">Center Logo URL (optional)</label>
-                    <input
-                      :value="selectedWidget.style?.logoUrl || ''"
-                      type="url"
-                      class="input-base w-full px-3 py-2 text-sm"
-                      placeholder="https://example.com/logo.png"
-                      @input="updateWidgetStyle('logoUrl', $event.target.value)"
-                    />
-                  </div>
-                  <div>
-                    <div class="flex items-center justify-between mb-2">
-                      <label class="block text-xs font-medium text-muted">Rules</label>
-                      <button
-                        type="button"
-                        class="btn-outline px-2 py-1 rounded text-xs"
-                        @click="addQrRule()"
-                      >
-                        + Add Rule
-                      </button>
-                    </div>
-                    <div class="space-y-2">
-                      <div
-                        v-for="(rule, ruleIndex) in currentQrRules"
-                        :key="`qr-rule-${ruleIndex}`"
-                        class="editor-panel-inset p-2.5 space-y-2"
-                      >
-                        <div class="grid grid-cols-[1fr_auto] gap-2 items-center">
-                          <input
-                            :value="rule.name || ''"
-                            type="text"
-                            class="input-base w-full px-2 py-1.5 text-xs"
-                            placeholder="Rule name"
-                            @input="updateQrRule(ruleIndex, 'name', $event.target.value)"
-                          />
-                          <button
-                            type="button"
-                            class="px-2 py-1 text-[11px] rounded border border-red-200 dark:border-red-500/60 text-red-600 dark:text-red-300 hover:bg-red-500/10"
-                            @click="removeQrRule(ruleIndex)"
-                          >
-                            Remove
-                          </button>
-                        </div>
-                        <div class="grid grid-cols-2 gap-2">
-                          <div>
-                            <label class="block text-[11px] text-muted mb-1">Priority</label>
-                            <input
-                              :value="rule.priority ?? ruleIndex + 1"
-                              type="number"
-                              min="1"
-                              class="input-base w-full px-2 py-1.5 text-xs"
-                              @input="updateQrRule(ruleIndex, 'priority', Math.max(1, Number.parseInt($event.target.value || '1', 10) || 1))"
-                            />
-                          </div>
-                          <label class="editor-switch-row editor-switch-row--compact">
-                            <span class="text-[11px] text-primary">Active</span>
-                            <span class="editor-switch">
-                              <input
-                                type="checkbox"
-                                class="sr-only peer"
-                                :checked="rule.isActive !== false"
-                                @change="updateQrRule(ruleIndex, 'isActive', $event.target.checked)"
-                              />
-                              <span class="editor-switch-track">
-                                <span class="editor-switch-thumb"></span>
-                              </span>
-                            </span>
-                          </label>
-                        </div>
-                        <div>
-                          <label class="block text-[11px] text-muted mb-1">Target URL</label>
-                          <input
-                            :value="rule.targetUrl || ''"
-                            type="url"
-                            class="input-base w-full px-2 py-1.5 text-xs"
-                            placeholder="https://example.com/landing"
-                            @input="updateQrRule(ruleIndex, 'targetUrl', $event.target.value)"
-                          />
-                        </div>
-                        <div>
-                          <label class="block text-[11px] text-muted mb-1">Time Window</label>
-                          <div class="grid grid-cols-2 gap-2 mb-2">
-                            <label class="flex items-center gap-1.5 text-[11px] text-primary">
-                              <input
-                                type="radio"
-                                :name="`rule-time-mode-${ruleIndex}`"
-                                :checked="isQrRuleAllDay(rule)"
-                                @change="setQrRuleTimeMode(ruleIndex, 'all_day')"
-                              />
-                              All Day
-                            </label>
-                            <label class="flex items-center gap-1.5 text-[11px] text-primary">
-                              <input
-                                type="radio"
-                                :name="`rule-time-mode-${ruleIndex}`"
-                                :checked="!isQrRuleAllDay(rule)"
-                                @change="setQrRuleTimeMode(ruleIndex, 'custom')"
-                              />
-                              Custom Range
-                            </label>
-                          </div>
-                          <div v-if="!isQrRuleAllDay(rule)" class="grid grid-cols-2 gap-2">
-                            <select
-                              :value="rule.startHour ?? 8"
-                              class="select-base w-full px-2 py-1.5 text-xs"
-                              @change="updateQrRule(ruleIndex, 'startHour', Number.parseInt($event.target.value, 10))"
-                            >
-                              <option v-for="hour in qrHourOptions" :key="`start-${ruleIndex}-${hour.value}`" :value="hour.value">
-                                {{ hour.label }}
-                              </option>
-                            </select>
-                            <select
-                              :value="rule.endHour ?? 18"
-                              class="select-base w-full px-2 py-1.5 text-xs"
-                              @change="updateQrRule(ruleIndex, 'endHour', Number.parseInt($event.target.value, 10))"
-                            >
-                              <option v-for="hour in qrHourOptions" :key="`end-${ruleIndex}-${hour.value}`" :value="hour.value">
-                                {{ hour.label }}
-                              </option>
-                            </select>
-                          </div>
-                        </div>
-                        <div>
-                          <label class="block text-[11px] text-muted mb-1">Days of Week</label>
-                          <div class="grid grid-cols-7 gap-1">
-                            <button
-                              v-for="day in qrWeekdayOptions"
-                              :key="`day-${ruleIndex}-${day.value}`"
-                              type="button"
-                              class="px-0 py-1 rounded text-[10px] border transition-colors"
-                              :class="(rule.daysOfWeek || []).includes(day.value) ? 'bg-emerald-500/20 border-emerald-400/80 text-emerald-200' : 'border-border-color text-muted hover:text-primary'"
-                              @click="toggleQrRuleDay(ruleIndex, day.value)"
-                            >
-                              {{ day.label }}
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  <div class="text-xs" :class="qrReadabilityOk(selectedWidget) ? 'text-emerald-400' : 'text-amber-400'">
-                    {{ qrReadabilityMessage(selectedWidget) }}
-                  </div>
-                </div>
-              </div>
-
-              <!-- Image/Video Widget Properties -->
-              <div v-if="selectedWidget.type === 'image' || selectedWidget.type === 'video'">
-                <h3 class="text-sm font-semibold mb-3 text-muted uppercase">{{ selectedWidget.type === 'image' ? 'Image' : 'Video' }} Properties</h3>
-                <div class="space-y-3">
-                  <div>
-                    <label class="block text-xs font-medium text-muted mb-1.5">Media Source</label>
-                    <div class="flex gap-2">
-                      <button
-                        @click="openMediaLibrary(selectedWidget.type)"
-                        class="flex-1 px-3 py-2 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white rounded-lg text-sm font-medium transition-all duration-200 flex items-center justify-center gap-2"
-                      >
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
-                        Select from Library
-                      </button>
-                    </div>
-                    <div v-if="selectedWidget.content" class="mt-2">
-                      <label class="block text-xs font-medium text-muted mb-1.5">Current URL</label>
-                      <div class="flex gap-2">
-                        <input
-                          v-model="selectedWidget.content"
-                          type="text"
-                          placeholder="Enter image/video URL"
-                          class="editor-select flex-1 placeholder:text-muted"
-                          @input="updateWidgetProperty('content', $event.target.value)"
-                        />
-                        <button
-                          @click="selectedWidget.content = ''; updateWidgetProperty('content', '')"
-                          class="px-3 py-2 bg-red-600/50 hover:bg-red-600 text-white rounded-lg text-sm transition-colors duration-200"
-                          title="Clear URL"
-                        >
-                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                          </svg>
-                        </button>
-                      </div>
-                      <!-- Preview -->
-                      <div v-if="selectedWidget.content" class="mt-2 rounded-lg overflow-hidden border border-border-color bg-surface-inset dark:bg-slate-800/30">
-                        <img
-                          v-if="selectedWidget.type === 'image'"
-                          :src="selectedWidget.content"
-                          alt="Preview"
-                          class="w-full h-32 object-cover"
-                          @error="handlePreviewError"
-                        />
-                        <video
-                          v-else-if="selectedWidget.type === 'video'"
-                          :src="selectedWidget.content"
-                          class="w-full h-32 object-cover"
-                          muted
-                          preload="metadata"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                  <div>
-                    <label class="block text-xs font-medium text-muted mb-1.5">Object Fit</label>
-                    <select
-                      v-model="selectedWidget.style.objectFit"
-                      class="editor-select"
-                      @change="updateWidgetStyle('objectFit', $event.target.value)"
-                    >
-                      <option value="contain">Contain</option>
-                      <option value="cover">Cover</option>
-                      <option value="fill">Fill</option>
-                      <option value="none">None</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              <div v-if="selectedWidget.type === 'album'">
-                <h3 class="text-sm font-semibold mb-3 text-muted uppercase">Album Playlist Properties</h3>
-                <div class="space-y-3">
-                  <div class="flex gap-2">
-                    <button
-                      @click="openMediaLibrary('album')"
-                      class="flex-1 px-3 py-2 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white rounded-lg text-sm font-medium transition-all duration-200"
-                    >
-                      Add Media to Queue
-                    </button>
-                    <button
-                      @click="clearAlbumQueue()"
-                      class="px-3 py-2 bg-red-600/50 hover:bg-red-600 text-white rounded-lg text-sm transition-colors duration-200"
-                    >
-                      Clear
-                    </button>
-                  </div>
-
-                  <div>
-                    <label class="block text-xs font-medium text-muted mb-1.5">Transition</label>
-                    <select
-                      :value="selectedWidget.style?.transition || 'fade'"
-                      class="editor-select"
-                      @change="updateWidgetStyle('transition', $event.target.value)"
-                    >
-                      <option value="fade">Fade</option>
-                      <option value="slideLeft">Slide Left</option>
-                      <option value="slideRight">Slide Right</option>
-                      <option value="none">None</option>
-                    </select>
-                  </div>
-
-                  <div class="grid grid-cols-2 gap-3">
-                    <div>
-                      <label class="block text-xs font-medium text-muted mb-1.5">Default Duration (s)</label>
-                      <input
-                        type="number"
-                        min="1"
-                        max="300"
-                        :value="selectedWidget.style?.defaultDurationSec || 10"
-                        class="editor-select"
-                        @input="updateWidgetStyle('defaultDurationSec', normalizeRange($event.target.value, 10, 1, 300))"
-                      />
-                    </div>
-                    <div>
-                      <label class="block text-xs font-medium text-muted mb-1.5">Transition Duration (ms)</label>
-                      <input
-                        type="number"
-                        min="0"
-                        max="5000"
-                        :value="selectedWidget.style?.transitionDurationMs || 450"
-                        class="editor-select"
-                        @input="updateWidgetStyle('transitionDurationMs', normalizeRange($event.target.value, 450, 0, 5000))"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label class="block text-xs font-medium text-muted mb-1.5">Object Fit</label>
-                    <select
-                      :value="selectedWidget.style?.objectFit || 'contain'"
-                      class="editor-select"
-                      @change="updateWidgetStyle('objectFit', $event.target.value)"
-                    >
-                      <option value="contain">Contain</option>
-                      <option value="cover">Cover</option>
-                    </select>
-                  </div>
-
-                  <div class="editor-panel-inset p-3">
-                    <div class="text-xs text-muted mb-2">Queue Items</div>
-                    <div v-if="!albumQueueItems.length" class="text-xs text-muted">
-                      No media selected yet.
-                    </div>
-                    <div v-for="(item, idx) in albumQueueItems" :key="item.content_id" class="grid grid-cols-[1fr_auto_auto_auto] gap-2 items-center py-1">
-                      <div class="text-xs text-primary truncate" :title="item.name || item.content_id">
-                        {{ idx + 1 }}. {{ item.name || item.content_id }}
-                      </div>
-                      <input
-                        type="number"
-                        min="1"
-                        max="300"
-                        :value="item.durationSec || 10"
-                        class="input-base w-20 px-2 py-1 text-xs"
-                        @input="updateAlbumItemDuration(item.content_id, $event.target.value)"
-                      />
-                      <button type="button" class="px-2 py-1 text-xs rounded border border-border-color bg-surface-2 hover:bg-surface-inset text-primary" @click="moveAlbumItem(item.content_id, -1)">Up</button>
-                      <button class="px-2 py-1 text-xs bg-red-700/70 hover:bg-red-600 rounded" @click="removeAlbumItem(item.content_id)">Del</button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Clock/Date Widget Properties -->
-              <div v-if="selectedWidget.type === 'clock' || selectedWidget.type === 'date' || selectedWidget.type === 'weekday'">
-                <h3 class="text-sm font-semibold mb-3 text-muted uppercase">{{ selectedWidget.type === 'clock' ? 'Clock' : selectedWidget.type === 'date' ? 'Date' : 'Weekday' }} Properties</h3>
-                <div class="space-y-3">
-                  <div>
-                    <label class="block text-xs font-medium text-muted mb-1.5">Style Preset</label>
-                    <div class="grid grid-cols-[1fr_auto] gap-2">
-                      <select
-                        :value="selectedWidget.style?.preset || (selectedWidget.type === 'clock' ? 'digitalBoard' : selectedWidget.type === 'date' ? 'calendarCard' : 'weekdayBold')"
-                        class="select-base w-full px-3 py-2 text-sm"
-                        @change="applyTemporalPreset(selectedWidget.type, $event.target.value)"
-                      >
-                        <option
-                          v-for="preset in selectedWidget.type === 'clock' ? clockStylePresets : selectedWidget.type === 'date' ? dateStylePresets : weekdayStylePresets"
-                          :key="preset.id"
-                          :value="preset.id"
-                        >
-                          {{ preset.label }}
-                        </option>
-                      </select>
-                      <button
-                        class="btn-outline px-3 py-2 rounded text-xs"
-                        @click="applyTemporalPreset(selectedWidget.type, selectedWidget.style?.preset || (selectedWidget.type === 'clock' ? 'digitalBoard' : selectedWidget.type === 'date' ? 'calendarCard' : 'weekdayBold'))"
-                      >
-                        Apply
-                      </button>
-                    </div>
-                  </div>
-                  <div>
-                    <label class="block text-xs font-medium text-muted mb-1.5">Format</label>
-                    <input
-                      v-model="selectedWidget.content"
-                      type="text"
-                      :placeholder="selectedWidget.type === 'clock' ? 'HH:mm:ss' : selectedWidget.type === 'date' ? 'YYYY-MM-DD' : 'dddd'"
-                      class="editor-select placeholder:text-muted"
-                      @input="updateWidgetProperty('content', $event.target.value); updateWidgetStyle('format', $event.target.value)"
-                    />
-                  </div>
-                  <div>
-                    <label class="block text-xs font-medium text-muted mb-1.5">Language / Locale</label>
-                    <select
-                      :value="selectedWidget.style?.locale || 'en-US'"
-                      class="select-base w-full px-3 py-2 text-sm"
-                      @change="updateWidgetStyle('locale', $event.target.value)"
-                    >
-                      <option v-for="locale in supportedLocales" :key="locale.value" :value="locale.value">
-                        {{ locale.label }}
-                      </option>
-                    </select>
-                  </div>
-                  <div>
-                    <label class="block text-xs font-medium text-muted mb-1.5">Time Zone</label>
-                    <select
-                      :value="selectedWidget.style?.timeZone || defaultTimeZone"
-                      class="select-base w-full px-3 py-2 text-sm"
-                      @change="updateWidgetStyle('timeZone', $event.target.value)"
-                    >
-                      <option
-                        v-for="zone in worldTimeZones"
-                        :key="zone.value"
-                        :value="zone.value"
-                      >
-                        {{ zone.label }}
-                      </option>
-                    </select>
-                  </div>
-                  <label
-                    class="editor-switch-row"
-                    :class="{ 'editor-switch-row--disabled': selectedWidget.type === 'weekday' }"
-                  >
-                    <span class="text-sm text-primary">Show Weekday</span>
-                    <span class="editor-switch">
-                      <input
-                        type="checkbox"
-                        class="sr-only peer"
-                        :checked="selectedWidget.type === 'weekday' ? true : selectedWidget.style?.showWeekday === true"
-                        :disabled="selectedWidget.type === 'weekday'"
-                        @change="updateWidgetStyle('showWeekday', $event.target.checked)"
-                      />
-                      <span class="editor-switch-track">
-                        <span class="editor-switch-thumb"></span>
-                      </span>
-                    </span>
-                  </label>
-                  <div v-if="selectedWidget.type !== 'clock' || selectedWidget.style?.showWeekday === true || selectedWidget.type === 'weekday'">
-                    <label class="block text-xs font-medium text-muted mb-1.5">Weekday Style</label>
-                    <select
-                      :value="selectedWidget.style?.weekdayStyle || 'long'"
-                      class="select-base w-full px-3 py-2 text-sm"
-                      @change="updateWidgetStyle('weekdayStyle', $event.target.value)"
-                    >
-                      <option value="long">Long</option>
-                      <option value="short">Short</option>
-                      <option value="narrow">Narrow</option>
-                    </select>
-                  </div>
-                  <div v-if="selectedWidget.type === 'clock'">
-                    <label class="block text-xs font-medium text-muted mb-1.5">Clock Display Mode</label>
-                    <select
-                      :value="selectedWidget.style?.displayMode || 'timeOnly'"
-                      class="select-base w-full px-3 py-2 text-sm"
-                      @change="updateWidgetStyle('displayMode', $event.target.value)"
-                    >
-                      <option value="timeOnly">Time Only</option>
-                      <option value="timePlusWeekday">Time + Weekday (Inline)</option>
-                      <option value="stacked">Stacked</option>
-                    </select>
-                  </div>
-                  <div v-if="selectedWidget.type === 'date'">
-                    <label class="block text-xs font-medium text-muted mb-1.5">Date Display Mode</label>
-                    <select
-                      :value="normalizeDateDisplayModeForEditor(selectedWidget.style)"
-                      class="select-base w-full px-3 py-2 text-sm"
-                      @change="onDateDisplayModeChange($event.target.value)"
-                    >
-                      <option value="dateOnly">Date Only</option>
-                      <option value="datePlusWeekday">Date + Weekday (Inline)</option>
-                      <option value="stacked">Stacked</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label class="block text-xs font-medium text-muted mb-1.5">Font Size (px)</label>
-                    <div class="grid grid-cols-[1fr_auto] gap-2 items-center">
-                      <input
-                        type="range"
-                        min="12"
-                        max="220"
-                        step="1"
-                        :value="getFontSizeNumber(selectedWidget.style?.fontSize, selectedWidget.type === 'clock' ? 56 : selectedWidget.type === 'date' ? 40 : 42)"
-                        class="w-full"
-                        @input="updateWidgetStyle('fontSize', `${$event.target.value}px`)"
-                      />
-                      <input
-                        type="number"
-                        min="12"
-                        max="220"
-                        :value="getFontSizeNumber(selectedWidget.style?.fontSize, selectedWidget.type === 'clock' ? 56 : selectedWidget.type === 'date' ? 40 : 42)"
-                        class="input-base w-20 px-2 py-1 text-sm"
-                        @input="updateWidgetStyle('fontSize', `${$event.target.value || (selectedWidget.type === 'clock' ? 56 : selectedWidget.type === 'date' ? 40 : 42)}px`)"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label class="block text-xs font-medium text-muted mb-1.5">Text Color</label>
-                    <input
-                      :value="selectedWidget.style?.color || '#ffffff'"
-                      type="color"
-                      class="editor-color-input"
-                      @input="updateWidgetStyle('color', $event.target.value)"
-                    />
-                  </div>
-                  <div>
-                    <label class="block text-xs font-medium text-muted mb-1.5">Background Color</label>
-                    <input
-                      :value="getBackgroundHex(selectedWidget.style?.backgroundColor, '#000000')"
-                      type="color"
-                      class="editor-color-input"
-                      :disabled="selectedWidget.style?.transparentBackground === true"
-                      @input="updateWidgetStyle('backgroundColor', $event.target.value)"
-                    />
-                    <label class="editor-switch-row mt-2">
-                      <span class="text-sm text-primary">Transparent background</span>
-                      <span class="editor-switch">
-                        <input
-                          type="checkbox"
-                          class="sr-only peer"
-                          :checked="selectedWidget.style?.transparentBackground === true"
-                          @change="updateWidgetStyle('transparentBackground', $event.target.checked)"
-                        />
-                        <span class="editor-switch-track">
-                          <span class="editor-switch-thumb"></span>
-                        </span>
-                      </span>
-                    </label>
-                  </div>
-                  <div>
-                    <label class="block text-xs font-medium text-muted mb-1.5">Font Family</label>
-                    <select
-                      :value="selectedWidget.style?.fontFamily || 'Arial, sans-serif'"
-                      class="select-base w-full px-3 py-2 text-sm"
-                      @change="updateWidgetStyle('fontFamily', $event.target.value)"
-                    >
-                      <option v-for="font in WIDGET_FONT_OPTIONS" :key="font.value" :value="font.value">
-                        {{ font.label }}
-                      </option>
-                    </select>
-                  </div>
-                  <div>
-                    <label class="block text-xs font-medium text-muted mb-1.5">Text Align</label>
-                    <select
-                      :value="selectedWidget.style?.textAlign || 'center'"
-                      class="select-base w-full px-3 py-2 text-sm"
-                      @change="updateWidgetStyle('textAlign', $event.target.value)"
-                    >
-                      <option value="left">Left</option>
-                      <option value="center">Center</option>
-                      <option value="right">Right</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              <div v-if="selectedWidget.type === 'countdown'">
-                <h3 class="text-sm font-semibold mb-3 text-muted uppercase">Countdown</h3>
-                <div class="space-y-3">
-                  <div class="rounded-lg border border-border-color/80 bg-card/30 p-3 space-y-3">
-                    <p class="text-[11px] font-semibold text-muted uppercase tracking-wide">
-                      Names
-                    </p>
-                    <div>
-                      <label class="block text-xs font-medium text-muted mb-1.5">Title above countdown</label>
-                      <input
-                        :value="selectedWidget.content || ''"
-                        type="text"
-                        class="input-base w-full px-3 py-2 text-sm"
-                        placeholder="Spring Festival"
-                        @input="updateWidgetProperty('content', $event.target.value)"
-                      />
-                      <p class="text-[10px] text-muted mt-1">
-                        Shown on screen above the timer (player & preview).
-                      </p>
-                    </div>
-                    <div>
-                      <label class="block text-xs font-medium text-muted mb-1.5">Widget name (editor list)</label>
-                      <input
-                        :value="selectedWidget.name || ''"
-                        type="text"
-                        class="input-base w-full px-3 py-2 text-sm"
-                        placeholder="Countdown — Lobby"
-                        @input="updateWidgetProperty('name', $event.target.value)"
-                      />
-                      <p class="text-[10px] text-muted mt-1">
-                        Label in the layers list only; not drawn on the canvas.
-                      </p>
-                    </div>
-                  </div>
-                  <div class="space-y-2">
-                    <div class="min-w-0">
-                      <label class="block text-xs font-medium text-muted mb-1.5">Progress start (optional)</label>
-                      <input
-                        :value="countdownStartLocal"
-                        type="datetime-local"
-                        class="input-base w-full min-w-0 px-3 py-2 text-sm"
-                        @input="onCountdownStartAtInput($event.target.value)"
-                      />
-                      <p class="text-[10px] text-muted mt-1 leading-snug">
-                        Bar only — empty uses first display.
-                      </p>
-                    </div>
-                    <div class="min-w-0">
-                      <label class="block text-xs font-medium text-muted mb-1.5">Target date and time (local)</label>
-                      <input
-                        :value="countdownTargetLocal"
-                        type="datetime-local"
-                        class="input-base w-full min-w-0 px-3 py-2 text-sm"
-                        @input="onCountdownTargetAtInput($event.target.value)"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label class="block text-xs font-medium text-muted mb-1.5">Appearance theme</label>
-                    <select
-                      :value="selectedWidget.style?.theme || COUNTDOWN_THEME_DEFAULT_ID"
-                      class="select-base w-full px-3 py-2 text-sm"
-                      @change="applyCountdownTheme($event.target.value)"
-                    >
-                      <option
-                        v-for="opt in COUNTDOWN_THEMES"
-                        :key="opt.id"
-                        :value="opt.id"
-                        :title="opt.hint || opt.label"
-                      >
-                        {{ opt.label }}
-                      </option>
-                    </select>
-                    <p class="text-[11px] text-muted mt-1">
-                      {{ countdownThemeHint }}
-                    </p>
-                  </div>
-                  <div
-                    v-if="countdownIsCustomTheme"
-                    class="grid grid-cols-2 gap-3 rounded-lg border border-border-color/80 bg-card/40 p-3"
-                  >
-                    <div>
-                      <label class="block text-xs font-medium text-muted mb-1.5">Text color</label>
-                      <input
-                        :value="selectedWidget.style?.color || '#fecaca'"
-                        type="color"
-                        class="editor-color-input"
-                        @input="updateWidgetStyle('color', $event.target.value)"
-                      />
-                    </div>
-                    <div>
-                      <label class="block text-xs font-medium text-muted mb-1.5">Background (solid)</label>
-                      <input
-                        :value="getBackgroundHex(selectedWidget.style?.backgroundColor, '#450a0a')"
-                        type="color"
-                        class="editor-color-input"
-                        :disabled="selectedWidget.style?.transparentBackground === true"
-                        @input="updateWidgetStyle('backgroundColor', $event.target.value)"
-                      />
-                    </div>
-                  </div>
-                  <p
-                    v-else
-                    class="text-[11px] text-muted rounded-md bg-card/30 px-2 py-1.5 border border-border-color/60"
-                  >
-                    Colors and background for this theme are preset. Choose <strong class="text-primary">Custom</strong> to set your own solid colors or gradients in JSON if needed.
-                  </p>
-                  <label class="editor-switch-row">
-                    <span class="text-sm text-primary">Transparent background</span>
-                    <span class="editor-switch">
-                      <input
-                        type="checkbox"
-                        class="sr-only peer"
-                        :checked="selectedWidget.style?.transparentBackground === true"
-                        @change="updateWidgetStyle('transparentBackground', $event.target.checked)"
-                      />
-                      <span class="editor-switch-track">
-                        <span class="editor-switch-thumb"></span>
-                      </span>
-                    </span>
-                  </label>
-                  <div>
-                    <label class="block text-xs font-medium text-muted mb-1.5">Font size (px)</label>
-                    <input
-                      type="number"
-                      min="12"
-                      max="220"
-                      :value="getFontSizeNumber(selectedWidget.style?.fontSize, 36)"
-                      class="input-base w-full px-3 py-2 text-sm"
-                      @input="updateWidgetStyle('fontSize', `${normalizeRange($event.target.value, 36, 12, 220)}px`)"
-                    />
-                  </div>
-                  <label class="editor-switch-row">
-                    <span class="text-sm text-primary">Show progress bar</span>
-                    <span class="editor-switch">
-                      <input
-                        type="checkbox"
-                        class="sr-only peer"
-                        :checked="selectedWidget.style?.showProgress === true"
-                        @change="updateWidgetStyle('showProgress', $event.target.checked)"
-                      />
-                      <span class="editor-switch-track">
-                        <span class="editor-switch-thumb"></span>
-                      </span>
-                    </span>
-                  </label>
-                  <div>
-                    <label class="block text-xs font-medium text-muted mb-1.5">When timer hits zero</label>
-                    <select
-                      :value="selectedWidget.style?.zeroStateMode || 'showMessage'"
-                      class="select-base w-full px-3 py-2 text-sm"
-                      @change="updateWidgetStyle('zeroStateMode', $event.target.value)"
-                    >
-                      <option value="showMessage">Show message</option>
-                      <option value="hideWidget">Hide widget</option>
-                    </select>
-                  </div>
-                  <div v-if="(selectedWidget.style?.zeroStateMode || 'showMessage') === 'showMessage'">
-                    <label class="block text-xs font-medium text-muted mb-1.5">Message at zero</label>
-                    <textarea
-                      :value="selectedWidget.style?.zeroStateMessage || ''"
-                      rows="2"
-                      class="input-base w-full px-3 py-2 text-sm"
-                      placeholder="The event has started!"
-                      @input="updateWidgetStyle('zeroStateMessage', $event.target.value)"
-                    />
-                  </div>
-                  <details class="rounded-lg border border-border-color/70 bg-card/20 p-2">
-                    <summary class="text-xs font-medium text-muted cursor-pointer select-none">
-                      Unit labels (translation)
-                    </summary>
-                    <div class="grid grid-cols-2 gap-2 mt-3">
-                      <div>
-                        <label class="block text-[11px] text-muted mb-1">Days</label>
-                        <input
-                          :value="selectedWidget.style?.labels?.days ?? 'Days'"
-                          type="text"
-                          class="input-base w-full px-2 py-1.5 text-sm"
-                          @input="updateCountdownLabel('days', $event.target.value)"
-                        />
-                      </div>
-                      <div>
-                        <label class="block text-[11px] text-muted mb-1">Hours</label>
-                        <input
-                          :value="selectedWidget.style?.labels?.hours ?? 'Hours'"
-                          type="text"
-                          class="input-base w-full px-2 py-1.5 text-sm"
-                          @input="updateCountdownLabel('hours', $event.target.value)"
-                        />
-                      </div>
-                      <div>
-                        <label class="block text-[11px] text-muted mb-1">Minutes</label>
-                        <input
-                          :value="selectedWidget.style?.labels?.minutes ?? 'Minutes'"
-                          type="text"
-                          class="input-base w-full px-2 py-1.5 text-sm"
-                          @input="updateCountdownLabel('minutes', $event.target.value)"
-                        />
-                      </div>
-                      <div>
-                        <label class="block text-[11px] text-muted mb-1">Seconds</label>
-                        <input
-                          :value="selectedWidget.style?.labels?.seconds ?? 'Seconds'"
-                          type="text"
-                          class="input-base w-full px-2 py-1.5 text-sm"
-                          @input="updateCountdownLabel('seconds', $event.target.value)"
-                        />
-                      </div>
-                    </div>
-                  </details>
-                </div>
-              </div>
-
-              <div v-if="selectedWidget.type === 'webview'">
-                <h3 class="text-sm font-semibold mb-3 text-muted uppercase">Webview Properties</h3>
-                <div class="space-y-3">
-                  <div>
-                    <label class="block text-xs font-medium text-muted mb-1.5">URL</label>
-                    <input
-                      v-model="webviewUrlDraft"
-                      type="url"
-                      placeholder="https://example.com"
-                      class="editor-select placeholder:text-muted"
-                      @keydown.enter.prevent="applyWebviewUrl"
-                    />
-                    <button
-                      type="button"
-                      class="btn-primary mt-2 w-full px-3 py-2 rounded-lg text-sm font-medium"
-                      @click="applyWebviewUrl"
-                    >
-                      Apply URL
-                    </button>
-                    <p class="text-[11px] text-muted mt-2">Loads the address in the widget when you click Apply (or press Enter).</p>
-                  </div>
-                </div>
-              </div>
-
-              <div v-if="selectedWidget.type === 'chart'">
-                <ChartEditorPanel
-                  :widget="selectedWidget"
-                  @update="handleChartWidgetUpdate"
-                />
-              </div>
-            </div>
-
-            <div v-else-if="rightPanelTab === 'properties'" class="text-center py-12">
-              <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-surface-inset dark:bg-slate-700/50 mb-4">
-                <svg class="w-8 h-8 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                </svg>
-              </div>
-              <h3 class="text-sm font-medium text-primary mb-2">No widget selected</h3>
-              <p class="text-xs text-muted">Select a widget from the canvas to edit its properties</p>
-            </div>
-
-            <div v-if="rightPanelTab === 'layers'">
-              <h3 class="text-sm font-semibold mb-3 text-muted uppercase tracking-wide">Layers ({{ widgets.length }})</h3>
-              <div v-if="widgets.length === 0" class="text-center py-8">
-                <svg class="w-12 h-12 mx-auto text-muted mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-                <p class="text-sm text-muted">No widgets yet</p>
-                <p class="text-xs text-muted mt-1">Add widgets to get started</p>
-              </div>
-              <div v-else class="space-y-2">
-                <div
-                  v-for="widget in sortedWidgetsByZIndex"
-                  :key="widget.id"
-                  :draggable="true"
-                  @dragstart="handleDragStart($event, widget.id)"
-                  @dragover.prevent="handleDragOver($event)"
-                  @drop="handleDrop($event, widget.id)"
-                  @dragenter.prevent
-                  @click="selectWidget(widget.id)"
-                  :class="[
-                    'px-3 py-2.5 rounded-lg cursor-pointer transition-all duration-200 text-sm border',
-                    selectedWidgetId === widget.id ? 'bg-accent-color text-white border-accent-color shadow-lg' : 'bg-card hover:bg-card border-border-color text-primary',
-                    draggingWidgetId === widget.id ? 'opacity-50' : '',
-                    dragOverWidgetId === widget.id ? 'ring-2 ring-blue-400' : ''
-                  ]"
-                >
-                  <div class="flex items-center justify-between gap-2">
-                    <div class="flex items-center gap-1 flex-1 min-w-0">
-                      <button
-                        @click.stop="toggleWidgetVisibility(widget.id)"
-                        :class="[
-                          'transition-colors duration-200 flex-shrink-0',
-                          widget.visible !== false ? 'text-muted hover:text-primary' : 'text-muted opacity-50'
-                        ]"
-                        :title="widget.visible !== false ? 'Hide Widget' : 'Show Widget'"
-                      >
-                        <svg v-if="widget.visible !== false" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                        </svg>
-                        <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.29 3.29m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.736m-7.101 2.101l-3.29-3.29" />
-                        </svg>
-                      </button>
-                      <span v-if="editingWidgetId !== widget.id" @dblclick.stop="startEditingWidgetName(widget.id)" class="font-medium truncate cursor-text">{{ widget.name }}</span>
-                      <input
-                        v-else
-                        v-model="editingWidgetName"
-                        @blur="finishEditingWidgetName(widget.id)"
-                        @keyup.enter="finishEditingWidgetName(widget.id)"
-                        @keyup.esc="cancelEditingWidgetName"
-                        class="font-medium bg-surface-inset dark:bg-gray-800 border border-blue-500 rounded px-1 py-0.5 text-sm flex-1 min-w-0 text-primary"
-                        @click.stop
-                        ref="widgetNameInput"
-                      />
-                      <span class="text-xs text-muted flex-shrink-0 ml-auto">Z:{{ widget.zIndex }}</span>
-                    </div>
-                    <div class="flex items-center gap-0.5 flex-shrink-0" @click.stop>
-                      <button
-                        type="button"
-                        class="px-1.5 py-1 rounded text-[10px] font-medium bg-surface-inset dark:bg-slate-700/80 text-muted hover:text-primary border border-border-color/60"
-                        title="Send backward"
-                        @click="moveLayerOrder(widget.id, 'back')"
-                      >
-                        ↓
-                      </button>
-                      <button
-                        type="button"
-                        class="px-1.5 py-1 rounded text-[10px] font-medium bg-surface-inset dark:bg-slate-700/80 text-muted hover:text-primary border border-border-color/60"
-                        title="Bring forward"
-                        @click="moveLayerOrder(widget.id, 'forward')"
-                      >
-                        ↑
-                      </button>
-                      <button
-                        type="button"
-                        class="px-1.5 py-1 rounded text-[10px] font-medium bg-surface-inset dark:bg-slate-700/80 text-muted hover:text-primary border border-border-color/60"
-                        title="Send to back"
-                        @click="sendLayerToBack(widget.id)"
-                      >
-                        ⤓
-                      </button>
-                      <button
-                        type="button"
-                        class="px-1.5 py-1 rounded text-[10px] font-medium bg-surface-inset dark:bg-slate-700/80 text-muted hover:text-primary border border-border-color/60"
-                        title="Bring to front"
-                        @click="bringLayerToFront(widget.id)"
-                      >
-                        ⤒
-                      </button>
-                    </div>
-                    <button @click.stop="deleteWidget(widget.id)" class="text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 active:scale-95 transition-all duration-200 flex-shrink-0 ml-2" title="Delete Widget">
-                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                    </button>
-                  </div>
-                  <div class="text-xs text-muted mt-1.5 flex items-center gap-2">
-                    <span class="px-1.5 py-0.5 bg-surface-inset dark:bg-gray-600/50 rounded text-[10px] uppercase text-muted">{{ widget.type }}</span>
-                    <span class="text-muted">{{ Math.round(widget.width) }}×{{ Math.round(widget.height) }}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+          <TemplateInspectorPanel />
         </div>
+
+        <Teleport to="body">
+          <div
+            v-if="!isDesktopLayout && mobileInspectorOpen"
+            class="fixed inset-0 z-[56] lg:hidden flex justify-end"
+          >
+            <div
+              class="absolute inset-0 bg-black/50 backdrop-blur-sm"
+              aria-hidden="true"
+              @click="mobileInspectorOpen = false"
+            />
+            <aside
+              class="relative w-[min(100%,22rem)] max-w-[100vw] h-full flex flex-col bg-card border-l border-border-color shadow-2xl"
+              style="padding-top: max(0.5rem, env(safe-area-inset-top))"
+              role="dialog"
+              aria-modal="true"
+              aria-label="Inspector"
+            >
+              <div class="flex items-center justify-between gap-2 px-4 py-3 border-b border-border-color shrink-0">
+                <h2 class="text-lg font-semibold text-primary">Inspector</h2>
+                <button
+                  type="button"
+                  class="btn-outline px-3 py-1.5 rounded-lg text-sm"
+                  @click="mobileInspectorOpen = false"
+                >
+                  Close
+                </button>
+              </div>
+              <div class="flex-1 min-h-0 flex flex-col overflow-hidden">
+                <TemplateInspectorPanel />
+              </div>
+            </aside>
+          </div>
+        </Teleport>
+
       </div>
-    </div>
 
     <!-- Media Library Modal -->
     <MediaLibraryModal
@@ -1759,11 +365,12 @@
       @close="showPushModal = false"
       @select="handlePushToScreenSelect"
     />
+    </div>
   </AppLayout>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, nextTick, watch, provide, reactive } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useTemplatesStore } from '@/stores/templates'
 import { useNotification } from '@/composables/useNotification'
@@ -1771,7 +378,9 @@ import { normalizeApiError } from '@/utils/apiError'
 import Moveable from 'vue3-moveable'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import WidgetPreview from './components/WidgetPreview.vue'
-import ChartEditorPanel from './components/chart/ChartEditorPanel.vue'
+import WidgetLibraryPanel from './components/WidgetLibraryPanel.vue'
+import TemplateInspectorPanel from './components/TemplateInspectorPanel.vue'
+import { TEMPLATE_EDITOR_INJECTION_KEY } from './templateEditorInjectionKey'
 import MediaLibraryModal from '@/components/common/MediaLibraryModal.vue'
 import PushToScreenModal from '@/components/templates/PushToScreenModal.vue'
 import { useScreensStore } from '@/stores/screens'
@@ -1933,6 +542,35 @@ const showMediaLibrary = ref(false)
 const mediaLibraryFilterType = ref(null)
 const rightPanelCollapsed = ref(false)
 const rightPanelTab = ref('properties')
+const isDesktopLayout = ref(
+  typeof window !== 'undefined' ? window.matchMedia('(min-width: 1024px)').matches : true
+)
+const mobileLibraryOpen = ref(false)
+const mobileInspectorOpen = ref(false)
+const showMobileToolbarMore = ref(false)
+let desktopLayoutMql = null
+
+function openMobileLibrary() {
+  mobileInspectorOpen.value = false
+  rightPanelCollapsed.value = false
+  mobileLibraryOpen.value = true
+}
+
+function openMobileInspector() {
+  mobileLibraryOpen.value = false
+  rightPanelCollapsed.value = false
+  mobileInspectorOpen.value = true
+}
+
+/** Pinch-zoom state (touch handlers attached in onMounted) */
+const pinchZoomState = { startDist: 0, startScale: 1, active: false }
+
+function canvasTouchDistance(touchList) {
+  if (touchList.length < 2) return 0
+  const a = touchList[0]
+  const b = touchList[1]
+  return Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY)
+}
 const defaultTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
 const widgetLibrarySections = [
   {
@@ -3468,6 +2106,83 @@ const exportJSON = async () => {
   URL.revokeObjectURL(url)
 }
 
+const templateEditorApi = reactive({
+  Math,
+  rightPanelTab,
+  rightPanelCollapsed,
+  selectedWidget,
+  selectedWidgetId,
+  widgets,
+  sortedWidgetsByZIndex,
+  updateWidgetProperty,
+  updateWidgetStyle,
+  getFontSizeNumber,
+  getBackgroundHex,
+  normalizeRange,
+  applyMarqueePreset,
+  marqueePresets,
+  currentQrRules,
+  updateQrRule,
+  removeQrRule,
+  addQrRule,
+  isQrRuleAllDay,
+  setQrRuleTimeMode,
+  qrHourOptions,
+  qrWeekdayOptions,
+  toggleQrRuleDay,
+  qrReadabilityOk,
+  qrReadabilityMessage,
+  openMediaLibrary,
+  handlePreviewError,
+  albumQueueItems,
+  updateAlbumItemDuration,
+  moveAlbumItem,
+  removeAlbumItem,
+  clearAlbumQueue,
+  applyTemporalPreset,
+  clockStylePresets,
+  dateStylePresets,
+  weekdayStylePresets,
+  supportedLocales,
+  defaultTimeZone,
+  worldTimeZones,
+  normalizeDateDisplayModeForEditor,
+  onDateDisplayModeChange,
+  countdownTargetLocal,
+  onCountdownTargetAtInput,
+  countdownStartLocal,
+  onCountdownStartAtInput,
+  applyCountdownTheme,
+  countdownIsCustomTheme,
+  countdownThemeHint,
+  updateCountdownLabel,
+  webviewUrlDraft,
+  applyWebviewUrl,
+  handleChartWidgetUpdate,
+  selectWidget,
+  handleDragStart,
+  handleDragOver,
+  handleDrop,
+  editingWidgetId,
+  startEditingWidgetName,
+  editingWidgetName,
+  finishEditingWidgetName,
+  cancelEditingWidgetName,
+  widgetNameInput,
+  toggleWidgetVisibility,
+  moveLayerOrder,
+  sendLayerToBack,
+  bringLayerToFront,
+  deleteWidget,
+  draggingWidgetId,
+  dragOverWidgetId,
+})
+
+provide(TEMPLATE_EDITOR_INJECTION_KEY, templateEditorApi)
+
+let canvasPinchCleanup = null
+let desktopLayoutListener = null
+
 // Lifecycle
 // Offline detection
 const isOnline = ref(navigator.onLine)
@@ -3509,6 +2224,54 @@ onMounted(async () => {
   await nextTick()
   calculateScale()
 
+  desktopLayoutMql = window.matchMedia('(min-width: 1024px)')
+  const syncDesktopLayout = () => {
+    isDesktopLayout.value = desktopLayoutMql.matches
+    if (desktopLayoutMql.matches) {
+      mobileLibraryOpen.value = false
+      mobileInspectorOpen.value = false
+      showMobileToolbarMore.value = false
+    } else {
+      rightPanelCollapsed.value = false
+    }
+  }
+  syncDesktopLayout()
+  desktopLayoutListener = syncDesktopLayout
+  desktopLayoutMql.addEventListener('change', syncDesktopLayout)
+
+  const el = canvasContainer.value
+  if (el) {
+    const onTouchStart = (e) => {
+      if (e.touches.length === 2) {
+        pinchZoomState.active = true
+        pinchZoomState.startDist = canvasTouchDistance(e.touches)
+        pinchZoomState.startScale = scale.value
+      }
+    }
+    const onTouchMove = (e) => {
+      if (!pinchZoomState.active || e.touches.length < 2) return
+      e.preventDefault()
+      const d = canvasTouchDistance(e.touches)
+      if (d > 0 && pinchZoomState.startDist > 0) {
+        const next = pinchZoomState.startScale * (d / pinchZoomState.startDist)
+        scale.value = Math.max(0.1, Math.min(2, next))
+      }
+    }
+    const onTouchEnd = (e) => {
+      if (e.touches.length < 2) pinchZoomState.active = false
+    }
+    el.addEventListener('touchstart', onTouchStart, { passive: false })
+    el.addEventListener('touchmove', onTouchMove, { passive: false })
+    el.addEventListener('touchend', onTouchEnd)
+    el.addEventListener('touchcancel', onTouchEnd)
+    canvasPinchCleanup = () => {
+      el.removeEventListener('touchstart', onTouchStart)
+      el.removeEventListener('touchmove', onTouchMove)
+      el.removeEventListener('touchend', onTouchEnd)
+      el.removeEventListener('touchcancel', onTouchEnd)
+    }
+  }
+
   if (typeof ResizeObserver !== 'undefined' && canvasContainer.value) {
     canvasResizeObserver = new ResizeObserver(() => {
       nextTick(() => calculateScale())
@@ -3520,17 +2283,24 @@ onMounted(async () => {
   window.addEventListener('resize', calculateScale)
   window.addEventListener('keydown', handleKeyDown)
   
-  // Also recalculate when canvas dimensions change
-  watch([canvasWidth, canvasHeight], () => {
-    nextTick(() => {
-      calculateScale()
-    })
+})
+
+watch([canvasWidth, canvasHeight], () => {
+  nextTick(() => {
+    calculateScale()
   })
 })
 
 onUnmounted(() => {
   canvasResizeObserver?.disconnect()
   canvasResizeObserver = null
+  canvasPinchCleanup?.()
+  canvasPinchCleanup = null
+  if (desktopLayoutMql && desktopLayoutListener) {
+    desktopLayoutMql.removeEventListener('change', desktopLayoutListener)
+  }
+  desktopLayoutMql = null
+  desktopLayoutListener = null
   window.removeEventListener('resize', calculateScale)
   window.removeEventListener('keydown', handleKeyDown)
   window.removeEventListener('online', handleOnline)

@@ -1,21 +1,14 @@
 import axios from 'axios'
 import { getBackendOrigin } from '@/utils/mediaUrl'
 import { normalizeApiError } from '@/utils/apiError'
+import {
+  getBrowserIotBaseUrl,
+  normalizeApiBaseForBrowser,
+  rewriteAxiosConfigIfDockerInternalHost,
+} from '@/utils/apiBaseUrl'
 
-function defaultIotBaseUrl() {
-  const apiBase = import.meta.env.VITE_API_BASE_URL
-  if (apiBase && (apiBase.startsWith('http://') || apiBase.startsWith('https://'))) {
-    try {
-      return `${new URL(apiBase).origin}/iot`
-    } catch {
-      /* fallthrough */
-    }
-  }
-  return '/iot'
-}
-
-/** Same-origin /iot unless overridden — Vite/nginx proxy to Django (avoids unreachable localhost:8000 in Docker dev). */
-const IOT_BASE_URL = import.meta.env.VITE_IOT_BASE_URL || defaultIotBaseUrl()
+/** Same-origin /iot unless overridden — Vite/nginx proxy to Django. */
+const IOT_BASE_URL = normalizeApiBaseForBrowser(getBrowserIotBaseUrl(), { emptyFallback: '/iot' })
 
 export const MEDIA_BASE_URL = import.meta.env.VITE_MEDIA_BASE_URL || getBackendOrigin()
 
@@ -25,6 +18,14 @@ const playerApi = axios.create({
   timeout: 10000,
   // Template endpoint may return 304 Not Modified (If-None-Match); treat as success.
   validateStatus: (status) => (status >= 200 && status < 300) || status === 304,
+})
+
+// Same as main api client: env may point at Docker-only hosts baked at module load time.
+playerApi.interceptors.request.use((config) => {
+  const next = normalizeApiBaseForBrowser(getBrowserIotBaseUrl(), { emptyFallback: '/iot' })
+  config.baseURL = next
+  playerApi.defaults.baseURL = next
+  return rewriteAxiosConfigIfDockerInternalHost(config)
 })
 
 // Strip any JWT Authorization header; inject X-Device-Token instead

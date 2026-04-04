@@ -205,6 +205,31 @@ def test_user_lock_unlock_and_revoke_sessions(superadmin_user, employee_user):
 
 @pytest.mark.django_db
 @override_settings(PLATFORM_SAAS_ENABLED=True)
+def test_user_set_tenant(superadmin_user, employee_user, tenant):
+    client = APIClient()
+    client.force_authenticate(user=superadmin_user)
+    r = client.post(
+        f'/api/users/{employee_user.id}/set_tenant/',
+        {'tenant_id': str(tenant.id)},
+        format='json',
+    )
+    assert r.status_code == 200
+    assert r.data.get('tenant_id') == str(tenant.id)
+    employee_user.refresh_from_db()
+    assert employee_user.tenant_id == tenant.id
+
+    r2 = client.post(
+        f'/api/users/{employee_user.id}/set_tenant/',
+        {'tenant_id': None},
+        format='json',
+    )
+    assert r2.status_code == 200
+    employee_user.refresh_from_db()
+    assert employee_user.tenant_id is None
+
+
+@pytest.mark.django_db
+@override_settings(PLATFORM_SAAS_ENABLED=True)
 def test_locked_user_login_blocked(superadmin_user):
     from django.contrib.auth import get_user_model
 
@@ -474,18 +499,18 @@ def test_impersonate_start_saas_disabled(superadmin_user, employee_user):
 @pytest.mark.django_db
 @override_settings(PLATFORM_SAAS_ENABLED=True)
 def test_impersonate_stop_ok(superadmin_user, employee_user):
-    """Full flow: start → get admin refresh → stop with it (called as impersonated user)."""
+    """Full flow: start → call stop with impersonation access JWT + admin refresh."""
     client = APIClient()
     client.force_authenticate(user=superadmin_user)
     start_r = client.post('/api/platform/impersonate/', {'user_id': str(employee_user.id)})
     assert start_r.status_code == 200
-    admin_refresh = start_r.data['tokens']['refresh']
+    access = start_r.data['tokens']['access']
 
     from accounts.tokens import ScreenGramRefreshToken
     admin_refresh_token = ScreenGramRefreshToken.for_user(superadmin_user)
 
     client2 = APIClient()
-    client2.force_authenticate(user=employee_user)
+    client2.credentials(HTTP_AUTHORIZATION=f'Bearer {access}')
     stop_r = client2.post(
         '/api/platform/impersonate/stop/',
         {'admin_refresh_token': str(admin_refresh_token)},
@@ -497,31 +522,59 @@ def test_impersonate_stop_ok(superadmin_user, employee_user):
 
 @pytest.mark.django_db
 @override_settings(PLATFORM_SAAS_ENABLED=True)
-def test_impersonate_stop_missing_token(employee_user):
+def test_impersonate_stop_rejects_stolen_admin_refresh_without_impersonation_session(
+    employee_user, superadmin_user,
+):
+    """Cannot exchange a Developer refresh for admin session without impersonator_id on JWT."""
+    from accounts.tokens import ScreenGramRefreshToken
+    admin_refresh = ScreenGramRefreshToken.for_user(superadmin_user)
+    emp_access = str(ScreenGramRefreshToken.for_user(employee_user).access_token)
     client = APIClient()
-    client.force_authenticate(user=employee_user)
-    r = client.post('/api/platform/impersonate/stop/', {})
+    client.credentials(HTTP_AUTHORIZATION=f'Bearer {emp_access}')
+    r = client.post('/api/platform/impersonate/stop/', {'admin_refresh_token': str(admin_refresh)})
+    assert r.status_code == 403
+
+
+@pytest.mark.django_db
+@override_settings(PLATFORM_SAAS_ENABLED=True)
+def test_impersonate_stop_missing_token(superadmin_user, employee_user):
+    client = APIClient()
+    client.force_authenticate(user=superadmin_user)
+    start_r = client.post('/api/platform/impersonate/', {'user_id': str(employee_user.id)})
+    assert start_r.status_code == 200
+    access = start_r.data['tokens']['access']
+    client2 = APIClient()
+    client2.credentials(HTTP_AUTHORIZATION=f'Bearer {access}')
+    r = client2.post('/api/platform/impersonate/stop/', {})
     assert r.status_code == 400
 
 
 @pytest.mark.django_db
 @override_settings(PLATFORM_SAAS_ENABLED=True)
-def test_impersonate_stop_invalid_token(employee_user):
+def test_impersonate_stop_invalid_token(superadmin_user, employee_user):
     client = APIClient()
-    client.force_authenticate(user=employee_user)
-    r = client.post('/api/platform/impersonate/stop/', {'admin_refresh_token': 'garbage.token.value'})
+    client.force_authenticate(user=superadmin_user)
+    start_r = client.post('/api/platform/impersonate/', {'user_id': str(employee_user.id)})
+    access = start_r.data['tokens']['access']
+    client2 = APIClient()
+    client2.credentials(HTTP_AUTHORIZATION=f'Bearer {access}')
+    r = client2.post('/api/platform/impersonate/stop/', {'admin_refresh_token': 'garbage.token.value'})
     assert r.status_code == 400
 
 
 @pytest.mark.django_db
 @override_settings(PLATFORM_SAAS_ENABLED=True)
-def test_impersonate_stop_non_developer_refresh(employee_user, manager_user):
+def test_impersonate_stop_non_developer_refresh(superadmin_user, employee_user, manager_user):
     """Providing a refresh token for a non-Developer should be rejected."""
     from accounts.tokens import ScreenGramRefreshToken
-    mgr_token = ScreenGramRefreshToken.for_user(manager_user)
     client = APIClient()
-    client.force_authenticate(user=employee_user)
-    r = client.post('/api/platform/impersonate/stop/', {'admin_refresh_token': str(mgr_token)})
+    client.force_authenticate(user=superadmin_user)
+    start_r = client.post('/api/platform/impersonate/', {'user_id': str(employee_user.id)})
+    access = start_r.data['tokens']['access']
+    mgr_token = ScreenGramRefreshToken.for_user(manager_user)
+    client2 = APIClient()
+    client2.credentials(HTTP_AUTHORIZATION=f'Bearer {access}')
+    r = client2.post('/api/platform/impersonate/stop/', {'admin_refresh_token': str(mgr_token)})
     assert r.status_code == 403
 
 
@@ -864,6 +917,7 @@ def test_billing_checkout_no_stripe_config(manager_with_tenant):
     client.force_authenticate(user=manager_with_tenant)
     r = client.post('/api/platform/billing/checkout-session/')
     assert r.status_code == 503
+    assert 'Stripe' in str(r.data.get('detail', ''))
 
 
 @pytest.mark.django_db
@@ -1141,3 +1195,79 @@ def test_tenant_crud_full_lifecycle(superadmin_user):
     r = client.delete(f'/api/platform/tenants/{tid}/')
     assert r.status_code == 200
     assert r.data['status'] == 'deleted'
+
+
+# ---------------------------------------------------------------------------
+# Public pricing & subscription sync
+# ---------------------------------------------------------------------------
+
+@pytest.mark.django_db
+def test_public_pricing_anonymous():
+    client = APIClient()
+    r = client.get('/api/public/pricing/')
+    assert r.status_code == 200
+    assert 'plans' in r.data
+    assert 'saas_enabled' in r.data
+    assert isinstance(r.data['plans'], list)
+
+
+@pytest.mark.django_db
+@override_settings(PLATFORM_SAAS_ENABLED=True)
+def test_platform_pricing_plans_list_developer(superadmin_user):
+    client = APIClient()
+    client.force_authenticate(user=superadmin_user)
+    r = client.get('/api/platform/pricing/plans/')
+    assert r.status_code == 200
+    assert 'results' in r.data
+
+
+@pytest.mark.django_db
+def test_sync_tenant_device_limit_from_subscription_metadata(tenant):
+    from saas_platform.services import sync_tenant_from_stripe_subscription
+
+    sub = {
+        'status': 'active',
+        'id': 'sub_123',
+        'metadata': {'device_limit': '7'},
+        'items': {
+            'data': [
+                {
+                    'quantity': 1,
+                    'price': {'id': 'price_x', 'nickname': 'Test', 'recurring': {'interval': 'month'}},
+                }
+            ]
+        },
+        'current_period_start': 1700000000,
+        'current_period_end': 1700000000,
+        'trial_end': None,
+        'cancel_at_period_end': False,
+    }
+    sync_tenant_from_stripe_subscription(tenant, sub)
+    tenant.refresh_from_db()
+    assert tenant.device_limit == 7
+
+
+@pytest.mark.django_db
+def test_sync_tenant_unlimited_from_subscription_metadata(tenant):
+    from saas_platform.services import sync_tenant_from_stripe_subscription
+
+    sub = {
+        'status': 'active',
+        'id': 'sub_124',
+        'metadata': {'device_limit': 'unlimited'},
+        'items': {
+            'data': [
+                {
+                    'quantity': 1,
+                    'price': {'id': 'price_y', 'nickname': 'VIP', 'recurring': {'interval': 'month'}},
+                }
+            ]
+        },
+        'current_period_start': 1700000000,
+        'current_period_end': 1700000000,
+        'trial_end': None,
+        'cancel_at_period_end': False,
+    }
+    sync_tenant_from_stripe_subscription(tenant, sub)
+    tenant.refresh_from_db()
+    assert tenant.device_limit is None

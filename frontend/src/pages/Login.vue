@@ -249,6 +249,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useNotification } from '@/composables/useNotification'
 import { normalizeApiError } from '@/utils/apiError'
+import { pushLogin } from '@/analytics/dataLayer'
 import {
   UserIcon,
   LockClosedIcon,
@@ -289,6 +290,7 @@ async function handleLogin() {
       return
     }
     notify.success('Login successful!')
+    pushLogin('password')
     const redirect = route.query.redirect || '/dashboard'
     router.push(redirect)
   } catch (error) {
@@ -306,6 +308,7 @@ async function handle2fa() {
       code: code2fa.value,
     })
     notify.success('Login successful!')
+    pushLogin('2fa')
     const redirect = route.query.redirect || '/dashboard'
     router.push(redirect)
   } catch (error) {

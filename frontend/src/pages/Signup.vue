@@ -314,6 +314,7 @@ import { authAPI } from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
 import { useNotification } from '@/composables/useNotification'
 import { normalizeApiError } from '@/utils/apiError'
+import { pushSignUp } from '@/analytics/dataLayer'
 import {
   UserIcon,
   EnvelopeIcon,
@@ -446,6 +447,7 @@ async function handleSignup() {
     }
 
     notify.success('Account created successfully!')
+    pushSignUp('email')
     router.push('/dashboard')
   } catch (err) {
     const parsed = err.apiError || normalizeApiError(err)

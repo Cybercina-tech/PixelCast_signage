@@ -45,9 +45,9 @@
             <select v-model="filters.priority" class="select-base w-full px-3 py-2 rounded-lg" @change="load">
               <option value="">All</option>
               <option value="low">Low</option>
-              <option value="normal">Normal</option>
+              <option value="medium">Normal</option>
               <option value="high">High</option>
-              <option value="urgent">Urgent</option>
+              <option value="critical">Critical</option>
             </select>
           </div>
         </div>
@@ -81,7 +81,7 @@
               </div>
               <div class="mt-3 flex items-center justify-between text-xs">
                 <span class="px-2 py-0.5 rounded-full border capitalize" :class="priorityClass(row.priority)">
-                  {{ row.priority }}
+                  {{ formatPriority(row.priority) }}
                 </span>
                 <span class="text-muted">{{ row.assignee_name || 'Unassigned' }}</span>
                 <span class="text-muted">{{ formatDate(row.created_at) }}</span>
@@ -118,7 +118,7 @@
                   </td>
                   <td class="py-2 pr-4">
                     <span class="text-[11px] px-2 py-1 rounded-full border capitalize" :class="priorityClass(row.priority)">
-                      {{ row.priority }}
+                      {{ formatPriority(row.priority) }}
                     </span>
                   </td>
                   <td class="py-2 pr-4 text-secondary">{{ row.assignee_name || '—' }}</td>
@@ -159,9 +159,9 @@
             <label class="label-base block text-sm mb-1">Priority</label>
             <select v-model="form.priority" class="select-base w-full px-3 py-2 rounded-lg">
               <option value="low">Low</option>
-              <option value="normal">Normal</option>
+              <option value="medium">Normal</option>
               <option value="high">High</option>
-              <option value="urgent">Urgent</option>
+              <option value="critical">Critical</option>
             </select>
           </div>
         </div>
@@ -193,7 +193,7 @@ const filters = ref({ search: '', status: '', priority: '' })
 const notify = useNotification()
 const showModal = ref(false)
 const saving = ref(false)
-const form = ref({ subject: '', body: '', priority: 'normal' })
+const form = ref({ subject: '', body: '', priority: 'medium' })
 
 function statusClass(status) {
   const map = {
@@ -210,11 +210,16 @@ function statusClass(status) {
 function priorityClass(priority) {
   const map = {
     low: 'border-slate-500/30 bg-slate-500/10 text-slate-400',
-    normal: 'border-blue-500/30 bg-blue-500/10 text-blue-300',
+    medium: 'border-blue-500/30 bg-blue-500/10 text-blue-300',
     high: 'border-orange-500/30 bg-orange-500/10 text-orange-300',
-    urgent: 'border-red-500/30 bg-red-500/10 text-red-300',
+    critical: 'border-red-500/30 bg-red-500/10 text-red-300',
   }
   return map[priority] || 'border-border-color/70 bg-card text-muted'
+}
+
+function formatPriority(p) {
+  const labels = { low: 'Low', medium: 'Normal', high: 'High', critical: 'Critical' }
+  return labels[p] || p
 }
 
 function formatStatus(s) {
@@ -227,7 +232,7 @@ function formatDate(iso) {
 }
 
 function openCreateModal() {
-  form.value = { subject: '', body: '', priority: 'normal' }
+  form.value = { subject: '', body: '', priority: 'medium' }
   showModal.value = true
 }
 

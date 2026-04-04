@@ -57,15 +57,6 @@
     >
       <button
         type="button"
-        @click="$emit('refresh', screen)"
-        class="btn-primary px-4 sm:px-5 py-2 rounded-lg font-medium inline-flex items-center justify-center gap-2 shrink-0 whitespace-nowrap"
-        title="Refresh Screen"
-      >
-        <ArrowPathIcon class="w-4 h-4 shrink-0" />
-        Refresh
-      </button>
-      <button
-        type="button"
         @click="$emit('identify', screen)"
         class="btn-secondary px-4 sm:px-5 py-2 rounded-lg font-medium inline-flex items-center justify-center gap-2 shrink-0 whitespace-nowrap"
         title="Identify Screen"
@@ -77,10 +68,10 @@
         type="button"
         @click="$emit('edit', screen)"
         class="btn-success px-4 sm:px-5 py-2 rounded-lg font-medium inline-flex items-center justify-center gap-2 shrink-0 whitespace-nowrap"
-        title="Edit Screen"
+        title="Manage Screen"
       >
         <PencilIcon class="w-4 h-4 shrink-0" />
-        Edit
+        Manage
       </button>
     </div>
   </div>
@@ -89,11 +80,7 @@
 <script setup>
 import { computed } from 'vue'
 import { useScreensStore } from '@/stores/screens'
-import {
-  ArrowPathIcon,
-  FingerPrintIcon,
-  PencilIcon,
-} from '@heroicons/vue/24/outline'
+import { FingerPrintIcon, PencilIcon } from '@heroicons/vue/24/outline'
 import StatusIndicator from './StatusIndicator.vue'
 import ScreenTemplatePreview from './ScreenTemplatePreview.vue'
 
@@ -104,7 +91,7 @@ const props = defineProps({
   },
 })
 
-defineEmits(['refresh', 'identify', 'edit'])
+defineEmits(['identify', 'edit'])
 
 const screensStore = useScreensStore()
 

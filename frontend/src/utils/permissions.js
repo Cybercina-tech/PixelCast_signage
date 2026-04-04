@@ -80,6 +80,7 @@ const ROLE_PERMISSIONS = {
   Employee: [
     'view_dashboard',
     'view_screens', 'create_screens', 'edit_screens',
+    'view_templates', 'create_templates', 'edit_templates',
     'view_schedules', 'create_schedules', 'edit_schedules',
     'view_contents', 'create_contents', 'edit_contents',
     'view_tickets', 'create_tickets',

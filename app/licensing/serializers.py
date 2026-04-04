@@ -12,6 +12,10 @@ class LicenseStatusSerializer(serializers.Serializer):
     last_validation_at = serializers.DateTimeField(allow_null=True)
     last_successful_validation_at = serializers.DateTimeField(allow_null=True)
     enforcement_enabled = serializers.BooleanField()
+    license_gateway_configured = serializers.BooleanField(required=False)
+    uses_activation_token = serializers.BooleanField(required=False)
+    masked_activation_token = serializers.CharField(required=False, allow_blank=True)
+    masked_purchase_code = serializers.CharField(required=False, allow_blank=True)
 
 
 class LicenseActivateSerializer(serializers.Serializer):

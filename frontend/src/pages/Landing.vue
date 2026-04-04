@@ -56,11 +56,32 @@
               Docs
             </router-link>
             <router-link
+              to="/blog"
+              class="px-2 py-1.5 text-xs sm:text-sm text-white/80 hover:text-white transition-colors whitespace-nowrap"
+            >
+              Blog
+            </router-link>
+            <router-link
               to="/data-center"
               class="px-2 py-1.5 text-xs sm:text-sm text-white/80 hover:text-white transition-colors whitespace-nowrap"
             >
               Data Center
             </router-link>
+            <router-link
+              to="/pricing"
+              class="px-2 py-1.5 text-xs sm:text-sm text-white/80 hover:text-white transition-colors whitespace-nowrap"
+            >
+              Pricing
+            </router-link>
+            <a
+              v-if="codecanyonItemUrl"
+              :href="codecanyonItemUrl"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="px-2 py-1.5 text-xs sm:text-sm text-white/80 hover:text-white transition-colors whitespace-nowrap"
+            >
+              CodeCanyon
+            </a>
             <template v-if="isInstalled">
               <router-link
                 to="/login"
@@ -122,7 +143,7 @@
             </svg>
           </button>
         </div>
-        <nav class="flex-1 overflow-y-auto px-3 py-3" aria-label="Landing menu">
+        <nav class="flex-1 overflow-y-auto px-3 py-3" aria-label="Home menu">
           <!-- 1) Primary actions: conversion before secondary (Login only after Install / Get Started) -->
           <p class="landing-drawer-section-label">
             {{ isInstalled ? 'Get started' : 'Setup' }}
@@ -170,9 +191,28 @@
               </router-link>
             </li>
             <li>
+              <router-link to="/blog" class="landing-drawer-quicklink" @click="closeSectionMenu">
+                Blog
+              </router-link>
+            </li>
+            <li>
               <router-link to="/data-center" class="landing-drawer-quicklink" @click="closeSectionMenu">
                 Data Center
               </router-link>
+            </li>
+            <li>
+              <router-link to="/pricing" class="landing-drawer-quicklink" @click="closeSectionMenu">
+                Pricing
+              </router-link>
+            </li>
+            <li>
+              <a
+                href="#codecanyon"
+                class="landing-drawer-quicklink"
+                @click="closeSectionMenu"
+              >
+                Self-hosted (CodeCanyon)
+              </a>
             </li>
           </ul>
 
@@ -198,7 +238,7 @@
       <!-- Hero Section -->
       <section 
         id="hero"
-        class="section snap-section hero-section"
+        class="section hero-section"
       >
         <div class="section-content">
           <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
@@ -216,7 +256,7 @@
                   <span class="text-white">From Deep Space</span>
                 </h1>
                 <p class="text-lg md:text-xl text-white/70 leading-relaxed max-w-xl mx-auto lg:mx-0">
-                  Real-time digital signage with secure setup wizard, remote screen control, and enterprise-grade monitoring.
+                  Cloud and self-hosted digital signage software for commercial displays—LCD and LED screen networks, menu boards, and advertising screens with secure setup, remote control, and fleet monitoring.
                 </p>
                 <div
                   class="hero-cta-grid grid grid-cols-2 gap-2.5 sm:gap-3 md:gap-4 pt-1 w-full max-w-md sm:max-w-lg md:max-w-xl mx-auto lg:mx-0"
@@ -224,24 +264,27 @@
                   <router-link
                     :to="isInstalled ? '/signup' : '/install'"
                     class="hero-cta-btn neon-button-large rounded-xl font-semibold !text-white visited:!text-white hover:!text-white transition-all duration-300 text-center inline-flex items-center justify-center w-full min-w-0 min-h-[3rem] sm:min-h-[3.25rem] px-2.5 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm md:text-base leading-tight"
+                    @click="trackLandingCta('hero_primary', isInstalled ? 'Start Free Trial' : 'Start Installation')"
                   >
                     {{ isInstalled ? 'Start Free Trial' : 'Start Installation' }}
                   </router-link>
                   <router-link
                     to="/docs"
                     class="hero-cta-btn glass-card rounded-xl font-semibold !text-white visited:!text-white hover:!text-white border border-white/20 hover:border-white/40 transition-all duration-300 text-center inline-flex items-center justify-center w-full min-w-0 min-h-[3rem] sm:min-h-[3.25rem] px-2.5 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm md:text-base leading-tight"
+                    @click="trackLandingCta('hero_docs', 'Documentation')"
                   >
                     Documentation
                   </router-link>
                   <router-link
                     to="/data-center"
                     class="hero-cta-btn glass-card rounded-xl font-semibold !text-white visited:!text-white hover:!text-white border border-white/20 hover:border-white/40 transition-all duration-300 text-center inline-flex items-center justify-center w-full min-w-0 min-h-[3rem] sm:min-h-[3.25rem] px-2.5 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm md:text-base leading-tight"
+                    @click="trackLandingCta('hero_data_center', 'Data Center')"
                   >
                     Data Center
                   </router-link>
                   <button 
                     type="button"
-                    @click="scrollToSection(1)" 
+                    @click="scrollToSectionById('features'); trackLandingCta('hero_explore', 'Explore Features')" 
                     class="hero-cta-btn glass-card rounded-xl font-semibold !text-white hover:!text-white border border-white/20 hover:border-white/40 transition-all duration-300 text-center inline-flex items-center justify-center w-full min-w-0 min-h-[3rem] sm:min-h-[3.25rem] px-2.5 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm md:text-base leading-tight"
                   >
                     Explore Features
@@ -323,10 +366,70 @@
         </div>
       </section>
 
+      <!-- CodeCanyon / self-hosted -->
+      <section
+        id="codecanyon"
+        class="section codecanyon-section"
+      >
+        <div class="section-content">
+          <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
+            <div
+              class="glass-card rounded-2xl p-6 lg:p-10 border border-amber-500/20 bg-gradient-to-br from-amber-500/10 via-slate-900/40 to-slate-950/60 section-fade-in"
+            >
+              <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+                <div class="max-w-2xl space-y-3">
+                  <p class="text-amber-300/90 text-xs font-semibold uppercase tracking-wider">Self-hosted</p>
+                  <h2 class="text-2xl sm:text-3xl font-bold text-white">
+                    Buy PixelCast for your own infrastructure
+                  </h2>
+                  <p class="text-on-starfield text-sm sm:text-base leading-relaxed">
+                    Prefer to run on your servers or ship a private deployment? We sell a self-hosted license on
+                    CodeCanyon (Envato). You get the product package, updates through the marketplace, and the same
+                    feature set—paired with license activation instead of cloud billing.
+                  </p>
+                  <p class="text-on-starfield text-sm leading-relaxed">
+                    Use <router-link to="/docs" class="text-cyan-400 hover:text-cyan-300 underline underline-offset-2">Documentation</router-link>
+                    and the <router-link to="/data-center" class="text-cyan-400 hover:text-cyan-300 underline underline-offset-2">Data Center</router-link>
+                    for install images, players, and operations.
+                  </p>
+                </div>
+                <div class="flex flex-col sm:flex-row lg:flex-col gap-3 shrink-0">
+                  <a
+                    v-if="codecanyonItemUrl"
+                    :href="codecanyonItemUrl"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="neon-button-large px-6 py-3 rounded-xl font-semibold text-white text-center inline-flex items-center justify-center min-h-[3rem]"
+                    @click="trackLandingCta('codecanyon_store', 'CodeCanyon item')"
+                  >
+                    View on CodeCanyon
+                  </a>
+                  <button
+                    v-else
+                    type="button"
+                    disabled
+                    class="px-6 py-3 rounded-xl font-semibold text-center min-h-[3rem] bg-white/10 text-white/50 cursor-not-allowed border border-white/10"
+                  >
+                    CodeCanyon link coming soon
+                  </button>
+                  <router-link
+                    to="/pricing"
+                    class="glass-card px-6 py-3 rounded-xl font-semibold text-white border border-white/20 hover:border-white/40 transition-colors text-center inline-flex items-center justify-center min-h-[3rem]"
+                    @click="trackLandingCta('codecanyon_pricing', 'Cloud pricing')"
+                  >
+                    Cloud plans &amp; pricing
+                  </router-link>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <!-- Features Section -->
       <section 
         id="features"
-        class="section snap-section features-section"
+        class="section features-section"
       >
         <div class="section-content">
           <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
@@ -350,8 +453,8 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="feature.iconPath" />
                   </svg>
                 </div>
-                <h3 class="text-xl lg:text-2xl font-bold !text-slate-100 mb-2 lg:mb-3">{{ feature.title }}</h3>
-                <p class="!text-slate-300 leading-relaxed text-sm lg:text-base">{{ feature.description }}</p>
+                <h3 class="text-xl lg:text-2xl font-bold !text-white mb-2 lg:mb-3">{{ feature.title }}</h3>
+                <p class="!text-on-starfield leading-relaxed text-sm lg:text-base">{{ feature.description }}</p>
               </div>
             </div>
           </div>
@@ -361,7 +464,7 @@
       <!-- Live Pulse Section -->
       <section 
         id="pulse"
-        class="section snap-section pulse-section"
+        class="section pulse-section"
       >
         <div class="section-content">
           <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
@@ -419,7 +522,7 @@
       <!-- Plans & billing -->
       <section
         id="plans"
-        class="section snap-section plans-section"
+        class="section plans-section"
       >
         <div class="section-content">
           <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
@@ -431,40 +534,65 @@
                 Start with a full-featured trial, then scale with subscriptions sized to your fleet. Payments and invoices run on Stripe—secure, familiar, and built for recurring SaaS.
               </p>
             </div>
-            <div class="grid md:grid-cols-3 gap-4 lg:gap-6 mb-8">
-              <div class="glass-card rounded-xl p-6 lg:p-8 section-fade-in">
-                <div class="text-cyan-400 text-sm font-semibold uppercase tracking-wide mb-2">Trial</div>
-                <h3 class="text-xl font-bold text-white mb-3">14-day trial</h3>
-                <p class="text-slate-300 text-sm leading-relaxed">
-                  Explore the full product without a credit card. Invite your team, pair players, and publish real content before you commit.
+            <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-5 mb-8">
+              <div class="glass-card rounded-xl p-5 lg:p-6 section-fade-in border border-white/10">
+                <div class="text-cyan-400 text-xs font-semibold uppercase tracking-wide mb-2">Free</div>
+                <h3 class="text-lg font-bold text-white mb-2">Starter</h3>
+                <p class="text-on-starfield text-sm leading-relaxed mb-3">
+                  Limited screens to try the product—upgrade when you are ready.
                 </p>
+                <p class="text-white/50 text-xs">Device limits apply</p>
               </div>
-              <div class="glass-card rounded-xl p-6 lg:p-8 section-fade-in" style="animation-delay: 0.08s">
-                <div class="text-purple-400 text-sm font-semibold uppercase tracking-wide mb-2">Plans</div>
-                <h3 class="text-xl font-bold text-white mb-3">Sized to your screens</h3>
-                <p class="text-slate-300 text-sm leading-relaxed">
-                  Subscriptions can include device limits so you only pay for the capacity you need. Upgrade as you add locations or players.
+              <div class="glass-card rounded-xl p-5 lg:p-6 section-fade-in border border-white/10" style="animation-delay: 0.06s">
+                <div class="text-purple-400 text-xs font-semibold uppercase tracking-wide mb-2">Bundle</div>
+                <h3 class="text-lg font-bold text-white mb-2">5-screen pack</h3>
+                <p class="text-on-starfield text-sm leading-relaxed mb-3">
+                  Flat bundle for small venues—predictable monthly pricing.
                 </p>
+                <p class="text-white/50 text-xs">Sized to your fleet</p>
               </div>
-              <div class="glass-card rounded-xl p-6 lg:p-8 section-fade-in" style="animation-delay: 0.16s">
-                <div class="text-emerald-400/90 text-sm font-semibold uppercase tracking-wide mb-2">Stripe</div>
-                <h3 class="text-xl font-bold text-white mb-3">Cards &amp; invoices</h3>
-                <p class="text-slate-300 text-sm leading-relaxed">
-                  Checkout, renewals, and billing history are processed through Stripe. Your payment details stay with the industry standard for online commerce.
+              <div class="glass-card rounded-xl p-5 lg:p-6 section-fade-in border border-white/10" style="animation-delay: 0.12s">
+                <div class="text-amber-300/90 text-xs font-semibold uppercase tracking-wide mb-2">Per screen</div>
+                <h3 class="text-lg font-bold text-white mb-2">Pay per screen</h3>
+                <p class="text-on-starfield text-sm leading-relaxed mb-3">
+                  Scale quantity as you add locations—billed per active screen.
                 </p>
+                <p class="text-white/50 text-xs">Flexible capacity</p>
+              </div>
+              <div class="glass-card rounded-xl p-5 lg:p-6 section-fade-in border border-emerald-500/25 bg-emerald-500/5" style="animation-delay: 0.18s">
+                <div class="text-emerald-400/90 text-xs font-semibold uppercase tracking-wide mb-2">VIP</div>
+                <h3 class="text-lg font-bold text-white mb-2">Unlimited</h3>
+                <p class="text-on-starfield text-sm leading-relaxed mb-3">
+                  One subscription for large rollouts—no screen cap.
+                </p>
+                <p class="text-white/50 text-xs">Stripe billing</p>
               </div>
             </div>
-            <div class="flex flex-col sm:flex-row items-center justify-center gap-4 section-fade-in" style="animation-delay: 0.2s">
+            <p class="text-center text-on-starfield text-sm mb-6 max-w-2xl mx-auto section-fade-in">
+              Trial, per-screen, bundles, and VIP run on Stripe—secure checkout, renewals, and invoices.
+            </p>
+            <div class="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 section-fade-in flex-wrap" style="animation-delay: 0.2s">
+              <router-link
+                to="/pricing"
+                class="neon-button-large px-8 py-3.5 rounded-xl font-semibold text-white transition-all duration-300 text-center w-full sm:w-auto min-h-[3rem] inline-flex items-center justify-center"
+                @click="trackLandingCta('plans_pricing_page', 'View plans and pricing')"
+              >
+                View plans &amp; pricing
+              </router-link>
               <router-link
                 :to="isInstalled ? '/signup' : '/install'"
-                class="neon-button-large px-8 py-3.5 rounded-xl font-semibold text-white transition-all duration-300 text-center w-full sm:w-auto min-h-[3rem] inline-flex items-center justify-center"
+                class="glass-card px-8 py-3.5 rounded-xl font-semibold text-white border border-white/20 hover:border-white/40 transition-all duration-300 text-center w-full sm:w-auto min-h-[3rem] inline-flex items-center justify-center"
               >
                 {{ isInstalled ? 'Start free trial' : 'Start installation' }}
               </router-link>
-              <p class="text-white/50 text-sm text-center sm:text-left max-w-md">
-                Self-hosted deployments can use license activation instead—see Docs and Data Center for your setup path.
-              </p>
             </div>
+            <p class="text-white/45 text-sm text-center mt-5 max-w-lg mx-auto">
+              Self-hosted? Use license activation—see
+              <router-link to="/docs" class="text-cyan-400/90 hover:text-cyan-300 underline underline-offset-2">Docs</router-link>
+              and
+              <router-link to="/data-center" class="text-cyan-400/90 hover:text-cyan-300 underline underline-offset-2">Data Center</router-link>,
+              or the CodeCanyon section above.
+            </p>
           </div>
         </div>
       </section>
@@ -472,7 +600,7 @@
       <!-- Industry Use Cases Section -->
       <section 
         id="industries"
-        class="section snap-section industries-section"
+        class="section industries-section"
       >
         <div class="section-content">
           <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
@@ -495,7 +623,7 @@
                   class="shrink-0 px-4 lg:px-6 py-2 lg:py-3 rounded-lg font-semibold text-sm lg:text-base transition-all duration-300 whitespace-nowrap"
                   :class="activeTab === index 
                     ? 'bg-gradient-to-r from-cyan-400 to-purple-500 !text-white shadow-[0_0_16px_rgba(6,182,212,0.25)]' 
-                    : '!text-slate-300 hover:!text-slate-100 hover:bg-white/5'"
+                    : '!text-white/80 hover:!text-white hover:bg-white/5'"
                 >
                   {{ industry.name }}
                 </button>
@@ -503,8 +631,8 @@
               <!-- Tab Content -->
               <div class="grid md:grid-cols-2 gap-6 lg:gap-8 items-center">
                 <div class="text-white">
-                  <h3 class="text-2xl lg:text-3xl font-bold !text-slate-100 mb-3 lg:mb-4">{{ industries[activeTab].title }}</h3>
-                  <p class="!text-slate-300 mb-4 lg:mb-6 leading-relaxed text-sm lg:text-base">{{ industries[activeTab].description }}</p>
+                  <h3 class="text-2xl lg:text-3xl font-bold !text-white mb-3 lg:mb-4">{{ industries[activeTab].title }}</h3>
+                  <p class="!text-on-starfield mb-4 lg:mb-6 leading-relaxed text-sm lg:text-base">{{ industries[activeTab].description }}</p>
                   <ul class="space-y-2 lg:space-y-3">
                     <li 
                       v-for="(benefit, idx) in industries[activeTab].benefits" 
@@ -514,7 +642,7 @@
                       <svg class="w-5 lg:w-6 h-5 lg:h-6 text-cyan-400 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
                         <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
                       </svg>
-                      <span class="!text-slate-200 text-sm lg:text-base">{{ benefit }}</span>
+                      <span class="!text-on-starfield text-sm lg:text-base">{{ benefit }}</span>
                     </li>
                   </ul>
                 </div>
@@ -539,38 +667,63 @@
       <!-- Tech Stack & CTA Section -->
       <section 
         id="cta"
-        class="section snap-section cta-section"
+        class="section cta-section"
       >
         <div class="section-content">
           <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
             <!-- Tech Stack -->
             <div class="glass-card rounded-xl p-5 lg:p-6 text-center mb-6 lg:mb-8 section-fade-in">
-              <p class="!text-slate-300 mb-3 lg:mb-4 text-sm lg:text-base">Powered by</p>
+              <p class="!text-on-starfield mb-3 lg:mb-4 text-sm lg:text-base">Powered by</p>
               <div class="flex flex-wrap justify-center items-center gap-4 lg:gap-6">
-                <div class="flex items-center space-x-2 !text-slate-200 text-sm lg:text-base">
+                <div class="flex items-center space-x-2 !text-on-starfield text-sm lg:text-base">
                   <svg class="w-5 lg:w-6 h-5 lg:h-6 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
                   </svg>
                   <span class="font-semibold">IoT</span>
                 </div>
-                <div class="flex items-center space-x-2 !text-slate-200 text-sm lg:text-base">
+                <div class="flex items-center space-x-2 !text-on-starfield text-sm lg:text-base">
                   <svg class="w-5 lg:w-6 h-5 lg:h-6 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
                   </svg>
                   <span class="font-semibold">Real-time Sync</span>
                 </div>
-                <div class="flex items-center space-x-2 !text-slate-200 text-sm lg:text-base">
+                <div class="flex items-center space-x-2 !text-on-starfield text-sm lg:text-base">
                   <svg class="w-5 lg:w-6 h-5 lg:h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01" />
                   </svg>
                   <span class="font-semibold">Cloud Infrastructure</span>
                 </div>
-                <div class="flex items-center space-x-2 !text-slate-200 text-sm lg:text-base">
+                <div class="flex items-center space-x-2 !text-on-starfield text-sm lg:text-base">
                   <svg class="w-5 lg:w-6 h-5 lg:h-6 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
                   </svg>
                   <span class="font-semibold">Stripe</span>
                 </div>
+              </div>
+            </div>
+            <!-- Latest blog (dynamic) -->
+            <div
+              v-if="latestPosts.length"
+              class="glass-card rounded-2xl p-6 lg:p-8 mb-8 lg:mb-10 section-fade-in border border-white/10"
+            >
+              <div class="flex flex-wrap items-end justify-between gap-4 mb-6">
+                <div>
+                  <p class="text-cyan-300/90 text-xs font-semibold uppercase tracking-wider mb-1">From the blog</p>
+                  <h2 class="text-2xl md:text-3xl font-bold text-white">Latest articles</h2>
+                </div>
+                <router-link to="/blog" class="text-sm font-medium text-cyan-300 hover:text-cyan-200"> View all → </router-link>
+              </div>
+              <div class="grid gap-4 md:grid-cols-3">
+                <router-link
+                  v-for="p in latestPosts"
+                  :key="p.id"
+                  :to="{ name: 'blog-post', params: { slug: p.slug } }"
+                  class="group rounded-xl border border-white/10 bg-white/5 hover:border-cyan-400/30 hover:bg-white/10 transition-colors p-4 flex flex-col min-h-[7rem]"
+                >
+                  <time v-if="p.published_at" class="text-[11px] text-white/45">{{ formatBlogDate(p.published_at) }}</time>
+                  <h3 class="mt-2 text-base font-semibold text-white group-hover:text-cyan-100 line-clamp-2">{{ p.title }}</h3>
+                  <p v-if="p.excerpt" class="mt-2 text-sm text-white/60 line-clamp-2 flex-1">{{ p.excerpt }}</p>
+                </router-link>
               </div>
             </div>
             <!-- CTA -->
@@ -625,6 +778,7 @@
             <router-link to="/privacy" class="hover:text-white transition-colors">Privacy</router-link>
             <router-link to="/terms" class="hover:text-white transition-colors">Terms</router-link>
             <router-link to="/docs" class="hover:text-white transition-colors">Docs</router-link>
+            <router-link to="/blog" class="hover:text-white transition-colors">Blog</router-link>
             <router-link to="/data-center" class="hover:text-white transition-colors">Data Center</router-link>
           </div>
         </div>
@@ -635,7 +789,12 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { setupAPI } from '@/services/api'
+import { setupAPI, publicAPI } from '@/services/api'
+import { pushCtaClick } from '@/analytics/dataLayer'
+
+function trackLandingCta(ctaId, label) {
+  pushCtaClick(ctaId, label, { page: 'landing' })
+}
 
 const scrollProgress = ref(0)
 const activeTab = ref(0)
@@ -643,6 +802,20 @@ const isInstalled = ref(true)
 const sectionMenuOpen = ref(false)
 
 const footerYear = computed(() => new Date().getFullYear())
+
+const latestPosts = ref([])
+
+function formatBlogDate(iso) {
+  try {
+    return new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', year: 'numeric' }).format(
+      new Date(iso)
+    )
+  } catch {
+    return ''
+  }
+}
+
+const codecanyonItemUrl = computed(() => (import.meta.env.VITE_CODECANYON_ITEM_URL || '').trim())
 
 const closeSectionMenu = () => {
   sectionMenuOpen.value = false
@@ -761,14 +934,24 @@ const industries = ref([
   }
 ])
 
-// Scroll to section
+// Scroll to section (by index — legacy)
 const scrollToSection = (index) => {
   const scrollContainer = document.querySelector('.scroll-container')
   if (scrollContainer) {
-    const sections = scrollContainer.querySelectorAll('.snap-section')
+    const sections = scrollContainer.querySelectorAll(':scope > section')
     if (sections[index]) {
       sections[index].scrollIntoView({ behavior: 'smooth', block: 'start' })
     }
+  }
+}
+
+const scrollToSectionById = (id) => {
+  const scrollContainer = document.querySelector('.scroll-container')
+  const el = document.getElementById(id)
+  if (scrollContainer && el && scrollContainer.contains(el)) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  } else if (el) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 }
 
@@ -832,6 +1015,16 @@ onMounted(() => {
       // Default to installed mode on network/API issues.
       isInstalled.value = true
     })
+
+  publicAPI.blog.posts
+    .list({ page_size: 3 })
+    .then(({ data }) => {
+      const list = data.results ?? data
+      latestPosts.value = Array.isArray(list) ? list.slice(0, 3) : []
+    })
+    .catch(() => {
+      latestPosts.value = []
+    })
 })
 
 onUnmounted(() => {
@@ -852,6 +1045,13 @@ onUnmounted(() => {
   min-height: 100dvh;
   height: 100dvh;
   overflow: hidden;
+  /* Always use light copy tokens here — global :root is light-theme when html has no .dark */
+  --text-body: #e2e8f0;
+  --text-main: #e2e8f0;
+  --text-heading: #f8fafc;
+  --text-muted: #94a3b8;
+  color: var(--text-body);
+  color-scheme: dark;
   background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 25%, #0f172a 50%, #1e293b 75%, #0a0e27 100%);
   background-size: 400% 400%;
   animation: gradientShift 20s ease infinite;
@@ -988,7 +1188,6 @@ onUnmounted(() => {
   overflow-y: auto;
   overflow-x: hidden;
   scroll-behavior: smooth;
-  scroll-snap-type: none;
   scroll-padding-top: 5.75rem;
   -ms-overflow-style: none;
   scrollbar-width: none;
@@ -997,7 +1196,6 @@ onUnmounted(() => {
 
 @media (min-width: 1024px) {
   .scroll-container {
-    scroll-snap-type: y mandatory;
     scroll-padding-top: 5.5rem;
   }
 }
@@ -1010,8 +1208,6 @@ onUnmounted(() => {
   min-height: 100dvh;
   height: auto;
   width: 100%;
-  scroll-snap-align: start;
-  scroll-snap-stop: normal;
   position: relative;
   display: flex;
   flex-direction: column;
@@ -1023,9 +1219,9 @@ onUnmounted(() => {
 
 @media (min-width: 1024px) {
   .section {
-    min-height: 100vh;
-    height: 100vh;
-    scroll-snap-stop: always;
+    /* min-height only: tall sections (e.g. features) grow with content; scroll stays on .scroll-container */
+    min-height: 100dvh;
+    height: auto;
     padding-top: max(5rem, env(safe-area-inset-top));
     padding-bottom: 40px;
   }
@@ -1042,27 +1238,6 @@ onUnmounted(() => {
   max-height: none;
   overflow-y: visible;
   overflow-x: hidden;
-}
-
-@media (min-width: 1024px) {
-  .section-content {
-    height: 100%;
-    max-height: calc(100vh - 100px);
-    overflow-y: auto;
-  }
-}
-
-.section-content::-webkit-scrollbar {
-  width: 4px;
-}
-
-.section-content::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.section-content::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 2px;
 }
 
 /* Background gradient animation */
@@ -1103,12 +1278,16 @@ onUnmounted(() => {
   to { transform: translateY(-2000px); }
 }
 
-/* Glassmorphism */
+/*
+ * Solid frosted surface (no backdrop-filter): matches app card-base stability note in style.css —
+ * blur + global light theme caused body/heading tokens to composite as dark text until repaint
+ * (e.g. full viewport vs DevTools docked).
+ */
 .glass-card {
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: rgba(15, 23, 42, 0.78);
   border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 /* Neon Buttons */
@@ -1211,7 +1390,8 @@ onUnmounted(() => {
 
 /* Fullscreen stability:
    Features/Industries are content-heavy; top-align them on large screens
-   to prevent heading clipping with fixed nav + snap sections. */
+   to prevent heading clipping with fixed nav + full-height sections. */
+.codecanyon-section .section-content,
 .features-section .section-content,
 .industries-section .section-content,
 .plans-section .section-content {
@@ -1220,6 +1400,7 @@ onUnmounted(() => {
 }
 
 @media (max-width: 1023px) {
+  .codecanyon-section .section-content,
   .features-section .section-content,
   .industries-section .section-content,
   .plans-section .section-content,
@@ -1307,7 +1488,4 @@ onUnmounted(() => {
   }
 }
 
-.landing-footer {
-  scroll-snap-align: none;
-}
 </style>

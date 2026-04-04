@@ -254,6 +254,17 @@ class TestRequesterAPI:
         assert r.data['subject'] == 'Help me'
         assert r.data['priority'] == 'high'
 
+    def test_create_ticket_priority_normal_alias_to_medium(self, requester_a):
+        client = APIClient()
+        client.force_authenticate(user=requester_a)
+        r = client.post('/api/tickets/', {
+            'subject': 'Alias priority',
+            'body': 'Body',
+            'priority': 'normal',
+        })
+        assert r.status_code == 201
+        assert r.data['priority'] == 'medium'
+
     def test_list_tickets(self, requester_a, ticket_a):
         client = APIClient()
         client.force_authenticate(user=requester_a)
@@ -316,6 +327,58 @@ class TestPlatformAPI:
         r = client.get('/api/platform/tickets/queue/')
         assert r.status_code == 403
 
+    def test_create_ticket_on_behalf(self, dev_user, tenant_a, requester_a):
+        client = APIClient()
+        client.force_authenticate(user=dev_user)
+        r = client.post('/api/platform/tickets/queue/', {
+            'tenant_id': str(tenant_a.id),
+            'requester_id': requester_a.id,
+            'subject': 'Admin-created ticket',
+            'body': 'Created by super-admin on behalf of user',
+            'priority': 'high',
+        })
+        assert r.status_code == 201
+        assert r.data['subject'] == 'Admin-created ticket'
+        assert r.data['priority'] == 'high'
+        assert r.data['requester'] == requester_a.id
+
+    def test_list_tenants(self, dev_user, tenant_a):
+        client = APIClient()
+        client.force_authenticate(user=dev_user)
+        r = client.get('/api/platform/tickets/queue/tenants/')
+        assert r.status_code == 200
+        slugs = [t['slug'] for t in r.data]
+        assert tenant_a.slug in slugs
+
+    def test_search_users(self, dev_user, requester_a):
+        client = APIClient()
+        client.force_authenticate(user=dev_user)
+        r = client.get('/api/platform/tickets/queue/users/', {'search': requester_a.email[:5]})
+        assert r.status_code == 200
+        emails = [u['email'] for u in r.data]
+        assert requester_a.email in emails
+
+    def test_reply_to_ticket(self, dev_user, ticket_a):
+        client = APIClient()
+        client.force_authenticate(user=dev_user)
+        r = client.post(f'/api/platform/tickets/queue/{ticket_a.id}/reply/', {
+            'body': 'Platform agent response',
+        })
+        assert r.status_code == 201
+        assert 'id' in r.data
+
+    def test_internal_note(self, dev_user, ticket_a):
+        client = APIClient()
+        client.force_authenticate(user=dev_user)
+        r = client.post(f'/api/platform/tickets/queue/{ticket_a.id}/reply/', {
+            'body': 'This is private',
+            'is_internal': True,
+        })
+        assert r.status_code == 201
+        detail = client.get(f'/api/platform/tickets/queue/{ticket_a.id}/').data
+        internals = [m for m in detail['messages'] if m['is_internal']]
+        assert len(internals) >= 1
+
 
 # ---------------------------------------------------------------------------
 # Sidebar visibility
@@ -373,3 +436,81 @@ class TestAnalyticsAndExport:
         r = client.get('/api/platform/tickets/agent-performance/')
         assert r.status_code == 200
         assert 'agents' in r.data
+
+
+# ---------------------------------------------------------------------------
+# Tenant assignment (self-hosted / no SaaS flag)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.django_db
+class TestTenantEnsureForTickets:
+    @override_settings(PLATFORM_SAAS_ENABLED=False, DEPLOYMENT_MODE='self_hosted')
+    def test_ensure_user_tenant_then_create_ticket(self):
+        from saas_platform.tenant_assignment import ensure_user_tenant
+
+        u = User.objects.create_user(
+            username='solo_ticket',
+            email='solo_ticket@example.com',
+            password='pass',
+            role='Employee',
+        )
+        assert u.tenant_id is None
+        ensure_user_tenant(u)
+        u.refresh_from_db()
+        assert u.tenant_id is not None
+        assert u.tenant.slug != 'default'
+        assert u.tenant.organization_name_key.startswith('__user__')
+
+        client = APIClient()
+        client.force_authenticate(user=u)
+        r = client.post(
+            '/api/tickets/',
+            {'subject': 'Help', 'body': 'Body', 'priority': 'medium'},
+        )
+        assert r.status_code == 201
+
+    @override_settings(PLATFORM_SAAS_ENABLED=False, DEPLOYMENT_MODE='self_hosted')
+    def test_ensure_user_tenant_shared_organization(self):
+        from saas_platform.tenant_assignment import ensure_user_tenant
+
+        u1 = User.objects.create_user(
+            username='org_a1',
+            email='org_a1@example.com',
+            password='pass',
+            role='Employee',
+            organization_name='Acme Corp',
+        )
+        u2 = User.objects.create_user(
+            username='org_a2',
+            email='org_a2@example.com',
+            password='pass',
+            role='Employee',
+            organization_name='Acme Corp',
+        )
+        ensure_user_tenant(u1)
+        ensure_user_tenant(u2)
+        u1.refresh_from_db()
+        u2.refresh_from_db()
+        assert u1.tenant_id == u2.tenant_id
+        assert u1.tenant.organization_name_key == 'Acme Corp'
+
+    @override_settings(PLATFORM_SAAS_ENABLED=False, DEPLOYMENT_MODE='self_hosted')
+    def test_rehome_from_legacy_default_to_personal(self):
+        from saas_platform.tenant_assignment import rehome_from_legacy_default
+
+        default_t, _ = Tenant.objects.get_or_create(
+            slug='default',
+            defaults={'name': 'Default', 'organization_name_key': ''},
+        )
+        u = User.objects.create_user(
+            username='legacy_default',
+            email='legacy_default@example.com',
+            password='pass',
+            role='Employee',
+            tenant=default_t,
+        )
+        rehome_from_legacy_default(u)
+        u.refresh_from_db()
+        assert u.tenant_id != default_t.id
+        assert u.tenant.organization_name_key.startswith('__user__')

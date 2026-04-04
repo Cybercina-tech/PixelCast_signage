@@ -80,6 +80,7 @@ def setup_status(request):
         except Exception:
             admin_exists = False
         
+        raw_pwd = settings.DATABASES['default'].get('PASSWORD') or ''
         serializer = SetupStatusSerializer({
             'installed': is_installed(),
             'database_connected': db_connected,
@@ -87,7 +88,7 @@ def setup_status(request):
             'admin_exists': admin_exists,
             'db_name': settings.DATABASES['default'].get('NAME', 'pixelcast_signage_db'),
             'db_user': settings.DATABASES['default'].get('USER', 'pixelcast_signage_user'),
-            'db_password': settings.DATABASES['default'].get('PASSWORD', ''),
+            'db_password_configured': bool(str(raw_pwd).strip()),
             'db_host': settings.DATABASES['default'].get('HOST', 'db'),
             'db_port': str(settings.DATABASES['default'].get('PORT', '5432')),
         })

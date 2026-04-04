@@ -1,6 +1,8 @@
+import { nextTick } from 'vue'
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { canAccessRoute, isDeveloperOrSuperuser } from '@/utils/permissions'
+import { pushVirtualPageView } from '@/analytics/dataLayer'
 
 // Public pages
 import Landing from '../pages/Landing.vue'
@@ -61,9 +63,12 @@ import SuperAdminShell from '../layouts/SuperAdminShell.vue'
 import SuperAdminHome from '../pages/super-admin/SuperAdminHome.vue'
 import SystemEmailSettingsPanel from '../components/core/SystemEmailSettingsPanel.vue'
 import SuperAdminUsers from '../pages/super-admin/SuperAdminUsers.vue'
+import SuperAdminGlobalUserManage from '../pages/super-admin/SuperAdminGlobalUserManage.vue'
 import SuperAdminBilling from '../pages/super-admin/SuperAdminBilling.vue'
+import SuperAdminPricing from '../pages/super-admin/SuperAdminPricing.vue'
 import SuperAdminReports from '../pages/super-admin/SuperAdminReports.vue'
 import SuperAdminDevices from '../pages/super-admin/SuperAdminDevices.vue'
+import SuperAdminLicenses from '../pages/super-admin/SuperAdminLicenses.vue'
 import SuperAdminAlerts from '../pages/super-admin/SuperAdminAlerts.vue'
 import SuperAdminCapacity from '../pages/super-admin/SuperAdminCapacity.vue'
 import SuperAdminSystem from '../pages/super-admin/SuperAdminSystem.vue'
@@ -72,6 +77,9 @@ import SuperAdminTicketQueue from '../pages/super-admin/SuperAdminTicketQueue.vu
 import SuperAdminTicketDetail from '../pages/super-admin/SuperAdminTicketDetail.vue'
 import SuperAdminTicketAnalytics from '../pages/super-admin/SuperAdminTicketAnalytics.vue'
 import SuperAdminTicketSettings from '../pages/super-admin/SuperAdminTicketSettings.vue'
+import SuperAdminBlogList from '../pages/super-admin/SuperAdminBlogList.vue'
+import SuperAdminBlogEditor from '../pages/super-admin/SuperAdminBlogEditor.vue'
+import SuperAdminBlogAI from '../pages/super-admin/SuperAdminBlogAI.vue'
 
 // User Management
 import Profile from '../pages/Profile.vue'
@@ -82,9 +90,6 @@ import Sessions from '../pages/Sessions.vue'
 import PrivacyPolicy from '../pages/PrivacyPolicy.vue'
 import TermsOfService from '../pages/TermsOfService.vue'
 import DataCenter from '../pages/DataCenter.vue'
-import Documentation from '../pages/Documentation.vue'
-import DocsChangelog from '../pages/DocsChangelog.vue'
-
 // Error Pages
 import NotFound from '../pages/errors/NotFound.vue'
 import Unauthorized from '../pages/errors/Unauthorized.vue'
@@ -155,13 +160,39 @@ const routes = [
   {
     path: '/docs',
     name: 'docs',
-    component: Documentation,
     meta: { public: true },
+    beforeEnter() {
+      window.location.replace(`${window.location.origin}/documentation/index.html`)
+      return false
+    },
+    component: { template: '<div />' },
   },
   {
     path: '/docs/changelog',
     name: 'docs-changelog',
-    component: DocsChangelog,
+    meta: { public: true },
+    beforeEnter() {
+      window.location.replace(`${window.location.origin}/documentation/changelog.html`)
+      return false
+    },
+    component: { template: '<div />' },
+  },
+  {
+    path: '/blog',
+    name: 'blog',
+    component: () => import('../pages/Blog.vue'),
+    meta: { public: true },
+  },
+  {
+    path: '/pricing',
+    name: 'pricing',
+    component: () => import('../pages/Pricing.vue'),
+    meta: { public: true },
+  },
+  {
+    path: '/blog/:slug',
+    name: 'blog-post',
+    component: () => import('../pages/BlogPost.vue'),
     meta: { public: true },
   },
   {
@@ -232,9 +263,27 @@ const routes = [
         meta: { requiresAuth: true, requiresRole: ['Developer'] },
       },
       {
+        path: 'users/:id',
+        name: 'super-admin-user-manage',
+        component: SuperAdminGlobalUserManage,
+        meta: { requiresAuth: true, requiresRole: ['Developer'] },
+      },
+      {
         path: 'billing',
         name: 'super-admin-billing',
         component: SuperAdminBilling,
+        meta: { requiresAuth: true, requiresRole: ['Developer'] },
+      },
+      {
+        path: 'pricing',
+        name: 'super-admin-pricing',
+        component: SuperAdminPricing,
+        meta: { requiresAuth: true, requiresRole: ['Developer'] },
+      },
+      {
+        path: 'self-hosted-licenses',
+        name: 'super-admin-self-hosted-licenses',
+        component: SuperAdminLicenses,
         meta: { requiresAuth: true, requiresRole: ['Developer'] },
       },
       {
@@ -315,6 +364,50 @@ const routes = [
         name: 'super-admin-ticket-detail',
         component: SuperAdminTicketDetail,
         meta: { requiresAuth: true, requiresRole: ['Developer'] },
+      },
+      {
+        path: 'blog',
+        name: 'super-admin-blog',
+        component: SuperAdminBlogList,
+        meta: {
+          requiresAuth: true,
+          requiresRole: ['Developer'],
+          superAdminTitle: 'Blog',
+          superAdminSubtitle: 'Create and publish marketing articles',
+        },
+      },
+      {
+        path: 'blog/new',
+        name: 'super-admin-blog-new',
+        component: SuperAdminBlogEditor,
+        meta: {
+          requiresAuth: true,
+          requiresRole: ['Developer'],
+          superAdminTitle: 'New article',
+          superAdminSubtitle: 'Draft, publish, and manage SEO fields',
+        },
+      },
+      {
+        path: 'blog/ai',
+        name: 'super-admin-blog-ai',
+        component: SuperAdminBlogAI,
+        meta: {
+          requiresAuth: true,
+          requiresRole: ['Developer'],
+          superAdminTitle: 'Blog AI',
+          superAdminSubtitle: 'OpenAI, daily limits, and generation logs',
+        },
+      },
+      {
+        path: 'blog/:id',
+        name: 'super-admin-blog-edit',
+        component: SuperAdminBlogEditor,
+        meta: {
+          requiresAuth: true,
+          requiresRole: ['Developer'],
+          superAdminTitle: 'Edit article',
+          superAdminSubtitle: 'Update content and publishing status',
+        },
       },
     ],
   },
@@ -623,6 +716,10 @@ router.beforeEach(async (to, from, next) => {
   }
 
   next()
+})
+
+router.afterEach((to) => {
+  nextTick(() => pushVirtualPageView(to))
 })
 
 export default router
