@@ -230,6 +230,12 @@ LICENSE_STALE_CONTACT_WARN_DAYS = env('LICENSE_STALE_CONTACT_WARN_DAYS', default
 LICENSE_STALE_CONTACT_READONLY_DAYS = env('LICENSE_STALE_CONTACT_READONLY_DAYS', default=14, cast=float)
 LICENSE_CACHE_TTL_SECONDS = env('LICENSE_CACHE_TTL_SECONDS', default=900, cast=int)
 LICENSE_SERVER_TIMEOUT_SECONDS = env('LICENSE_SERVER_TIMEOUT_SECONDS', default=8, cast=int)
+# Dev: mock registry/gateway responses (no network / no Envato). See licensing/mock_registry.py
+USE_MOCK_REGISTRY = env('USE_MOCK_REGISTRY', default=False, cast=bool)
+# Bind license to Host via HS256 JWT (middleware); registry Bearer token stays separate.
+LICENSE_DOMAIN_BINDING_ENABLED = env('LICENSE_DOMAIN_BINDING_ENABLED', default=True, cast=bool)
+LICENSE_DOMAIN_JWT_TTL_HOURS = env('LICENSE_DOMAIN_JWT_TTL_HOURS', default=8760, cast=int)
+LICENSE_DOMAIN_JWT_SECRET = env('LICENSE_DOMAIN_JWT_SECRET', default='')
 # Self-hosted → operator gateway: base URL for /activate/, /heartbeat/, /validate/ (v1).
 # If empty, derived from LICENSE_SERVER_URL by stripping a trailing /validate path when possible.
 LICENSE_GATEWAY_BASE_URL = env('LICENSE_GATEWAY_BASE_URL', default='')
@@ -261,6 +267,10 @@ from core.deployment import normalize_deployment_mode, resolve_effective_platfor
 DEPLOYMENT_MODE = normalize_deployment_mode(env('DEPLOYMENT_MODE', default='hybrid'))
 _PLATFORM_SAAS_ENV = env('PLATFORM_SAAS_ENABLED', default=True, cast=bool)
 PLATFORM_SAAS_ENABLED = resolve_effective_platform_saas(DEPLOYMENT_MODE, _PLATFORM_SAAS_ENV)
+# CodeCanyon instance gateway (public register/heartbeat/usage + admin list under /api/platform/gateway/).
+PLATFORM_GATEWAY_ENABLED = env('PLATFORM_GATEWAY_ENABLED', default=False, cast=bool)
+GATEWAY_REGISTER_RATE_LIMIT_PER_HOUR = env('GATEWAY_REGISTER_RATE_LIMIT_PER_HOUR', default=5, cast=int)
+GATEWAY_OFFLINE_HEARTBEAT_MINUTES = env('GATEWAY_OFFLINE_HEARTBEAT_MINUTES', default=3, cast=int)
 # Self-hosted only: POST new tickets / customer replies to operator LICENSE_GATEWAY_BASE_URL …/tickets/ingest/
 TICKET_OPERATOR_BRIDGE_ENABLED = env('TICKET_OPERATOR_BRIDGE_ENABLED', default=False, cast=bool)
 STRIPE_SECRET_KEY = env('STRIPE_SECRET_KEY', default='')
@@ -287,6 +297,7 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt.token_blacklist',  # JWT refresh blacklist (session revoke)
     'setup',  # Setup/Installation wizard (must be early for middleware)
     'licensing',  # License management and enforcement
+    'platform_gateway',  # CodeCanyon instance registry API (operator SaaS)
     'core',  # Core infrastructure (caching, rate limiting, audit, backup)
     'accounts',  # App for User management (must be before other apps)
     'saas_platform',  # SaaS platform admin (tenants, Stripe webhooks)
@@ -605,6 +616,12 @@ CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = TIME_ZONE
+CELERY_BEAT_SCHEDULE = {
+    'check-offline-instances': {
+        'task': 'platform_gateway.tasks.check_offline_instances',
+        'schedule': timedelta(seconds=120),
+    },
+}
 
 # Email Configuration
 # For development: emails are printed to console

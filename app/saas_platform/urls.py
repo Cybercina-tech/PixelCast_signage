@@ -27,6 +27,11 @@ from licensing.registry_admin_views import (
     self_hosted_license_suspicious,
     self_hosted_license_suspend,
 )
+from platform_gateway.admin_views import (
+    gateway_instance_detail,
+    gateway_instance_list,
+    gateway_instance_usage,
+)
 from .views import PlatformExpenseViewSet, TenantViewSet, impersonate_start, impersonate_stop
 
 router = DefaultRouter()
@@ -60,4 +65,7 @@ urlpatterns = [
     path('self-hosted-licenses/<uuid:pk>/reactivate/', self_hosted_license_reactivate, name='platform-self-hosted-license-reactivate'),
     path('self-hosted-licenses/<uuid:pk>/suspicious/', self_hosted_license_suspicious, name='platform-self-hosted-license-suspicious'),
     path('self-hosted-licenses/<uuid:pk>/heartbeats/', self_hosted_license_heartbeats, name='platform-self-hosted-license-heartbeats'),
+    path('gateway/instances/', gateway_instance_list, name='platform-gateway-instances'),
+    path('gateway/instances/<uuid:pk>/', gateway_instance_detail, name='platform-gateway-instance-detail'),
+    path('gateway/instances/<uuid:pk>/usage/', gateway_instance_usage, name='platform-gateway-instance-usage'),
 ] + router.urls

@@ -384,7 +384,14 @@
               <div class="space-y-4">
                 <p v-if="licenseLoadError" class="text-sm text-amber-600">{{ licenseLoadError }}</p>
                 <div v-else-if="licenseLoading" class="text-sm text-muted">Loading…</div>
-                <dl v-else class="grid gap-4 sm:grid-cols-2">
+                <div
+                  v-if="licenseGraceBanner"
+                  class="rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-100"
+                  role="status"
+                >
+                  {{ licenseGraceBanner }}
+                </div>
+                <dl v-if="!licenseLoading && !licenseLoadError" class="grid gap-4 sm:grid-cols-2">
                   <div class="rounded-xl border border-border-color bg-surface-inset/40 px-4 py-3">
                     <dt class="text-xs text-muted mb-1">License active</dt>
                     <dd class="text-sm font-semibold text-primary">{{ licenseActiveLabel }}</dd>
@@ -431,7 +438,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useThemeStore } from '@/stores/theme'
@@ -570,8 +577,13 @@ const sessionsError = ref(null)
 
 /** Raw status string from `/license/status/` — only used to derive the two summary labels below. */
 const licenseStatusRaw = ref(null)
+/** Full license envelope (features, grace_until, valid, …). */
+const licensePayload = ref(null)
 const licenseLoading = ref(false)
 const licenseLoadError = ref(null)
+
+const licenseNowTick = ref(Date.now())
+let licenseGraceTicker = null
 
 const licenseActiveLabel = computed(() => {
   const s = licenseStatusRaw.value
@@ -585,6 +597,29 @@ const licenseServerVerifiedLabel = computed(() => {
   const s = licenseStatusRaw.value
   if (s == null) return '—'
   return s === 'active' ? 'Yes' : 'No'
+})
+
+/** Countdown / urgency when grace_until is set (e.g. after Skip or offline grace). */
+const licenseGraceBanner = computed(() => {
+  const p = licensePayload.value
+  if (!p || !p.grace_until) return ''
+  const end = new Date(p.grace_until)
+  if (Number.isNaN(end.getTime())) return ''
+  const sec = Math.max(0, Math.floor((end.getTime() - licenseNowTick.value) / 1000))
+  const st = p.license_status
+  if (sec <= 0) {
+    if (st === 'grace' || st === 'inactive')
+      return 'Grace period has ended — enter your purchase code below to restore full access.'
+    return ''
+  }
+  if (st !== 'grace' && st !== 'inactive') return ''
+  const days = Math.floor(sec / 86400)
+  const hours = Math.floor((sec % 86400) / 3600)
+  const mins = Math.floor((sec % 3600) / 60)
+  if (days >= 1) {
+    return `${days} day(s) until grace ends — activate your license in Settings to avoid losing access.`
+  }
+  return `${hours}h ${mins}m left in grace — activate your license soon.`
 })
 const terminatingSession = ref(null)
 const loggingOutAllSessions = ref(false)
@@ -611,15 +646,36 @@ async function loadLicenseSummary() {
   licenseLoadError.value = null
   try {
     const { data } = await licenseAPI.status()
+    licensePayload.value = data
     licenseStatusRaw.value = data?.license_status ?? null
   } catch (err) {
     licenseStatusRaw.value = null
+    licensePayload.value = null
     licenseLoadError.value =
       err.response?.data?.detail || err.response?.data?.message || 'Could not load license status'
   } finally {
     licenseLoading.value = false
   }
 }
+
+watch(
+  () => activeTab.value === 'license',
+  (on) => {
+    if (licenseGraceTicker) clearInterval(licenseGraceTicker)
+    licenseGraceTicker = null
+    if (on) {
+      licenseNowTick.value = Date.now()
+      licenseGraceTicker = setInterval(() => {
+        licenseNowTick.value = Date.now()
+      }, 1000)
+    }
+  },
+  { immediate: true },
+)
+
+onUnmounted(() => {
+  if (licenseGraceTicker) clearInterval(licenseGraceTicker)
+})
 
 async function loadSessions() {
   loadingSessions.value = true

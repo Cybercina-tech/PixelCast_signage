@@ -30,10 +30,26 @@ class LicenseDecision:
     error_code: str
     message: str
     grace_until: object = None
+    retry_after: int | None = None
 
 
 def _cache_key() -> str:
     return "licensing:decision:v1"
+
+
+def invalidate_license_cache() -> None:
+    cache.delete(_cache_key())
+
+
+def _apply_domain_binding(state: LicenseState) -> None:
+    """Issue or clear HS256 domain-binding JWT (registry token stays separate)."""
+    dom = (state.activated_domain or "").strip()
+    if state.license_status in (LicenseState.STATUS_ACTIVE, LicenseState.STATUS_GRACE) and dom:
+        from .jwt_tokens import issue_domain_binding_jwt
+
+        state.domain_binding_jwt = issue_domain_binding_jwt(dom, state.plan_type or "")
+    else:
+        state.domain_binding_jwt = ""
 
 
 def resolve_product_id(state: LicenseState):
@@ -98,11 +114,13 @@ def apply_heartbeat_gateway_response(state: LicenseState, data: dict) -> None:
     if not data.get("ok", True):
         return
     merge_gateway_license_payload(state, data, touch_contact=True)
+    _apply_domain_binding(state)
     state.save(
         update_fields=[
             "plan_type",
             "features_snapshot",
             "last_gateway_contact_at",
+            "domain_binding_jwt",
             "validation_signature",
             "updated_at",
         ]
@@ -157,6 +175,7 @@ def activate_license(purchase_code: str, domain: str = "", override_product_id: 
     if base:
         if not _purchase_code_shape_valid(code):
             state.last_error = "Purchase code format is invalid"
+            _apply_domain_binding(state)
             state.touch_signature()
             state.save()
             return LicenseDecision(
@@ -183,8 +202,17 @@ def activate_license(purchase_code: str, domain: str = "", override_product_id: 
             state.purchase_code = code
             state.activation_token = ""
             state.last_error = str(exc)
+            _apply_domain_binding(state)
             state.touch_signature()
             state.save()
+            if getattr(exc, "status_code", None) == 429:
+                return LicenseDecision(
+                    allow=False,
+                    status=LicenseState.STATUS_INACTIVE,
+                    error_code="rate_limited",
+                    message=str(exc),
+                    retry_after=getattr(exc, "retry_after", None) or 60,
+                )
             return LicenseDecision(
                 allow=False,
                 status=LicenseState.STATUS_INACTIVE,
@@ -197,6 +225,7 @@ def activate_license(purchase_code: str, domain: str = "", override_product_id: 
             state.purchase_code = code
             state.activation_token = ""
             state.last_error = data.get("message") or "Gateway did not return an activation token"
+            _apply_domain_binding(state)
             state.touch_signature()
             state.save()
             return LicenseDecision(
@@ -222,13 +251,34 @@ def activate_license(purchase_code: str, domain: str = "", override_product_id: 
     return validate_license(force=True)
 
 
-def current_status_payload():
+def current_status_payload(decision=None):
     state = get_or_create_state()
     product_id, source = resolve_product_id(state)
     gw = bool(license_gateway_base_url())
+    raw_feat = state.features_snapshot or {}
+    feat = dict(raw_feat) if isinstance(raw_feat, dict) else {}
+    if decision is not None:
+        valid = bool(decision.allow)
+        err = decision.error_code or ""
+        retry = getattr(decision, "retry_after", None)
+        top_status = "success" if decision.allow else "error"
+        msg = decision.message
+    else:
+        valid = state.license_status in (
+            LicenseState.STATUS_ACTIVE,
+            LicenseState.STATUS_GRACE,
+        )
+        err = ""
+        retry = None
+        top_status = "success"
+        msg = "License status fetched"
     return {
-        "status": "success",
-        "message": "License status fetched",
+        "status": top_status,
+        "message": msg,
+        "valid": valid,
+        "error_code": err,
+        "error": err,
+        "retry_after": retry,
         "license_status": state.license_status,
         "grace_until": state.grace_until,
         "activated_domain": state.activated_domain,
@@ -244,7 +294,8 @@ def current_status_payload():
         "masked_activation_token": _masked_token_preview(state.activation_token),
         "masked_purchase_code": state.masked_purchase_code(),
         "plan_type": state.plan_type or "",
-        "features_snapshot": state.features_snapshot or {},
+        "features": feat,
+        "features_snapshot": feat,
         "last_gateway_contact_at": state.last_gateway_contact_at,
         "heartbeat_stale_tier": heartbeat_stale_contact_tier() or "",
     }
@@ -268,12 +319,14 @@ def validate_license(force: bool = False) -> LicenseDecision:
         state.license_status = LicenseState.STATUS_INACTIVE
         state.last_error = "Purchase code or activation token is not set"
         state.last_validation_at = now
+        _apply_domain_binding(state)
         state.touch_signature()
         state.save(
             update_fields=[
                 "license_status",
                 "last_error",
                 "last_validation_at",
+                "domain_binding_jwt",
                 "validation_signature",
                 "updated_at",
             ]
@@ -311,12 +364,14 @@ def validate_license(force: bool = False) -> LicenseDecision:
                 state.license_status = LicenseState.STATUS_INVALID
                 state.last_error = "Purchase code format is invalid"
                 state.last_validation_at = now
+                _apply_domain_binding(state)
                 state.touch_signature()
                 state.save(
                     update_fields=[
                         "license_status",
                         "last_error",
                         "last_validation_at",
+                        "domain_binding_jwt",
                         "validation_signature",
                         "updated_at",
                     ]
@@ -358,6 +413,7 @@ def validate_license(force: bool = False) -> LicenseDecision:
         else:
             state.grace_until = now
 
+        _apply_domain_binding(state)
         state.touch_signature()
         state.save()
 
@@ -383,6 +439,11 @@ def validate_license(force: bool = False) -> LicenseDecision:
 
     except LicenseServerError as exc:
         logger.warning("License server unavailable: %s", exc)
+        is_rate_limited = getattr(exc, "status_code", None) == 429
+        retry_after = (
+            getattr(exc, "retry_after", None) if is_rate_limited else None
+        )
+
         state.last_validation_at = now
         state.last_error = str(exc)
 
@@ -391,6 +452,7 @@ def validate_license(force: bool = False) -> LicenseDecision:
             state.grace_until = grace_until
             if now <= grace_until:
                 state.license_status = LicenseState.STATUS_GRACE
+                _apply_domain_binding(state)
                 state.touch_signature()
                 state.save(
                     update_fields=[
@@ -398,6 +460,7 @@ def validate_license(force: bool = False) -> LicenseDecision:
                         "last_validation_at",
                         "last_error",
                         "grace_until",
+                        "domain_binding_jwt",
                         "validation_signature",
                         "updated_at",
                     ]
@@ -408,27 +471,40 @@ def validate_license(force: bool = False) -> LicenseDecision:
                     error_code="",
                     message="License server unavailable; running in grace mode",
                     grace_until=grace_until,
+                    retry_after=retry_after,
                 )
                 cache.set(_cache_key(), decision, cache_ttl)
                 return decision
 
         state.license_status = LicenseState.STATUS_INVALID
+        _apply_domain_binding(state)
         state.touch_signature()
         state.save(
             update_fields=[
                 "license_status",
                 "last_validation_at",
                 "last_error",
+                "domain_binding_jwt",
                 "validation_signature",
                 "updated_at",
             ]
         )
-        decision = LicenseDecision(
-            allow=False,
-            status=state.license_status,
-            error_code="grace_expired",
-            message="License server unavailable and grace period has expired",
-            grace_until=state.grace_until,
-        )
+        if is_rate_limited:
+            decision = LicenseDecision(
+                allow=False,
+                status=state.license_status,
+                error_code="rate_limited",
+                message=str(exc),
+                grace_until=state.grace_until,
+                retry_after=retry_after or 60,
+            )
+        else:
+            decision = LicenseDecision(
+                allow=False,
+                status=state.license_status,
+                error_code="grace_expired",
+                message="License server unavailable and grace period has expired",
+                grace_until=state.grace_until,
+            )
         cache.set(_cache_key(), decision, cache_ttl)
         return decision

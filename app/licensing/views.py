@@ -3,6 +3,8 @@ from rest_framework.permissions import BasePermission, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from setup.utils import is_installed
+
 from .serializers import (
     LicenseActivateSerializer,
     LicenseStatusSerializer,
@@ -16,14 +18,35 @@ from .service import (
 )
 
 
-class DeveloperOnlyPermission(BasePermission):
+class LicenseManagementPermission(BasePermission):
+    """During setup (not installed), allow activation without auth. After install, Developer only."""
+
     message = "Only Developer users can manage license settings."
 
     def has_permission(self, request, view):
+        if not is_installed():
+            return True
         if not request.user or not request.user.is_authenticated:
             return False
         user = request.user
         return bool(getattr(user, "is_developer", lambda: False)())
+
+
+def _http_status_for_license(decision) -> int:
+    if getattr(decision, "error_code", None) == "rate_limited":
+        return status.HTTP_429_TOO_MANY_REQUESTS
+    if decision.allow:
+        return status.HTTP_200_OK
+    return status.HTTP_400_BAD_REQUEST
+
+
+def _license_response(decision):
+    payload = current_status_payload(decision=decision)
+    serializer = LicenseStatusSerializer(payload)
+    resp = Response(serializer.data, status=_http_status_for_license(decision))
+    if decision.error_code == "rate_limited" and getattr(decision, "retry_after", None):
+        resp["Retry-After"] = str(decision.retry_after)
+    return resp
 
 
 class LicenseStatusView(APIView):
@@ -36,7 +59,7 @@ class LicenseStatusView(APIView):
 
 
 class LicenseActivateView(APIView):
-    permission_classes = [DeveloperOnlyPermission]
+    permission_classes = [LicenseManagementPermission]
 
     def post(self, request):
         serializer = LicenseActivateSerializer(data=request.data)
@@ -50,36 +73,22 @@ class LicenseActivateView(APIView):
             domain=domain,
             override_product_id=override,
         )
-        payload = current_status_payload()
-        payload["message"] = decision.message
-        payload["status"] = "success" if decision.allow else "error"
-        payload["error"] = decision.error_code
-        return Response(
-            payload,
-            status=status.HTTP_200_OK if decision.allow else status.HTTP_400_BAD_REQUEST,
-        )
+        return _license_response(decision)
 
 
 class LicenseRevalidateView(APIView):
-    permission_classes = [DeveloperOnlyPermission]
+    permission_classes = [LicenseManagementPermission]
 
     def post(self, request):
         serializer = LicenseRevalidateSerializer(data=request.data or {})
         serializer.is_valid(raise_exception=True)
 
         decision = validate_license(force=serializer.validated_data.get("force", True))
-        payload = current_status_payload()
-        payload["message"] = decision.message
-        payload["status"] = "success" if decision.allow else "error"
-        payload["error"] = decision.error_code
-        return Response(
-            payload,
-            status=status.HTTP_200_OK if decision.allow else status.HTTP_400_BAD_REQUEST,
-        )
+        return _license_response(decision)
 
 
 class LicenseProductOverrideView(APIView):
-    permission_classes = [DeveloperOnlyPermission]
+    permission_classes = [LicenseManagementPermission]
 
     def post(self, request):
         override_value = (request.data.get("codecanyon_product_id_override") or "").strip()
@@ -88,8 +97,4 @@ class LicenseProductOverrideView(APIView):
         state.touch_signature()
         state.save(update_fields=["codecanyon_product_id_override", "validation_signature", "updated_at"])
         decision = validate_license(force=True)
-        payload = current_status_payload()
-        payload["message"] = decision.message
-        payload["status"] = "success" if decision.allow else "error"
-        payload["error"] = decision.error_code
-        return Response(payload, status=status.HTTP_200_OK)
+        return _license_response(decision)

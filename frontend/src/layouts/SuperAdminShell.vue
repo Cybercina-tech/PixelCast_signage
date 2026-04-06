@@ -156,6 +156,7 @@ import {
   NewspaperIcon,
   SparklesIcon,
   KeyIcon,
+  GlobeAltIcon,
 } from '@heroicons/vue/24/outline'
 import { SUPER_ADMIN_NAV_GROUPS } from '@/config/superAdminNav'
 
@@ -182,6 +183,7 @@ const iconMap = {
   NewspaperIcon,
   SparklesIcon,
   KeyIcon,
+  GlobeAltIcon,
 }
 
 function iconFor(name) {

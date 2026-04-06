@@ -68,6 +68,7 @@ import SuperAdminPricing from '../pages/super-admin/SuperAdminPricing.vue'
 import SuperAdminReports from '../pages/super-admin/SuperAdminReports.vue'
 import SuperAdminDevices from '../pages/super-admin/SuperAdminDevices.vue'
 import SuperAdminLicenses from '../pages/super-admin/SuperAdminLicenses.vue'
+import SuperAdminGatewayInstances from '../pages/super-admin/SuperAdminGatewayInstances.vue'
 import SuperAdminAlerts from '../pages/super-admin/SuperAdminAlerts.vue'
 import SuperAdminCapacity from '../pages/super-admin/SuperAdminCapacity.vue'
 import SuperAdminSystem from '../pages/super-admin/SuperAdminSystem.vue'
@@ -283,6 +284,12 @@ const routes = [
         path: 'self-hosted-licenses',
         name: 'super-admin-self-hosted-licenses',
         component: SuperAdminLicenses,
+        meta: { requiresAuth: true, requiresRole: ['Developer'] },
+      },
+      {
+        path: 'gateway-instances',
+        name: 'super-admin-gateway-instances',
+        component: SuperAdminGatewayInstances,
         meta: { requiresAuth: true, requiresRole: ['Developer'] },
       },
       {

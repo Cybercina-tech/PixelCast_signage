@@ -6,7 +6,7 @@
 # - `.env.example` is documentation/template only; never loaded by Compose.
 # - `environment:` below still overrides values when defined.
 services:
-  # Postgres: password is pinned in `environment` for deterministic local setup.
+  # Postgres: default DB_PASSWORD matches frontend SetupWizard DEFAULT_DB_PASSWORD; override in .env.
   db:
     image: postgres:15-alpine
     container_name: db
@@ -16,7 +16,7 @@ services:
     environment:
       - POSTGRES_DB=${DB_NAME:-pixelcast_signage_db}
       - POSTGRES_USER=${DB_USER:-pixelcast_signage_user}
-      - POSTGRES_PASSWORD=safpewri234aca
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-PCgMain_Sc7Qk9Nm2pW4vL8xH3jF6yT1sA5eB0dR}
       # Use an internal subdirectory to avoid initdb failure when mount root contains artifacts.
       - PGDATA=/var/lib/postgresql/data/pgdata
     volumes:
@@ -59,7 +59,7 @@ services:
       # Same DB_* as service `db` above.
       - DB_NAME=${DB_NAME:-pixelcast_signage_db}
       - DB_USER=${DB_USER:-pixelcast_signage_user}
-      - DB_PASSWORD=safpewri234aca
+      - DB_PASSWORD=${DB_PASSWORD:-PCgMain_Sc7Qk9Nm2pW4vL8xH3jF6yT1sA5eB0dR}
       - DB_HOST=db
       - DB_PORT=5432
       - REDIS_HOST=redis

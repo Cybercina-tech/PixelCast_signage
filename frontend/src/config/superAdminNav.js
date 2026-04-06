@@ -25,6 +25,7 @@ export const SUPER_ADMIN_NAV_GROUPS = [
       { label: 'Billing', to: '/super-admin/billing', icon: 'CurrencyDollarIcon' },
       { label: 'Pricing catalog', to: '/super-admin/pricing', icon: 'TagIcon' },
       { label: 'Self-hosted licenses', to: '/super-admin/self-hosted-licenses', icon: 'KeyIcon' },
+      { label: 'Gateway instances', to: '/super-admin/gateway-instances', icon: 'GlobeAltIcon' },
     ],
   },
   {

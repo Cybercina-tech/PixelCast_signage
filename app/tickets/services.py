@@ -493,3 +493,117 @@ def ingest_remote_support_ticket(
     _auto_route(ticket)
     _audit(ticket, None, 'created')
     return ticket, 'created'
+
+
+def ensure_gateway_bridge_tenant(gateway_instance):
+    """One synthetic Tenant per platform_gateway instance (operator-side tickets)."""
+    from django.utils.text import slugify
+
+    from saas_platform.models import Tenant
+    from saas_platform.pricing_models import PlatformBillingSettings
+
+    key = f'__gateway_instance__{gateway_instance.pk}'
+    existing = Tenant.objects.filter(organization_name_key=key).first()
+    if existing:
+        return existing
+
+    solo = PlatformBillingSettings.get_solo()
+    free_limit = solo.default_free_screen_limit
+    dom = slugify((gateway_instance.domain or 'install').replace('.', '-'))[:40] or 'install'
+    uid = str(gateway_instance.pk).replace('-', '')[:12]
+    base = f'gw-{dom}-{uid}'.lower()[:80]
+    slug = base
+    n = 0
+    while Tenant.objects.filter(slug=slug).exists():
+        n += 1
+        slug = f'{base}-{n}'[:80]
+
+    return Tenant.objects.create(
+        name=(gateway_instance.domain or str(gateway_instance.pk))[:255],
+        slug=slug,
+        organization_name_key=key,
+        device_limit=free_limit,
+    )
+
+
+@transaction.atomic
+def ingest_gateway_ticket(
+    gateway_instance,
+    remote_ticket_id: uuid.UUID,
+    body: str,
+    *,
+    subject: str = '',
+    priority: str = 'medium',
+    requester_email: str = '',
+    client_version: str = '',
+) -> tuple[Ticket, str]:
+    """
+    Create or append a ticket from platform_gateway (CodeCanyon instance API).
+
+    Returns (ticket, event) where event is 'created', 'appended', or 'noop'.
+    """
+    valid_pri = {c[0] for c in Ticket.PRIORITY_CHOICES}
+    pri = priority if priority in valid_pri else 'medium'
+
+    body = (body or '').strip()
+    tenant = ensure_gateway_bridge_tenant(gateway_instance)
+    existing = (
+        Ticket.objects.select_for_update()
+        .filter(
+            gateway_instance_id=gateway_instance.pk,
+            remote_ticket_id=remote_ticket_id,
+            is_deleted=False,
+        )
+        .first()
+    )
+    if existing:
+        if not body:
+            return existing, 'noop'
+        msg = TicketMessage.objects.create(
+            ticket=existing,
+            author=None,
+            body=body,
+            is_internal=False,
+            source='gateway_cc',
+        )
+        existing.last_message_at = msg.created_at
+        existing.save(update_fields=['last_message_at', 'updated_at'])
+        _audit(existing, None, 'reply')
+        return existing, 'appended'
+
+    subject = (subject or '').strip()
+    if not subject:
+        raise ValueError('subject is required for a new remote ticket')
+    if not body:
+        raise ValueError('body is required')
+
+    ticket = Ticket(
+        tenant=tenant,
+        subject=subject[:255],
+        priority=pri,
+        source='gateway_cc',
+        requester=None,
+        category='',
+        language='en',
+        client_version=(client_version or '')[:64],
+        deployment_context='self_hosted',
+        gateway_instance=gateway_instance,
+        remote_ticket_id=remote_ticket_id,
+        bridge_requester_name='',
+        bridge_requester_email=(requester_email or '')[:254],
+    )
+    ticket.save()
+    msg = TicketMessage.objects.create(
+        ticket=ticket,
+        author=None,
+        body=body,
+        is_internal=False,
+        source='gateway_cc',
+    )
+    ticket.last_message_at = msg.created_at
+    ticket.save(update_fields=['last_message_at'])
+    _apply_sla(ticket)
+    _auto_route(ticket)
+    _audit(ticket, None, 'created')
+    _schedule_operator_bridge_new_ticket(ticket.id)
+    return ticket, 'created'

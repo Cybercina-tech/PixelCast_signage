@@ -24,6 +24,8 @@ class LicenseState(models.Model):
     """Envato purchase code; optional after gateway activation if cleared locally."""
     activation_token = models.TextField(blank=True, default="")
     """Opaque token from the operator license gateway (SaaS); preferred over sending purchase_code."""
+    domain_binding_jwt = models.TextField(blank=True, default="")
+    """HS256 JWT issued locally; binds plan/domain for middleware (not sent to Envato/registry)."""
     activated_domain = models.CharField(max_length=255, blank=True, default="")
     activated_at = models.DateTimeField(null=True, blank=True)
 

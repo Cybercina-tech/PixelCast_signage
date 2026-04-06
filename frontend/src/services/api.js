@@ -74,6 +74,28 @@ api.interceptors.response.use(
     const status = error.response?.status
     const errorData = error.response?.data || {}
 
+    if (status === 429) {
+      const ra = error.response?.headers?.['retry-after'] ?? error.response?.headers?.['Retry-After']
+      const headerSec = parseInt(ra, 10)
+      let retrySec = Number.isFinite(headerSec) && headerSec > 0 ? headerSec : null
+      if (errorData && typeof errorData === 'object' && errorData.retry_after != null) {
+        const n = Number(errorData.retry_after)
+        if (Number.isFinite(n) && n > 0) retrySec = n
+      }
+      error.retryAfterSeconds = retrySec
+    }
+
+    if (status === 429) {
+      const ra = error.response?.headers?.['retry-after'] ?? error.response?.headers?.['Retry-After']
+      const headerSec = parseInt(ra, 10)
+      let retrySec = Number.isFinite(headerSec) && headerSec > 0 ? headerSec : null
+      if (errorData && typeof errorData === 'object' && errorData.retry_after != null) {
+        const n = Number(errorData.retry_after)
+        if (Number.isFinite(n) && n > 0) retrySec = n
+      }
+      error.retryAfterSeconds = retrySec
+    }
+
     // Single retry for GET on 429 after backoff (bursts from list prefetch / UI loops)
     if (
       status === 429 &&
@@ -290,7 +312,8 @@ export const authAPI = {
   twofaDisable: (data) => api.post('/auth/2fa/disable/', data),
   revokeSession: (outstandingId) =>
     api.post('/auth/sessions/revoke/', { outstanding_id: outstandingId }),
-  logout: (data) => api.post('/auth/logout/', data),
+  logout: (data) =>
+    api.post('/auth/logout/', data, { meta: { suppressGlobalErrorToast: true } }),
   logoutAll: () => api.post('/auth/logout-all/'),
   sessions: () => api.get('/auth/sessions/'),
   token: (credentials) => api.post('/auth/token/', credentials),
@@ -805,6 +828,11 @@ export const platformAPI = {
     get: (tenantId) => api.get(`/platform/tenants/${tenantId}/license/`),
     update: (tenantId, data) => api.put(`/platform/tenants/${tenantId}/license/`, data),
     enforcementLogs: (tenantId) => api.get(`/platform/tenants/${tenantId}/license/enforcement-logs/`),
+  },
+  gatewayInstances: {
+    list: (params) => api.get('/platform/gateway/instances/', { params }),
+    detail: (id) => api.get(`/platform/gateway/instances/${id}/`),
+    usage: (id, params) => api.get(`/platform/gateway/instances/${id}/usage/`, { params }),
   },
   selfHostedLicenses: {
     list: (params) => api.get('/platform/self-hosted-licenses/', { params }),

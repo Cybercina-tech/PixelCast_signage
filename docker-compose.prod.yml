@@ -18,7 +18,7 @@
 # Do not bind-mount `./documentation` here — that path may not exist on the server build context and can break the container.
 
 services:
-  # db + backend: same pinned password for both services.
+  # db + backend: same DB_PASSWORD as POSTGRES_PASSWORD (default matches main repo SetupWizard).
   db:
     image: postgres:15-alpine
     env_file:
@@ -27,7 +27,7 @@ services:
     environment:
       - POSTGRES_DB=${DB_NAME:-pixelcast_signage_db}
       - POSTGRES_USER=${DB_USER:-pixelcast_signage_user}
-      - POSTGRES_PASSWORD=safpewri234aca
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-PCgMain_Sc7Qk9Nm2pW4vL8xH3jF6yT1sA5eB0dR}
       - PGDATA=/var/lib/postgresql/data/pgdata
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -68,7 +68,7 @@ services:
       - DB_NAME=${DB_NAME:-pixelcast_signage_db}
       - DB_USER=${DB_USER:-pixelcast_signage_user}
       # Same DB_PASSWORD as service `db` (POSTGRES_PASSWORD).
-      - DB_PASSWORD=safpewri234aca
+      - DB_PASSWORD=${DB_PASSWORD:-PCgMain_Sc7Qk9Nm2pW4vL8xH3jF6yT1sA5eB0dR}
       - DB_HOST=db
       - DB_PORT=5432
       - REDIS_HOST=redis
@@ -99,6 +99,69 @@ services:
     networks:
       - default
       - dokploy-network
+
+  celery-worker:
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+    command: celery -A Screengram worker -l info
+    env_file:
+      - path: .env
+        required: true
+    environment:
+      - SECRET_KEY=${SECRET_KEY:-wN9vQx2!mK7pR4tY8uH3cD6sL1zA5eB9fG2jT7nV4qP8xM3rK6hC1wZ}
+      - DEBUG=${DEBUG:-False}
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-localhost,127.0.0.1,backend,frontend,.traefik.me}
+      - DB_NAME=${DB_NAME:-pixelcast_signage_db}
+      - DB_USER=${DB_USER:-pixelcast_signage_user}
+      - DB_PASSWORD=${DB_PASSWORD:-PCgMain_Sc7Qk9Nm2pW4vL8xH3jF6yT1sA5eB0dR}
+      - DB_HOST=db
+      - DB_PORT=5432
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - CELERY_BROKER_URL=${CELERY_BROKER_URL:-redis://redis:6379/0}
+      - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND:-redis://redis:6379/0}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    restart: always
+    networks:
+      - default
+
+  celery-beat:
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+    command: celery -A Screengram beat -l info
+    env_file:
+      - path: .env
+        required: true
+    environment:
+      - SECRET_KEY=${SECRET_KEY:-wN9vQx2!mK7pR4tY8uH3cD6sL1zA5eB9fG2jT7nV4qP8xM3rK6hC1wZ}
+      - DEBUG=${DEBUG:-False}
+      - DB_NAME=${DB_NAME:-pixelcast_signage_db}
+      - DB_USER=${DB_USER:-pixelcast_signage_user}
+      - DB_PASSWORD=${DB_PASSWORD:-PCgMain_Sc7Qk9Nm2pW4vL8xH3jF6yT1sA5eB0dR}
+      - DB_HOST=db
+      - DB_PORT=5432
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - CELERY_BROKER_URL=${CELERY_BROKER_URL:-redis://redis:6379/0}
+      - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND:-redis://redis:6379/0}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+    restart: always
+    networks:
+      - default
 
   frontend:
     # Context = repo root; Vue SPA includes /docs (product documentation).

@@ -6,6 +6,7 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.views import APIView
 from .tokens import ScreenGramRefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from rest_framework_simplejwt.exceptions import TokenError
 from django.contrib.auth import logout
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.utils import timezone
@@ -913,9 +914,15 @@ def logout_view(request):
     try:
         refresh_token = request.data.get('refresh_token')
         if refresh_token:
-            token = ScreenGramRefreshToken(refresh_token)
-            token.blacklist()
-        
+            try:
+                token = ScreenGramRefreshToken(refresh_token)
+                token.blacklist()
+            except TokenError as e:
+                # Stale, rotated, expired, or already-blacklisted refresh — session is already unusable
+                logger.info('Logout: refresh not blacklisted (invalid or already revoked): %s', e)
+            except Exception as e:
+                logger.warning('Logout: unexpected blacklist error: %s', e)
+
         # Log logout action
         try:
             AuditLogger.log_authentication(

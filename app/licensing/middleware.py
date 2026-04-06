@@ -3,9 +3,51 @@ from django.conf import settings
 from django.http import JsonResponse
 from django.utils.deprecation import MiddlewareMixin
 
-from .service import heartbeat_stale_contact_tier, validate_license
+from .jwt_tokens import verify_domain_binding_jwt
+from .models import LicenseState
+from .service import (
+    heartbeat_stale_contact_tier,
+    invalidate_license_cache,
+    validate_license,
+)
 
 logger = logging.getLogger(__name__)
+
+
+def _verify_domain_binding(request):
+    """Ensure locally issued domain JWT matches Host (registry token is separate)."""
+    if not bool(getattr(settings, "LICENSE_DOMAIN_BINDING_ENABLED", True)):
+        return True
+    if not bool(getattr(settings, "LICENSE_ENFORCEMENT_ENABLED", False)):
+        return True
+
+    state = LicenseState.get_solo()
+    if state.license_status not in (LicenseState.STATUS_ACTIVE, LicenseState.STATUS_GRACE):
+        return True
+
+    host = request.get_host()
+    tok = (state.domain_binding_jwt or "").strip()
+    if not tok:
+        from .jwt_tokens import issue_domain_binding_jwt
+
+        dom = (state.activated_domain or "").strip()
+        if dom:
+            state.domain_binding_jwt = issue_domain_binding_jwt(dom, state.plan_type or "")
+            state.save(update_fields=["domain_binding_jwt", "validation_signature", "updated_at"])
+            tok = (state.domain_binding_jwt or "").strip()
+
+    ok, reason = verify_domain_binding_jwt(tok, host)
+    if ok:
+        return True
+    if reason == "expired" and not getattr(request, "_license_jwt_refresh_tried", False):
+        request._license_jwt_refresh_tried = True
+        invalidate_license_cache()
+        validate_license(force=True)
+        state.refresh_from_db()
+        tok2 = (state.domain_binding_jwt or "").strip()
+        ok2, _ = verify_domain_binding_jwt(tok2, host)
+        return ok2
+    return False
 
 
 class LicenseEnforcementMiddleware(MiddlewareMixin):
@@ -40,6 +82,21 @@ class LicenseEnforcementMiddleware(MiddlewareMixin):
 
         decision = validate_license(force=False)
         if decision.allow:
+            if not _verify_domain_binding(request):
+                return JsonResponse(
+                    {
+                        "error": "license_domain_mismatch",
+                        "message": (
+                            "This license is bound to another domain. "
+                            "Re-validate the license on this host or contact support."
+                        ),
+                        "license_status": decision.status,
+                        "grace_until": decision.grace_until.isoformat()
+                        if decision.grace_until
+                        else None,
+                    },
+                    status=403,
+                )
             if decision.status == "grace":
                 request.META["HTTP_X_LICENSE_STATUS"] = "grace"
             else:

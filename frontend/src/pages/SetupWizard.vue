@@ -152,7 +152,12 @@
                   <ServerIcon class="w-5 h-5 sm:w-6 sm:h-6 text-indigo-400 cosmic-icon" />
                 </div>
                 <h2 class="cosmic-heading text-base sm:text-lg font-bold text-white mb-0.5">Database Configuration</h2>
-                <p class="text-slate-400 text-[11px]">Database credentials are loaded from server environment (.env)</p>
+                <p class="text-slate-400 text-[11px]">
+                  Values below match your server <code class="text-slate-300">.env</code> / Docker defaults. Before
+                  <code class="text-slate-300">docker compose up</code>, set your domain in <code class="text-slate-300">.env</code>
+                  (<code class="text-slate-300">ALLOWED_HOSTS</code>, <code class="text-slate-300">BASE_URL</code>, CSRF). The database password is optional to change; edit
+                  <code class="text-slate-300">DB_PASSWORD</code> there if you need a custom secret (best before first DB volume init).
+                </p>
               </div>
 
               <form @submit.prevent="testDatabaseConnection" class="space-y-2 max-w-2xl mx-auto">
@@ -228,16 +233,15 @@
                 </div>
                 <div class="rounded-xl border border-indigo-500/25 bg-indigo-500/10 p-3 text-[11px] text-slate-300 space-y-2 -mt-0.5">
                   <p>
-                    <strong class="text-indigo-300">Recommended (Default) Setup:</strong>
-                    PixelCast generates and uses a secure database password automatically.
-                    For most users, this is the safest and easiest option.
+                    <strong class="text-indigo-300">Default setup:</strong>
+                    The password field is pre-filled with the same secure default as this project’s Docker Compose. You can continue to the next step as-is.
                   </p>
                   <p>
-                    If you want to use your own database credentials, create the database manually first,
-                    then set your custom host/user/password in <code>.env</code> before running the installer.
+                    To use a different password, set <code class="text-slate-300">DB_PASSWORD</code> and
+                    <code class="text-slate-300">POSTGRES_PASSWORD</code> in <code>.env</code> before the first database init, or create the database manually and enter matching credentials here.
                   </p>
                   <p class="text-slate-400">
-                    In both modes, the setup is secure when strong credentials are used and kept private.
+                    For production on the public internet, use a strong unique password in <code>.env</code>.
                   </p>
                 </div>
 
@@ -589,11 +593,17 @@
                     <div class="flex flex-wrap gap-2 justify-center">
                       <button
                         type="button"
-                        class="px-4 py-2 rounded-lg text-sm text-slate-200 border border-white/20 bg-white/5 hover:bg-white/10 transition-colors"
-                        :disabled="postInstallLicenseLoading"
+                        class="px-4 py-2 rounded-lg text-sm text-slate-200 border border-white/20 bg-white/5 hover:bg-white/10 transition-colors disabled:opacity-50 disabled:pointer-events-none"
+                        :disabled="postInstallLicenseLoading || postInstallLicenseCooldownSeconds > 0"
                         @click="activateLicenseAfterInstall"
                       >
-                        {{ postInstallLicenseLoading ? 'Activating…' : 'Activate license' }}
+                        {{
+                          postInstallLicenseLoading
+                            ? 'Activating…'
+                            : postInstallLicenseCooldownSeconds > 0
+                              ? `Retry in ${postInstallLicenseCooldownSeconds}s`
+                              : 'Activate license'
+                        }}
                       </button>
                       <button
                         type="button"
@@ -625,7 +635,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   RocketLaunchIcon,
@@ -640,7 +650,8 @@ import {
   EyeSlashIcon,
 } from '@heroicons/vue/24/outline'
 import axios from 'axios'
-import { setupAPI } from '@/services/api'
+import { useAuthStore } from '@/stores/auth'
+import { setupAPI, licenseAPI } from '@/services/api'
 import { normalizeApiError } from '@/utils/apiError'
 import {
   getBrowserApiBaseUrl,
@@ -655,6 +666,16 @@ const postInstallPurchaseCode = ref('')
 const postInstallLicenseLoading = ref(false)
 const postInstallLicenseError = ref('')
 const postInstallLicenseDone = ref(false)
+const postInstallLicenseCooldownSeconds = ref(0)
+let postInstallCooldownTimer = null
+
+function clearPostInstallLicenseCooldown() {
+  if (postInstallCooldownTimer) {
+    clearInterval(postInstallCooldownTimer)
+    postInstallCooldownTimer = null
+  }
+  postInstallLicenseCooldownSeconds.value = 0
+}
 
 // Steps configuration
 const steps = [
@@ -674,6 +695,9 @@ const focusAdminPassword = ref(false)
 const focusAdminFirstName = ref(false)
 const focusAdminLastName = ref(false)
 
+/** Must match main repo docker-compose default `${DB_PASSWORD:-…}` */
+const DEFAULT_DB_PASSWORD = 'PCgMain_Sc7Qk9Nm2pW4vL8xH3jF6yT1sA5eB0dR'
+
 // Setup data
 const setupData = reactive({
   db: {
@@ -681,7 +705,7 @@ const setupData = reactive({
     port: 5432,
     name: 'pixelcast_signage_db',
     user: 'pixelcast_signage_user',
-    password: '',
+    password: DEFAULT_DB_PASSWORD,
   },
   admin: {
     username: '',
@@ -691,8 +715,6 @@ const setupData = reactive({
     last_name: '',
   },
 })
-
-const DEFAULT_DB_PASSWORD = 'safpewri234aca'
 
 // Status tracking
 const dbStatus = reactive({
@@ -849,18 +871,32 @@ async function activateLicenseAfterInstall() {
     const host =
       typeof window !== 'undefined' && window.location?.host ? window.location.host : ''
     await licenseAPI.activate({ purchase_code: code, domain: host })
+    clearPostInstallLicenseCooldown()
     postInstallLicenseDone.value = true
   } catch (e) {
-    const msg =
-      e?.response?.data?.message ||
-      e?.response?.data?.detail ||
-      e?.message ||
-      'Activation failed'
-    postInstallLicenseError.value = typeof msg === 'string' ? msg : 'Activation failed'
+    const retrySec = e.retryAfterSeconds
+    if (e?.response?.status === 429 && Number.isFinite(retrySec) && retrySec > 0) {
+      clearPostInstallLicenseCooldown()
+      postInstallLicenseCooldownSeconds.value = retrySec
+      postInstallCooldownTimer = setInterval(() => {
+        postInstallLicenseCooldownSeconds.value -= 1
+        if (postInstallLicenseCooldownSeconds.value <= 0) clearPostInstallLicenseCooldown()
+      }, 1000)
+      postInstallLicenseError.value = `Too many requests. Please wait before trying again.`
+    } else {
+      const msg =
+        e?.response?.data?.message ||
+        e?.response?.data?.detail ||
+        e?.message ||
+        'Activation failed'
+      postInstallLicenseError.value = typeof msg === 'string' ? msg : 'Activation failed'
+    }
   } finally {
     postInstallLicenseLoading.value = false
   }
 }
+
+onUnmounted(() => clearPostInstallLicenseCooldown())
 
 const startInstallation = async () => {
   // Step 1: Run migrations
@@ -933,11 +969,8 @@ onMounted(async () => {
       setupData.db.port = Number(response.data.db_port || setupData.db.port)
       setupData.db.name = response.data.db_name || setupData.db.name
       setupData.db.user = response.data.db_user || setupData.db.user
-      if (response.data.db_password_configured) {
-        setupData.db.password = ''
-      } else {
-        setupData.db.password = DEFAULT_DB_PASSWORD
-      }
+      // Always pre-fill the compose default so the field is not empty; DB_PASSWORD in .env may differ — user can edit.
+      setupData.db.password = DEFAULT_DB_PASSWORD
       break
     } catch (error) {
       const statusCode = error?.response?.status

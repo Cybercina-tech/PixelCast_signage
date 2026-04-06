@@ -109,6 +109,7 @@ class Ticket(models.Model):
         ('email', 'Email'),
         ('api', 'API'),
         ('chat', 'Chat'),
+        ('gateway_cc', 'CodeCanyon gateway'),
     ]
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -124,7 +125,7 @@ class Ticket(models.Model):
     subject = models.CharField(max_length=255)
     status = models.CharField(max_length=16, choices=STATUS_CHOICES, default='open', db_index=True)
     priority = models.CharField(max_length=16, choices=PRIORITY_CHOICES, default='medium', db_index=True)
-    source = models.CharField(max_length=16, choices=SOURCE_CHOICES, default='web')
+    source = models.CharField(max_length=24, choices=SOURCE_CHOICES, default='web')
 
     requester = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
@@ -181,6 +182,14 @@ class Ticket(models.Model):
         related_name='bridged_tickets',
         help_text='Operator registry row when this ticket was ingested from a self-hosted site',
     )
+    gateway_instance = models.ForeignKey(
+        'platform_gateway.InstanceRegistry',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='tickets',
+        help_text='Operator platform_gateway row when ingested via CodeCanyon gateway API',
+    )
     remote_ticket_id = models.UUIDField(
         null=True,
         blank=True,
@@ -200,6 +209,11 @@ class Ticket(models.Model):
                 fields=['registry_installation', 'remote_ticket_id'],
                 condition=Q(registry_installation__isnull=False, remote_ticket_id__isnull=False),
                 name='tickets_ticket_registry_install_remote_uid',
+            ),
+            models.UniqueConstraint(
+                fields=['gateway_instance', 'remote_ticket_id'],
+                condition=Q(gateway_instance__isnull=False, remote_ticket_id__isnull=False),
+                name='tickets_ticket_gateway_instance_remote_uid',
             ),
         ]
         indexes = [

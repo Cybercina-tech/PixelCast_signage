@@ -45,6 +45,7 @@ urlpatterns = [
     path('api/setup/', include('setup.urls')),
     path('api/license/', include('licensing.urls')),
     path('api/license-registry/v1/', include('licensing.registry_urls')),
+    path('api/gateway/', include('platform_gateway.urls')),
     # More specific than api/platform/ so these are reachable
     path('api/platform/blog/', include('blog.platform_urls')),
     path('api/platform/tickets/', include('tickets.platform_urls')),

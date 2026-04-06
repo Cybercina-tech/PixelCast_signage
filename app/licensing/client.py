@@ -8,7 +8,10 @@ logger = logging.getLogger(__name__)
 
 
 class LicenseServerError(Exception):
-    pass
+    def __init__(self, message, status_code=None, retry_after=None):
+        super().__init__(message)
+        self.status_code = status_code
+        self.retry_after = retry_after
 
 
 def license_gateway_base_url() -> str:
@@ -37,6 +40,11 @@ def post_license_validation(
     if not license_server_url:
         raise LicenseServerError("LICENSE_SERVER_URL is not configured")
 
+    if bool(getattr(settings, "USE_MOCK_REGISTRY", False)):
+        from .mock_registry import mock_post_license_validation
+
+        return mock_post_license_validation(license_server_url, payload, auth_bearer)
+
     headers = {"Content-Type": "application/json"}
     if auth_bearer:
         headers["Authorization"] = f"Bearer {auth_bearer}"
@@ -52,6 +60,18 @@ def post_license_validation(
         )
     except requests.RequestException as exc:
         raise LicenseServerError(f"License server request failed: {exc}") from exc
+
+    if response.status_code == 429:
+        ra = response.headers.get("Retry-After") or response.headers.get("retry-after") or "60"
+        try:
+            retry_after = max(1, int(ra))
+        except (TypeError, ValueError):
+            retry_after = 60
+        raise LicenseServerError(
+            "License server rate limited",
+            status_code=429,
+            retry_after=retry_after,
+        )
 
     if response.status_code >= 500:
         raise LicenseServerError(f"License server returned {response.status_code}")
@@ -70,6 +90,11 @@ def post_license_validation(
 
 
 def post_gateway_activate(base_url: str, body: dict, timeout_seconds: int = 25) -> dict:
+    if bool(getattr(settings, "USE_MOCK_REGISTRY", False)):
+        from .mock_registry import mock_post_gateway_activate
+
+        return mock_post_gateway_activate(base_url, body)
+
     url = f"{base_url.rstrip('/')}/activate/"
     try:
         response = requests.post(
@@ -80,6 +105,18 @@ def post_gateway_activate(base_url: str, body: dict, timeout_seconds: int = 25) 
         )
     except requests.RequestException as exc:
         raise LicenseServerError(f"License activation request failed: {exc}") from exc
+
+    if response.status_code == 429:
+        ra = response.headers.get("Retry-After") or response.headers.get("retry-after") or "60"
+        try:
+            retry_after = max(1, int(ra))
+        except (TypeError, ValueError):
+            retry_after = 60
+        raise LicenseServerError(
+            "License gateway rate limited",
+            status_code=429,
+            retry_after=retry_after,
+        )
 
     if response.status_code >= 500:
         raise LicenseServerError(f"License gateway returned {response.status_code}")
