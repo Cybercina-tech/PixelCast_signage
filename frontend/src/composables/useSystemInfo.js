@@ -8,6 +8,13 @@ import { ref } from 'vue'
 // Cache for system info to avoid repeated calculations
 const systemInfoCache = ref(null)
 
+function safeCapture(text, regex, idx = 1) {
+  if (!text || typeof text !== 'string') return null
+  const match = text.match(regex)
+  if (!match || typeof match[idx] !== 'string') return null
+  return match[idx]
+}
+
 /**
  * Get app version from package.json or environment
  */
@@ -33,8 +40,8 @@ function getOSVersion() {
   if (typeof navigator === 'undefined') {
     return 'Unknown'
   }
-  
-  const userAgent = navigator.userAgent || navigator.vendor || window.opera
+
+  const userAgent = String(navigator.userAgent || navigator.vendor || window.opera || '')
   
   // Windows
   if (userAgent.indexOf('Windows NT 10.0') !== -1) return 'Windows 10'
@@ -48,27 +55,30 @@ function getOSVersion() {
   
   // macOS
   if (userAgent.indexOf('Mac OS X') !== -1) {
-    const match = userAgent.match(/Mac OS X (\d+)[._](\d+)/)
-    if (match) {
-      return `macOS ${match[1]}.${match[2]}`
+    const major = safeCapture(userAgent, /Mac OS X (\d+)[._](\d+)/, 1)
+    const minor = safeCapture(userAgent, /Mac OS X (\d+)[._](\d+)/, 2)
+    if (major && minor) {
+      return `macOS ${major}.${minor}`
     }
     return 'macOS'
   }
   
   // iOS
   if (/iPad|iPhone|iPod/.test(userAgent) && !window.MSStream) {
-    const match = userAgent.match(/OS (\d+)[._](\d+)/)
-    if (match) {
-      return `iOS ${match[1]}.${match[2]}`
+    const major = safeCapture(userAgent, /OS (\d+)[._](\d+)/, 1)
+    const minor = safeCapture(userAgent, /OS (\d+)[._](\d+)/, 2)
+    if (major && minor) {
+      return `iOS ${major}.${minor}`
     }
     return 'iOS'
   }
   
   // Android
   if (userAgent.indexOf('Android') !== -1) {
-    const match = userAgent.match(/Android (\d+)[._](\d+)/)
-    if (match) {
-      return `Android ${match[1]}.${match[2]}`
+    const major = safeCapture(userAgent, /Android (\d+)[._](\d+)/, 1)
+    const minor = safeCapture(userAgent, /Android (\d+)[._](\d+)/, 2)
+    if (major && minor) {
+      return `Android ${major}.${minor}`
     }
     return 'Android'
   }
@@ -93,15 +103,15 @@ function getDeviceModel() {
   if (typeof navigator === 'undefined') {
     return 'Unknown'
   }
-  
-  const userAgent = navigator.userAgent || navigator.vendor || window.opera
+
+  const userAgent = String(navigator.userAgent || navigator.vendor || window.opera || '')
   
   // Try to get device model from user agent
   // iPhone
   if (/iPhone/.test(userAgent)) {
-    const match = userAgent.match(/iPhone\s*([^;]+)/)
-    if (match) {
-      return `iPhone ${match[1].trim()}`
+    const model = safeCapture(userAgent, /iPhone\s*([^;]+)/, 1)
+    if (model) {
+      return `iPhone ${model.trim()}`
     }
     return 'iPhone'
   }
@@ -121,9 +131,9 @@ function getDeviceModel() {
     const match = userAgent.match(/Android[^;]*(?:;|$)/)
     if (match) {
       // Try to find device model
-      const modelMatch = userAgent.match(/\(([^)]+)\)/)
-      if (modelMatch) {
-        return modelMatch[1].trim()
+      const model = safeCapture(userAgent, /\(([^)]+)\)/, 1)
+      if (model) {
+        return model.trim()
       }
     }
     return 'Android Device'

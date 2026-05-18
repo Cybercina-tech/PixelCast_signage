@@ -10,7 +10,9 @@ from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 
+from accounts.models import UserSubscription
 from .models import Tenant, TenantInvoice
+from .stripe_config import get_stripe_secret_key
 
 logger = logging.getLogger(__name__)
 
@@ -100,6 +102,51 @@ def sync_tenant_from_stripe_subscription(tenant: Tenant, sub: dict[str, Any]) ->
         update_fields.append('device_limit')
 
     tenant.save(update_fields=update_fields)
+    _sync_user_subscriptions_from_tenant(tenant, sub)
+
+
+def _extract_plan_key(sub: dict[str, Any]) -> str:
+    meta = sub.get('metadata') or {}
+    return (meta.get('plan_key') or '').strip()
+
+
+def _sync_user_subscriptions_from_tenant(tenant: Tenant, sub: dict[str, Any]) -> None:
+    """Propagate the Stripe-derived tenant snapshot to all users in that tenant."""
+    users_qs = tenant.users.all().only('id')
+    if not users_qs.exists():
+        return
+
+    status = sub.get('status') or tenant.subscription_status or 'none'
+    plan_key = _extract_plan_key(sub)
+    plan_name = tenant.plan_name or ''
+    plan_interval = tenant.plan_interval or ''
+    trial_end = tenant.trial_end
+    current_period_start = tenant.current_period_start
+    current_period_end = tenant.current_period_end
+    cancel_at_period_end = bool(tenant.cancel_at_period_end)
+    provider_customer_id = tenant.stripe_customer_id or ''
+    provider_subscription_id = tenant.stripe_subscription_id or ''
+    device_limit = tenant.device_limit
+    metadata = sub.get('metadata') or {}
+
+    for user in users_qs:
+        UserSubscription.objects.update_or_create(
+            user_id=user.id,
+            defaults={
+                'plan_key': plan_key,
+                'plan_name': plan_name,
+                'plan_interval': plan_interval,
+                'status': status,
+                'trial_end': trial_end,
+                'current_period_start': current_period_start,
+                'current_period_end': current_period_end,
+                'cancel_at_period_end': cancel_at_period_end,
+                'provider_customer_id': provider_customer_id,
+                'provider_subscription_id': provider_subscription_id,
+                'device_limit': device_limit,
+                'metadata': metadata,
+            },
+        )
 
 
 def upsert_invoice_from_stripe(tenant: Tenant, inv: dict[str, Any]) -> TenantInvoice:
@@ -134,7 +181,7 @@ def apply_payment_failed(tenant: Tenant, at: Optional[datetime] = None) -> None:
     when = at or timezone.now()
     tenant.last_payment_failed_at = when
     tenant.payment_failed_count = (tenant.payment_failed_count or 0) + 1
-    grace_days = int(getattr(settings, 'STRIPE_GRACE_PERIOD_DAYS', 7) or 7)
+    grace_days = int(getattr(settings, 'STRIPE_INTERNAL_GRACE_DAYS', 3) or 3)
     tenant.billing_grace_until = when + timedelta(days=grace_days)
     tenant.save(
         update_fields=[
@@ -147,12 +194,13 @@ def apply_payment_failed(tenant: Tenant, at: Optional[datetime] = None) -> None:
 
 
 def fetch_stripe_subscription(subscription_id: str) -> Optional[dict[str, Any]]:
-    if not subscription_id or not getattr(settings, 'STRIPE_SECRET_KEY', ''):
+    secret = get_stripe_secret_key()
+    if not subscription_id or not secret:
         return None
     try:
         import stripe
 
-        stripe.api_key = settings.STRIPE_SECRET_KEY
+        stripe.api_key = secret
         sub = stripe.Subscription.retrieve(subscription_id)
         return sub.to_dict() if hasattr(sub, 'to_dict') else dict(sub)
     except Exception as e:

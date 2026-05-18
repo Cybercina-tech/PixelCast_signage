@@ -54,7 +54,7 @@ class UserViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         """Filter queryset based on user permissions"""
-        queryset = super().get_queryset().select_related('tenant')
+        queryset = super().get_queryset().select_related('tenant', 'subscription')
         user = self.request.user
 
         if user.is_developer():
@@ -391,6 +391,7 @@ class UserViewSet(viewsets.ModelViewSet):
     def set_tenant(self, request, id=None):
         """Developer-only: assign or clear the user's SaaS tenant (customer account)."""
         from saas_platform.models import Tenant
+        from .models import UserSubscription
 
         actor = request.user
         if not actor.is_developer():
@@ -404,6 +405,25 @@ class UserViewSet(viewsets.ModelViewSet):
             tenant = get_object_or_404(Tenant, pk=raw)
             target_user.tenant = tenant
         target_user.save(update_fields=['tenant'])
+        if target_user.tenant_id:
+            t = target_user.tenant
+            UserSubscription.objects.update_or_create(
+                user=target_user,
+                defaults={
+                    'plan_key': '',
+                    'plan_name': t.plan_name or '',
+                    'plan_interval': t.plan_interval or '',
+                    'status': t.subscription_status or 'none',
+                    'trial_end': t.trial_end,
+                    'current_period_start': t.current_period_start,
+                    'current_period_end': t.current_period_end,
+                    'cancel_at_period_end': bool(t.cancel_at_period_end),
+                    'provider_customer_id': t.stripe_customer_id or '',
+                    'provider_subscription_id': t.stripe_subscription_id or '',
+                    'device_limit': t.device_limit,
+                    'metadata': {'source': 'set_tenant'},
+                },
+            )
         new_tid = str(target_user.tenant_id) if target_user.tenant_id else None
         try:
             AuditLogger.log_action(

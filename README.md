@@ -167,6 +167,7 @@ cd ScreenGram
 
 cp .env.example .env
 # Edit .env: at minimum set domain/URL settings; DB password can stay at the documented default locally
+# Local Docker dev: PIXELCAST_SIGNAGE_INSTALLED=true (in .env.example) skips the install wizard / API 503.
 
 docker compose up --build
 ```
@@ -175,8 +176,8 @@ Then open the **Vite dev app** (the browser talks to the API on the **same origi
 
 | What | URL |
 |------|-----|
-| SPA (dev) | [http://localhost:5173](http://localhost:5173) (or the host port from `FRONTEND_HOST_PORT`) |
-| API (via Vite proxy) | Same origin, e.g. `http://localhost:5173/api/…` |
+| SPA (dev) | `http://localhost:` + `FRONTEND_HOST_PORT` (default **4173**; see `.env`) |
+| API (via Vite proxy) | Same origin, e.g. `http://localhost:4173/api/…` |
 
 The dev stack runs **PostgreSQL**, **Redis**, **Django** (Uvicorn with `--reload` when `ENABLE_HOT_RELOAD=true`), and **Vite**. The backend container **does not publish port 8000** by default; use the SPA origin so `/api`, `/iot`, and `/ws` are proxied correctly.
 
@@ -240,6 +241,7 @@ High-level groups (see `.env.example` for the full list and comments):
 | License | `LICENSE_GATEWAY_BASE_URL`, `LICENSE_SERVER_URL`, `LICENSE_ENFORCEMENT_ENABLED`, `CODECANYON_*`, `SCREENGRAM_APP_VERSION` |
 | Email fallbacks | `EMAIL_*`, `DEFAULT_FROM_EMAIL` |
 | Ports / dev UX | `FRONTEND_HOST_PORT`, `HTTP_PORT`, `VITE_BEHIND_HTTPS_PROXY`, optional `VITE_HMR_*` |
+| Local install skip | `PIXELCAST_SIGNAGE_INSTALLED` (dev Docker; `true` = API usable without `installed.lock`) |
 | SEO / marketing build | `VITE_PUBLIC_SITE_ORIGIN`, `VITE_GTM_CONTAINER_ID`, `VITE_CODECANYON_ITEM_URL`, … |
 | Storage | `USE_S3_STORAGE`, `AWS_*` |
 
@@ -255,7 +257,27 @@ If the browser requests **`https://backend:8000`** (or similar), the bundle is u
 
 1. Ensure `VITE_API_BASE_URL=/api` for the frontend service (as in `docker-compose.yml` / production build args).
 2. After changing any `VITE_*` variable, rebuild or restart the frontend container and hard-refresh (or clear site data).
-3. In DevTools, login should **`POST`** to **`/api/auth/login/`** on the **same host** as the page (e.g. `http://localhost:5173` in dev).
+3. In DevTools, login should **`POST`** to **`/api/auth/login/`** on the **same host** as the page (e.g. `http://localhost:4173` in dev).
+
+### API returns 503 / SPA redirects to `/install`
+
+The backend blocks `/api/*` until installation is complete (`installed.lock` or `PIXELCAST_SIGNAGE_INSTALLED=true`). For local Compose, keep `PIXELCAST_SIGNAGE_INSTALLED=true` in `.env` (default in `.env.example`), or finish the wizard at `/install`.
+
+### `npm ci` fails in Docker (`@emnapi/*` / lock file out of sync)
+
+Regenerate the lock file on Linux (same image as the frontend Dockerfile), then commit `frontend/package-lock.json`:
+
+```bash
+docker run --rm -v "%CD%/frontend:/app" -w /app node:20-alpine npm install
+```
+
+### Windows: port bind errors on 5173 / 5174
+
+Hyper-V often reserves TCP **5141–5240**. Set `FRONTEND_HOST_PORT=4173` (or another port outside excluded ranges; check with `netsh interface ipv4 show excludedportrange protocol=tcp`).
+
+### Shell scripts fail in Docker (`illegal option -`)
+
+Ensure `*.sh` files use LF line endings (see `.gitattributes`).
 
 ---
 
@@ -263,13 +285,20 @@ If the browser requests **`https://backend:8000`** (or similar), the bundle is u
 
 ```bash
 # Backend (pytest in the backend container)
-docker compose exec backend pytest --cov
+docker compose exec -T -e PIXELCAST_SIGNAGE_INSTALLED=true backend python -m pytest tests/ -q
+
+# Or from repo root (PowerShell):
+./scripts/test-backend.ps1
+
+# Backend (local; from app/)
+$env:PIXELCAST_SIGNAGE_INSTALLED = "true"   # PowerShell
+python -m pytest tests/ -q
 
 # Frontend unit tests
 cd frontend && npm run test
 
-# Frontend E2E (Playwright)
-cd frontend && npm run e2e
+# Frontend E2E (Playwright) — copy frontend/.env.e2e.example to .env.e2e first
+cd frontend && npx playwright install && npm run e2e
 ```
 
 ---

@@ -1,4 +1,5 @@
 import uuid
+import math
 from django.db import models
 from django.contrib.auth.models import AbstractUser, Group, Permission, UserManager as DjangoUserManager
 from django.core.validators import RegexValidator, EmailValidator
@@ -324,7 +325,10 @@ class User(AbstractUser):
 
     @property
     def subscription_plan(self):
-        """Plan name from the user's tenant, or None."""
+        """Plan name from user subscription (fallback to tenant), or None."""
+        subscription = getattr(self, 'subscription', None)
+        if subscription:
+            return subscription.plan_name or subscription.plan_key or None
         tenant = getattr(self, 'tenant', None)
         if tenant:
             return getattr(tenant, 'plan_name', '') or None
@@ -332,7 +336,10 @@ class User(AbstractUser):
 
     @property
     def subscription_status(self):
-        """Subscription status from the user's tenant, or None."""
+        """Subscription status from user subscription (fallback to tenant), or None."""
+        subscription = getattr(self, 'subscription', None)
+        if subscription:
+            return subscription.status or None
         tenant = getattr(self, 'tenant', None)
         if tenant:
             return getattr(tenant, 'subscription_status', '') or None
@@ -487,3 +494,67 @@ class UserInvitation(models.Model):
 
 
 # Signals are handled in accounts/signals.py
+
+
+class UserSubscription(models.Model):
+    """Per-user SaaS subscription snapshot with Stripe identifiers and period dates."""
+
+    STATUS_CHOICES = [
+        ('none', 'None'),
+        ('trialing', 'Trialing'),
+        ('active', 'Active'),
+        ('past_due', 'Past Due'),
+        ('canceled', 'Canceled'),
+        ('incomplete', 'Incomplete'),
+        ('incomplete_expired', 'Incomplete Expired'),
+        ('unpaid', 'Unpaid'),
+    ]
+
+    user = models.OneToOneField(
+        'accounts.User',
+        on_delete=models.CASCADE,
+        related_name='subscription',
+    )
+    plan_key = models.CharField(max_length=64, blank=True, default='')
+    plan_name = models.CharField(max_length=128, blank=True, default='')
+    plan_interval = models.CharField(max_length=32, blank=True, default='')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='none')
+    trial_end = models.DateTimeField(null=True, blank=True)
+    current_period_start = models.DateTimeField(null=True, blank=True)
+    current_period_end = models.DateTimeField(null=True, blank=True)
+    cancel_at_period_end = models.BooleanField(default=False)
+    provider_customer_id = models.CharField(max_length=255, blank=True, default='', db_index=True)
+    provider_subscription_id = models.CharField(max_length=255, blank=True, default='', db_index=True)
+    device_limit = models.PositiveIntegerField(null=True, blank=True)
+    metadata = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'accounts_user_subscription'
+        verbose_name = 'User Subscription'
+        verbose_name_plural = 'User Subscriptions'
+        indexes = [
+            models.Index(fields=['status', 'updated_at']),
+            models.Index(fields=['plan_key', 'status']),
+        ]
+
+    def __str__(self):
+        return f'{self.user.username} subscription'
+
+    @staticmethod
+    def _days_remaining(dt_value):
+        if not dt_value:
+            return None
+        delta = dt_value - timezone.now()
+        if delta.total_seconds() <= 0:
+            return 0
+        return int(math.ceil(delta.total_seconds() / 86400))
+
+    @property
+    def trial_days_remaining(self):
+        return self._days_remaining(self.trial_end)
+
+    @property
+    def billing_days_remaining(self):
+        return self._days_remaining(self.current_period_end)

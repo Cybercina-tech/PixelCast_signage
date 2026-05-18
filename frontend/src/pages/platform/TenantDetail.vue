@@ -31,6 +31,120 @@
         </div>
       </section>
 
+      <nav class="flex flex-wrap gap-2 border-b border-border-color/60 pb-3" aria-label="Tenant sections">
+        <button
+          v-for="tab in tabs"
+          :key="tab.id"
+          type="button"
+          class="px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
+          :class="
+            activeTab === tab.id
+              ? 'bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 border border-cyan-500/30'
+              : 'text-muted hover:bg-slate-100 dark:hover:bg-slate-800/80 border border-transparent'
+          "
+          @click="activeTab = tab.id"
+        >
+          {{ tab.label }}
+        </button>
+      </nav>
+
+      <template v-if="activeTab === 'license'">
+        <Card title="SaaS tenant license">
+          <div v-if="licenseLoading" class="text-sm text-muted py-4">Loading…</div>
+          <form v-else-if="licenseState" class="grid gap-3 max-w-lg" @submit.prevent="saveLicense">
+            <div>
+              <label class="label-base block text-sm mb-1">License key</label>
+              <input v-model="licenseForm.license_key" type="text" class="input-base w-full px-3 py-2 rounded-lg font-mono text-sm" />
+            </div>
+            <div>
+              <label class="label-base block text-sm mb-1">Status</label>
+              <select v-model="licenseForm.license_status" class="select-base w-full px-3 py-2 rounded-lg">
+                <option value="inactive">inactive</option>
+                <option value="active">active</option>
+                <option value="invalid">invalid</option>
+                <option value="grace">grace</option>
+              </select>
+            </div>
+            <div>
+              <label class="label-base block text-sm mb-1">Offline grace (hours)</label>
+              <input v-model.number="licenseForm.offline_grace_hours" type="number" min="0" class="input-base w-full px-3 py-2 rounded-lg" />
+            </div>
+            <p class="text-xs text-muted">Entitled: {{ licenseState.is_entitled ? 'Yes' : 'No' }}</p>
+            <button type="submit" class="btn-primary px-4 py-2 rounded-lg text-sm w-fit" :disabled="licenseSaving">
+              {{ licenseSaving ? 'Saving…' : 'Save license' }}
+            </button>
+          </form>
+        </Card>
+        <Card title="Enforcement logs">
+          <div v-if="enforcementLoading" class="text-sm text-muted py-4">Loading…</div>
+          <div v-else class="overflow-x-auto max-h-64">
+            <table v-if="enforcementLogs.length" class="min-w-full text-xs">
+              <thead>
+                <tr class="text-left text-muted border-b border-border-color">
+                  <th class="py-2 pr-2">Time</th>
+                  <th class="py-2 pr-2">Action</th>
+                  <th class="py-2 pr-2">Decision</th>
+                  <th class="py-2">Details</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="log in enforcementLogs" :key="log.id" class="border-b border-border-color/30">
+                  <td class="py-1.5 pr-2 whitespace-nowrap">{{ fmt(log.created_at) }}</td>
+                  <td class="py-1.5 pr-2">{{ log.action }}</td>
+                  <td class="py-1.5 pr-2">{{ log.decision }}</td>
+                  <td class="py-1.5 text-muted break-all">{{ JSON.stringify(log.details || {}) }}</td>
+                </tr>
+              </tbody>
+            </table>
+            <p v-else class="text-sm text-muted">No enforcement logs.</p>
+          </div>
+        </Card>
+      </template>
+
+      <template v-else-if="activeTab === 'integrations'">
+        <Card title="API keys">
+          <div class="flex flex-wrap gap-2 mb-3">
+            <input v-model="newKeyLabel" type="text" placeholder="Label (optional)" class="input-base px-3 py-2 rounded-lg text-sm flex-1 min-w-[12rem]" />
+            <button type="button" class="btn-primary px-4 py-2 rounded-lg text-sm" :disabled="keysBusy" @click="createApiKey">
+              Create key
+            </button>
+          </div>
+          <p v-if="newKeySecret" class="text-xs font-mono p-3 rounded-lg bg-amber-500/10 border border-amber-500/40 mb-3 break-all">
+            Secret (copy now): {{ newKeySecret }}
+          </p>
+          <ul v-if="apiKeys.length" class="divide-y divide-border-color/60 text-sm">
+            <li v-for="k in apiKeys" :key="k.id" class="py-2 flex justify-between gap-2 items-center">
+              <span>{{ k.label || k.prefix }} <span class="text-muted font-mono text-xs">{{ k.prefix }}…</span></span>
+              <button type="button" class="btn-outline px-2 py-1 rounded text-xs text-rose-400" @click="revokeKey(k.id)">Revoke</button>
+            </li>
+          </ul>
+          <p v-else class="text-sm text-muted">No active API keys.</p>
+        </Card>
+        <Card title="Outbound webhooks">
+          <form class="flex flex-wrap gap-2 mb-3" @submit.prevent="createWebhook">
+            <input v-model="newWebhookUrl" type="url" required placeholder="https://…" class="input-base px-3 py-2 rounded-lg text-sm flex-1 min-w-[14rem]" />
+            <button type="submit" class="btn-primary px-4 py-2 rounded-lg text-sm" :disabled="webhooksBusy">Add webhook</button>
+          </form>
+          <p v-if="newWebhookSecret" class="text-xs font-mono p-3 rounded-lg bg-amber-500/10 border border-amber-500/40 mb-3 break-all">
+            Signing secret (copy now): {{ newWebhookSecret }}
+          </p>
+          <ul v-if="webhooks.length" class="divide-y divide-border-color/60 text-sm">
+            <li v-for="w in webhooks" :key="w.id" class="py-2 flex flex-wrap justify-between gap-2 items-center">
+              <span class="font-mono text-xs break-all">{{ w.url }}</span>
+              <div class="flex items-center gap-2 shrink-0">
+                <label class="flex items-center gap-1 text-xs">
+                  <input type="checkbox" :checked="w.is_active" @change="toggleWebhook(w, $event.target.checked)" />
+                  Active
+                </label>
+                <button type="button" class="btn-outline px-2 py-1 rounded text-xs text-rose-400" @click="removeWebhook(w.id)">Delete</button>
+              </div>
+            </li>
+          </ul>
+          <p v-else class="text-sm text-muted">No webhooks configured.</p>
+        </Card>
+      </template>
+
+      <template v-else>
       <Card v-if="tenant.health" title="Tenant health">
         <div class="flex flex-wrap items-end gap-4">
           <div>
@@ -81,7 +195,9 @@
             <div><span class="text-muted">Plan</span> — {{ tenant.plan_name || '—' }} {{ tenant.plan_interval || '' }}</div>
             <div><span class="text-muted">Tenant ID</span> — <span class="font-mono text-xs">{{ tenant.id }}</span></div>
             <div><span class="text-muted">Period end</span> — {{ fmt(tenant.current_period_end) }}</div>
+            <div><span class="text-muted">Period left</span> — {{ tenant.billing_days_remaining ?? '—' }} days</div>
             <div><span class="text-muted">Trial end</span> — {{ fmt(tenant.trial_end) }}</div>
+            <div><span class="text-muted">Trial left</span> — {{ tenant.trial_days_remaining ?? '—' }} days</div>
             <div><span class="text-muted">Device limit</span> — {{ tenant.device_limit ?? '∞' }}</div>
             <div><span class="text-muted">Payment failures</span> — {{ tenant.payment_failed_count ?? 0 }}</div>
             <div><span class="text-muted">Billing grace until</span> — {{ fmt(tenant.billing_grace_until) }}</div>
@@ -211,6 +327,7 @@
           <p v-else class="text-muted text-sm">No audit log entries for this tenant.</p>
         </div>
       </Card>
+      </template>
     </div>
     <div v-else-if="loadError" class="text-center py-12 text-red-600">{{ loadError }}</div>
     <div v-else class="text-center py-12 text-muted">Loading…</div>
@@ -253,6 +370,29 @@ const tenantFlags = ref({})
 const flagsLoading = ref(false)
 const auditRows = ref([])
 const auditLoading = ref(false)
+
+const tabs = [
+  { id: 'overview', label: 'Overview' },
+  { id: 'license', label: 'License' },
+  { id: 'integrations', label: 'Integrations' },
+]
+const activeTab = ref('overview')
+
+const licenseState = ref(null)
+const licenseForm = ref({ license_key: '', license_status: 'inactive', offline_grace_hours: 72 })
+const licenseLoading = ref(false)
+const licenseSaving = ref(false)
+const enforcementLogs = ref([])
+const enforcementLoading = ref(false)
+
+const apiKeys = ref([])
+const webhooks = ref([])
+const keysBusy = ref(false)
+const webhooksBusy = ref(false)
+const newKeyLabel = ref('')
+const newKeySecret = ref('')
+const newWebhookUrl = ref('')
+const newWebhookSecret = ref('')
 
 const deviceUtilization = computed(() => {
   const screens = Number(tenant.value?.engagement?.screen_count || 0)
@@ -375,6 +515,143 @@ async function loadAuditLog() {
   }
 }
 
+async function loadLicense() {
+  licenseLoading.value = true
+  try {
+    const { data } = await platformAPI.tenantLicense.get(route.params.id)
+    licenseState.value = data
+    licenseForm.value = {
+      license_key: data.license_key || '',
+      license_status: data.license_status || 'inactive',
+      offline_grace_hours: data.offline_grace_hours ?? 72,
+    }
+  } catch {
+    licenseState.value = null
+  } finally {
+    licenseLoading.value = false
+  }
+}
+
+async function loadEnforcementLogs() {
+  enforcementLoading.value = true
+  try {
+    const { data } = await platformAPI.tenantLicense.enforcementLogs(route.params.id)
+    enforcementLogs.value = data.results || []
+  } catch {
+    enforcementLogs.value = []
+  } finally {
+    enforcementLoading.value = false
+  }
+}
+
+async function saveLicense() {
+  licenseSaving.value = true
+  try {
+    const { data } = await platformAPI.tenantLicense.update(route.params.id, licenseForm.value)
+    licenseState.value = data
+    notify.success('License updated')
+    await loadEnforcementLogs()
+  } catch (e) {
+    notify.error(normalizeApiError(e).userMessage || 'Save failed')
+  } finally {
+    licenseSaving.value = false
+  }
+}
+
+async function loadIntegrations() {
+  try {
+    const [keysRes, whRes] = await Promise.all([
+      platformAPI.tenantIntegrations.apiKeys.list(route.params.id),
+      platformAPI.tenantIntegrations.webhooks.list(route.params.id),
+    ])
+    apiKeys.value = keysRes.data?.keys || []
+    webhooks.value = whRes.data?.webhooks || []
+  } catch {
+    apiKeys.value = []
+    webhooks.value = []
+  }
+}
+
+async function createApiKey() {
+  keysBusy.value = true
+  newKeySecret.value = ''
+  try {
+    const { data } = await platformAPI.tenantIntegrations.apiKeys.create(route.params.id, {
+      label: newKeyLabel.value,
+    })
+    newKeySecret.value = data.secret
+    newKeyLabel.value = ''
+    await loadIntegrations()
+    notify.success('API key created')
+  } catch (e) {
+    notify.error(normalizeApiError(e).userMessage || 'Failed to create key')
+  } finally {
+    keysBusy.value = false
+  }
+}
+
+async function revokeKey(keyId) {
+  if (!window.confirm('Revoke this API key?')) return
+  keysBusy.value = true
+  try {
+    await platformAPI.tenantIntegrations.apiKeys.revoke(route.params.id, keyId)
+    await loadIntegrations()
+    notify.success('Key revoked')
+  } catch (e) {
+    notify.error(normalizeApiError(e).userMessage || 'Revoke failed')
+  } finally {
+    keysBusy.value = false
+  }
+}
+
+async function createWebhook() {
+  webhooksBusy.value = true
+  newWebhookSecret.value = ''
+  try {
+    const { data } = await platformAPI.tenantIntegrations.webhooks.create(route.params.id, {
+      url: newWebhookUrl.value,
+    })
+    newWebhookSecret.value = data.signing_secret
+    newWebhookUrl.value = ''
+    await loadIntegrations()
+    notify.success('Webhook created')
+  } catch (e) {
+    notify.error(normalizeApiError(e).userMessage || 'Failed to create webhook')
+  } finally {
+    webhooksBusy.value = false
+  }
+}
+
+async function toggleWebhook(w, active) {
+  try {
+    await platformAPI.tenantIntegrations.webhooks.patch(route.params.id, w.id, { is_active: active })
+    w.is_active = active
+  } catch (e) {
+    notify.error(normalizeApiError(e).userMessage || 'Update failed')
+    await loadIntegrations()
+  }
+}
+
+async function removeWebhook(id) {
+  if (!window.confirm('Delete this webhook endpoint?')) return
+  try {
+    await platformAPI.tenantIntegrations.webhooks.remove(route.params.id, id)
+    await loadIntegrations()
+    notify.success('Webhook deleted')
+  } catch (e) {
+    notify.error(normalizeApiError(e).userMessage || 'Delete failed')
+  }
+}
+
+watch(activeTab, (tab) => {
+  if (tab === 'license') {
+    loadLicense()
+    loadEnforcementLogs()
+  } else if (tab === 'integrations') {
+    loadIntegrations()
+  }
+})
+
 async function impersonate(userId) {
   impBusy.value = true
   try {
@@ -396,6 +673,7 @@ onMounted(async () => {
 watch(
   () => route.params.id,
   async () => {
+    activeTab.value = 'overview'
     await load()
     await Promise.all([loadUsers(), loadFlags(), loadAuditLog()])
   }

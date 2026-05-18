@@ -4,8 +4,10 @@
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $scriptDir
 
+$env:PIXELCAST_SIGNAGE_INSTALLED = "true"
+
 if ($args.Count -eq 0) {
-    python manage.py test tests --settings=tests.test_settings
+    python -m pytest tests/ -q
 } else {
-    python manage.py test "tests.$($args[0])" --settings=tests.test_settings
+    python -m pytest "tests/$($args[0])" -q
 }

@@ -14,6 +14,7 @@
 /logs
 
 # Playwright / E2E artifacts
+.env.e2e
 /test-results
 /playwright-report
 /blob-report

@@ -10,6 +10,9 @@
         <button type="button" class="btn-primary px-4 py-2 rounded-lg text-sm" @click="openCreateModal">
           New Ticket
         </button>
+        <button type="button" class="btn-outline px-4 py-2 rounded-lg text-sm" :disabled="exporting" @click="exportCsv">
+          {{ exporting ? 'Exporting…' : 'Export CSV' }}
+        </button>
         <button type="button" class="btn-outline px-4 py-2 rounded-lg text-sm" @click="load" :disabled="loading">
           Refresh
         </button>
@@ -453,6 +456,7 @@ const route = useRoute()
 const router = useRouter()
 
 const loading = ref(false)
+const exporting = ref(false)
 const error = ref(null)
 const rows = ref([])
 const filters = ref({ search: '', status: '', priority: '', tenant_id: '', assignee_id: '' })
@@ -751,6 +755,28 @@ async function handleTransition(row, action) {
     await load()
   } catch (e) {
     notify.error(normalizeApiError(e).userMessage || 'Transition failed')
+  }
+}
+
+async function exportCsv() {
+  exporting.value = true
+  try {
+    const params = { ...filters.value }
+    Object.keys(params).forEach((k) => {
+      if (params[k] === '' || params[k] == null) delete params[k]
+    })
+    const { data } = await platformTicketsAPI.exportCsv(params)
+    const blob = new Blob([data], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'platform-tickets.csv'
+    a.click()
+    URL.revokeObjectURL(url)
+  } catch (e) {
+    notify.error(normalizeApiError(e).userMessage || 'Export failed')
+  } finally {
+    exporting.value = false
   }
 }
 

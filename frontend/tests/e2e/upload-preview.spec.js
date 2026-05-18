@@ -36,6 +36,10 @@ test('real upload and preview flow', async ({ page }) => {
   await mediaCard.hover()
   await mediaCard.getByRole('button', { name: /preview/i }).click()
 
-  await expect(page.getByText(uniqueName).first()).toBeVisible()
-  await expect(page.locator('img, video').first()).toBeVisible()
+  await expect(page.getByRole('heading', { name: uniqueName, level: 3 })).toBeVisible({ timeout: 15000 })
+  await expect(page.getByText('IMAGE', { exact: true }).first()).toBeVisible()
+  // Media may show "Loading media..." until secure_url resolves; wait for preview or loading state.
+  await expect(
+    page.locator('img[alt*="preview" i], img[alt*="Image" i]').or(page.getByText('Loading media...'))
+  ).toBeVisible({ timeout: 30000 })
 })

@@ -6,6 +6,9 @@ import os
 import sys
 import tempfile
 
+# Treat installation as complete for API tests (no 503 from InstallationCheckMiddleware).
+os.environ.setdefault('PIXELCAST_SIGNAGE_INSTALLED', 'true')
+
 # Add BackEnd directory to Python path
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if BASE_DIR not in sys.path:
@@ -104,6 +107,15 @@ USE_S3_STORAGE = False
 
 # Avoid license middleware blocking API tests that expect 201/401/403 from auth alone
 LICENSE_ENFORCEMENT_ENABLED = False
+
+# SaaS / tickets tests expect platform APIs to be enabled.
+PLATFORM_SAAS_ENABLED = True
+
+# Skip install gate during tests (env above is sufficient; drop middleware for clarity).
+MIDDLEWARE = [
+    m for m in MIDDLEWARE
+    if m != 'setup.middleware.InstallationCheckMiddleware'
+]
 
 # Tests use http://testserver; do not redirect to HTTPS (BASE_URL may be https in developer .env)
 SECURE_SSL_REDIRECT = False

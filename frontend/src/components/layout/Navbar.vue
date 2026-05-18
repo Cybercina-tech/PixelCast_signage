@@ -69,37 +69,16 @@
           </nav>
         </div>
 
-        <!-- Center: Ghost Search -->
+        <!-- Center: Plan shortcut -->
         <div class="navbar-center">
-          <div class="ghost-search" :class="{ 'search-expanded': searchExpanded }">
-            <button
-              v-if="!searchExpanded"
-              @click="searchExpanded = true"
-              class="search-trigger"
-              aria-label="Search"
-            >
-              <MagnifyingGlassIcon class="w-4 h-4" />
-            </button>
-            <div v-else class="search-input-wrapper">
-              <MagnifyingGlassIcon class="w-4 h-4 search-icon" />
-              <input
-                ref="searchInput"
-                v-model="searchQuery"
-                type="text"
-                placeholder="Search..."
-                class="search-input"
-                @blur="handleSearchBlur"
-                @keyup.esc="closeSearch"
-              />
-              <button
-                @click="closeSearch"
-                class="search-close"
-                aria-label="Close search"
-              >
-                <XMarkIcon class="w-4 h-4" />
-              </button>
-            </div>
-          </div>
+          <router-link
+            class="plan-shortcut"
+            :to="{ path: '/settings', query: { tab: 'billing' } }"
+            aria-label="My plan and upgrade"
+          >
+            <CreditCardIcon class="w-4 h-4" />
+            <span class="hidden sm:inline">My Plan</span>
+          </router-link>
         </div>
 
         <!-- Right: Icons -->
@@ -206,9 +185,13 @@
               ref="userMenuDropdown"
               class="user-dropdown"
             >
-              <div class="dropdown-header">
-                <p class="user-name">{{ user?.username || 'Guest' }}</p>
-                <p class="user-email">{{ user?.email || '' }}</p>
+              <div class="dropdown-header user-dropdown-header">
+                <p class="user-name truncate" :title="user?.username || 'Guest'">
+                  {{ user?.username || 'Guest' }}
+                </p>
+                <p v-if="user?.email" class="user-email truncate" :title="user.email">
+                  {{ user.email }}
+                </p>
               </div>
               <div class="dropdown-menu">
                 <router-link
@@ -253,7 +236,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useNotificationsStore } from '@/stores/notificationsStore'
@@ -265,7 +248,7 @@ import {
   ShieldCheckIcon,
   DevicePhoneMobileIcon,
   ArrowRightOnRectangleIcon,
-  MagnifyingGlassIcon,
+  CreditCardIcon,
   XMarkIcon,
   ExclamationCircleIcon,
   CheckCircleIcon,
@@ -294,9 +277,6 @@ async function exitImpersonation() {
 // UI State
 const showNotifications = ref(false)
 const showUserMenu = ref(false)
-const searchExpanded = ref(false)
-const searchQuery = ref('')
-const searchInput = ref(null)
 const notificationsDropdown = ref(null)
 const userMenuDropdown = ref(null)
 const bellShake = ref(false)
@@ -336,23 +316,6 @@ const breadcrumbs = computed(() => {
   
   return crumbs
 })
-
-// Search handlers
-const closeSearch = () => {
-  searchExpanded.value = false
-  searchQuery.value = ''
-}
-
-const handleSearchBlur = (e) => {
-  // Don't close if clicking inside dropdown
-  if (!e.relatedTarget || !e.relatedTarget.closest('.notifications-dropdown, .user-dropdown')) {
-    setTimeout(() => {
-      if (!searchQuery.value) {
-        closeSearch()
-      }
-    }, 200)
-  }
-}
 
 // Toggle functions
 const toggleNotifications = () => {
@@ -460,14 +423,6 @@ const handleLogout = () => {
   authStore.logout()
   router.push('/')
 }
-
-// Focus search input when expanded
-watch(searchExpanded, async (expanded) => {
-  if (expanded) {
-    await nextTick()
-    searchInput.value?.focus()
-  }
-})
 
 onMounted(() => {
   document.addEventListener('click', handleClickOutside)
@@ -620,7 +575,7 @@ onUnmounted(() => {
   color: rgba(255, 255, 255, 0.3);
 }
 
-/* Center: Ghost Search */
+/* Center: Plan shortcut */
 .navbar-center {
   display: flex;
   align-items: center;
@@ -628,133 +583,32 @@ onUnmounted(() => {
   flex: 0 0 auto;
 }
 
-.ghost-search {
-  position: relative;
-  display: flex;
-  align-items: center;
-}
-
-.search-trigger {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 2rem;
-  height: 2rem;
-  padding: 0;
-  background: transparent;
-  border: none;
-  border-radius: 8px;
-  color: var(--text-muted);
-  cursor: pointer;
-  transition: all 0.4s ease;
-}
-
-.search-trigger:hover {
-  color: var(--accent-color);
-  background: rgba(9, 132, 227, 0.1);
-}
-
-.dark .search-trigger {
-  color: rgba(255, 255, 255, 0.6);
-}
-
-.dark .search-trigger:hover {
-  color: #00d2ff;
-  background: rgba(0, 210, 255, 0.1);
-}
-
-.search-input-wrapper {
+.plan-shortcut {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.5rem 0.75rem;
-  background: var(--card-bg); /* Frosted glass with 80% opacity */
-  border: none; /* No borders - Aether uses soft shadows */
+  padding: 0.45rem 0.75rem;
+  color: var(--text-muted);
+  text-decoration: none;
+  border: 1px solid transparent;
   border-radius: 8px;
-  min-width: 250px;
-  box-shadow: var(--shadow-soft); /* Soft shadow instead of border */
-  animation: searchExpand 0.3s ease;
-  transition: all 0.4s ease;
+  transition: all 0.25s ease;
 }
 
-.dark .search-input-wrapper {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: none;
+.plan-shortcut:hover {
+  color: var(--accent-color);
+  background: rgba(9, 132, 227, 0.1);
+  border-color: rgba(9, 132, 227, 0.2);
 }
 
-@keyframes searchExpand {
-  from {
-    opacity: 0;
-    transform: scale(0.9);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
+.dark .plan-shortcut {
+  color: rgba(255, 255, 255, 0.7);
 }
 
-.search-icon {
-  color: var(--text-muted);
-  flex-shrink: 0;
-  transition: color 0.4s ease;
-}
-
-.dark .search-icon {
-  color: rgba(255, 255, 255, 0.5);
-}
-
-.search-input {
-  flex: 1;
-  background: transparent;
-  border: none;
-  outline: none;
-  color: var(--text-main);
-  font-size: 0.875rem;
-  min-width: 0;
-  transition: color 0.4s ease;
-}
-
-.dark .search-input {
-  color: rgba(255, 255, 255, 0.9);
-}
-
-.search-input::placeholder {
-  color: var(--text-muted);
-}
-
-.dark .search-input::placeholder {
-  color: rgba(255, 255, 255, 0.4);
-}
-
-.search-close {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.25rem;
-  height: 1.25rem;
-  padding: 0;
-  background: transparent;
-  border: none;
-  border-radius: 4px;
-  color: var(--text-muted);
-  cursor: pointer;
-  transition: all 0.3s ease;
-  flex-shrink: 0;
-}
-
-.search-close:hover {
-  color: var(--text-main);
-  background: rgba(15, 23, 42, 0.08);
-}
-
-.dark .search-close {
-  color: rgba(255, 255, 255, 0.5);
-}
-
-.dark .search-close:hover {
-  color: rgba(255, 255, 255, 0.8);
-  background: rgba(255, 255, 255, 0.1);
+.dark .plan-shortcut:hover {
+  color: #00d2ff;
+  background: rgba(0, 210, 255, 0.1);
+  border-color: rgba(0, 210, 255, 0.25);
 }
 
 /* Right Section */
@@ -877,7 +731,6 @@ onUnmounted(() => {
   position: absolute;
   right: 0;
   top: calc(100% + 0.5rem);
-  width: 20rem;
   background: var(--card-bg); /* Frosted glass with 80% opacity */
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
@@ -886,6 +739,16 @@ onUnmounted(() => {
   box-shadow: var(--shadow-medium); /* Soft shadow instead of border */
   z-index: 50;
   transition: all 0.4s ease;
+}
+
+.notifications-dropdown {
+  width: 20rem;
+}
+
+.user-dropdown {
+  width: 16rem;
+  max-width: min(16rem, calc(100vw - 2rem));
+  overflow: hidden;
 }
 
 .dark .notifications-dropdown,
@@ -977,16 +840,34 @@ onUnmounted(() => {
   box-shadow: 0 0 10px rgba(0, 210, 255, 0.2);
 }
 
+.user-dropdown-header {
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 0.25rem;
+  min-width: 0;
+  overflow: hidden;
+}
+
 .user-name {
   font-size: 0.875rem;
   font-weight: 600;
   color: var(--text-heading);
-  margin-bottom: 0.25rem;
+  margin-bottom: 0;
+  max-width: 100%;
 }
 
 .user-email {
   font-size: 0.75rem;
   color: var(--text-muted);
+  max-width: 100%;
+}
+
+.user-dropdown-header .user-name,
+.user-dropdown-header .user-email {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .dark .user-name {

@@ -403,6 +403,82 @@
                 </dl>
               </div>
             </Card>
+
+            <Card
+              v-else-if="activeTab === 'billing'"
+              key="billing"
+              title="Plan & Billing"
+              subtitle="Review your current plan and manage upgrades"
+            >
+              <div class="space-y-4">
+                <div
+                  class="rounded-xl border border-border-color bg-surface-inset/40 px-4 py-3"
+                  v-if="subscription"
+                >
+                  <p class="text-sm font-semibold text-primary">
+                    {{ subscription.plan_name || subscription.plan_key || 'No active plan' }}
+                  </p>
+                  <p class="text-xs text-muted mt-1">
+                    Status: {{ subscription.status || 'none' }} · Interval: {{ subscription.plan_interval || '—' }}
+                  </p>
+                  <div class="grid sm:grid-cols-2 gap-3 mt-3 text-sm">
+                    <div class="rounded-lg border border-border-color/60 px-3 py-2">
+                      <p class="text-xs text-muted">Trial remaining</p>
+                      <p class="text-primary font-semibold">{{ subscription.trial_days_remaining ?? '—' }} days</p>
+                    </div>
+                    <div class="rounded-lg border border-border-color/60 px-3 py-2">
+                      <p class="text-xs text-muted">Billing period remaining</p>
+                      <p class="text-primary font-semibold">{{ subscription.billing_days_remaining ?? '—' }} days</p>
+                    </div>
+                  </div>
+                  <div
+                    v-if="billingGraceBanner"
+                    class="mt-3 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-200"
+                  >
+                    {{ billingGraceBanner }}
+                  </div>
+                  <div
+                    v-if="subscription.plan_key === 'per_screen'"
+                    class="mt-3 rounded-lg border border-border-color/60 px-3 py-2"
+                  >
+                    <p class="text-xs text-muted mb-2">Change number of screens</p>
+                    <div class="flex flex-wrap items-center gap-2">
+                      <input
+                        v-model.number="billingScreenQuantity"
+                        type="number"
+                        min="1"
+                        class="input-base w-28 px-3 py-2 rounded-lg text-sm"
+                      />
+                      <button
+                        type="button"
+                        class="btn-outline px-3 py-2 rounded-lg text-xs"
+                        :disabled="billingChangeBusy"
+                        @click="changeScreenQuantity"
+                      >
+                        {{ billingChangeBusy ? 'Updating…' : 'Update screens' }}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <div v-else class="rounded-xl border border-border-color bg-surface-inset/40 px-4 py-3 text-sm text-muted">
+                  No subscription details found yet.
+                </div>
+
+                <div class="flex flex-wrap gap-2">
+                  <button type="button" class="btn-primary px-4 py-2 rounded-lg text-sm" @click="goToPricing">
+                    Upgrade plan
+                  </button>
+                  <button
+                    type="button"
+                    class="btn-outline px-4 py-2 rounded-lg text-sm"
+                    :disabled="billingBusy"
+                    @click="openBillingPortal"
+                  >
+                    {{ billingBusy ? 'Opening…' : 'Manage billing' }}
+                  </button>
+                </div>
+              </div>
+            </Card>
           </Transition>
         </div>
       </div>
@@ -443,7 +519,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useThemeStore } from '@/stores/theme'
 import { useNotification } from '@/composables/useNotification'
-import { authAPI, licenseAPI, notificationCenterAPI } from '@/services/api'
+import { authAPI, licenseAPI, notificationCenterAPI, platformAPI } from '@/services/api'
 import { getBrowserApiBaseUrl } from '@/utils/apiBaseUrl'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import Card from '@/components/common/Card.vue'
@@ -455,6 +531,7 @@ import {
   ShieldCheckIcon,
   Cog6ToothIcon,
   KeyIcon,
+  CreditCardIcon,
   CameraIcon,
   CalendarIcon,
   ComputerDesktopIcon,
@@ -477,12 +554,17 @@ const tabs = [
   { id: 'security', label: 'Security', icon: ShieldCheckIcon },
   { id: 'system', label: 'System', icon: Cog6ToothIcon },
   { id: 'license', label: 'License', icon: KeyIcon },
+  { id: 'billing', label: 'Billing', icon: CreditCardIcon },
 ]
 
 const activeTab = ref('profile')
 const hasChanges = ref(false)
 
 const user = computed(() => authStore.user)
+const subscription = computed(() => user.value?.subscription || null)
+const billingBusy = ref(false)
+const billingChangeBusy = ref(false)
+const billingScreenQuantity = ref(1)
 const userInitials = computed(() => {
   if (!user.value?.username) return 'U'
   const parts = user.value.username.split(' ')
@@ -621,6 +703,17 @@ const licenseGraceBanner = computed(() => {
   }
   return `${hours}h ${mins}m left in grace — activate your license soon.`
 })
+const billingGraceBanner = computed(() => {
+  const s = subscription.value
+  if (!s?.billing_grace_until) return ''
+  const end = new Date(s.billing_grace_until)
+  if (Number.isNaN(end.getTime())) return ''
+  const sec = Math.floor((end.getTime() - Date.now()) / 1000)
+  if (sec <= 0) return 'Grace period ended. Please resolve billing to avoid service interruption.'
+  const days = Math.floor(sec / 86400)
+  const hours = Math.floor((sec % 86400) / 3600)
+  return `Payment retry grace active: ${days}d ${hours}h remaining.`
+})
 const terminatingSession = ref(null)
 const loggingOutAllSessions = ref(false)
 
@@ -655,6 +748,47 @@ async function loadLicenseSummary() {
       err.response?.data?.detail || err.response?.data?.message || 'Could not load license status'
   } finally {
     licenseLoading.value = false
+  }
+}
+
+async function openBillingPortal() {
+  billingBusy.value = true
+  try {
+    const returnUrl = `${window.location.origin}/settings?tab=billing`
+    const { data } = await platformAPI.billingPortal({ return_url: returnUrl })
+    if (data?.url) {
+      window.location.href = data.url
+      return
+    }
+    notify.error('Billing portal is unavailable right now')
+  } catch (err) {
+    notify.error(err.response?.data?.detail || 'Could not open billing portal')
+  } finally {
+    billingBusy.value = false
+  }
+}
+
+function goToPricing() {
+  router.push('/pricing')
+}
+
+async function changeScreenQuantity() {
+  const s = subscription.value
+  if (!s || s.plan_key !== 'per_screen') return
+  const qty = Math.max(1, Number(billingScreenQuantity.value) || 1)
+  billingChangeBusy.value = true
+  try {
+    await platformAPI.billingChangeSubscription({
+      plan_key: s.plan_key,
+      quantity: qty,
+      proration_behavior: 'create_prorations',
+    })
+    await authStore.fetchMe()
+    notify.success('Screen quantity updated successfully')
+  } catch (err) {
+    notify.error(err.response?.data?.detail || 'Could not update screen quantity')
+  } finally {
+    billingChangeBusy.value = false
   }
 }
 
@@ -858,6 +992,10 @@ function syncTabFromRoute() {
   const t = route.query.tab
   if (typeof t === 'string' && tabs.some((x) => x.id === t)) {
     activeTab.value = t
+    return
+  }
+  if (route.query.billing) {
+    activeTab.value = 'billing'
   }
 }
 
@@ -871,12 +1009,29 @@ watch(activeTab, (tab) => {
   }
 })
 
+watch(
+  () => subscription.value?.device_limit,
+  (n) => {
+    if (n == null) return
+    const parsed = Number(n)
+    if (Number.isFinite(parsed) && parsed > 0) {
+      billingScreenQuantity.value = parsed
+    }
+  },
+  { immediate: true },
+)
+
 watch(() => route.query.tab, () => {
   syncTabFromRoute()
 })
 
 onMounted(() => {
   syncTabFromRoute()
+  if (route.query.billing === '1') {
+    notify.success('Payment completed. Your plan details are refreshed shortly.')
+  } else if (route.query.billing === 'cancel') {
+    notify.info('Checkout canceled. You can continue anytime.')
+  }
 })
 
 loadSettings()

@@ -62,12 +62,6 @@
               Blog
             </router-link>
             <router-link
-              to="/data-center"
-              class="px-2 py-1.5 text-xs sm:text-sm text-white/80 hover:text-white transition-colors whitespace-nowrap"
-            >
-              Data Center
-            </router-link>
-            <router-link
               to="/pricing"
               class="px-2 py-1.5 text-xs sm:text-sm text-white/80 hover:text-white transition-colors whitespace-nowrap"
             >
@@ -196,9 +190,13 @@
               </router-link>
             </li>
             <li>
-              <router-link to="/data-center" class="landing-drawer-quicklink" @click="closeSectionMenu">
-                Data Center
-              </router-link>
+              <a
+                href="#tv-connect"
+                class="landing-drawer-quicklink"
+                @click="closeSectionMenu"
+              >
+                Connect your TV
+              </a>
             </li>
             <li>
               <router-link to="/pricing" class="landing-drawer-quicklink" @click="closeSectionMenu">
@@ -359,6 +357,77 @@
                       </div>
                     </div>
                   </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TV / display browser: open connect URL on the screen -->
+      <section id="tv-connect" class="tv-connect-section">
+        <div class="section-content py-6 sm:py-8 lg:py-10">
+          <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full section-fade-in">
+            <div
+              class="glass-card rounded-2xl border border-cyan-400/30 bg-gradient-to-br from-cyan-500/10 via-slate-900/50 to-slate-950/80 p-5 sm:p-6 lg:p-8"
+            >
+              <div class="flex flex-col lg:flex-row lg:items-center gap-6 lg:gap-10">
+                <div class="flex gap-4 min-w-0 flex-1">
+                  <div
+                    class="hidden sm:flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-cyan-400/25 bg-cyan-500/15"
+                    aria-hidden="true"
+                  >
+                    <svg class="h-7 w-7 text-cyan-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="1.75"
+                        d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                      />
+                    </svg>
+                  </div>
+                  <div class="min-w-0 space-y-2">
+                    <p class="text-cyan-300/90 text-xs font-semibold uppercase tracking-wider">On your TV or display</p>
+                    <h2 class="text-xl sm:text-2xl font-bold text-white leading-snug">
+                      Opening PixelCast on a television browser?
+                    </h2>
+                    <p class="text-on-starfield text-sm sm:text-base leading-relaxed max-w-2xl">
+                      Type or paste this link into the TV’s browser (Samsung, LG, Fire TV, built-in browser, etc.) to open
+                      the pairing screen. You can also tap
+                      <strong class="text-white/90 font-medium">Open pairing on this device</strong>
+                      if you are already on the display.
+                    </p>
+                  </div>
+                </div>
+                <div class="w-full lg:max-w-md shrink-0 space-y-3">
+                  <div
+                    class="rounded-xl border border-white/15 bg-black/35 px-3 py-2.5 flex items-center gap-2 min-w-0"
+                  >
+                    <code
+                      class="flex-1 min-w-0 text-xs sm:text-sm text-cyan-100/95 font-mono break-all leading-relaxed select-all"
+                    >
+                      {{ playerConnectUrl }}
+                    </code>
+                  </div>
+                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <router-link
+                      to="/player/connect"
+                      class="neon-button-large rounded-xl font-semibold text-white text-center inline-flex items-center justify-center min-h-[3rem] px-4 py-2.5 text-sm sm:text-base w-full"
+                      @click="trackLandingCta('tv_connect_open', 'Open pairing on TV')"
+                    >
+                      Open pairing on this device
+                    </router-link>
+                    <button
+                      type="button"
+                      class="glass-card rounded-xl font-semibold !text-white hover:!text-white border border-white/20 hover:border-cyan-400/40 transition-all duration-300 text-center inline-flex items-center justify-center min-h-[3rem] px-4 py-2.5 text-sm sm:text-base w-full"
+                      @click="copyPlayerConnectLink"
+                    >
+                      {{ connectLinkCopied ? 'Link copied' : 'Copy link for TV' }}
+                    </button>
+                  </div>
+                  <p class="text-xs text-white/50 text-center sm:text-left">
+                    Setting up from your phone? Copy the link, then open it on the TV browser.
+                  </p>
                 </div>
               </div>
             </div>
@@ -789,11 +858,35 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { setupAPI, publicAPI } from '@/services/api'
 import { pushCtaClick } from '@/analytics/dataLayer'
 
+const router = useRouter()
+
 function trackLandingCta(ctaId, label) {
   pushCtaClick(ctaId, label, { page: 'landing' })
+}
+
+const connectLinkCopied = ref(false)
+
+/** Absolute URL for TV browsers — same origin in dev (:4173) and production */
+const playerConnectUrl = computed(() => {
+  const r = router.resolve({ path: '/player/connect' })
+  return new URL(r.href, window.location.origin).href
+})
+
+async function copyPlayerConnectLink() {
+  try {
+    await navigator.clipboard.writeText(playerConnectUrl.value)
+    connectLinkCopied.value = true
+    trackLandingCta('tv_connect_copy', 'Copy TV connect link')
+    window.setTimeout(() => {
+      connectLinkCopied.value = false
+    }, 2500)
+  } catch {
+    connectLinkCopied.value = false
+  }
 }
 
 /** Static HTML product docs (Vite `public/documentation/` → `/documentation/index.html`). */
@@ -1241,6 +1334,11 @@ onUnmounted(() => {
   max-height: none;
   overflow-y: visible;
   overflow-x: hidden;
+}
+
+.tv-connect-section {
+  width: 100%;
+  position: relative;
 }
 
 /* Background gradient animation */

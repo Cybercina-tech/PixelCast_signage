@@ -11,6 +11,8 @@ class TenantListSerializer(serializers.ModelSerializer):
     churn = serializers.SerializerMethodField()
     engagement = serializers.SerializerMethodField()
     health = serializers.SerializerMethodField()
+    trial_days_remaining = serializers.SerializerMethodField()
+    billing_days_remaining = serializers.SerializerMethodField()
 
     class Meta:
         model = Tenant
@@ -27,7 +29,9 @@ class TenantListSerializer(serializers.ModelSerializer):
             'device_limit',
             'current_period_end',
             'trial_end',
+            'trial_days_remaining',
             'cancel_at_period_end',
+            'billing_days_remaining',
             'last_payment_failed_at',
             'payment_failed_count',
             'billing_grace_until',
@@ -80,6 +84,22 @@ class TenantListSerializer(serializers.ModelSerializer):
         if obj.pk not in cache:
             cache[obj.pk] = tenant_health_score(obj)
         return cache[obj.pk]
+
+    def get_trial_days_remaining(self, obj):
+        if not obj.trial_end:
+            return None
+        delta = obj.trial_end - timezone.now()
+        if delta.total_seconds() <= 0:
+            return 0
+        return int((delta.total_seconds() + 86399) // 86400)
+
+    def get_billing_days_remaining(self, obj):
+        if not obj.current_period_end:
+            return None
+        delta = obj.current_period_end - timezone.now()
+        if delta.total_seconds() <= 0:
+            return 0
+        return int((delta.total_seconds() + 86399) // 86400)
 
 
 class TenantDetailSerializer(TenantListSerializer):
@@ -231,7 +251,6 @@ class TenantWriteSerializer(serializers.ModelSerializer):
             'name',
             'slug',
             'organization_name_key',
-            'subscription_status',
             'plan_name',
             'plan_interval',
             'device_limit',
@@ -245,7 +264,6 @@ class TenantWriteSerializer(serializers.ModelSerializer):
             'plan_name': {'required': False, 'allow_blank': True},
             'plan_interval': {'required': False, 'allow_blank': True},
             'device_limit': {'required': False, 'allow_null': True},
-            'subscription_status': {'required': False},
             'access_locked': {'required': False},
             'access_lock_reason': {'required': False, 'allow_blank': True},
             'access_lock_until': {'required': False, 'allow_null': True},
@@ -253,6 +271,10 @@ class TenantWriteSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         attrs = super().validate(attrs)
+        if self.instance and 'device_limit' in attrs:
+            raise serializers.ValidationError(
+                {'device_limit': 'Use the manual-override action to change screen limits.'}
+            )
         incoming_slug = (attrs.get('slug') or '').strip()
         if incoming_slug:
             attrs['slug'] = incoming_slug

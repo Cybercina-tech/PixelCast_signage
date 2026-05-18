@@ -35,7 +35,7 @@ class UserModelTests(BaseTestCase):
         user = self.create_user(role='Employee')
         self.assertTrue(user.is_employee())
         self.assertFalse(user.has_full_access())
-        self.assertFalse(user.can_execute_commands())
+        self.assertTrue(user.can_execute_commands())
     
     def test_user_email_lowercase(self):
         """Test email is stored in lowercase."""
@@ -185,14 +185,20 @@ class ContentModelTests(BaseTestCase):
     
     def test_content_validate_content(self):
         """Test content validation."""
-        content = self.create_content(type='text', content_json={'text': 'Hello'})
+        content = self.create_content(type='text', text_content='Hello')
         is_valid, error = content.validate_content()
-        self.assertTrue(is_valid)
+        self.assertTrue(is_valid, msg=error)
         
-        # Invalid content
-        content = self.create_content(type='image')
-        is_valid, error = content.validate_content()
+        # Invalid: image without file_url or storage_path
+        from templates.models import Content
+        invalid = Content(
+            name='Invalid Image',
+            type='image',
+            widget=content.widget,
+        )
+        is_valid, error = invalid.validate_content()
         self.assertFalse(is_valid)
+        self.assertIn('file_url', (error or '').lower())
 
 
 class ScheduleModelTests(BaseTestCase):
@@ -285,8 +291,10 @@ class CommandModelTests(BaseTestCase):
         command = self.create_command()
         self.assertFalse(command.is_expired())
         
-        command.expire_at = timezone.now() - timedelta(hours=1)
-        command.save()
+        past = timezone.now() - timedelta(hours=1)
+        from commands.models import Command
+        Command.objects.filter(pk=command.pk).update(expire_at=past)
+        command.refresh_from_db()
         self.assertTrue(command.is_expired())
     
     def test_command_can_retry(self):

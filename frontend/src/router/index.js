@@ -69,6 +69,7 @@ import SuperAdminReports from '../pages/super-admin/SuperAdminReports.vue'
 import SuperAdminDevices from '../pages/super-admin/SuperAdminDevices.vue'
 import SuperAdminLicenses from '../pages/super-admin/SuperAdminLicenses.vue'
 import SuperAdminGatewayInstances from '../pages/super-admin/SuperAdminGatewayInstances.vue'
+import SuperAdminGatewayInstanceDetail from '../pages/super-admin/SuperAdminGatewayInstanceDetail.vue'
 import SuperAdminAlerts from '../pages/super-admin/SuperAdminAlerts.vue'
 import SuperAdminCapacity from '../pages/super-admin/SuperAdminCapacity.vue'
 import SuperAdminSystem from '../pages/super-admin/SuperAdminSystem.vue'
@@ -291,6 +292,16 @@ const routes = [
         name: 'super-admin-gateway-instances',
         component: SuperAdminGatewayInstances,
         meta: { requiresAuth: true, requiresRole: ['Developer'] },
+      },
+      {
+        path: 'gateway-instances/:id',
+        name: 'super-admin-gateway-instance-detail',
+        component: SuperAdminGatewayInstanceDetail,
+        meta: {
+          requiresAuth: true,
+          requiresRole: ['Developer'],
+          superAdminTitle: 'Gateway instance',
+        },
       },
       {
         path: 'reports',

@@ -15,9 +15,12 @@
 
     <div
       v-if="loadError"
-      class="rounded-2xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-900 dark:text-amber-100"
+      class="rounded-2xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-900 dark:text-amber-100 space-y-2"
     >
-      {{ loadError }}
+      <p>{{ loadError }}</p>
+      <router-link to="/super-admin/system" class="text-xs text-indigo-600 dark:text-indigo-400 hover:underline">
+        Check deployment flags in System health →
+      </router-link>
     </div>
 
     <div v-if="loading" class="card-base rounded-2xl p-8 animate-pulse h-32" />
@@ -43,7 +46,14 @@
               :key="row.id"
               class="border-b border-border-color/60 hover:bg-slate-50/50 dark:hover:bg-slate-800/30 align-top"
             >
-              <td class="py-2 pr-4 font-mono text-xs text-primary">{{ row.domain }}</td>
+              <td class="py-2 pr-4 font-mono text-xs">
+                <router-link
+                  :to="`/super-admin/gateway-instances/${row.id}`"
+                  class="text-indigo-600 dark:text-indigo-400 hover:underline"
+                >
+                  {{ row.domain }}
+                </router-link>
+              </td>
               <td class="py-2 pr-4 text-xs">{{ row.license_status }}</td>
               <td class="py-2 pr-4">
                 <span v-if="row.is_online" class="text-emerald-600 font-medium">Online</span>

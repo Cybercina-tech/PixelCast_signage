@@ -205,7 +205,7 @@ main() {
         # Run migrations (only if database is available)
         run_migrations || log_warning "Migrations skipped or failed, but continuing..."
 
-        # Ensure core app migrations apply (TV catalog tables); helps if a partial migrate state left gaps
+        # Ensure core app migrations apply; helps if a partial migrate state left gaps
         log_info "Applying core app migrations explicitly..."
         if python manage.py migrate core --noinput; then
             log_success "Core migrations OK"
@@ -221,12 +221,12 @@ main() {
             log_warning "Explicit blog migrate failed (check logs)."
         fi
 
-        # Idempotent seed so Data Center has rows after fresh migrate
-        log_info "Seeding TV catalog (safe to repeat)..."
-        if python manage.py seed_tv_catalog; then
-            log_success "TV catalog seed completed"
+        # UserSubscription (/api/users/me/ subscription snapshot)
+        log_info "Applying accounts app migrations explicitly..."
+        if python manage.py migrate accounts --noinput; then
+            log_success "Accounts migrations OK"
         else
-            log_warning "TV catalog seed failed or skipped (tables may be missing)."
+            log_warning "Explicit accounts migrate failed (check logs)."
         fi
 
         # Optional: create default Developer (admin@pixelcast.com) if no user with that email exists.
@@ -235,6 +235,15 @@ main() {
             log_info "BOOTSTRAP_DEFAULT_ADMIN=true: ensure_default_developer (create-if-missing)..."
             if python manage.py ensure_default_developer; then
                 log_success "Default Developer bootstrap OK (or user already existed)"
+                # Dev convenience: persist installed.lock so API works without running the wizard.
+                if [ ! -f "$INSTALLED_LOCK_PATH" ]; then
+                    log_info "Creating installation lock after successful dev bootstrap..."
+                    if python -c "from setup.utils import mark_as_installed; raise SystemExit(0 if mark_as_installed() else 1)"; then
+                        log_success "Installation lock created at $INSTALLED_LOCK_PATH"
+                    else
+                        log_warning "Could not create installation lock (wizard may still be required)."
+                    fi
+                fi
             else
                 log_warning "ensure_default_developer failed (non-fatal)."
             fi

@@ -18,6 +18,40 @@
 
       <!-- Profile Content -->
       <div v-else class="space-y-6">
+        <Card title="Billing Summary">
+          <div
+            v-if="billingSummary"
+            class="rounded-xl border border-border-color bg-card p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
+          >
+            <div class="min-w-0">
+              <p class="text-sm font-semibold text-primary truncate">
+                {{ billingSummary.plan_name || billingSummary.plan_key || 'No active plan' }}
+              </p>
+              <p class="text-xs text-muted mt-1">
+                Status: {{ billingSummary.status || 'none' }}
+                <span class="mx-1">·</span>
+                Trial: {{ billingSummary.trial_days_remaining ?? '—' }}d
+                <span class="mx-1">·</span>
+                Period: {{ billingSummary.billing_days_remaining ?? '—' }}d
+              </p>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+              <router-link to="/settings?tab=billing" class="px-3 py-1.5 rounded-lg border border-border-color text-xs text-primary hover:bg-card transition-colors">
+                Manage
+              </router-link>
+              <router-link to="/pricing" class="px-3 py-1.5 rounded-lg bg-brand text-white text-xs hover:bg-brand-hover transition-colors">
+                Upgrade
+              </router-link>
+            </div>
+          </div>
+          <div
+            v-else
+            class="rounded-xl border border-border-color bg-card p-4 text-sm text-muted"
+          >
+            Billing summary is not available yet.
+          </div>
+        </Card>
+
         <!-- Profile Information Section -->
         <Card title="Profile Information">
           <form @submit.prevent="handleUpdateProfile" class="space-y-4">
@@ -314,6 +348,10 @@ const profileForm = ref({
   organization_name: '',
   role: '',
   role_display: '',
+})
+
+const billingSummary = computed(() => {
+  return userData.value?.subscription || authStore.user?.subscription || null
 })
 
 const loadProfile = async () => {

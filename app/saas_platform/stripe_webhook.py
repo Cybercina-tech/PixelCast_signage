@@ -17,6 +17,7 @@ from .services import (
     sync_tenant_from_stripe_subscription,
     upsert_invoice_from_stripe,
 )
+from .stripe_config import get_stripe_webhook_secret
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +41,7 @@ def stripe_webhook_view(request):
 
     payload = request.body
     sig_header = request.META.get('HTTP_STRIPE_SIGNATURE')
-    secret = getattr(settings, 'STRIPE_WEBHOOK_SECRET', '') or ''
+    secret = get_stripe_webhook_secret()
 
     try:
         import stripe

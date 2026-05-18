@@ -51,7 +51,7 @@ test('template editor can configure qr action widget fields', async ({ page }) =
   await page.getByPlaceholder('branch-x-morning').fill('branch-x-morning')
   await page.getByPlaceholder('https://example.com/menu').fill('https://example.com/morning-menu')
 
-  await expect(page.getByText(/Readable contrast|Low contrast|Quiet zone/i)).toBeVisible()
+  await expect(page.getByText(/Readable contrast|Low contrast|Quiet zone/i).first()).toBeVisible()
 })
 
 test('template editor mobile: library, widget, inspector', async ({ page }) => {
@@ -68,6 +68,6 @@ test('template editor mobile: library, widget, inspector', async ({ page }) => {
 
   await page.getByRole('button', { name: /^inspector$/i }).click()
   await expect(page.getByRole('dialog', { name: /^inspector$/i })).toBeVisible()
-  await expect(page.getByText(/position & size/i)).toBeVisible()
+  await expect(page.getByRole('heading', { name: /position & size/i }).first()).toBeVisible()
   await page.getByRole('button', { name: /^close$/i }).click()
 })

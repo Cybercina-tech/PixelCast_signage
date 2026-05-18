@@ -5,6 +5,7 @@ Tenant plan limits — enforce quotas when PLATFORM_SAAS_ENABLED.
 from __future__ import annotations
 
 from django.conf import settings
+from django.utils import timezone
 from rest_framework.exceptions import ValidationError
 
 
@@ -23,12 +24,19 @@ def count_screens_for_tenant(tenant_id) -> int:
     return Screen.objects.filter(owner__tenant_id=tenant_id).count()
 
 
+def tenant_has_manual_access(tenant) -> bool:
+    until = getattr(tenant, 'manual_access_until', None)
+    return bool(until and until > timezone.now())
+
+
 def assert_can_create_screen(user) -> None:
     """Raise ValidationError if tenant is at device_limit."""
     if not getattr(settings, 'PLATFORM_SAAS_ENABLED', False):
         return
     tenant = tenant_for_user(user)
     if not tenant:
+        return
+    if tenant_has_manual_access(tenant):
         return
     limit = tenant.device_limit
     if limit is None:

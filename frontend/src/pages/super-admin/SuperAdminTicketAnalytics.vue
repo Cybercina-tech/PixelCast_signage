@@ -45,6 +45,31 @@
         <p class="text-3xl font-bold text-primary mt-1">{{ stats.sla_compliance_pct }}%</p>
       </div>
 
+      <Card title="Agent performance">
+        <div v-if="agentLoading" class="text-sm text-muted py-4">Loading…</div>
+        <div v-else-if="agentRows.length" class="overflow-x-auto">
+          <table class="min-w-full text-sm">
+            <thead>
+              <tr class="border-b border-border-color text-left text-muted">
+                <th class="py-2 pr-3">Agent</th>
+                <th class="py-2 pr-3">Total</th>
+                <th class="py-2 pr-3">Open</th>
+                <th class="py-2 pr-3">Resolved / closed</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="row in agentRows" :key="row.email || row.name" class="border-b border-border-color/40">
+                <td class="py-2 pr-3">{{ row.name || row.email || '—' }}</td>
+                <td class="py-2 pr-3">{{ row.total ?? '—' }}</td>
+                <td class="py-2 pr-3">{{ row.open ?? '—' }}</td>
+                <td class="py-2 pr-3">{{ row.resolved ?? '—' }} / {{ row.closed ?? '—' }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p v-else class="text-sm text-muted py-4">No agent performance data for this period.</p>
+      </Card>
+
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card title="Tickets by status">
           <div class="space-y-2">
@@ -146,6 +171,8 @@ import { platformTicketsAPI } from '@/services/api'
 import { normalizeApiError } from '@/utils/apiError'
 
 const loading = ref(true)
+const agentLoading = ref(false)
+const agentRows = ref([])
 const error = ref(null)
 const days = ref(30)
 const stats = ref({
@@ -178,11 +205,24 @@ function formatDuration(minutes) {
   return m > 0 ? `${h}h ${m}m` : `${h}h`
 }
 
+async function loadAgents() {
+  agentLoading.value = true
+  try {
+    const { data } = await platformTicketsAPI.agentPerformance({ days: days.value })
+    agentRows.value = data.agents || []
+  } catch {
+    agentRows.value = []
+  } finally {
+    agentLoading.value = false
+  }
+}
+
 async function load() {
   loading.value = true
   error.value = null
   try {
     const { data } = await platformTicketsAPI.analytics({ days: days.value })
+    await loadAgents()
     stats.value = {
       total: data.total ?? 0,
       open_count: data.open_count ?? 0,

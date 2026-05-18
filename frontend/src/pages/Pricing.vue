@@ -42,6 +42,12 @@
       >
         {{ loadError }}
       </div>
+      <div
+        v-if="billingNotice"
+        class="rounded-xl border border-cyan-500/40 bg-cyan-500/10 px-4 py-3 text-sm text-cyan-100 mb-8"
+      >
+        {{ billingNotice }}
+      </div>
 
       <div v-if="!saasEnabled" class="glass-card rounded-2xl p-8 border border-white/10 mb-10">
         <h2 class="text-xl font-bold text-white mb-2">Self-hosted deployment</h2>
@@ -63,7 +69,7 @@
       </div>
 
       <template v-else>
-        <p class="text-center text-white max-w-2xl mx-auto mb-10 text-sm sm:text-base leading-relaxed">
+        <p class="text-center text-on-starfield max-w-2xl mx-auto mb-10 text-sm sm:text-base leading-relaxed">
           Start with a full-featured {{ trialDays }}-day trial (see signup flow), then scale with subscriptions sized to your
           fleet. Checkout and invoices run on Stripe. Promotional codes can be applied when enabled by the platform.
         </p>
@@ -123,11 +129,11 @@
                   v-if="canSubscribe"
                   type="button"
                   class="w-full neon-button-large py-3 rounded-xl font-semibold text-white disabled:opacity-50"
-                  :disabled="checkoutBusy || !plan.checkout_available"
+                  :disabled="checkoutPlanBusyKey === plan.key || !plan.checkout_available"
                   @click="checkout(plan)"
                 >
                   {{
-                    checkoutBusy
+                    checkoutPlanBusyKey === plan.key
                       ? 'Redirecting…'
                       : !plan.checkout_available
                         ? 'Configure Stripe price (admin)'
@@ -156,7 +162,7 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { publicAPI, platformAPI } from '@/services/api'
 import { normalizeApiError } from '@/utils/apiError'
@@ -165,10 +171,12 @@ import { useRouteHead } from '@/composables/useRouteHead'
 useRouteHead()
 
 const router = useRouter()
+const route = useRoute()
 const auth = useAuthStore()
 
 const loading = ref(true)
 const loadError = ref('')
+const billingNotice = ref('')
 const saasEnabled = ref(true)
 const plans = ref([])
 const trialDays = ref(14)
@@ -176,7 +184,7 @@ const freeLimit = ref(1)
 
 const quantities = reactive({})
 
-const checkoutBusy = ref(false)
+const checkoutPlanBusyKey = ref('')
 
 const isAuthed = computed(() => auth.isAuthenticated)
 
@@ -278,8 +286,13 @@ function goSignup() {
 }
 
 async function checkout(plan) {
+  if (checkoutPlanBusyKey.value) return
   if (!canSubscribe.value) {
     router.push(signupLink.value)
+    return
+  }
+  if (!plan.checkout_available) {
+    loadError.value = 'Stripe price is not configured for this plan yet. Please contact support.'
     return
   }
   const base = typeof window !== 'undefined' ? `${window.location.origin}` : ''
@@ -292,20 +305,27 @@ async function checkout(plan) {
     const q = quantities[plan.key]
     payload.quantity = Math.max(plan.min_quantity || 1, Number(q) || 1)
   }
-  checkoutBusy.value = true
+  checkoutPlanBusyKey.value = plan.key
   try {
     const { data } = await platformAPI.billingCheckout(payload)
     if (data.url) {
       window.location.href = data.url
+      return
     }
+    loadError.value = 'Checkout session was created without a redirect URL. Please try again.'
   } catch (e) {
     loadError.value = normalizeApiError(e).userMessage || 'Checkout failed.'
   } finally {
-    checkoutBusy.value = false
+    checkoutPlanBusyKey.value = ''
   }
 }
 
 onMounted(() => {
+  if (route.query.billing === 'cancel') {
+    billingNotice.value = 'Checkout canceled. You can resume whenever you are ready.'
+  } else if (route.query.billing === '1') {
+    billingNotice.value = 'Payment completed. Your subscription details are updating.'
+  }
   load()
 })
 </script>

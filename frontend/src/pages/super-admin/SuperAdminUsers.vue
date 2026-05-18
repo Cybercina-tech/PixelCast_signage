@@ -6,6 +6,9 @@
         <h1 class="text-2xl font-bold text-primary">Global Users</h1>
         <p class="text-sm text-muted mt-1">Manage accounts across all tenants — screens, storage, subscriptions</p>
       </div>
+      <button type="button" class="btn-outline px-4 py-2 rounded-lg text-sm" :disabled="exporting" @click="exportUsers">
+        {{ exporting ? 'Exporting…' : 'Export XLSX' }}
+      </button>
       <button type="button" class="btn-outline px-4 py-2 rounded-lg text-sm" :disabled="loading" @click="load">
         Refresh
       </button>
@@ -41,7 +44,7 @@
 
     <!-- Filters -->
     <Card>
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-3">
         <div class="lg:col-span-2">
           <label class="label-base block text-sm mb-1">Search</label>
           <input
@@ -73,6 +76,24 @@
             <option value="active">Active</option>
             <option value="locked">Locked</option>
             <option value="inactive">Inactive</option>
+          </select>
+        </div>
+        <div>
+          <label class="label-base block text-sm mb-1">Plan status</label>
+          <select v-model="filters.planStatus" class="select-base w-full px-3 py-2 rounded-lg" @change="load">
+            <option value="">All</option>
+            <option value="trialing">Trialing</option>
+            <option value="active">Active</option>
+            <option value="past_due">Past due</option>
+            <option value="canceled">Canceled</option>
+          </select>
+        </div>
+        <div>
+          <label class="label-base block text-sm mb-1">Alerts</label>
+          <select v-model="filters.alert" class="select-base w-full px-3 py-2 rounded-lg" @change="load">
+            <option value="">None</option>
+            <option value="trial_ending">Trial ending</option>
+            <option value="period_ending">Period ending</option>
           </select>
         </div>
       </div>
@@ -138,6 +159,12 @@
                 >
                   {{ row.subscription_plan }}
                 </span>
+                <p v-if="row.trial_days_remaining !== null" class="text-[11px] text-muted mt-1">
+                  Trial left: {{ row.trial_days_remaining }}d
+                </p>
+                <p v-if="row.billing_days_remaining !== null" class="text-[11px] text-muted">
+                  Period left: {{ row.billing_days_remaining }}d
+                </p>
                 <span v-else class="text-muted text-xs">—</span>
               </td>
               <td class="py-2.5 pr-3 text-center font-mono text-xs">
@@ -210,6 +237,7 @@
             <div class="rounded-lg bg-slate-800/30 px-2 py-1.5">
               <p class="text-muted">Plan</p>
               <p class="font-semibold">{{ row.subscription_plan || '—' }}</p>
+              <p class="text-[10px] text-muted">Trial: {{ row.trial_days_remaining ?? '—' }}d</p>
             </div>
           </div>
           <div class="flex flex-wrap gap-2 justify-end" @click.stop>
@@ -290,6 +318,8 @@
                   <span v-else class="text-muted">—</span>
                 </dd>
               </div>
+              <div><dt class="text-muted">Trial left</dt><dd class="text-primary">{{ drawer.user.trial_days_remaining ?? '—' }} days</dd></div>
+              <div><dt class="text-muted">Period left</dt><dd class="text-primary">{{ drawer.user.billing_days_remaining ?? '—' }} days</dd></div>
             </dl>
           </section>
 
@@ -387,14 +417,15 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import Card from '@/components/common/Card.vue'
-import api, { platformAPI, usersAPI } from '@/services/api'
+import { platformAPI, usersAPI } from '@/services/api'
 import { normalizeApiError } from '@/utils/apiError'
 
 const loading = ref(true)
+const exporting = ref(false)
 const loadError = ref(null)
 const rows = ref([])
 const search = ref('')
-const filters = ref({ tenantId: '', role: '', status: '' })
+const filters = ref({ tenantId: '', role: '', status: '', planStatus: '', alert: '' })
 const actionBusyId = ref(null)
 const passwordModal = ref({ open: false, user: null, value: '' })
 const passwordSubmitting = ref(false)
@@ -479,23 +510,17 @@ async function fetchTenants() {
 }
 
 async function fetchAllUsers() {
-  const acc = []
-  let page = 1
-  const params = { page_size: 100 }
+  const params = {}
   if (filters.value.tenantId === '__none__') {
     params.no_tenant = 'true'
   } else if (filters.value.tenantId) {
     params.tenant_id = filters.value.tenantId
   }
-  for (;;) {
-    const { data } = await api.get('/users/', { params: { ...params, page } })
-    const chunk = data.results || data || []
-    acc.push(...chunk)
-    if (!data.next || !chunk.length) break
-    page += 1
-    if (page > 200) break
-  }
-  return acc
+  if (filters.value.role) params.role = filters.value.role
+  if (filters.value.planStatus) params.plan_status = filters.value.planStatus
+  if (filters.value.alert) params.alert = filters.value.alert
+  const { data } = await platformAPI.accounts.list(params)
+  return data.results || data || []
 }
 
 async function load() {
@@ -557,6 +582,27 @@ async function submitPassword() {
     loadError.value = normalizeApiError(e).userMessage || 'Password reset failed'
   } finally {
     passwordSubmitting.value = false
+  }
+}
+
+async function exportUsers() {
+  exporting.value = true
+  try {
+    const scope = filters.value.role === 'Manager' ? 'tenant_admins' : 'all'
+    const { data } = await platformAPI.exportUsersXlsx(scope)
+    const blob = new Blob([data], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `platform-users-${scope}.xlsx`
+    a.click()
+    URL.revokeObjectURL(url)
+  } catch (e) {
+    loadError.value = normalizeApiError(e).userMessage || 'Export failed'
+  } finally {
+    exporting.value = false
   }
 }
 

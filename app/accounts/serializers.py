@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from django.utils import timezone
 from django.contrib.auth.password_validation import validate_password
 from django.contrib.auth import authenticate, get_user_model
 from django.core.exceptions import ValidationError
@@ -12,6 +13,33 @@ from .tokens import ScreenGramRefreshToken
 logger = logging.getLogger(__name__)
 
 
+def _remaining_days(end_at):
+    if not end_at:
+        return None
+    delta = end_at - timezone.now()
+    if delta.total_seconds() <= 0:
+        return 0
+    return int((delta.total_seconds() + 86399) // 86400)
+
+
+class UserSubscriptionSerializer(serializers.Serializer):
+    plan_key = serializers.CharField(read_only=True, allow_blank=True)
+    plan_name = serializers.CharField(read_only=True, allow_blank=True)
+    plan_interval = serializers.CharField(read_only=True, allow_blank=True)
+    status = serializers.CharField(read_only=True, allow_blank=True)
+    trial_end = serializers.DateTimeField(read_only=True, allow_null=True)
+    current_period_start = serializers.DateTimeField(read_only=True, allow_null=True)
+    current_period_end = serializers.DateTimeField(read_only=True, allow_null=True)
+    trial_days_remaining = serializers.IntegerField(read_only=True, allow_null=True)
+    billing_days_remaining = serializers.IntegerField(read_only=True, allow_null=True)
+    cancel_at_period_end = serializers.BooleanField(read_only=True)
+    provider_customer_id = serializers.CharField(read_only=True, allow_blank=True)
+    provider_subscription_id = serializers.CharField(read_only=True, allow_blank=True)
+    device_limit = serializers.IntegerField(read_only=True, allow_null=True)
+    billing_grace_until = serializers.DateTimeField(read_only=True, allow_null=True)
+    payment_failed_count = serializers.IntegerField(read_only=True, allow_null=True)
+
+
 class UserSerializer(serializers.ModelSerializer):
     """Serializer for User model"""
     password = serializers.CharField(write_only=True, required=False, validators=[validate_password])
@@ -23,6 +51,7 @@ class UserSerializer(serializers.ModelSerializer):
     storage_used_bytes = serializers.IntegerField(read_only=True)
     subscription_plan = serializers.CharField(read_only=True)
     subscription_status = serializers.CharField(read_only=True)
+    subscription = serializers.SerializerMethodField()
     tenant_id = serializers.SerializerMethodField()
     tenant_name = serializers.SerializerMethodField()
     is_lock_active = serializers.SerializerMethodField()
@@ -39,13 +68,14 @@ class UserSerializer(serializers.ModelSerializer):
             'active_screens_count', 'total_screens_count',
             'active_templates_count', 'total_templates_count',
             'storage_used_bytes', 'subscription_plan', 'subscription_status',
+            'subscription',
             'is_lock_active', 'admin_lock_reason', 'tenant_restriction',
             'password'
         ]
         read_only_fields = [
             'id', 'is_staff', 'is_superuser', 'is_email_verified', 'is_2fa_enabled', 'last_seen', 'date_joined', 'tenant_id',
             'is_lock_active', 'admin_lock_reason', 'tenant_restriction',
-            'storage_used_bytes', 'subscription_plan', 'subscription_status', 'tenant_name',
+            'storage_used_bytes', 'subscription_plan', 'subscription_status', 'tenant_name', 'subscription',
         ]
         extra_kwargs = {
             'email': {'required': True},
@@ -129,6 +159,49 @@ class UserSerializer(serializers.ModelSerializer):
                 }
         return None
 
+    def get_subscription(self, obj):
+        sub = getattr(obj, 'subscription', None)
+        if sub:
+            payload = {
+                'plan_key': sub.plan_key,
+                'plan_name': sub.plan_name,
+                'plan_interval': sub.plan_interval,
+                'status': sub.status,
+                'trial_end': sub.trial_end,
+                'current_period_start': sub.current_period_start,
+                'current_period_end': sub.current_period_end,
+                'trial_days_remaining': sub.trial_days_remaining,
+                'billing_days_remaining': sub.billing_days_remaining,
+                'cancel_at_period_end': sub.cancel_at_period_end,
+                'provider_customer_id': sub.provider_customer_id,
+                'provider_subscription_id': sub.provider_subscription_id,
+                'device_limit': sub.device_limit,
+                'billing_grace_until': getattr(obj.tenant, 'billing_grace_until', None) if getattr(obj, 'tenant', None) else None,
+                'payment_failed_count': getattr(obj.tenant, 'payment_failed_count', None) if getattr(obj, 'tenant', None) else None,
+            }
+            return UserSubscriptionSerializer(payload).data
+        tenant = getattr(obj, 'tenant', None)
+        if not tenant:
+            return None
+        payload = {
+            'plan_key': '',
+            'plan_name': getattr(tenant, 'plan_name', '') or '',
+            'plan_interval': getattr(tenant, 'plan_interval', '') or '',
+            'status': getattr(tenant, 'subscription_status', '') or 'none',
+            'trial_end': getattr(tenant, 'trial_end', None),
+            'current_period_start': getattr(tenant, 'current_period_start', None),
+            'current_period_end': getattr(tenant, 'current_period_end', None),
+            'trial_days_remaining': _remaining_days(getattr(tenant, 'trial_end', None)),
+            'billing_days_remaining': _remaining_days(getattr(tenant, 'current_period_end', None)),
+            'cancel_at_period_end': bool(getattr(tenant, 'cancel_at_period_end', False)),
+            'provider_customer_id': getattr(tenant, 'stripe_customer_id', '') or '',
+            'provider_subscription_id': getattr(tenant, 'stripe_subscription_id', '') or '',
+            'device_limit': getattr(tenant, 'device_limit', None),
+            'billing_grace_until': getattr(tenant, 'billing_grace_until', None),
+            'payment_failed_count': getattr(tenant, 'payment_failed_count', None),
+        }
+        return UserSubscriptionSerializer(payload).data
+
     def create(self, validated_data):
         """Create user with hashed password"""
         password = validated_data.pop('password', None)
@@ -162,6 +235,8 @@ class UserListSerializer(serializers.ModelSerializer):
     storage_used_bytes = serializers.IntegerField(read_only=True)
     subscription_plan = serializers.CharField(read_only=True)
     subscription_status = serializers.CharField(read_only=True)
+    trial_days_remaining = serializers.SerializerMethodField()
+    billing_days_remaining = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -173,7 +248,7 @@ class UserListSerializer(serializers.ModelSerializer):
             'is_lock_active', 'admin_lock_reason',
             'total_screens_count', 'active_screens_count',
             'total_templates_count', 'storage_used_bytes',
-            'subscription_plan', 'subscription_status',
+            'subscription_plan', 'subscription_status', 'trial_days_remaining', 'billing_days_remaining',
         ]
         read_only_fields = ['id', 'last_seen', 'date_joined']
 
@@ -194,6 +269,20 @@ class UserListSerializer(serializers.ModelSerializer):
             if lock_until <= timezone.now():
                 return False
         return True
+
+    def get_trial_days_remaining(self, obj):
+        sub = getattr(obj, 'subscription', None)
+        if sub:
+            return sub.trial_days_remaining
+        tenant = getattr(obj, 'tenant', None)
+        return _remaining_days(getattr(tenant, 'trial_end', None)) if tenant else None
+
+    def get_billing_days_remaining(self, obj):
+        sub = getattr(obj, 'subscription', None)
+        if sub:
+            return sub.billing_days_remaining
+        tenant = getattr(obj, 'tenant', None)
+        return _remaining_days(getattr(tenant, 'current_period_end', None)) if tenant else None
 
 
 class UserCreateSerializer(serializers.ModelSerializer):

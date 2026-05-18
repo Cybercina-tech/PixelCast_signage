@@ -45,6 +45,89 @@ class PlatformBillingSettings(models.Model):
         return obj
 
 
+class StripeBillingConfig(models.Model):
+    """Singleton Stripe runtime config managed from Super Admin."""
+
+    publishable_key = models.CharField(
+        max_length=255,
+        blank=True,
+        default='',
+        help_text='Stripe publishable key (pk_live_... / pk_test_...).',
+    )
+    secret_key_encrypted = models.TextField(
+        blank=True,
+        default='',
+        help_text='Encrypted Stripe secret key.',
+    )
+    webhook_secret_encrypted = models.TextField(
+        blank=True,
+        default='',
+        help_text='Encrypted Stripe webhook signing secret.',
+    )
+    default_currency = models.CharField(max_length=8, default='usd')
+    customer_portal_enabled = models.BooleanField(default=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Stripe billing config'
+        verbose_name_plural = 'Stripe billing config'
+
+    def save(self, *args, **kwargs):
+        self.pk = 1
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def get_solo(cls):
+        obj, _ = cls.objects.get_or_create(
+            pk=1,
+            defaults={
+                'publishable_key': '',
+                'secret_key_encrypted': '',
+                'webhook_secret_encrypted': '',
+                'default_currency': 'usd',
+                'customer_portal_enabled': True,
+            },
+        )
+        return obj
+
+    def set_secret_key(self, plain: str | None) -> None:
+        if plain is None:
+            return
+        plain = str(plain).strip()
+        if not plain:
+            return
+        from core.email_crypto import encrypt_secret
+
+        self.secret_key_encrypted = encrypt_secret(plain)
+
+    def get_secret_key(self) -> str:
+        from core.email_crypto import decrypt_secret
+
+        return decrypt_secret(self.secret_key_encrypted or '')
+
+    def clear_secret_key(self) -> None:
+        self.secret_key_encrypted = ''
+
+    def set_webhook_secret(self, plain: str | None) -> None:
+        if plain is None:
+            return
+        plain = str(plain).strip()
+        if not plain:
+            return
+        from core.email_crypto import encrypt_secret
+
+        self.webhook_secret_encrypted = encrypt_secret(plain)
+
+    def get_webhook_secret(self) -> str:
+        from core.email_crypto import decrypt_secret
+
+        return decrypt_secret(self.webhook_secret_encrypted or '')
+
+    def clear_webhook_secret(self) -> None:
+        self.webhook_secret_encrypted = ''
+
+
 class SubscriptionPlan(models.Model):
     """Sellable / display plan row; paid plans reference a Stripe Price id."""
 

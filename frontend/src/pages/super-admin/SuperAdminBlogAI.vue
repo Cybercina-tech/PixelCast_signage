@@ -14,6 +14,13 @@
 
     <p v-if="loadError" class="text-red-400 text-sm">{{ loadError }}</p>
 
+    <div
+      v-if="settings && !settings.openai_api_key_masked && !form.openai_api_key"
+      class="rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-900 dark:text-amber-100"
+    >
+      No OpenAI API key is configured. Add a key below or set it via environment before using Generate.
+    </div>
+
     <Card v-if="settings">
       <h2 class="text-lg font-semibold text-primary mb-4">Settings</h2>
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">

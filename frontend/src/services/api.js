@@ -718,29 +718,6 @@ export const coreAPI = {
     verify: (id) => api.post(`/core/backups/${id}/verify/`),
     cleanup: () => api.post('/core/backups/cleanup/'),
   },
-  tvCatalog: {
-    list: (params) =>
-      api.get('/core/tv-brands/', {
-        params,
-        meta: { suppressGlobalErrorToast: true },
-      }),
-    detail: (id) =>
-      api.get(`/core/tv-brands/${id}/`, {
-        meta: { suppressGlobalErrorToast: true },
-      }),
-  },
-}
-
-export const tvCatalogAPI = {
-  list: (params) =>
-    api.get('/core/tv-brands/', {
-      params,
-      meta: { suppressGlobalErrorToast: true },
-    }),
-  detail: (id) =>
-    api.get(`/core/tv-brands/${id}/`, {
-      meta: { suppressGlobalErrorToast: true },
-    }),
 }
 
 // Notification Center API
@@ -779,6 +756,9 @@ export const platformAPI = {
   },
   overview: () => api.get('/platform/overview/'),
   reportsSummary: (params) => api.get('/platform/reports/summary/', { params }),
+  accounts: {
+    list: (params) => api.get('/platform/accounts/', { params }),
+  },
   tenants: {
     list: (params) => api.get('/platform/tenants/', { params }),
     retrieve: (id) => api.get(`/platform/tenants/${id}/`),
@@ -800,6 +780,7 @@ export const platformAPI = {
   impersonateStop: (adminRefreshToken) =>
     api.post('/platform/impersonate/stop/', { admin_refresh_token: adminRefreshToken }),
   billingCheckout: (data) => api.post('/platform/billing/checkout-session/', data || {}),
+  billingChangeSubscription: (data) => api.post('/platform/billing/change-subscription/', data || {}),
   billingPortal: (data) => api.post('/platform/billing/portal-session/', data || {}),
   pricingPlans: {
     list: () => api.get('/platform/pricing/plans/'),
@@ -813,6 +794,8 @@ export const platformAPI = {
     get: () => api.get('/platform/pricing/settings/'),
     patch: (data) => api.patch('/platform/pricing/settings/', data),
   },
+  stripeStatus: () => api.get('/platform/pricing/stripe-status/'),
+  stripeConnectionHealth: () => api.get('/platform/pricing/stripe-connection-health/'),
   pricingPromotions: {
     list: () => api.get('/platform/pricing/promotions/'),
     create: (data) => api.post('/platform/pricing/promotions/', data),
@@ -829,6 +812,22 @@ export const platformAPI = {
     update: (tenantId, data) => api.put(`/platform/tenants/${tenantId}/license/`, data),
     enforcementLogs: (tenantId) => api.get(`/platform/tenants/${tenantId}/license/enforcement-logs/`),
   },
+  tenantIntegrations: {
+    apiKeys: {
+      list: (tenantId) => api.get(`/platform/tenants/${tenantId}/integrations/api-keys/`),
+      create: (tenantId, data) => api.post(`/platform/tenants/${tenantId}/integrations/api-keys/`, data || {}),
+      revoke: (tenantId, keyId) =>
+        api.post(`/platform/tenants/${tenantId}/integrations/api-keys/${keyId}/revoke/`),
+    },
+    webhooks: {
+      list: (tenantId) => api.get(`/platform/tenants/${tenantId}/integrations/webhooks/`),
+      create: (tenantId, data) => api.post(`/platform/tenants/${tenantId}/integrations/webhooks/`, data || {}),
+      patch: (tenantId, id, data) => api.patch(`/platform/tenants/${tenantId}/integrations/webhooks/${id}/`, data),
+      remove: (tenantId, id) => api.delete(`/platform/tenants/${tenantId}/integrations/webhooks/${id}/`),
+    },
+  },
+  exportUsersXlsx: (scope = 'all') =>
+    api.get('/platform/exports/users.xlsx', { params: { scope }, responseType: 'blob' }),
   gatewayInstances: {
     list: (params) => api.get('/platform/gateway/instances/', { params }),
     detail: (id) => api.get(`/platform/gateway/instances/${id}/`),

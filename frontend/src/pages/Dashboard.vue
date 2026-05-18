@@ -55,6 +55,34 @@
           </div>
         </div>
 
+        <div class="card-base rounded-2xl p-4 md:p-5">
+          <div v-if="billingSummary" class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div class="min-w-0">
+              <p class="text-sm font-semibold text-primary truncate">
+                Plan: {{ billingSummary.plan_name || billingSummary.plan_key || 'No active plan' }}
+              </p>
+              <p class="text-xs text-muted mt-1">
+                Status {{ billingSummary.status || 'none' }}
+                <span class="mx-1">·</span>
+                Trial left {{ billingSummary.trial_days_remaining ?? '—' }}d
+                <span class="mx-1">·</span>
+                Period left {{ billingSummary.billing_days_remaining ?? '—' }}d
+              </p>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+              <router-link to="/settings?tab=billing" class="btn-outline px-3 py-1.5 rounded-lg text-xs">
+                Billing
+              </router-link>
+              <router-link to="/pricing" class="btn-primary px-3 py-1.5 rounded-lg text-xs">
+                Upgrade
+              </router-link>
+            </div>
+          </div>
+          <div v-else class="text-sm text-muted">
+            Billing summary is not available yet.
+          </div>
+        </div>
+
         <!-- Loading Skeleton -->
         <div v-if="loading && !hasData" class="space-y-6 md:space-y-8">
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -470,6 +498,7 @@ const screensStore = useScreensStore()
 const notify = useNotification()
 
 const isSuperAdmin = computed(() => isDeveloperOrSuperuser(authStore.user))
+const billingSummary = computed(() => authStore.user?.subscription || null)
 
 // State
 const loading = ref(true)

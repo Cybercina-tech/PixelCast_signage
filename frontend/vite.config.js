@@ -102,13 +102,37 @@ Sitemap: ${origin}/sitemap.xml
 }
 
 /**
- * Vite HMR behind HTTPS reverse proxy (Traefik / Dokploy):
- * HTTPS pages cannot use ws:// (mixed content). Use wss:// on the public port (443).
+ * Browser port for the Vite HMR WebSocket.
  *
- * Options (any one is enough):
- * - VITE_BEHIND_HTTPS_PROXY=1  → wss + clientPort 443
- * - VITE_HMR_PROTOCOL=wss and VITE_HMR_CLIENT_PORT=443
+ * Docker Compose maps host FRONTEND_HOST_PORT (e.g. 4173) → container :5173. The page loads on
+ * :4173 but the default HMR client would try ws://localhost:5173 and fail. Set clientPort to
+ * the host-published port.
+ *
+ * HTTPS reverse proxy (Traefik / Dokploy): use VITE_BEHIND_HTTPS_PROXY=1 or VITE_HMR_PROTOCOL=wss.
  */
+function getHmrClientPort(useWss) {
+  const explicit = process.env.VITE_HMR_CLIENT_PORT
+  if (explicit !== undefined && String(explicit).trim() !== '') {
+    return Number(explicit)
+  }
+  if (useWss) {
+    return 443
+  }
+  const hostMapped =
+    process.env.FRONTEND_HOST_PORT || process.env.VITE_DEV_SERVER_PORT
+  if (hostMapped !== undefined && String(hostMapped).trim() !== '') {
+    return Number(hostMapped)
+  }
+  try {
+    if (fs.existsSync('/.dockerenv')) {
+      return 4173
+    }
+  } catch {
+    /* non-blocking */
+  }
+  return 5173
+}
+
 function getHmrConfig() {
   const behindHttps =
     process.env.VITE_BEHIND_HTTPS_PROXY === '1' ||
@@ -117,9 +141,7 @@ function getHmrConfig() {
     behindHttps ||
     process.env.VITE_HMR_PROTOCOL === 'wss' ||
     process.env.VITE_HMR_CLIENT_PORT === '443'
-  const clientPort = Number(
-    process.env.VITE_HMR_CLIENT_PORT || (useWss ? 443 : 5173)
-  )
+  const clientPort = getHmrClientPort(useWss)
   const protocol = useWss ? 'wss' : 'ws'
   const cfg = {
     path: '/vite-hmr',
@@ -128,6 +150,9 @@ function getHmrConfig() {
   }
   if (process.env.VITE_HMR_HOST) {
     cfg.host = process.env.VITE_HMR_HOST
+  } else if (clientPort !== 5173) {
+    // Use page hostname (localhost) with the published host port, not container-only :5173.
+    cfg.host = 'localhost'
   }
   return cfg
 }

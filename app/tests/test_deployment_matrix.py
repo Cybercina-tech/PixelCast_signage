@@ -32,6 +32,7 @@ def test_public_deployment_endpoint():
     assert 'deployment_mode' in data
     assert 'platform_saas_enabled' in data
     assert 'stripe_publishable_key_configured' in data
+    assert 'platform_gateway_enabled' in data
 
 
 @override_settings(DEPLOYMENT_MODE='saas', PLATFORM_SAAS_ENABLED=True)
@@ -43,7 +44,8 @@ def test_public_deployment_saas_mode():
 
 
 def test_deployment_public_payload_shape():
-    p = deployment_public_payload('hybrid', True, 'pk_test_123')
+    p = deployment_public_payload('hybrid', True, 'pk_test_123', platform_gateway_enabled=True)
     assert p['deployment_mode'] == 'hybrid'
     assert p['platform_saas_enabled'] is True
+    assert p['platform_gateway_enabled'] is True
     assert p['stripe_publishable_key_configured'] is True

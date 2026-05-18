@@ -19,6 +19,17 @@ from datetime import timedelta
 User = get_user_model()
 
 
+@pytest.fixture(autouse=True)
+def _test_hygiene():
+    """Clear cache and DB connections between tests to avoid rate-limit / connection pollution."""
+    from django.core.cache import cache
+    from django.db import connections
+
+    yield
+    cache.clear()
+    connections.close_all()
+
+
 @pytest.fixture
 def api_client():
     """Create API client for testing."""

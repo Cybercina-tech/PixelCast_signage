@@ -10,10 +10,22 @@
         <router-link to="/super-admin/pricing" class="btn-outline px-4 py-2 rounded-lg text-sm inline-flex items-center">
           Pricing catalog
         </router-link>
-        <button type="button" class="btn-primary px-4 py-2 rounded-lg text-sm" :disabled="billingBusy" @click="openCheckout">
+        <button
+          type="button"
+          class="btn-primary px-4 py-2 rounded-lg text-sm"
+          :disabled="billingBusy || !stripeConfigured"
+          :title="stripeConfigured ? '' : 'Configure Stripe in Super Admin → Pricing'"
+          @click="openCheckout"
+        >
           {{ billingBusy ? 'Opening...' : 'Stripe Checkout' }}
         </button>
-        <button type="button" class="btn-outline px-4 py-2 rounded-lg text-sm" :disabled="billingBusy" @click="openPortal">
+        <button
+          type="button"
+          class="btn-outline px-4 py-2 rounded-lg text-sm"
+          :disabled="billingBusy || !stripeConfigured"
+          :title="stripeConfigured ? '' : 'Configure Stripe in Super Admin → Pricing'"
+          @click="openPortal"
+        >
           Customer Portal
         </button>
         <button type="button" class="btn-outline px-4 py-2 rounded-lg text-sm" :disabled="loading" @click="load">
@@ -208,6 +220,9 @@
       <!--  ROW 8: Expense Ledger                                    -->
       <!-- ══════════════════════════════════════════════════════════ -->
       <Card title="Recent Expenses">
+        <div class="flex justify-end mb-3">
+          <button type="button" class="btn-primary px-3 py-1.5 rounded-lg text-xs" @click="openExpenseModal()">Add expense</button>
+        </div>
         <div v-if="expenses.length" class="overflow-x-auto">
           <table class="min-w-full text-sm">
             <thead>
@@ -217,7 +232,8 @@
                 <th class="py-2 pr-3">Category</th>
                 <th class="py-2 pr-3 text-right">Amount</th>
                 <th class="py-2 pr-3">Recurring</th>
-                <th class="py-2">Tenant</th>
+                <th class="py-2 pr-3">Tenant</th>
+                <th class="py-2 pr-3"></th>
               </tr>
             </thead>
             <tbody>
@@ -229,13 +245,68 @@
                 </td>
                 <td class="py-2 pr-3 text-right font-mono">{{ formatMoney(exp.amount_cents) }}</td>
                 <td class="py-2 pr-3 text-xs">{{ exp.is_recurring ? 'Yes' : 'No' }}</td>
-                <td class="py-2 text-xs text-muted">{{ exp.tenant_name || '---' }}</td>
+                <td class="py-2 pr-3 text-xs text-muted">{{ exp.tenant_name || '---' }}</td>
+                <td class="py-2 pr-3 text-right whitespace-nowrap">
+                  <button type="button" class="btn-outline px-2 py-1 rounded text-xs mr-1" @click="openExpenseModal(exp)">Edit</button>
+                  <button type="button" class="btn-outline px-2 py-1 rounded text-xs text-rose-400" @click="deleteExpense(exp)">Delete</button>
+                </td>
               </tr>
             </tbody>
           </table>
         </div>
         <p v-else class="text-sm text-muted py-6 text-center">No expenses recorded yet</p>
       </Card>
+
+      <div
+        v-if="expenseModal"
+        class="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60"
+        role="dialog"
+        aria-modal="true"
+        @click.self="expenseModal = false"
+      >
+        <form class="card-base rounded-2xl p-6 max-w-md w-full space-y-3" @submit.prevent="saveExpense">
+          <h3 class="text-lg font-bold text-primary">{{ expenseForm.id ? 'Edit expense' : 'Add expense' }}</h3>
+          <div>
+            <label class="label-base text-xs">Title</label>
+            <input v-model="expenseForm.title" type="text" required class="input-base w-full px-3 py-2 rounded-lg" />
+          </div>
+          <div>
+            <label class="label-base text-xs">Category</label>
+            <select v-model="expenseForm.category" class="select-base w-full px-3 py-2 rounded-lg">
+              <option value="hosting">hosting</option>
+              <option value="infrastructure">infrastructure</option>
+              <option value="tools">tools</option>
+              <option value="support">support</option>
+              <option value="marketing">marketing</option>
+              <option value="other">other</option>
+            </select>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="label-base text-xs">Amount (cents)</label>
+              <input v-model.number="expenseForm.amount_cents" type="number" min="0" required class="input-base w-full px-3 py-2 rounded-lg" />
+            </div>
+            <div>
+              <label class="label-base text-xs">Date</label>
+              <input v-model="expenseForm.spent_on" type="date" required class="input-base w-full px-3 py-2 rounded-lg" />
+            </div>
+          </div>
+          <label class="flex items-center gap-2 text-sm">
+            <input v-model="expenseForm.is_recurring" type="checkbox" />
+            Recurring
+          </label>
+          <div>
+            <label class="label-base text-xs">Notes</label>
+            <textarea v-model="expenseForm.notes" rows="2" class="input-base w-full px-3 py-2 rounded-lg" />
+          </div>
+          <div class="flex gap-2 pt-2">
+            <button type="submit" class="btn-primary px-4 py-2 rounded-lg text-sm" :disabled="expenseSaving">
+              {{ expenseSaving ? 'Saving…' : 'Save' }}
+            </button>
+            <button type="button" class="btn-outline px-4 py-2 rounded-lg text-sm" @click="expenseModal = false">Cancel</button>
+          </div>
+        </form>
+      </div>
     </template>
   </div>
 </template>
@@ -254,6 +325,18 @@ const licenseInfo = ref(null)
 const licenseError = ref(null)
 const billingBusy = ref(false)
 const expenses = ref([])
+const stripeConfigured = ref(false)
+const expenseModal = ref(false)
+const expenseSaving = ref(false)
+const expenseForm = ref({
+  id: null,
+  title: '',
+  category: 'other',
+  amount_cents: 0,
+  spent_on: new Date().toISOString().slice(0, 10),
+  notes: '',
+  is_recurring: false,
+})
 
 const PALETTE = ['#06b6d4', '#8b5cf6', '#ec4899', '#f97316', '#22c55e', '#eab308', '#ef4444', '#3b82f6', '#14b8a6']
 
@@ -531,5 +614,71 @@ async function openPortal() {
   }
 }
 
-onMounted(load)
+function openExpenseModal(exp = null) {
+  expenseForm.value = exp
+    ? {
+        id: exp.id,
+        title: exp.title,
+        category: exp.category || 'other',
+        amount_cents: exp.amount_cents,
+        spent_on: exp.spent_on,
+        notes: exp.notes || '',
+        is_recurring: !!exp.is_recurring,
+      }
+    : {
+        id: null,
+        title: '',
+        category: 'other',
+        amount_cents: 0,
+        spent_on: new Date().toISOString().slice(0, 10),
+        notes: '',
+        is_recurring: false,
+      }
+  expenseModal.value = true
+}
+
+async function saveExpense() {
+  expenseSaving.value = true
+  try {
+    const payload = {
+      title: expenseForm.value.title,
+      category: expenseForm.value.category,
+      amount_cents: expenseForm.value.amount_cents,
+      spent_on: expenseForm.value.spent_on,
+      notes: expenseForm.value.notes,
+      is_recurring: expenseForm.value.is_recurring,
+    }
+    if (expenseForm.value.id) {
+      await platformAPI.expenses.update(expenseForm.value.id, payload)
+    } else {
+      await platformAPI.expenses.create(payload)
+    }
+    expenseModal.value = false
+    await load()
+  } catch (e) {
+    loadError.value = normalizeApiError(e).userMessage || 'Could not save expense'
+  } finally {
+    expenseSaving.value = false
+  }
+}
+
+async function deleteExpense(exp) {
+  if (!window.confirm(`Delete expense "${exp.title}"?`)) return
+  try {
+    await platformAPI.expenses.remove(exp.id)
+    await load()
+  } catch (e) {
+    loadError.value = normalizeApiError(e).userMessage || 'Could not delete expense'
+  }
+}
+
+onMounted(async () => {
+  try {
+    const { data } = await platformAPI.stripeStatus()
+    stripeConfigured.value = Boolean(data?.checkout_ready)
+  } catch {
+    stripeConfigured.value = false
+  }
+  await load()
+})
 </script>

@@ -9,6 +9,7 @@
         <router-link to="/super-admin/billing" class="btn-outline px-4 py-2 rounded-lg text-sm">
           Billing center
         </router-link>
+        <button type="button" class="btn-outline px-4 py-2 rounded-lg text-sm" @click="openCreatePlan">Add plan</button>
         <button type="button" class="btn-outline px-4 py-2 rounded-lg text-sm" :disabled="loading" @click="loadAll">
           Refresh
         </button>
@@ -21,6 +22,101 @@
     >
       {{ bannerError }}
     </div>
+
+    <Card title="Stripe runtime configuration">
+      <div v-if="stripeStatusLoading" class="text-sm text-muted py-4">Loading…</div>
+      <div v-else-if="stripeStatus" class="space-y-4">
+        <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div
+            v-for="item in stripeStatusItems"
+            :key="item.key"
+            class="rounded-xl border px-3 py-2"
+            :class="item.ok ? 'border-emerald-500/40 bg-emerald-500/5' : 'border-amber-500/40 bg-amber-500/10'"
+          >
+            <p class="text-[10px] font-semibold uppercase tracking-wider text-muted">{{ item.label }}</p>
+            <p class="text-sm font-medium mt-1" :class="item.ok ? 'text-emerald-500' : 'text-amber-600 dark:text-amber-300'">
+              {{ item.ok ? 'Configured' : 'Missing' }}
+            </p>
+          </div>
+        </div>
+        <div class="grid sm:grid-cols-2 gap-4 max-w-4xl">
+          <div>
+            <label class="label-base block text-sm mb-1">Publishable key</label>
+            <input
+              v-model.trim="settingsForm.stripe_publishable_key"
+              type="text"
+              class="input-base w-full px-3 py-2 rounded-lg font-mono text-xs"
+              placeholder="pk_live_..."
+            />
+          </div>
+          <div>
+            <label class="label-base block text-sm mb-1">Default currency</label>
+            <input
+              v-model.trim="settingsForm.stripe_default_currency"
+              type="text"
+              class="input-base w-full px-3 py-2 rounded-lg"
+              placeholder="usd"
+            />
+          </div>
+          <div>
+            <label class="label-base block text-sm mb-1">Secret key</label>
+            <input
+              v-model.trim="settingsForm.stripe_secret_key"
+              type="password"
+              class="input-base w-full px-3 py-2 rounded-lg font-mono text-xs"
+              :placeholder="settingsForm.stripe_secret_key_masked || 'sk_live_...'"
+              autocomplete="new-password"
+            />
+            <p class="text-xs text-muted mt-1">Leave empty to keep current value. Enter `clear` to remove.</p>
+          </div>
+          <div>
+            <label class="label-base block text-sm mb-1">Webhook signing secret</label>
+            <input
+              v-model.trim="settingsForm.stripe_webhook_secret"
+              type="password"
+              class="input-base w-full px-3 py-2 rounded-lg font-mono text-xs"
+              :placeholder="settingsForm.stripe_webhook_secret_masked || 'whsec_...'"
+              autocomplete="new-password"
+            />
+            <p class="text-xs text-muted mt-1">Leave empty to keep current value. Enter `clear` to remove.</p>
+          </div>
+          <div class="sm:col-span-2">
+            <label class="flex items-center gap-2 text-sm text-secondary">
+              <input v-model="settingsForm.stripe_customer_portal_enabled" type="checkbox" class="rounded border-border-color" />
+              Enable Stripe customer portal for tenant billing self-service
+            </label>
+          </div>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <button type="button" class="btn-primary px-4 py-2 rounded-lg text-sm" :disabled="settingsSaving" @click="saveSettings">
+            {{ settingsSaving ? 'Saving…' : 'Save Stripe configuration' }}
+          </button>
+          <button type="button" class="btn-outline px-4 py-2 rounded-lg text-sm" :disabled="stripeHealthLoading" @click="runStripeHealthCheck">
+            {{ stripeHealthLoading ? 'Checking…' : 'Run health check' }}
+          </button>
+        </div>
+        <div v-if="stripeHealth" class="rounded-xl border border-border-color/60 px-4 py-3 bg-surface-inset/40 text-sm">
+          <p class="font-medium" :class="stripeHealth.ready ? 'text-emerald-500' : 'text-amber-500'">
+            {{ stripeHealth.ready ? 'Live readiness: ready' : 'Live readiness: blocked' }}
+          </p>
+          <p class="text-muted mt-1">{{ stripeHealth.message || 'No message' }}</p>
+          <p class="text-xs text-muted mt-2">
+            Mode: {{ stripeHealth.mode || 'unknown' }} · Account: {{ stripeHealth.account_id || 'n/a' }} · Charges enabled:
+            {{ stripeHealth.charges_enabled ? 'yes' : 'no' }}
+          </p>
+          <ul v-if="Array.isArray(stripeHealth.blocking_reasons) && stripeHealth.blocking_reasons.length" class="mt-2 space-y-1">
+            <li v-for="(reason, idx) in stripeHealth.blocking_reasons" :key="idx" class="text-xs text-amber-400">
+              - {{ reason }}
+            </li>
+          </ul>
+        </div>
+        <p class="text-xs text-muted max-w-3xl">
+          Stripe credentials are stored encrypted in the database and managed from this panel. Map Stripe Price IDs in
+          the plans table below; trial logic remains in Stripe Dashboard.
+        </p>
+      </div>
+      <p v-else class="text-sm text-muted py-4">Could not load Stripe status.</p>
+    </Card>
 
     <Card title="Platform defaults">
       <div v-if="settingsLoading" class="text-sm text-muted py-4">Loading…</div>
@@ -118,7 +214,11 @@
       @click.self="editPlan = null"
     >
       <div class="card-base rounded-2xl p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto space-y-3" @click.stop>
-        <h3 class="text-lg font-bold text-primary">Edit plan — {{ editPlan.key }}</h3>
+        <h3 class="text-lg font-bold text-primary">{{ editPlan._isNew ? 'New plan' : `Edit plan — ${editPlan.key}` }}</h3>
+        <div v-if="editPlan._isNew">
+          <label class="label-base text-xs">Key (slug)</label>
+          <input v-model="editPlan.key" type="text" required class="input-base w-full px-3 py-2 rounded-lg font-mono text-sm" />
+        </div>
         <div>
           <label class="label-base text-xs">Label</label>
           <input v-model="editPlan.label" type="text" class="input-base w-full px-3 py-2 rounded-lg" />
@@ -182,9 +282,18 @@
           <input v-model="editPlan.highlight" type="checkbox" />
           Highlight on marketing pages
         </label>
-        <div class="flex gap-2 pt-2">
+        <div class="flex gap-2 pt-2 flex-wrap">
           <button type="button" class="btn-primary px-4 py-2 rounded-lg text-sm" :disabled="planSaving" @click="savePlan">
             {{ planSaving ? 'Saving…' : 'Save' }}
+          </button>
+          <button
+            v-if="editPlan?.key && !editPlan._isNew"
+            type="button"
+            class="btn-outline px-4 py-2 rounded-lg text-sm text-rose-400"
+            :disabled="planSaving"
+            @click="deletePlan"
+          >
+            Delete plan
           </button>
           <button type="button" class="btn-outline px-4 py-2 rounded-lg text-sm" @click="editPlan = null">Cancel</button>
         </div>
@@ -217,9 +326,18 @@
           <input v-model="editPromoRow.is_active" type="checkbox" />
           Active
         </label>
-        <div class="flex gap-2 pt-2">
+        <div class="flex gap-2 pt-2 flex-wrap">
           <button type="button" class="btn-primary px-4 py-2 rounded-lg text-sm" :disabled="promoSaving" @click="savePromo">
             {{ promoSaving ? 'Saving…' : 'Save' }}
+          </button>
+          <button
+            v-if="editPromoRow.id"
+            type="button"
+            class="btn-outline px-4 py-2 rounded-lg text-sm text-rose-400"
+            :disabled="promoSaving"
+            @click="deletePromo"
+          >
+            Delete
           </button>
           <button type="button" class="btn-outline px-4 py-2 rounded-lg text-sm" @click="editPromoRow = null">Cancel</button>
         </div>
@@ -229,7 +347,7 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import Card from '@/components/common/Card.vue'
 import { platformAPI } from '@/services/api'
 import { normalizeApiError } from '@/utils/apiError'
@@ -237,7 +355,11 @@ import { normalizeApiError } from '@/utils/apiError'
 const loading = ref(true)
 const settingsLoading = ref(true)
 const promoLoading = ref(true)
+const stripeStatusLoading = ref(true)
+const stripeHealthLoading = ref(false)
 const bannerError = ref(null)
+const stripeStatus = ref(null)
+const stripeHealth = ref(null)
 
 const plans = ref([])
 const promotions = ref([])
@@ -246,6 +368,13 @@ const settingsForm = ref({
   default_free_screen_limit: 1,
   trial_days_display: 14,
   checkout_allow_promotion_codes: true,
+  stripe_publishable_key: '',
+  stripe_secret_key: '',
+  stripe_secret_key_masked: '',
+  stripe_webhook_secret: '',
+  stripe_webhook_secret_masked: '',
+  stripe_default_currency: 'usd',
+  stripe_customer_portal_enabled: true,
 })
 
 const settingsSaving = ref(false)
@@ -254,6 +383,44 @@ const promoSaving = ref(false)
 
 const editPlan = ref(null)
 const editPromoRow = ref(null)
+
+const stripeStatusItems = computed(() => {
+  const s = stripeStatus.value
+  if (!s) return []
+  return [
+    { key: 'secret', label: 'Secret key', ok: s.stripe_secret_key_configured },
+    { key: 'webhook', label: 'Webhook secret', ok: s.stripe_webhook_secret_configured },
+    { key: 'publishable', label: 'Publishable key', ok: s.stripe_publishable_key_configured },
+    { key: 'checkout', label: 'Checkout ready', ok: s.checkout_ready },
+  ]
+})
+
+async function loadStripeStatus() {
+  stripeStatusLoading.value = true
+  try {
+    const { data } = await platformAPI.stripeStatus()
+    stripeStatus.value = data
+  } catch {
+    stripeStatus.value = null
+  } finally {
+    stripeStatusLoading.value = false
+  }
+}
+
+async function runStripeHealthCheck() {
+  stripeHealthLoading.value = true
+  try {
+    const { data } = await platformAPI.stripeConnectionHealth()
+    stripeHealth.value = data
+  } catch (e) {
+    stripeHealth.value = {
+      api_reachable: false,
+      message: normalizeApiError(e).userMessage || 'Could not run health check',
+    }
+  } finally {
+    stripeHealthLoading.value = false
+  }
+}
 
 async function loadPlans() {
   const { data } = await platformAPI.pricingPlans.list()
@@ -266,6 +433,13 @@ async function loadSettings() {
     default_free_screen_limit: data.default_free_screen_limit ?? 1,
     trial_days_display: data.trial_days_display ?? 14,
     checkout_allow_promotion_codes: data.checkout_allow_promotion_codes !== false,
+    stripe_publishable_key: data.stripe_publishable_key ?? '',
+    stripe_secret_key: '',
+    stripe_secret_key_masked: data.stripe_secret_key_masked ?? '',
+    stripe_webhook_secret: '',
+    stripe_webhook_secret_masked: data.stripe_webhook_secret_masked ?? '',
+    stripe_default_currency: data.stripe_default_currency ?? 'usd',
+    stripe_customer_portal_enabled: data.stripe_customer_portal_enabled !== false,
   }
 }
 
@@ -279,6 +453,7 @@ async function loadAll() {
   loading.value = true
   settingsLoading.value = true
   promoLoading.value = true
+  await loadStripeStatus()
   try {
     await loadSettings()
   } catch (e) {
@@ -306,7 +481,25 @@ async function saveSettings() {
   settingsSaving.value = true
   bannerError.value = null
   try {
-    await platformAPI.pricingSettings.patch(settingsForm.value)
+    const payload = {
+      default_free_screen_limit: settingsForm.value.default_free_screen_limit,
+      trial_days_display: settingsForm.value.trial_days_display,
+      checkout_allow_promotion_codes: settingsForm.value.checkout_allow_promotion_codes,
+      stripe_publishable_key: settingsForm.value.stripe_publishable_key,
+      stripe_default_currency: settingsForm.value.stripe_default_currency,
+      stripe_customer_portal_enabled: settingsForm.value.stripe_customer_portal_enabled,
+    }
+    const secret = (settingsForm.value.stripe_secret_key || '').trim()
+    if (secret) {
+      payload.stripe_secret_key = secret.toLowerCase() === 'clear' ? '' : secret
+    }
+    const webhook = (settingsForm.value.stripe_webhook_secret || '').trim()
+    if (webhook) {
+      payload.stripe_webhook_secret = webhook.toLowerCase() === 'clear' ? '' : webhook
+    }
+    await platformAPI.pricingSettings.patch(payload)
+    await loadSettings()
+    await loadStripeStatus()
   } catch (e) {
     bannerError.value = normalizeApiError(e).userMessage || 'Save failed'
   } finally {
@@ -317,8 +510,29 @@ async function saveSettings() {
 function openEdit(p) {
   editPlan.value = {
     ...p,
+    _isNew: false,
     included_screens: p.included_screens ?? '',
     description: p.description ?? '',
+  }
+}
+
+function openCreatePlan() {
+  editPlan.value = {
+    _isNew: true,
+    key: '',
+    label: '',
+    kind: 'per_screen',
+    description: '',
+    sort_order: 0,
+    included_screens: '',
+    min_quantity: 1,
+    is_unlimited: false,
+    stripe_price_id: '',
+    display_amount_cents: '',
+    currency: 'usd',
+    badge: '',
+    is_active: true,
+    highlight: false,
   }
 }
 
@@ -327,19 +541,40 @@ async function savePlan() {
   planSaving.value = true
   bannerError.value = null
   try {
+    const isNew = !!editPlan.value._isNew
     const payload = { ...editPlan.value }
     delete payload.id
+    delete payload._isNew
     if (payload.included_screens === '' || payload.included_screens === undefined) {
       payload.included_screens = null
     }
     if (payload.display_amount_cents === '') {
       payload.display_amount_cents = null
     }
-    await platformAPI.pricingPlans.patch(editPlan.value.key, payload)
+    if (isNew) {
+      await platformAPI.pricingPlans.create(payload)
+    } else {
+      await platformAPI.pricingPlans.patch(editPlan.value.key, payload)
+    }
     editPlan.value = null
     await loadPlans()
   } catch (e) {
     bannerError.value = normalizeApiError(e).userMessage || 'Save failed'
+  } finally {
+    planSaving.value = false
+  }
+}
+
+async function deletePlan() {
+  if (!editPlan.value?.key || editPlan.value._isNew) return
+  if (!window.confirm(`Delete plan "${editPlan.value.key}"?`)) return
+  planSaving.value = true
+  try {
+    await platformAPI.pricingPlans.remove(editPlan.value.key)
+    editPlan.value = null
+    await loadPlans()
+  } catch (e) {
+    bannerError.value = normalizeApiError(e).userMessage || 'Delete failed'
   } finally {
     planSaving.value = false
   }
@@ -357,6 +592,21 @@ function addPromo() {
 
 function editPromo(pr) {
   editPromoRow.value = { ...pr }
+}
+
+async function deletePromo() {
+  if (!editPromoRow.value?.id) return
+  if (!window.confirm('Delete this promotion?')) return
+  promoSaving.value = true
+  try {
+    await platformAPI.pricingPromotions.remove(editPromoRow.value.id)
+    editPromoRow.value = null
+    await loadPromotions()
+  } catch (e) {
+    bannerError.value = normalizeApiError(e).userMessage || 'Delete failed'
+  } finally {
+    promoSaving.value = false
+  }
 }
 
 async function savePromo() {

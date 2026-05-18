@@ -2,13 +2,21 @@ from django.urls import path
 from rest_framework.routers import DefaultRouter
 
 from .stripe_webhook import stripe_webhook_view
-from .billing_customer_views import create_billing_portal_session, create_checkout_session
+from .billing_customer_views import change_subscription, create_billing_portal_session, create_checkout_session
 from .pricing_views import (
     BillingPromotionViewSet,
     SubscriptionPlanViewSet,
     platform_billing_settings,
+    platform_stripe_connection_health,
+    platform_stripe_status,
 )
 from .integration_views import tenant_api_key_revoke, tenant_api_keys, tenant_webhooks
+from .platform_integration_views import (
+    platform_tenant_api_key_revoke,
+    platform_tenant_api_keys,
+    platform_tenant_webhook_detail,
+    platform_tenant_webhooks,
+)
 from .export_views import export_users_xlsx
 from .overview_views import (
     platform_capacity,
@@ -32,7 +40,7 @@ from platform_gateway.admin_views import (
     gateway_instance_list,
     gateway_instance_usage,
 )
-from .views import PlatformExpenseViewSet, TenantViewSet, impersonate_start, impersonate_stop
+from .views import PlatformExpenseViewSet, TenantViewSet, impersonate_start, impersonate_stop, platform_accounts
 
 router = DefaultRouter()
 router.register(r'tenants', TenantViewSet, basename='platform-tenant')
@@ -47,11 +55,15 @@ urlpatterns = [
     path('exports/users.xlsx', export_users_xlsx, name='platform-export-users-xlsx'),
     path('capacity/', platform_capacity, name='platform-capacity'),
     path('communications/', platform_communications_feed, name='platform-communications'),
+    path('accounts/', platform_accounts, name='platform-accounts'),
     path('system-health/', platform_system_health, name='platform-system-health'),
     path('stripe/webhook/', stripe_webhook_view, name='platform-stripe-webhook'),
     path('billing/checkout-session/', create_checkout_session, name='platform-billing-checkout'),
+    path('billing/change-subscription/', change_subscription, name='platform-billing-change-subscription'),
     path('billing/portal-session/', create_billing_portal_session, name='platform-billing-portal'),
     path('pricing/settings/', platform_billing_settings, name='platform-billing-settings'),
+    path('pricing/stripe-status/', platform_stripe_status, name='platform-stripe-status'),
+    path('pricing/stripe-connection-health/', platform_stripe_connection_health, name='platform-stripe-connection-health'),
     path('integrations/api-keys/', tenant_api_keys, name='platform-api-keys'),
     path('integrations/api-keys/<uuid:pk>/revoke/', tenant_api_key_revoke, name='platform-api-key-revoke'),
     path('integrations/webhooks/', tenant_webhooks, name='platform-tenant-webhooks'),
@@ -59,6 +71,26 @@ urlpatterns = [
     path('impersonate/stop/', impersonate_stop, name='platform-impersonate-stop'),
     path('tenants/<uuid:tenant_id>/license/', tenant_license_view, name='platform-tenant-license'),
     path('tenants/<uuid:tenant_id>/license/enforcement-logs/', tenant_license_enforcement_logs, name='platform-tenant-license-logs'),
+    path(
+        'tenants/<uuid:tenant_id>/integrations/api-keys/',
+        platform_tenant_api_keys,
+        name='platform-tenant-integrations-api-keys',
+    ),
+    path(
+        'tenants/<uuid:tenant_id>/integrations/api-keys/<uuid:pk>/revoke/',
+        platform_tenant_api_key_revoke,
+        name='platform-tenant-integrations-api-key-revoke',
+    ),
+    path(
+        'tenants/<uuid:tenant_id>/integrations/webhooks/',
+        platform_tenant_webhooks,
+        name='platform-tenant-integrations-webhooks',
+    ),
+    path(
+        'tenants/<uuid:tenant_id>/integrations/webhooks/<uuid:pk>/',
+        platform_tenant_webhook_detail,
+        name='platform-tenant-integrations-webhook-detail',
+    ),
     path('self-hosted-licenses/', self_hosted_license_list, name='platform-self-hosted-licenses'),
     path('self-hosted-licenses/<uuid:pk>/', self_hosted_license_detail, name='platform-self-hosted-license-detail'),
     path('self-hosted-licenses/<uuid:pk>/suspend/', self_hosted_license_suspend, name='platform-self-hosted-license-suspend'),

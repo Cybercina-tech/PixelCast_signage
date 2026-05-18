@@ -43,11 +43,13 @@ def deployment_public_payload(
     deployment_mode: str | None,
     effective_platform_saas: bool,
     stripe_publishable_key: str = '',
+    platform_gateway_enabled: bool = False,
 ) -> dict[str, Any]:
     """Safe JSON for anonymous clients (SPA routing / feature toggles)."""
     mode = normalize_deployment_mode(deployment_mode)
     return {
         'deployment_mode': mode,
         'platform_saas_enabled': bool(effective_platform_saas),
+        'platform_gateway_enabled': bool(platform_gateway_enabled),
         'stripe_publishable_key_configured': bool((stripe_publishable_key or '').strip()),
     }

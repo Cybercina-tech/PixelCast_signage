@@ -8,7 +8,6 @@ from core.views import (
     SystemBackupViewSet,
     NotificationViewSet,
     NotificationPreferenceViewSet,
-    TVBrandViewSet,
 )
 from core.deploy_views import github_webhook, deployment_status
 from core.system_email_views import SystemEmailSettingsView, SystemEmailTestView
@@ -19,7 +18,6 @@ router.register(r'audit-logs', AuditLogViewSet, basename='audit-log')
 router.register(r'backups', SystemBackupViewSet, basename='backup')
 router.register(r'notifications', NotificationViewSet, basename='notification')
 router.register(r'notification-preferences', NotificationPreferenceViewSet, basename='notification-preferences')
-router.register(r'tv-brands', TVBrandViewSet, basename='tv-brand')
 
 urlpatterns = [
     path('support/tickets/', support_tickets, name='support-tickets'),

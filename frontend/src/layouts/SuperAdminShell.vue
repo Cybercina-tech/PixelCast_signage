@@ -110,6 +110,13 @@
           <p v-if="pageSubtitle" :class="['text-xs truncate mt-0.5', isDarkTheme ? 'text-slate-400' : 'text-slate-500']">{{ pageSubtitle }}</p>
         </div>
         <div :class="['hidden md:flex items-center gap-2 text-xs shrink-0', isDarkTheme ? 'text-slate-300' : 'text-slate-600']">
+          <router-link
+            to="/settings?tab=billing"
+            class="px-2 py-1 rounded-lg border border-cyan-500/30 bg-cyan-500/10 text-cyan-700 dark:text-cyan-300 hover:bg-cyan-500/20 transition-colors inline-flex items-center gap-1"
+          >
+            <CreditCardIcon class="w-3.5 h-3.5" />
+            Plan
+          </router-link>
           <span :class="['px-2 py-1 rounded-lg border', isDarkTheme ? 'bg-amber-500/15 text-amber-300 border-amber-500/30' : 'bg-amber-500/12 text-amber-700 border-amber-600/30']">
             Developer
           </span>
@@ -123,6 +130,7 @@
       </header>
       <main class="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-6 lg:p-8">
         <div class="mx-auto max-w-[1400px]">
+          <PlatformConfigBanner class="mb-4" />
           <router-view />
         </div>
       </main>
@@ -157,8 +165,10 @@ import {
   SparklesIcon,
   KeyIcon,
   GlobeAltIcon,
+  CreditCardIcon,
 } from '@heroicons/vue/24/outline'
 import { SUPER_ADMIN_NAV_GROUPS } from '@/config/superAdminNav'
+import PlatformConfigBanner from '@/components/super-admin/PlatformConfigBanner.vue'
 
 const route = useRoute()
 const sidebarOpen = ref(false)

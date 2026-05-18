@@ -1,13 +1,19 @@
 """Tests for Platform (SaaS super-admin) API."""
 
 import json
+from datetime import timedelta
+from io import StringIO
 from unittest.mock import patch
 
 import pytest
 from django.test import override_settings
+from django.core.management import call_command
+from django.utils import timezone
 from rest_framework.test import APIClient
 
+from accounts.models import UserSubscription
 from saas_platform.models import PlatformExpense, Tenant, TenantAuditLog, TenantWebhookEndpoint
+from saas_platform.pricing_models import StripeBillingConfig, SubscriptionPlan
 
 
 # ---------------------------------------------------------------------------
@@ -111,7 +117,6 @@ def test_platform_tenant_create_as_developer(superadmin_user):
         {
             'name': 'Gamma Org',
             'slug': 'gamma-org',
-            'subscription_status': 'trialing',
             'plan_name': 'Starter',
             'plan_interval': 'month',
             'device_limit': 25,
@@ -131,7 +136,7 @@ def test_platform_tenant_update_as_developer(superadmin_user, tenant):
     client.force_authenticate(user=superadmin_user)
     r = client.put(
         f'/api/platform/tenants/{tenant.id}/',
-        {'name': 'Acme Updated', 'plan_name': 'Pro', 'subscription_status': 'active'},
+        {'name': 'Acme Updated', 'plan_name': 'Pro'},
         format='json',
     )
     assert r.status_code == 200
@@ -935,6 +940,47 @@ def test_billing_checkout_no_stripe_config(manager_with_tenant):
 
 
 @pytest.mark.django_db
+@override_settings(
+    PLATFORM_SAAS_ENABLED=True,
+    STRIPE_SECRET_KEY='sk_test_x',
+    STRIPE_PRICE_ID='price_test_legacy_1',
+    PUBLIC_WEB_APP_URL='http://localhost:4173',
+)
+def test_billing_checkout_bootstraps_tenant_for_developer_without_tenant(superadmin_user, monkeypatch):
+    import sys
+    from types import SimpleNamespace
+
+    class _FakeCustomer:
+        @staticmethod
+        def create(**kwargs):
+            return SimpleNamespace(id='cus_test_bootstrap_1')
+
+    class _FakeSession:
+        @staticmethod
+        def create(**kwargs):
+            return SimpleNamespace(id='cs_test_bootstrap_1', url='https://checkout.stripe.test/session')
+
+    fake_stripe = SimpleNamespace(
+        api_key='',
+        Customer=_FakeCustomer,
+        checkout=SimpleNamespace(Session=_FakeSession),
+    )
+    monkeypatch.setitem(sys.modules, 'stripe', fake_stripe)
+
+    client = APIClient()
+    client.force_authenticate(user=superadmin_user)
+    assert superadmin_user.tenant_id is None
+
+    r = client.post('/api/platform/billing/checkout-session/', {}, format='json')
+    assert r.status_code == 200
+    assert r.data['url'].startswith('https://checkout.stripe.test/')
+
+    superadmin_user.refresh_from_db()
+    assert superadmin_user.tenant_id is not None
+    assert superadmin_user.tenant.stripe_customer_id == 'cus_test_bootstrap_1'
+
+
+@pytest.mark.django_db
 @override_settings(PLATFORM_SAAS_ENABLED=True)
 def test_billing_checkout_denied_employee(employee_with_tenant):
     client = APIClient()
@@ -960,6 +1006,332 @@ def test_billing_portal_no_customer(manager_with_tenant):
     r = client.post('/api/platform/billing/portal-session/')
     assert r.status_code == 400
     assert 'Stripe customer' in r.data['detail']
+
+
+@pytest.mark.django_db
+@override_settings(PLATFORM_SAAS_ENABLED=True)
+def test_tenant_update_ignores_subscription_status_bypass(superadmin_user, tenant):
+    """Subscription state must come from Stripe webhooks/sync, not tenant PUT."""
+    client = APIClient()
+    client.force_authenticate(user=superadmin_user)
+    tenant.subscription_status = 'none'
+    tenant.save(update_fields=['subscription_status'])
+    r = client.put(
+        f'/api/platform/tenants/{tenant.id}/',
+        {'name': tenant.name, 'subscription_status': 'active'},
+        format='json',
+    )
+    assert r.status_code == 200
+    tenant.refresh_from_db()
+    assert tenant.subscription_status == 'none'
+
+
+@pytest.mark.django_db
+@override_settings(PLATFORM_SAAS_ENABLED=True)
+def test_tenant_update_device_limit_requires_manual_override(superadmin_user, tenant):
+    client = APIClient()
+    client.force_authenticate(user=superadmin_user)
+    r = client.patch(
+        f'/api/platform/tenants/{tenant.id}/',
+        {'device_limit': 99},
+        format='json',
+    )
+    assert r.status_code == 400
+    assert 'manual-override' in str(r.data).lower()
+
+
+@pytest.mark.django_db
+@override_settings(
+    PLATFORM_SAAS_ENABLED=True,
+    STRIPE_SECRET_KEY='sk_test_x',
+    PUBLIC_WEB_APP_URL='https://app.example.com',
+)
+def test_billing_checkout_rejects_external_success_url(manager_with_tenant):
+    client = APIClient()
+    client.force_authenticate(user=manager_with_tenant)
+    r = client.post(
+        '/api/platform/billing/checkout-session/',
+        {'success_url': 'https://evil.example/phish'},
+        format='json',
+    )
+    assert r.status_code == 400
+    assert 'success_url' in str(r.data).lower()
+
+
+@pytest.mark.django_db
+@override_settings(PLATFORM_SAAS_ENABLED=True)
+def test_platform_stripe_status_developer(superadmin_user):
+    client = APIClient()
+    client.force_authenticate(user=superadmin_user)
+    r = client.get('/api/platform/pricing/stripe-status/')
+    assert r.status_code == 200
+    assert 'stripe_secret_key_configured' in r.data
+    assert 'checkout_ready' in r.data
+    assert 'public_web_app_url' in r.data
+
+
+@pytest.mark.django_db
+@override_settings(PLATFORM_SAAS_ENABLED=True)
+def test_platform_stripe_status_denied_manager(manager_user):
+    client = APIClient()
+    client.force_authenticate(user=manager_user)
+    r = client.get('/api/platform/pricing/stripe-status/')
+    assert r.status_code == 403
+
+
+@pytest.mark.django_db
+@override_settings(
+    PLATFORM_SAAS_ENABLED=True,
+    NOTIFICATION_ENCRYPTION_KEY='MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=',
+)
+def test_platform_pricing_settings_can_store_stripe_keys(superadmin_user):
+    client = APIClient()
+    client.force_authenticate(user=superadmin_user)
+    payload = {
+        'stripe_publishable_key': 'pk_live_12345',
+        'stripe_secret_key': 'sk_live_12345',
+        'stripe_webhook_secret': 'whsec_12345',
+        'stripe_default_currency': 'usd',
+        'stripe_customer_portal_enabled': True,
+    }
+    r = client.patch('/api/platform/pricing/settings/', payload, format='json')
+    assert r.status_code == 200
+    assert r.data['stripe_publishable_key'] == 'pk_live_12345'
+    assert r.data['stripe_secret_key_configured'] is True
+    assert r.data['stripe_webhook_secret_configured'] is True
+    assert 'stripe_secret_key' not in r.data
+    assert 'stripe_webhook_secret' not in r.data
+
+    cfg = StripeBillingConfig.get_solo()
+    assert cfg.get_secret_key() == 'sk_live_12345'
+    assert cfg.get_webhook_secret() == 'whsec_12345'
+
+
+@pytest.mark.django_db
+@override_settings(
+    PLATFORM_SAAS_ENABLED=True,
+    STRIPE_SECRET_KEY='',
+    NOTIFICATION_ENCRYPTION_KEY='MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=',
+)
+def test_billing_checkout_uses_db_secret_config(manager_with_tenant, monkeypatch):
+    import sys
+    from types import SimpleNamespace
+
+    cfg = StripeBillingConfig.get_solo()
+    cfg.set_secret_key('sk_test_db_987')
+    cfg.save()
+
+    SubscriptionPlan.objects.create(
+        key='bundle-five',
+        label='Bundle',
+        kind=SubscriptionPlan.KIND_BUNDLE,
+        included_screens=5,
+        stripe_price_id='price_12345',
+        min_quantity=1,
+        currency='usd',
+        sort_order=1,
+        is_active=True,
+    )
+
+    class _FakeCustomer:
+        @staticmethod
+        def create(**kwargs):
+            return SimpleNamespace(id='cus_test_db_1')
+
+    class _FakeSession:
+        seen_api_key = ''
+
+        @staticmethod
+        def create(**kwargs):
+            _FakeSession.seen_api_key = fake_stripe.api_key
+            return SimpleNamespace(id='cs_test_1', url='https://checkout.stripe.test/session')
+
+    fake_stripe = SimpleNamespace(
+        api_key='',
+        Customer=_FakeCustomer,
+        checkout=SimpleNamespace(Session=_FakeSession),
+    )
+    monkeypatch.setitem(sys.modules, 'stripe', fake_stripe)
+
+    client = APIClient()
+    client.force_authenticate(user=manager_with_tenant)
+    r = client.post(
+        '/api/platform/billing/checkout-session/',
+        {'plan_key': 'bundle-five'},
+        format='json',
+    )
+    assert r.status_code == 200
+    assert _FakeSession.seen_api_key == 'sk_test_db_987'
+
+
+@pytest.mark.django_db
+@override_settings(
+    PLATFORM_SAAS_ENABLED=True,
+    STRIPE_SECRET_KEY='',
+    NOTIFICATION_ENCRYPTION_KEY='MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=',
+)
+def test_platform_stripe_connection_health_uses_db_secret(superadmin_user, monkeypatch):
+    import sys
+    from types import SimpleNamespace
+
+    cfg = StripeBillingConfig.get_solo()
+    cfg.set_secret_key('sk_live_health_123')
+    cfg.save()
+
+    class _FakeAccount:
+        @staticmethod
+        def retrieve():
+            return SimpleNamespace(
+                id='acct_live_1',
+                charges_enabled=True,
+                details_submitted=True,
+            )
+
+    fake_stripe = SimpleNamespace(api_key='', Account=_FakeAccount)
+    monkeypatch.setitem(sys.modules, 'stripe', fake_stripe)
+
+    client = APIClient()
+    client.force_authenticate(user=superadmin_user)
+    r = client.get('/api/platform/pricing/stripe-connection-health/')
+    assert r.status_code == 200
+    assert r.data['api_reachable'] is True
+    assert r.data['mode'] == 'live'
+    assert r.data['account_id'] == 'acct_live_1'
+    assert 'checks' in r.data
+    assert 'blocking_reasons' in r.data
+    assert isinstance(r.data['ready'], bool)
+
+
+@pytest.mark.django_db
+@override_settings(PLATFORM_SAAS_ENABLED=True)
+def test_platform_stripe_connection_health_requires_active_paid_plan_prices(superadmin_user):
+    SubscriptionPlan.objects.create(
+        key='paid-no-price',
+        label='Paid',
+        kind=SubscriptionPlan.KIND_BUNDLE,
+        included_screens=5,
+        stripe_price_id='',
+        min_quantity=1,
+        currency='usd',
+        sort_order=1,
+        is_active=True,
+    )
+    client = APIClient()
+    client.force_authenticate(user=superadmin_user)
+    r = client.get('/api/platform/pricing/stripe-connection-health/')
+    assert r.status_code == 200
+    assert r.data['checks']['paid_plan_price_coverage'] is False
+    assert 'paid-no-price' in r.data['missing_price_plan_keys']
+
+
+@pytest.mark.django_db
+@override_settings(
+    PLATFORM_SAAS_ENABLED=True,
+    NOTIFICATION_ENCRYPTION_KEY='MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=',
+)
+def test_change_subscription_with_proration_behavior(manager_with_tenant, monkeypatch):
+    import sys
+    from types import SimpleNamespace
+
+    cfg = StripeBillingConfig.get_solo()
+    cfg.set_secret_key('sk_test_change_123')
+    cfg.save()
+
+    manager_with_tenant.tenant.stripe_subscription_id = 'sub_test_1'
+    manager_with_tenant.tenant.stripe_customer_id = 'cus_test_1'
+    manager_with_tenant.tenant.save(update_fields=['stripe_subscription_id', 'stripe_customer_id', 'updated_at'])
+
+    SubscriptionPlan.objects.create(
+        key='per_screen',
+        label='Per screen',
+        kind=SubscriptionPlan.KIND_PER_SCREEN,
+        stripe_price_id='price_per_screen_x',
+        min_quantity=1,
+        currency='usd',
+        sort_order=1,
+        is_active=True,
+    )
+
+    class _FakeSubscription:
+        seen_proration = None
+
+        @staticmethod
+        def retrieve(_sub_id, **kwargs):
+            return {
+                'id': 'sub_test_1',
+                'metadata': {'plan_key': 'per_screen'},
+                'items': {
+                    'data': [
+                        {
+                            'id': 'si_test_1',
+                            'quantity': 3,
+                            'price': {'id': 'price_old', 'nickname': 'Old', 'recurring': {'interval': 'month'}},
+                        }
+                    ]
+                },
+                'status': 'active',
+                'current_period_start': 1700000000,
+                'current_period_end': 1700003600,
+                'trial_end': None,
+                'cancel_at_period_end': False,
+            }
+
+        @staticmethod
+        def modify(_sub_id, **kwargs):
+            _FakeSubscription.seen_proration = kwargs.get('proration_behavior')
+            return {
+                'id': 'sub_test_1',
+                'metadata': kwargs.get('metadata') or {},
+                'items': {
+                    'data': [
+                        {
+                            'id': 'si_test_1',
+                            'quantity': kwargs['items'][0]['quantity'],
+                            'price': {
+                                'id': kwargs['items'][0]['price'],
+                                'nickname': 'Per screen',
+                                'recurring': {'interval': 'month'},
+                            },
+                        }
+                    ]
+                },
+                'status': 'active',
+                'current_period_start': 1700000000,
+                'current_period_end': 1700003600,
+                'trial_end': None,
+                'cancel_at_period_end': False,
+            }
+
+    fake_stripe = SimpleNamespace(api_key='', Subscription=_FakeSubscription)
+    monkeypatch.setitem(sys.modules, 'stripe', fake_stripe)
+
+    client = APIClient()
+    client.force_authenticate(user=manager_with_tenant)
+    r = client.post(
+        '/api/platform/billing/change-subscription/',
+        {
+            'plan_key': 'per_screen',
+            'quantity': 8,
+            'proration_behavior': 'create_prorations',
+        },
+        format='json',
+    )
+    assert r.status_code == 200
+    assert r.data['ok'] is True
+    assert r.data['proration_behavior'] == 'create_prorations'
+    assert _FakeSubscription.seen_proration == 'create_prorations'
+
+
+@pytest.mark.django_db
+def test_apply_payment_failed_uses_three_day_default_grace(tenant):
+    from saas_platform.services import apply_payment_failed
+
+    now = timezone.now()
+    apply_payment_failed(tenant, at=now)
+    tenant.refresh_from_db()
+    assert tenant.billing_grace_until is not None
+    diff = tenant.billing_grace_until - now
+    assert timedelta(days=2, hours=23) <= diff <= timedelta(days=3, minutes=1)
 
 
 # ---------------------------------------------------------------------------
@@ -1236,6 +1608,114 @@ def test_platform_pricing_plans_list_developer(superadmin_user):
 
 
 @pytest.mark.django_db
+@override_settings(PLATFORM_SAAS_ENABLED=True)
+def test_platform_pricing_plan_create_requires_price_for_paid(superadmin_user):
+    client = APIClient()
+    client.force_authenticate(user=superadmin_user)
+    r = client.post(
+        '/api/platform/pricing/plans/',
+        {
+            'key': 'pro-monthly',
+            'label': 'Pro',
+            'kind': 'bundle',
+            'included_screens': 5,
+            'is_unlimited': False,
+            'stripe_price_id': '',
+            'min_quantity': 1,
+            'currency': 'usd',
+            'sort_order': 10,
+            'is_active': True,
+            'badge': '',
+            'highlight': False,
+        },
+        format='json',
+    )
+    assert r.status_code == 400
+    assert 'stripe_price_id' in (r.data.get('field_errors') or {})
+
+
+@pytest.mark.django_db
+@override_settings(PLATFORM_SAAS_ENABLED=True)
+def test_platform_pricing_plan_create_rejects_non_price_prefix(superadmin_user):
+    client = APIClient()
+    client.force_authenticate(user=superadmin_user)
+    r = client.post(
+        '/api/platform/pricing/plans/',
+        {
+            'key': 'starter-monthly',
+            'label': 'Starter',
+            'kind': 'bundle',
+            'included_screens': 2,
+            'is_unlimited': False,
+            'stripe_price_id': 'prod_123',
+            'min_quantity': 1,
+            'currency': 'usd',
+            'sort_order': 11,
+            'is_active': True,
+            'badge': '',
+            'highlight': False,
+        },
+        format='json',
+    )
+    assert r.status_code == 400
+    assert 'stripe_price_id' in (r.data.get('field_errors') or {})
+
+
+@pytest.mark.django_db
+@override_settings(PLATFORM_SAAS_ENABLED=True)
+def test_platform_pricing_plan_bundle_requires_included_screens(superadmin_user):
+    client = APIClient()
+    client.force_authenticate(user=superadmin_user)
+    r = client.post(
+        '/api/platform/pricing/plans/',
+        {
+            'key': 'bundle-missing-screens',
+            'label': 'Bundle Missing',
+            'kind': 'bundle',
+            'included_screens': None,
+            'is_unlimited': False,
+            'stripe_price_id': 'price_bundle_x',
+            'min_quantity': 1,
+            'currency': 'usd',
+            'sort_order': 12,
+            'is_active': True,
+            'badge': '',
+            'highlight': False,
+        },
+        format='json',
+    )
+    assert r.status_code == 400
+    assert 'included_screens' in (r.data.get('field_errors') or {})
+
+
+@pytest.mark.django_db
+@override_settings(PLATFORM_SAAS_ENABLED=True)
+def test_platform_pricing_plan_vip_requires_unlimited(superadmin_user):
+    client = APIClient()
+    client.force_authenticate(user=superadmin_user)
+    r = client.post(
+        '/api/platform/pricing/plans/',
+        {
+            'key': 'vip-not-unlimited',
+            'label': 'VIP',
+            'kind': 'vip',
+            'included_screens': None,
+            'is_unlimited': False,
+            'stripe_price_id': 'price_vip_x',
+            'min_quantity': 1,
+            'currency': 'usd',
+            'sort_order': 13,
+            'is_active': True,
+            'badge': '',
+            'highlight': False,
+        },
+        format='json',
+    )
+    assert r.status_code == 400
+    assert 'is_unlimited' in (r.data.get('field_errors') or {})
+
+
+@pytest.mark.django_db
 def test_sync_tenant_device_limit_from_subscription_metadata(tenant):
     from saas_platform.services import sync_tenant_from_stripe_subscription
 
@@ -1285,3 +1765,176 @@ def test_sync_tenant_unlimited_from_subscription_metadata(tenant):
     sync_tenant_from_stripe_subscription(tenant, sub)
     tenant.refresh_from_db()
     assert tenant.device_limit is None
+
+
+@pytest.mark.django_db
+@override_settings(PLATFORM_SAAS_ENABLED=True)
+def test_user_me_returns_subscription_snapshot(employee_with_tenant):
+    now = timezone.now()
+    UserSubscription.objects.create(
+        user=employee_with_tenant,
+        plan_key='pro_monthly',
+        plan_name='Pro',
+        plan_interval='month',
+        status='trialing',
+        trial_end=now + timedelta(days=4),
+        current_period_start=now - timedelta(days=1),
+        current_period_end=now + timedelta(days=29),
+        provider_customer_id='cus_test_1',
+        provider_subscription_id='sub_test_1',
+    )
+    client = APIClient()
+    client.force_authenticate(user=employee_with_tenant)
+    r = client.get('/api/users/me/')
+    assert r.status_code == 200
+    sub = r.data.get('subscription')
+    assert sub is not None
+    assert sub['plan_key'] == 'pro_monthly'
+    assert sub['plan_name'] == 'Pro'
+    assert sub['status'] == 'trialing'
+    assert sub['trial_days_remaining'] >= 1
+    assert sub['billing_days_remaining'] >= 1
+
+
+@pytest.mark.django_db
+@override_settings(PLATFORM_SAAS_ENABLED=True)
+def test_platform_accounts_lists_subscription_remaining_days(superadmin_user, employee_with_tenant):
+    now = timezone.now()
+    UserSubscription.objects.create(
+        user=employee_with_tenant,
+        plan_name='Starter',
+        plan_interval='month',
+        status='active',
+        trial_end=now + timedelta(days=2),
+        current_period_end=now + timedelta(days=10),
+    )
+    client = APIClient()
+    client.force_authenticate(user=superadmin_user)
+    r = client.get('/api/platform/accounts/')
+    assert r.status_code == 200
+    rows = r.data.get('results') or []
+    hit = next((row for row in rows if str(row['id']) == str(employee_with_tenant.id)), None)
+    assert hit is not None
+    assert hit['subscription_plan'] == 'Starter'
+    assert hit['subscription_status'] == 'active'
+    assert hit['trial_days_remaining'] >= 1
+    assert hit['billing_days_remaining'] >= 1
+
+
+@pytest.mark.django_db
+def test_sync_tenant_creates_user_subscription_rows(tenant):
+    from django.contrib.auth import get_user_model
+    from saas_platform.services import sync_tenant_from_stripe_subscription
+
+    user = get_user_model().objects.create_user(
+        username='sync_sub_user',
+        email='sync_sub_user@example.com',
+        password='StrongP@ss1234!',
+        role='Employee',
+        tenant=tenant,
+    )
+    sub = {
+        'status': 'active',
+        'id': 'sub_sync_001',
+        'metadata': {'plan_key': 'starter_monthly', 'device_limit': '3'},
+        'items': {
+            'data': [
+                {
+                    'quantity': 1,
+                    'price': {'id': 'price_sync', 'nickname': 'Starter', 'recurring': {'interval': 'month'}},
+                }
+            ]
+        },
+        'current_period_start': 1700000000,
+        'current_period_end': 1702600000,
+        'trial_end': 1701200000,
+        'cancel_at_period_end': False,
+    }
+    sync_tenant_from_stripe_subscription(tenant, sub)
+    us = UserSubscription.objects.get(user=user)
+    assert us.plan_key == 'starter_monthly'
+    assert us.plan_name == 'Starter'
+    assert us.status == 'active'
+    assert us.provider_subscription_id == 'sub_sync_001'
+
+
+@pytest.mark.django_db
+def test_sync_all_tenant_subscriptions_dry_run(tenant):
+    tenant.stripe_subscription_id = 'sub_dry_run_1'
+    tenant.save(update_fields=['stripe_subscription_id'])
+    out = StringIO()
+    with patch('saas_platform.management.commands.sync_all_tenant_subscriptions.fetch_stripe_subscription') as mocked:
+        mocked.return_value = {'id': 'sub_dry_run_1', 'status': 'active', 'items': {'data': []}}
+        call_command('sync_all_tenant_subscriptions', '--dry-run', stdout=out)
+    text = out.getvalue()
+    assert 'DRY-RUN' in text
+    tenant.refresh_from_db()
+    assert tenant.subscription_status == 'none'
+
+
+@pytest.mark.django_db
+def test_sync_all_tenant_subscriptions_multiple_tenants_success(tenant, tenant_b):
+    tenant.stripe_subscription_id = 'sub_batch_1'
+    tenant_b.stripe_subscription_id = 'sub_batch_2'
+    tenant.save(update_fields=['stripe_subscription_id'])
+    tenant_b.save(update_fields=['stripe_subscription_id'])
+
+    payloads = {
+        'sub_batch_1': {
+            'id': 'sub_batch_1',
+            'status': 'active',
+            'metadata': {'plan_key': 'starter_monthly'},
+            'items': {'data': [{'price': {'id': 'price_1', 'nickname': 'Starter', 'recurring': {'interval': 'month'}}}]},
+            'current_period_start': 1700000000,
+            'current_period_end': 1703000000,
+            'trial_end': None,
+            'cancel_at_period_end': False,
+        },
+        'sub_batch_2': {
+            'id': 'sub_batch_2',
+            'status': 'trialing',
+            'metadata': {'plan_key': 'pro_monthly'},
+            'items': {'data': [{'price': {'id': 'price_2', 'nickname': 'Pro', 'recurring': {'interval': 'month'}}}]},
+            'current_period_start': 1700000000,
+            'current_period_end': 1703000000,
+            'trial_end': 1701200000,
+            'cancel_at_period_end': False,
+        },
+    }
+
+    with patch('saas_platform.management.commands.sync_all_tenant_subscriptions.fetch_stripe_subscription') as mocked:
+        mocked.side_effect = lambda sid: payloads.get(sid)
+        call_command('sync_all_tenant_subscriptions')
+
+    tenant.refresh_from_db()
+    tenant_b.refresh_from_db()
+    assert tenant.subscription_status == 'active'
+    assert tenant_b.subscription_status == 'trialing'
+
+
+@pytest.mark.django_db
+def test_sync_all_tenant_subscriptions_continue_on_error(tenant, tenant_b):
+    tenant.stripe_subscription_id = 'sub_fail_me'
+    tenant_b.stripe_subscription_id = 'sub_ok_me'
+    tenant.save(update_fields=['stripe_subscription_id'])
+    tenant_b.save(update_fields=['stripe_subscription_id'])
+
+    ok_payload = {
+        'id': 'sub_ok_me',
+        'status': 'active',
+        'metadata': {'plan_key': 'pro_monthly'},
+        'items': {'data': [{'price': {'id': 'price_ok', 'nickname': 'Pro', 'recurring': {'interval': 'month'}}}]},
+        'current_period_start': 1700000000,
+        'current_period_end': 1703000000,
+        'trial_end': None,
+        'cancel_at_period_end': False,
+    }
+
+    with patch('saas_platform.management.commands.sync_all_tenant_subscriptions.fetch_stripe_subscription') as mocked:
+        mocked.side_effect = lambda sid: None if sid == 'sub_fail_me' else ok_payload
+        call_command('sync_all_tenant_subscriptions', '--continue-on-error')
+
+    tenant.refresh_from_db()
+    tenant_b.refresh_from_db()
+    assert tenant.subscription_status == 'none'
+    assert tenant_b.subscription_status == 'active'

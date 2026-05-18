@@ -4,16 +4,19 @@ from __future__ import annotations
 
 import logging
 import re
+from datetime import timedelta
 
 from django.conf import settings
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from rest_framework import status, viewsets
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from accounts.models import User
+from accounts.serializers import UserListSerializer
 from accounts.tokens import ScreenGramRefreshToken
 from core.audit import AuditLogger
 
@@ -401,3 +404,56 @@ class PlatformExpenseViewSet(PlatformSaaSViewSet):
 
     def perform_update(self, serializer):
         serializer.save()
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsDeveloper])
+def platform_accounts(request):
+    """Return platform-wide user accounts with subscription remaining-day filters."""
+    if not _saas_enabled():
+        return Response(
+            {'detail': 'Platform SaaS features are disabled (set PLATFORM_SAAS_ENABLED=true).'},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+
+    qs = User.objects.select_related('tenant', 'subscription').order_by('-date_joined')
+    search = (request.query_params.get('search') or '').strip()
+    if search:
+        qs = qs.filter(
+            Q(username__icontains=search) |
+            Q(email__icontains=search) |
+            Q(full_name__icontains=search)
+        )
+
+    tenant_id = request.query_params.get('tenant_id')
+    if tenant_id:
+        qs = qs.filter(tenant_id=tenant_id)
+    no_tenant = (request.query_params.get('no_tenant') or '').lower() == 'true'
+    if no_tenant:
+        qs = qs.filter(tenant__isnull=True)
+
+    role = request.query_params.get('role')
+    if role:
+        qs = qs.filter(role=role)
+
+    plan_status = request.query_params.get('plan_status')
+    if plan_status:
+        qs = qs.filter(Q(subscription__status=plan_status) | Q(subscription__isnull=True, tenant__subscription_status=plan_status))
+
+    alert = request.query_params.get('alert')
+    now = timezone.now()
+    if alert == 'trial_ending':
+        soon = now + timedelta(days=7)
+        qs = qs.filter(
+            Q(subscription__trial_end__isnull=False, subscription__trial_end__lte=soon, subscription__trial_end__gte=now) |
+            Q(subscription__isnull=True, tenant__trial_end__isnull=False, tenant__trial_end__lte=soon, tenant__trial_end__gte=now)
+        )
+    if alert == 'period_ending':
+        soon = now + timedelta(days=7)
+        qs = qs.filter(
+            Q(subscription__current_period_end__isnull=False, subscription__current_period_end__lte=soon, subscription__current_period_end__gte=now) |
+            Q(subscription__isnull=True, tenant__current_period_end__isnull=False, tenant__current_period_end__lte=soon, tenant__current_period_end__gte=now)
+        )
+
+    serializer = UserListSerializer(qs, many=True, context={'request': request})
+    return Response({'count': len(serializer.data), 'results': serializer.data})
