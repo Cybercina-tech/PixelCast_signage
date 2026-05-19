@@ -146,8 +146,17 @@ class TestLifecycle:
         assert t.status == 'closed'
         assert t.closed_at is not None
 
+    def test_resolve_from_open(self, ticket_a, dev_user):
+        t = resolve_ticket(ticket_a, dev_user, reason='duplicate')
+        assert t.status == 'resolved'
+        assert t.resolved_at is not None
+
+    def test_pend_from_open(self, ticket_a, dev_user):
+        t = pend_ticket(ticket_a, dev_user, reason='waiting')
+        assert t.status == 'pending'
+
     def test_invalid_transition_raises(self, ticket_a, dev_user):
-        t = ticket_a
+        t = close_ticket(ticket_a, dev_user)
         with pytest.raises(TicketTransitionError):
             resolve_ticket(t, dev_user)
 

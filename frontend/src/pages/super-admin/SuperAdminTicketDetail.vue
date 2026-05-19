@@ -194,7 +194,7 @@
           <Card title="Actions">
             <div class="grid grid-cols-2 gap-2">
               <button
-                v-for="action in transitionActions"
+                v-for="action in availableTransitionActions"
                 :key="action.value"
                 type="button"
                 class="px-3 py-2 rounded-lg border text-xs font-medium transition-colors"
@@ -226,7 +226,7 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { PaperClipIcon } from '@heroicons/vue/24/outline'
 import Card from '@/components/common/Card.vue'
@@ -262,6 +262,23 @@ const transitionActions = [
   { value: 'reopen', label: 'Reopen', class: 'border-cyan-500/40 bg-cyan-500/10 text-cyan-300 hover:bg-cyan-500/20' },
   { value: 'escalate', label: 'Escalate', class: 'border-red-500/40 bg-red-500/10 text-red-300 hover:bg-red-500/20' },
 ]
+
+/** Matches backend VALID_TRANSITIONS + reopen/escalate rules in tickets/services.py */
+const actionsByStatus = {
+  open: ['start_progress', 'pend', 'resolve', 'close', 'escalate'],
+  assigned: ['start_progress', 'pend', 'resolve', 'close', 'escalate'],
+  in_progress: ['pend', 'resolve', 'close', 'escalate'],
+  pending: ['start_progress', 'resolve', 'close', 'escalate'],
+  resolved: ['close', 'reopen', 'escalate'],
+  closed: ['reopen', 'escalate'],
+}
+
+const availableTransitionActions = computed(() => {
+  const status = ticket.value?.status
+  if (!status) return []
+  const allowed = actionsByStatus[status] || []
+  return transitionActions.filter((action) => allowed.includes(action.value))
+})
 
 function statusClass(status) {
   const map = {

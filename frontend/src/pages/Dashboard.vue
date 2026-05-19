@@ -63,10 +63,18 @@
               </p>
               <p class="text-xs text-muted mt-1">
                 Status {{ billingSummary.status || 'none' }}
-                <span class="mx-1">·</span>
-                Trial left {{ billingSummary.trial_days_remaining ?? '—' }}d
-                <span class="mx-1">·</span>
-                Period left {{ billingSummary.billing_days_remaining ?? '—' }}d
+                <template v-if="trialRemainingLabel">
+                  <span class="mx-1">·</span>
+                  <span class="text-primary font-medium">{{ trialRemainingLabel }}</span>
+                </template>
+                <template v-else-if="billingSummary.status === 'trialing'">
+                  <span class="mx-1">·</span>
+                  Trial period
+                </template>
+                <template v-if="showBillingPeriod && billingRemainingLabel">
+                  <span class="mx-1">·</span>
+                  {{ billingRemainingLabel }}
+                </template>
               </p>
             </div>
             <div class="flex items-center gap-2 shrink-0">
@@ -479,6 +487,7 @@ import { useDashboardStore } from '@/stores/dashboard'
 import { useTemplatesStore } from '@/stores/templates'
 import { useScreensStore } from '@/stores/screens'
 import { useNotification } from '@/composables/useNotification'
+import { useBillingTrial } from '@/composables/useBillingTrial'
 import { contentsAPI } from '@/services/api'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import OnboardingChecklist from '@/components/onboarding/OnboardingChecklist.vue'
@@ -499,6 +508,7 @@ const notify = useNotification()
 
 const isSuperAdmin = computed(() => isDeveloperOrSuperuser(authStore.user))
 const billingSummary = computed(() => authStore.user?.subscription || null)
+const { trialRemainingLabel, billingRemainingLabel, showBillingPeriod } = useBillingTrial(billingSummary)
 
 // State
 const loading = ref(true)

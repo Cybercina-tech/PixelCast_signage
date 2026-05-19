@@ -6,6 +6,7 @@ from django.utils.text import slugify
 
 from .models import Tenant
 from .pricing_models import PlatformBillingSettings
+from .trial import ensure_local_trial, sync_user_subscription_from_tenant
 
 
 def _default_device_limit():
@@ -21,10 +22,12 @@ def _tenant_for_organization(org: str) -> Tenant:
     while Tenant.objects.filter(slug=slug).exclude(organization_name_key=org).exists():
         i += 1
         slug = f'{base}-{i}'[:80]
-    tenant, _ = Tenant.objects.get_or_create(
+    tenant, created = Tenant.objects.get_or_create(
         organization_name_key=org,
         defaults={'name': org[:255], 'slug': slug, 'device_limit': free_limit},
     )
+    if created:
+        ensure_local_trial(tenant)
     return tenant
 
 
@@ -46,12 +49,14 @@ def _tenant_personal(user) -> Tenant:
     while Tenant.objects.filter(slug=slug).exists():
         n += 1
         slug = f'{base}-{uid}-{n}'[:80]
-    return Tenant.objects.create(
+    tenant = Tenant.objects.create(
         name=name,
         slug=slug,
         organization_name_key=key,
         device_limit=free_limit,
     )
+    ensure_local_trial(tenant)
+    return tenant
 
 
 def ensure_user_tenant(user) -> None:
@@ -68,6 +73,8 @@ def ensure_user_tenant(user) -> None:
         tenant = _tenant_personal(user)
     user.tenant = tenant
     user.save(update_fields=['tenant'])
+    ensure_local_trial(tenant)
+    sync_user_subscription_from_tenant(user)
 
 
 def assign_tenant_for_new_user(user) -> None:

@@ -25,7 +25,8 @@ from .models import (
 logger = logging.getLogger(__name__)
 
 VALID_TRANSITIONS: dict[str, set[str]] = {
-    'open': {'assigned', 'in_progress', 'closed'},
+    # Super-admin / agent shortcuts: resolve or pend directly from open.
+    'open': {'assigned', 'in_progress', 'pending', 'resolved', 'closed'},
     'assigned': {'in_progress', 'pending', 'resolved', 'closed'},
     'in_progress': {'pending', 'resolved', 'closed'},
     'pending': {'in_progress', 'resolved', 'closed'},

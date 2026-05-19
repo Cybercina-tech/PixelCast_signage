@@ -1769,6 +1769,30 @@ def test_sync_tenant_unlimited_from_subscription_metadata(tenant):
 
 @pytest.mark.django_db
 @override_settings(PLATFORM_SAAS_ENABLED=True)
+def test_ensure_user_tenant_starts_local_trial(employee_user):
+    from accounts.models import UserSubscription
+    from saas_platform.tenant_assignment import ensure_user_tenant
+
+    ensure_user_tenant(employee_user)
+    employee_user.refresh_from_db()
+    tenant = employee_user.tenant
+    assert tenant.trial_end is not None
+    assert tenant.subscription_status == 'trialing'
+    sub = UserSubscription.objects.get(user=employee_user)
+    assert sub.trial_end == tenant.trial_end
+
+    client = APIClient()
+    client.force_authenticate(user=employee_user)
+    r = client.get('/api/users/me/')
+    assert r.status_code == 200
+    payload = r.data.get('subscription')
+    assert payload is not None
+    assert payload['trial_days_remaining'] is not None
+    assert payload['trial_days_remaining'] >= 1
+
+
+@pytest.mark.django_db
+@override_settings(PLATFORM_SAAS_ENABLED=True)
 def test_user_me_returns_subscription_snapshot(employee_with_tenant):
     now = timezone.now()
     UserSubscription.objects.create(

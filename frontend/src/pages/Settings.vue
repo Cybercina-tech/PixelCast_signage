@@ -424,11 +424,21 @@
                   <div class="grid sm:grid-cols-2 gap-3 mt-3 text-sm">
                     <div class="rounded-lg border border-border-color/60 px-3 py-2">
                       <p class="text-xs text-muted">Trial remaining</p>
-                      <p class="text-primary font-semibold">{{ subscription.trial_days_remaining ?? '—' }} days</p>
+                      <p class="text-primary font-semibold">
+                        <template v-if="trialDaysRemaining !== null">
+                          {{ trialDaysRemaining }} {{ trialDaysRemaining === 1 ? 'day' : 'days' }}
+                        </template>
+                        <template v-else>—</template>
+                      </p>
                     </div>
-                    <div class="rounded-lg border border-border-color/60 px-3 py-2">
+                    <div
+                      v-if="showBillingPeriod"
+                      class="rounded-lg border border-border-color/60 px-3 py-2"
+                    >
                       <p class="text-xs text-muted">Billing period remaining</p>
-                      <p class="text-primary font-semibold">{{ subscription.billing_days_remaining ?? '—' }} days</p>
+                      <p class="text-primary font-semibold">
+                        {{ billingDaysRemaining }} {{ billingDaysRemaining === 1 ? 'day' : 'days' }}
+                      </p>
                     </div>
                   </div>
                   <div
@@ -519,6 +529,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useThemeStore } from '@/stores/theme'
 import { useNotification } from '@/composables/useNotification'
+import { useBillingTrial } from '@/composables/useBillingTrial'
 import { authAPI, licenseAPI, notificationCenterAPI, platformAPI } from '@/services/api'
 import { getBrowserApiBaseUrl } from '@/utils/apiBaseUrl'
 import AppLayout from '@/components/layout/AppLayout.vue'
@@ -562,6 +573,11 @@ const hasChanges = ref(false)
 
 const user = computed(() => authStore.user)
 const subscription = computed(() => user.value?.subscription || null)
+const {
+  trialDaysRemaining,
+  billingDaysRemaining,
+  showBillingPeriod,
+} = useBillingTrial(subscription)
 const billingBusy = ref(false)
 const billingChangeBusy = ref(false)
 const billingScreenQuantity = ref(1)

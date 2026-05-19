@@ -161,17 +161,22 @@ class UserSerializer(serializers.ModelSerializer):
 
     def get_subscription(self, obj):
         sub = getattr(obj, 'subscription', None)
+        tenant = getattr(obj, 'tenant', None)
         if sub:
+            trial_end = sub.trial_end or (getattr(tenant, 'trial_end', None) if tenant else None)
+            period_end = sub.current_period_end or (
+                getattr(tenant, 'current_period_end', None) if tenant else None
+            )
             payload = {
                 'plan_key': sub.plan_key,
                 'plan_name': sub.plan_name,
                 'plan_interval': sub.plan_interval,
                 'status': sub.status,
-                'trial_end': sub.trial_end,
+                'trial_end': trial_end,
                 'current_period_start': sub.current_period_start,
-                'current_period_end': sub.current_period_end,
-                'trial_days_remaining': sub.trial_days_remaining,
-                'billing_days_remaining': sub.billing_days_remaining,
+                'current_period_end': period_end,
+                'trial_days_remaining': _remaining_days(trial_end),
+                'billing_days_remaining': _remaining_days(period_end),
                 'cancel_at_period_end': sub.cancel_at_period_end,
                 'provider_customer_id': sub.provider_customer_id,
                 'provider_subscription_id': sub.provider_subscription_id,
@@ -272,17 +277,23 @@ class UserListSerializer(serializers.ModelSerializer):
 
     def get_trial_days_remaining(self, obj):
         sub = getattr(obj, 'subscription', None)
-        if sub:
-            return sub.trial_days_remaining
         tenant = getattr(obj, 'tenant', None)
-        return _remaining_days(getattr(tenant, 'trial_end', None)) if tenant else None
+        trial_end = None
+        if sub and sub.trial_end:
+            trial_end = sub.trial_end
+        elif tenant:
+            trial_end = getattr(tenant, 'trial_end', None)
+        return _remaining_days(trial_end)
 
     def get_billing_days_remaining(self, obj):
         sub = getattr(obj, 'subscription', None)
-        if sub:
-            return sub.billing_days_remaining
         tenant = getattr(obj, 'tenant', None)
-        return _remaining_days(getattr(tenant, 'current_period_end', None)) if tenant else None
+        period_end = None
+        if sub and sub.current_period_end:
+            period_end = sub.current_period_end
+        elif tenant:
+            period_end = getattr(tenant, 'current_period_end', None)
+        return _remaining_days(period_end)
 
 
 class UserCreateSerializer(serializers.ModelSerializer):
