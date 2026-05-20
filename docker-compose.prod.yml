@@ -62,9 +62,10 @@ services:
     environment:
       - SECRET_KEY=${SECRET_KEY:-wN9vQx2!mK7pR4tY8uH3cD6sL1zA5eB9fG2jT7nV4qP8xM3rK6hC1wZ}
       - DEBUG=${DEBUG:-False}
-      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-localhost,127.0.0.1,backend,frontend,.traefik.me}
-      - BASE_URL=${BASE_URL:-}
-      - CSRF_TRUSTED_ORIGINS=${CSRF_TRUSTED_ORIGINS:-}
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-pixelcast.uk,www.pixelcast.uk,localhost,127.0.0.1,backend,frontend,.traefik.me}
+      - BASE_URL=${BASE_URL:-https://pixelcast.uk}
+      - PUBLIC_WEB_APP_URL=${PUBLIC_WEB_APP_URL:-https://pixelcast.uk}
+      - CSRF_TRUSTED_ORIGINS=${CSRF_TRUSTED_ORIGINS:-https://pixelcast.uk,https://www.pixelcast.uk}
       - DB_NAME=${DB_NAME:-pixelcast_signage_db}
       - DB_USER=${DB_USER:-pixelcast_signage_user}
       # Same DB_PASSWORD as service `db` (POSTGRES_PASSWORD).

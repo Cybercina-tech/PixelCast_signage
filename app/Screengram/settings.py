@@ -164,8 +164,11 @@ SECURE_HSTS_SECONDS = env('SECURE_HSTS_SECONDS', default=0, cast=int)
 SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_REFERRER_POLICY = 'same-origin'
 
-if env('USE_BEHIND_PROXY', default=False, cast=bool):
+_USE_BEHIND_PROXY = env('USE_BEHIND_PROXY', default=False, cast=bool)
+if _USE_BEHIND_PROXY:
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    # Traefik/Dokploy: validate Host from X-Forwarded-Host when present
+    USE_X_FORWARDED_HOST = True
 
 # CORS Configuration — localhost defaults; add production SPA origins via CORS_ALLOWED_ORIGINS (comma-separated)
 _cors_from_env = env('CORS_ALLOWED_ORIGINS', default='', cast=list)
@@ -443,6 +446,30 @@ PUBLIC_WEB_APP_URL = env('PUBLIC_WEB_APP_URL', default='http://localhost:5173')
 # Screen pairing QR / deep links (defaults to PUBLIC_WEB_APP_URL)
 _frontend_url = (env('FRONTEND_URL', default='') or '').strip()
 FRONTEND_URL = _frontend_url or PUBLIC_WEB_APP_URL
+
+# Merge public hostnames into ALLOWED_HOSTS (fixes 400 DisallowedHost behind Traefik/Dokploy).
+def _hosts_from_url(value: str) -> list[str]:
+    if not isinstance(value, str) or not value.strip():
+        return []
+    host = urlparse(value.strip()).hostname
+    if not host:
+        return []
+    hosts = [host]
+    if ':' in host:
+        hosts.append(host.split(':', 1)[0])
+    return hosts
+
+
+_inferred_allowed_hosts: list[str] = []
+for _url in (BASE_URL, PUBLIC_WEB_APP_URL):
+    _inferred_allowed_hosts.extend(_hosts_from_url(_url))
+for _origin in CSRF_TRUSTED_ORIGINS:
+    _inferred_allowed_hosts.extend(_hosts_from_url(_origin))
+_docker_allowed = ('backend', 'frontend', '.traefik.me')
+ALLOWED_HOSTS = list(
+    dict.fromkeys([*ALLOWED_HOSTS, *_inferred_allowed_hosts, *_docker_allowed])
+)
+
 # Enterprise SSO (OIDC/SAML) — off until IdP env vars are set
 SSO_ENABLED = env('SSO_ENABLED', default=False, cast=bool)
 

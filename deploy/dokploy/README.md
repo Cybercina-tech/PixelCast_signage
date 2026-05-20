@@ -80,6 +80,18 @@ Webhook URL:
 
 ## Troubleshooting
 
+### API returns **400** on `pixelcast.uk` (`/api/setup/status/`, `/api/public/...`)
+
+**Cause:** Django `USE_X_FORWARDED_HOST=True` with an **empty** `X-Forwarded-Host` from Nginx → `DisallowedHost` (shows as 400).
+
+**Fix:** Rebuild **frontend** image (nginx passes `X-Forwarded-Host` from client `Host` when upstream header is empty). Ensure Environment has:
+
+```env
+ALLOWED_HOSTS=pixelcast.uk,www.pixelcast.uk,backend,frontend,.traefik.me
+BASE_URL=https://pixelcast.uk
+USE_BEHIND_PROXY=True
+```
+
 ### `backend` unhealthy / `dependency failed to start`
 
 **Common causes:**
