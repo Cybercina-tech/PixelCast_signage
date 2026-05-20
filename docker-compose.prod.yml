@@ -80,6 +80,7 @@ services:
       - BOOTSTRAP_DEFAULT_ADMIN=false
       - INSTALLATION_STATE_DIR=/app/installation_state
       - GUNICORN_WORKERS=${GUNICORN_WORKERS:-4}
+      - USE_BEHIND_PROXY=${USE_BEHIND_PROXY:-True}
     volumes:
       - backend_media:/app/media
       - backend_static:/app/staticfiles
@@ -173,6 +174,10 @@ services:
       args:
         VITE_API_BASE_URL: /api
         VITE_IOT_BASE_URL: /iot
+        VITE_PUBLIC_SITE_ORIGIN: ${VITE_PUBLIC_SITE_ORIGIN:-https://pixelcast.uk}
+        VITE_PUBLIC_REGION: ${VITE_PUBLIC_REGION:-UK}
+        VITE_OG_IMAGE_URL: ${VITE_OG_IMAGE_URL:-}
+        VITE_GTM_CONTAINER_ID: ${VITE_GTM_CONTAINER_ID:-}
     volumes:
       - backend_media:/app/media:ro
     depends_on:

@@ -52,7 +52,7 @@ function seoStaticFilesPlugin() {
       outDir = config.build.outDir
     },
     writeBundle() {
-      const raw = process.env.VITE_PUBLIC_SITE_ORIGIN || 'https://pixelcast.cybercina.co.uk'
+      const raw = process.env.VITE_PUBLIC_SITE_ORIGIN || 'https://pixelcast.uk'
       const origin = String(raw).trim().replace(/\/$/, '')
       const indexablePaths = [
         '/',

@@ -565,7 +565,9 @@ class PairingSessionSerializer(serializers.ModelSerializer):
         """Generate QR code URL for pairing"""
         from django.conf import settings
         # Try to get from settings, fallback to localhost
-        base_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:5173')
+        base_url = getattr(settings, 'FRONTEND_URL', None) or getattr(
+            settings, 'PUBLIC_WEB_APP_URL', 'http://localhost:5173'
+        )
         # Remove trailing slash if present
         base_url = base_url.rstrip('/')
         return f"{base_url}/screens/add?token={obj.pairing_token}"

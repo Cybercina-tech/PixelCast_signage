@@ -440,6 +440,9 @@ MEDIA_URL = '/media/'
 BASE_URL = env('BASE_URL', default='http://localhost:8000')
 # Public SPA URL for password-reset and email links (Vite dev default)
 PUBLIC_WEB_APP_URL = env('PUBLIC_WEB_APP_URL', default='http://localhost:5173')
+# Screen pairing QR / deep links (defaults to PUBLIC_WEB_APP_URL)
+_frontend_url = (env('FRONTEND_URL', default='') or '').strip()
+FRONTEND_URL = _frontend_url or PUBLIC_WEB_APP_URL
 # Enterprise SSO (OIDC/SAML) — off until IdP env vars are set
 SSO_ENABLED = env('SSO_ENABLED', default=False, cast=bool)
 
