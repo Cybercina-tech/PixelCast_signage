@@ -93,6 +93,7 @@ services:
         condition: service_healthy
     restart: always
 
+  # DEV ONLY — Dokploy/production must use compose.yaml or docker-compose.prod.yml (Nginx :80).
   frontend:
     build:
       context: ./frontend

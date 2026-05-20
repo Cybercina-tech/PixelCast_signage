@@ -1,0 +1,4 @@
+# Production default for Dokploy / server deploy (Nginx :80, not Vite :5173).
+# Local development: docker compose -f docker-compose.yml up
+include:
+  - docker-compose.prod.yml

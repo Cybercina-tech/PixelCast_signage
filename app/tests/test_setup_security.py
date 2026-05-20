@@ -1,7 +1,7 @@
 """Security-related tests for setup/installation API."""
 
 import pytest
-from django.test import override_settings
+from django.test import Client, override_settings
 from django.urls import reverse
 from rest_framework.test import APIClient
 
@@ -32,3 +32,16 @@ def test_setup_status_password_configured_reflects_settings():
     r = client.get(url)
     assert r.status_code == 200
     assert r.data['db_password_configured'] is False
+
+
+@pytest.mark.django_db
+def test_api_health_ok_before_installation(monkeypatch, tmp_path):
+    """Docker/Dokploy healthcheck must not get 503 from InstallationCheckMiddleware."""
+    monkeypatch.delenv('PIXELCAST_SIGNAGE_INSTALLED', raising=False)
+    monkeypatch.delenv('SCREENGRAM_INSTALLED', raising=False)
+    lock = tmp_path / 'installed.lock'
+    with override_settings(INSTALLATION_STATE_DIR=tmp_path):
+        assert not lock.exists()
+        r = Client().get('/api/health/')
+    assert r.status_code == 200
+    assert r.json()['status'] == 'ok'

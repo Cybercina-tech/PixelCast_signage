@@ -91,11 +91,12 @@ services:
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf http://127.0.0.1:8000/api/health/ >/dev/null || exit 1"]
+      # X-Forwarded-Proto: https — SECURE_SSL_REDIRECT when BASE_URL is https (Traefik terminates TLS).
+      test: ["CMD-SHELL", "curl -sf -H 'X-Forwarded-Proto: https' http://127.0.0.1:8000/api/health/ >/dev/null || exit 1"]
       interval: 10s
-      timeout: 5s
-      retries: 12
-      start_period: 180s
+      timeout: 10s
+      retries: 18
+      start_period: 300s
     restart: always
     networks:
       - default

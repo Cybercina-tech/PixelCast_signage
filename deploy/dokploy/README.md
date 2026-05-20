@@ -7,7 +7,7 @@ Nginx in **`frontend`** serves the SPA and proxies `/api`, `/iot`, `/ws`, `/medi
 
 | Step | Value |
 |------|--------|
-| Compose file | `docker-compose.prod.yml` |
+| Compose file | **`compose.yaml`** or **`docker-compose.prod.yml`** — never default `docker-compose.yml` |
 | Host network (once) | `docker network create dokploy-network` |
 | Domain | `pixelcast.uk` → service **`frontend`** |
 | Do **not** expose | `backend:8000`, `db`, `redis` |
@@ -79,6 +79,29 @@ Webhook URL:
 - `https://pixelcast.uk/sitemap.xml` lists `https://pixelcast.uk/...`
 
 ## Troubleshooting
+
+### `backend` unhealthy / `dependency failed to start`
+
+**Common causes:**
+
+1. **`/api/health/` returned 503** before install — fixed in app: health is allowed before `installed.lock`.
+2. **`SECURE_SSL_REDIRECT`** with `BASE_URL=https://...` — internal Docker healthcheck uses HTTP; set `SECURE_SSL_REDIRECT=false` when Traefik handles HTTPS (see `.env.production.example`).
+3. **DB password mismatch** — if Postgres volume was created with another password, set `DB_PASSWORD`/`POSTGRES_PASSWORD` to match or reset the volume.
+4. **Slow first migrate** — first deploy can take several minutes; prod compose allows **300s** start period.
+
+Check backend logs in Dokploy for `ImproperlyConfigured: SECRET_KEY` → set a unique `SECRET_KEY` in Environment.
+
+### Frontend logs show `vite --port 5173` or `npm run dev`
+
+**Cause:** Dokploy is using **`docker-compose.yml`** (local dev), not production.
+
+**Fix:**
+
+1. Dokploy → Application → **Compose file** → set to **`compose.yaml`** or **`docker-compose.prod.yml`**
+2. Remove any custom **Start command** on `frontend` (must not run `npm run dev`)
+3. **Redeploy** with **Rebuild** enabled
+4. Logs should show: `[pixelcast] production: nginx on :80` — not Vite `5173`
+5. Domain **Container Port** = **80** (HTTPS stays **On** for public 443)
 
 | Issue | Fix |
 |-------|-----|
