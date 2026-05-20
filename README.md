@@ -209,19 +209,19 @@ docker network create dokploy-network   # once per host, if using Traefik/Dokplo
 docker compose -f docker-compose.prod.yml up -d --build
 ```
 
-The production bundle exposes the **Nginx** frontend on host **port 8080** (mapped `8080:80` in `docker-compose.prod.yml`). Nginx serves the built SPA and proxies `/api`, `/iot`, and `/ws` to the backend. In Dokploy, point **`pixelcast.uk`** and **`app.pixelcast.uk`** at the **`frontend`** container on port **80** via `dokploy-network`.
+The production bundle exposes the **Nginx** frontend on host **port 8080** (mapped `8080:80` in `docker-compose.prod.yml`). Nginx serves the built SPA and proxies `/api`, `/iot`, and `/ws` to the backend. In Dokploy, point **`pixelcast.uk`** (and optional `www`) at the **`frontend`** container on port **80** via `dokploy-network`.
 
 Set at least:
 
 | Variable | Purpose |
 |----------|---------|
 | `SECRET_KEY` | Strong random Django secret |
-| `ALLOWED_HOSTS` | Comma-separated hostnames (`pixelcast.uk`, `app.pixelcast.uk`, …) |
-| `CSRF_TRUSTED_ORIGINS` | Full origins (`https://…`) |
-| `BASE_URL` | Public API/media base (`https://app.pixelcast.uk`) |
-| `PUBLIC_WEB_APP_URL` | SPA URL for emails, Stripe, pairing (`https://app.pixelcast.uk`) |
+| `ALLOWED_HOSTS` | `pixelcast.uk,www.pixelcast.uk,frontend,backend,.traefik.me` |
+| `CSRF_TRUSTED_ORIGINS` | `https://pixelcast.uk,https://www.pixelcast.uk` |
+| `BASE_URL` | `https://pixelcast.uk` |
+| `PUBLIC_WEB_APP_URL` | `https://pixelcast.uk` |
 | `USE_BEHIND_PROXY` | `True` behind Traefik/Dokploy HTTPS |
-| `VITE_PUBLIC_SITE_ORIGIN` | SEO/sitemap origin (`https://pixelcast.uk`; rebuild frontend) |
+| `VITE_PUBLIC_SITE_ORIGIN` | `https://pixelcast.uk` (rebuild frontend after change) |
 | `DB_PASSWORD` | Must stay in sync with `POSTGRES_PASSWORD` / `db` service |
 
 `frontend` and `backend` join the external network **`dokploy-network`** so an edge proxy can reach them without binding host port 80 on the stack.

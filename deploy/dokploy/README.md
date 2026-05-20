@@ -1,97 +1,90 @@
-# Deploy PixelCast Signage on Dokploy
+# Deploy on Dokploy — pixelcast.uk
 
-Production domains:
+Single public origin: **`https://pixelcast.uk`** (optional `www` alias).  
+Nginx in **`frontend`** serves the SPA and proxies `/api`, `/iot`, `/ws`, `/media` to Django.
 
-| Host | Role |
-|------|------|
-| `https://pixelcast.uk` | Public marketing / SEO canonical (`VITE_PUBLIC_SITE_ORIGIN`) |
-| `https://www.pixelcast.uk` | Optional alias → same app |
-| `https://app.pixelcast.uk` | Web app, API (`/api`), IoT (`/iot`), WebSockets (`/ws`) |
+## Dokploy setup (summary)
 
-One Compose stack serves the Vue SPA (Nginx) and proxies API traffic to Django. Point **both** hostnames at the **`frontend`** service (container port **80**).
+| Step | Value |
+|------|--------|
+| Compose file | `docker-compose.prod.yml` |
+| Host network (once) | `docker network create dokploy-network` |
+| Domain | `pixelcast.uk` → service **`frontend`** |
+| Do **not** expose | `backend:8000`, `db`, `redis` |
 
-## 1. Host preparation
+### Domain panel (match these fields exactly)
 
-On the Dokploy server (once):
+Use this in **Domains → Add/Edit** for `pixelcast.uk`:
 
-```bash
-docker network create dokploy-network
+| Field | Value | Why |
+|-------|--------|-----|
+| **Service Name** | `frontend` | Nginx + SPA + `/api` proxy |
+| **Host** | `pixelcast.uk` | Public hostname |
+| **Path** | `/` | Whole site |
+| **Internal Path** | `/` | App root |
+| **Strip Path** | **Off** | Do not strip `/` |
+| **Container Port** | **`80`** | Nginx listens on 80 *inside* the container — **not 443** |
+| **HTTPS** | **On** | Traefik serves **public HTTPS on 443** and terminates SSL |
+| **Certificate Provider** | `Let's Encrypt` | Auto SSL for `pixelcast.uk` |
+
+**Important:** You do **not** set Container Port to `443` for full HTTPS. Port **443** is the public internet port handled by **Traefik** when **HTTPS** is enabled. Traffic flow:
+
+```text
+Browser https://pixelcast.uk:443  →  Traefik (SSL / Let's Encrypt)  →  frontend container :80 (HTTP)
 ```
 
-## 2. Dokploy application
+If Container Port is `443` but Nginx only listens on `80`, the site will not load (connection refused / bad gateway).
 
-1. **Source**: Git repository for this project.
-2. **Compose file**: `docker-compose.prod.yml`
-3. **Environment**: copy [`deploy/dokploy/.env.production.example`](.env.production.example) to `.env` on the server, or paste variables into Dokploy → **Environment**.
-4. Set a strong `SECRET_KEY` and `DB_PASSWORD` / `POSTGRES_PASSWORD` (must match).
-5. **Build**: enable build on deploy; first deploy runs `docker compose -f docker-compose.prod.yml up -d --build`.
+Optional second domain: `www.pixelcast.uk` — same settings, Container Port **80**, HTTPS **On**.
 
-Services `frontend` and `backend` join **`dokploy-network`** so Traefik can reach them without binding host port 80.
+Env template: [`.env.production.example`](.env.production.example) → copy to `.env` on the server.
 
-## 3. Domains in Dokploy (Traefik)
+## Environment (go-live)
 
-Add two domains (or three with `www`) on the **`frontend`** service:
-
-| Domain | Container port | HTTPS |
-|--------|----------------|-------|
-| `pixelcast.uk` | 80 | Let's Encrypt |
-| `www.pixelcast.uk` | 80 | redirect to apex or same service |
-| `app.pixelcast.uk` | 80 | Let's Encrypt |
-
-Do **not** expose `backend:8000` publicly. The browser must call **`/api`** on the same origin as the SPA (Nginx proxy).
-
-Optional: stop publishing host port `8080` in production if you only use `dokploy-network` (remove the `ports:` block from `frontend` in a Dokploy-specific override, or firewall 8080).
-
-## 4. Environment checklist (go-live)
-
-| Variable | Production value |
-|----------|------------------|
-| `ALLOWED_HOSTS` | `pixelcast.uk,www.pixelcast.uk,app.pixelcast.uk,frontend,backend,.traefik.me` |
-| `CSRF_TRUSTED_ORIGINS` | `https://pixelcast.uk,https://www.pixelcast.uk,https://app.pixelcast.uk` |
-| `BASE_URL` | `https://app.pixelcast.uk` |
-| `PUBLIC_WEB_APP_URL` | `https://app.pixelcast.uk` |
+| Variable | Value |
+|----------|--------|
+| `ALLOWED_HOSTS` | `pixelcast.uk,www.pixelcast.uk,frontend,backend,.traefik.me` |
+| `CSRF_TRUSTED_ORIGINS` | `https://pixelcast.uk,https://www.pixelcast.uk` |
+| `BASE_URL` | `https://pixelcast.uk` |
+| `PUBLIC_WEB_APP_URL` | `https://pixelcast.uk` |
 | `USE_BEHIND_PROXY` | `True` |
-| `DEBUG` | `False` |
-| `BOOTSTRAP_DEFAULT_ADMIN` | `false` |
-| `VITE_PUBLIC_SITE_ORIGIN` | `https://pixelcast.uk` (requires **frontend rebuild**) |
-| `VITE_PUBLIC_REGION` | `UK` (optional, rebuild) |
+| `VITE_PUBLIC_SITE_ORIGIN` | `https://pixelcast.uk` (frontend **rebuild**) |
+| `SECRET_KEY` | Strong random (required when `DEBUG=False`) |
+| `DB_PASSWORD` | Same as `POSTGRES_PASSWORD` |
 
-After changing any `VITE_*` variable:
+Rebuild frontend after `VITE_*` changes:
 
 ```bash
 docker compose -f docker-compose.prod.yml build --no-cache frontend
-docker compose -f docker-compose.prod.yml up -d frontend
+docker compose -f docker-compose.prod.yml up -d
 ```
 
-## 5. First boot
+## First boot
 
-1. Wait until `backend` healthcheck passes (`/api/health/`).
-2. Open `https://app.pixelcast.uk/install` and finish the setup wizard (or set `PIXELCAST_SIGNAGE_INSTALLED=true` only after `installed.lock` exists).
-3. Create admin via wizard; do not rely on `BOOTSTRAP_DEFAULT_ADMIN` in production.
+1. Wait for `backend` healthy (`/api/health/`).
+2. Open **`https://pixelcast.uk/install`** and complete the wizard.
+3. Production: keep `BOOTSTRAP_DEFAULT_ADMIN=false`.
 
-## 6. Stripe webhooks (if SaaS billing)
+## Stripe (if used)
 
-Register webhook endpoint on Stripe Dashboard:
+Webhook URL:
 
-`https://app.pixelcast.uk/api/platform/stripe/webhook/`
+`https://pixelcast.uk/api/platform/stripe/webhook/`
 
-Set `STRIPE_WEBHOOK_SECRET` in `.env`.
+## Verify before announcing
 
-## 7. Verify
+- `https://pixelcast.uk/health` → `healthy`
+- `https://pixelcast.uk/api/health/` → OK
+- Login: `POST https://pixelcast.uk/api/auth/login/` (same host, not `backend:8000`)
+- `https://pixelcast.uk/sitemap.xml` lists `https://pixelcast.uk/...`
 
-- `https://app.pixelcast.uk/health` → `healthy`
-- `https://app.pixelcast.uk/api/health/` → JSON OK
-- Login: DevTools → `POST https://app.pixelcast.uk/api/auth/login/` (not `backend:8000`)
-- `https://pixelcast.uk/` → landing; sitemap at `https://pixelcast.uk/sitemap.xml` uses `VITE_PUBLIC_SITE_ORIGIN`
+## Troubleshooting
 
-## 8. Troubleshooting
+| Issue | Fix |
+|-------|-----|
+| 400 DisallowedHost | Add host to `ALLOWED_HOSTS` |
+| CSRF / cookie on HTTPS | `CSRF_TRUSTED_ORIGINS` + `USE_BEHIND_PROXY=True` |
+| API 503 | Finish `/install` or set `PIXELCAST_SIGNAGE_INSTALLED=true` after lock file exists |
+| `backend:8000` in browser | Rebuild frontend (`VITE_API_BASE_URL=/api` in compose) |
 
-| Symptom | Fix |
-|---------|-----|
-| `ERR_NAME_NOT_RESOLVED` for `backend:8000` | Rebuild frontend; ensure `VITE_API_BASE_URL=/api` at build (see `docker-compose.prod.yml`). |
-| 400 DisallowedHost | Add hostname to `ALLOWED_HOSTS`. |
-| CSRF / login fails on HTTPS | Set `CSRF_TRUSTED_ORIGINS` and `USE_BEHIND_PROXY=True`. |
-| Mixed Content / WebSocket | Same-origin `/ws` via Nginx; avoid absolute `http://` API URLs. |
-| 503 on `/api` | Complete `/install` or set `PIXELCAST_SIGNAGE_INSTALLED=true` after install. |
-
-See also root [`README.md`](../../README.md) → Production deployment.
+See [`../../README.md`](../../README.md) → Production deployment.
