@@ -1662,7 +1662,7 @@ onUnmounted(() => {
 
 /* ===== Landing always-light contrast normalization ===== */
 .landing-page :deep(.text-white),
-.landing-page :deep(.!text-white) {
+.landing-page :deep([class*="!text-white"]) {
   color: var(--text-heading) !important;
   -webkit-text-fill-color: var(--text-heading) !important;
 }
@@ -1717,7 +1717,7 @@ onUnmounted(() => {
 }
 
 .landing-page :deep(.text-on-starfield),
-.landing-page :deep(.!text-on-starfield) {
+.landing-page :deep([class*="!text-on-starfield"]) {
   color: var(--text-body) !important;
   -webkit-text-fill-color: var(--text-body) !important;
 }
