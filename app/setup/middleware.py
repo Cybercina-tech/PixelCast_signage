@@ -27,6 +27,7 @@ class InstallationCheckMiddleware(MiddlewareMixin):
     # Paths that should be allowed even if installation is not completed
     ALLOWED_PATHS = [
         '/api/health/',  # Docker / Dokploy healthcheck (must not return 503 before install)
+        '/api/health/live/',
         '/api/setup/',  # All setup endpoints
         # Public marketing JSON (SPA may call these before installed.lock exists)
         '/api/public/blog/',

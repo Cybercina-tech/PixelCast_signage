@@ -205,28 +205,16 @@ main() {
         # Run migrations (only if database is available)
         run_migrations || log_warning "Migrations skipped or failed, but continuing..."
 
-        # Ensure core app migrations apply; helps if a partial migrate state left gaps
-        log_info "Applying core app migrations explicitly..."
-        if python manage.py migrate core --noinput; then
-            log_success "Core migrations OK"
-        else
-            log_warning "Explicit core migrate failed (check logs)."
-        fi
-
-        # Marketing blog (public API /api/public/blog/); same rationale as core — avoids 5xx when migrate was partial
-        log_info "Applying blog app migrations explicitly..."
-        if python manage.py migrate blog --noinput; then
-            log_success "Blog migrations OK"
-        else
-            log_warning "Explicit blog migrate failed (check logs)."
-        fi
-
-        # UserSubscription (/api/users/me/ subscription snapshot)
-        log_info "Applying accounts app migrations explicitly..."
-        if python manage.py migrate accounts --noinput; then
-            log_success "Accounts migrations OK"
-        else
-            log_warning "Explicit accounts migrate failed (check logs)."
+        # Optional per-app migrates for partial DB states (off by default — saves ~30–90s on deploy).
+        if [ -n "${ENTRYPOINT_EXTRA_MIGRATE_APPS:-}" ]; then
+            for app in $(echo "$ENTRYPOINT_EXTRA_MIGRATE_APPS" | tr ',' ' '); do
+                log_info "Applying explicit migrate for app: $app"
+                if python manage.py migrate "$app" --noinput; then
+                    log_success "Migrate $app OK"
+                else
+                    log_warning "Explicit migrate for $app failed (check logs)."
+                fi
+            done
         fi
 
         # Optional: create default Developer (admin@pixelcast.com) if no user with that email exists.

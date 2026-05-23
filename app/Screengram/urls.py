@@ -58,7 +58,8 @@ urlpatterns = [
     # LAST RESORT: Public IoT endpoints (keeping for backward compatibility)
     path('public-iot/', include('signage.urls')),  # Public IoT endpoints (heartbeat, template)
     
-    # Lightweight health probe used by frontend footer/status checks.
+    # Lightweight health probes (allowed before installation; see setup.middleware).
+    path('api/health/live/', lambda request: JsonResponse({'status': 'ok', 'live': True})),
     path('api/health/', lambda request: JsonResponse({'status': 'ok'})),
     path('api/public/downloads/', public_downloads, name='public-downloads'),
     path('api/public/deployment/', public_deployment_view, name='public-deployment'),

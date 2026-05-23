@@ -34,9 +34,10 @@ services:
     # Probe `postgres` DB only — app DB may be created later by backend (ensure_postgres_db).
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d postgres"]
-      interval: 5s
+      interval: 10s
       timeout: 5s
-      retries: 20
+      retries: 30
+      start_period: 40s
     restart: always
 
   redis:
@@ -46,9 +47,10 @@ services:
       - redis_data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 3s
-      retries: 20
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 15s
     restart: always
 
   backend:
@@ -82,6 +84,10 @@ services:
       - INSTALLATION_STATE_DIR=/app/installation_state
       - GUNICORN_WORKERS=${GUNICORN_WORKERS:-4}
       - USE_BEHIND_PROXY=${USE_BEHIND_PROXY:-True}
+      # Required in production (multiple Gunicorn workers); omitting from .env must not fall back to memory.
+      - CHANNEL_LAYERS_BACKEND=${CHANNEL_LAYERS_BACKEND:-redis}
+      # Traefik terminates TLS; internal healthchecks use plain HTTP to :8000.
+      - SECURE_SSL_REDIRECT=${SECURE_SSL_REDIRECT:-false}
     volumes:
       - backend_media:/app/media
       - backend_static:/app/staticfiles
@@ -92,12 +98,12 @@ services:
       redis:
         condition: service_healthy
     healthcheck:
-      # X-Forwarded-Proto: https — SECURE_SSL_REDIRECT when BASE_URL is https (Traefik terminates TLS).
-      test: ["CMD-SHELL", "curl -sf -H 'X-Forwarded-Proto: https' http://127.0.0.1:8000/api/health/ >/dev/null || exit 1"]
-      interval: 10s
+      # /api/health/live/ — no DB; allowed before install. First boot may run migrations 2–5 min.
+      test: ["CMD-SHELL", "curl -sf http://127.0.0.1:8000/api/health/live/ >/dev/null || exit 1"]
+      interval: 15s
       timeout: 10s
-      retries: 18
-      start_period: 300s
+      retries: 40
+      start_period: 420s
     restart: always
     networks:
       - default
@@ -124,13 +130,14 @@ services:
       - REDIS_PORT=6379
       - CELERY_BROKER_URL=${CELERY_BROKER_URL:-redis://redis:6379/0}
       - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND:-redis://redis:6379/0}
+      - CHANNEL_LAYERS_BACKEND=${CHANNEL_LAYERS_BACKEND:-redis}
     depends_on:
       db:
         condition: service_healthy
       redis:
         condition: service_healthy
       backend:
-        condition: service_healthy
+        condition: service_started
     restart: always
     networks:
       - default
@@ -155,13 +162,14 @@ services:
       - REDIS_PORT=6379
       - CELERY_BROKER_URL=${CELERY_BROKER_URL:-redis://redis:6379/0}
       - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND:-redis://redis:6379/0}
+      - CHANNEL_LAYERS_BACKEND=${CHANNEL_LAYERS_BACKEND:-redis}
     depends_on:
       db:
         condition: service_healthy
       redis:
         condition: service_healthy
       backend:
-        condition: service_healthy
+        condition: service_started
     restart: always
     networks:
       - default
@@ -185,6 +193,12 @@ services:
     depends_on:
       backend:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
     ports:
       - "8080:80"
     restart: always

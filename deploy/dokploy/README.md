@@ -113,14 +113,41 @@ USE_BEHIND_PROXY=True
 
 ### `backend` unhealthy / `dependency failed to start`
 
-**Common causes:**
+Your deploy log may end with:
 
-1. **`/api/health/` returned 503** before install — fixed in app: health is allowed before `installed.lock`.
-2. **`SECURE_SSL_REDIRECT`** with `BASE_URL=https://...` — internal Docker healthcheck uses HTTP; set `SECURE_SSL_REDIRECT=false` when Traefik handles HTTPS (see `.env.production.example`).
-3. **DB password mismatch** — if Postgres volume was created with another password, set `DB_PASSWORD`/`POSTGRES_PASSWORD` to match or reset the volume.
-4. **Slow first migrate** — first deploy can take several minutes; prod compose allows **300s** start period.
+```text
+container ...-backend-1 is unhealthy
+dependency failed to start
+```
 
-Check backend logs in Dokploy for `ImproperlyConfigured: SECRET_KEY` → set a unique `SECRET_KEY` in Environment.
+That means **Gunicorn did not pass the health probe in time** (or crashed on boot). Celery/frontend then fail because they wait on `backend`.
+
+**Checklist (in order):**
+
+1. **Backend logs** (Dokploy → `backend` → Logs). Look for:
+   - `ImproperlyConfigured: CHANNEL_LAYERS_BACKEND must be 'redis'` → set `CHANNEL_LAYERS_BACKEND=redis` in Environment (prod compose now defaults this).
+   - `ImproperlyConfigured: SECRET_KEY` → set a strong `SECRET_KEY`.
+   - `password authentication failed` → `DB_PASSWORD` must match the existing Postgres volume (`POSTGRES_PASSWORD`).
+   - `FATAL: database "pixelcast_signage_db" does not exist` → wait for entrypoint `ensure_postgres_db` or fix `DB_NAME`.
+2. **Env (required for production):**
+   ```env
+   CHANNEL_LAYERS_BACKEND=redis
+   SECURE_SSL_REDIRECT=false
+   USE_BEHIND_PROXY=True
+   ```
+3. **First deploy is slow** — migrations + `collectstatic` run before Gunicorn. Prod compose allows **420s** `start_period` on `backend`. Dokploy must not use a deploy wait timeout shorter than ~7 minutes on first boot.
+4. **Health probe** — Docker calls `GET http://127.0.0.1:8000/api/health/live/` (no install lock required).
+5. **Disk space** — full disk during image build can leave containers half-started; run `df -h` on the host.
+
+**After deploy succeeds:** open `https://pixelcast.uk/install` if this is a fresh server.
+
+**Manual check on the server:**
+
+```bash
+docker logs pixelcast-saas-eqm4aq-backend-1 --tail 120
+docker inspect pixelcast-saas-eqm4aq-backend-1 --format '{{json .State.Health}}'
+curl -sS http://127.0.0.1:8080/api/health/live/   # via published frontend port if mapped
+```
 
 ### Frontend logs show `vite --port 5173` or `npm run dev`
 
