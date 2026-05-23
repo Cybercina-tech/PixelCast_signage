@@ -1077,12 +1077,20 @@ class Content(models.Model):
             url = ContentStorageManager.get_content_url(self, expiration)
             if not url:
                 # If get_content_url returns empty, fallback to file_url
-                logger.warning(f"Content {self.id}: get_content_url returned empty, using file_url")
+                logger.warning(
+                    f"Content {self.id}: get_content_url returned empty "
+                    f"(file_url={bool(self.file_url)}, storage_path={bool(self.storage_path)}), "
+                    "using file_url fallback"
+                )
                 return self.file_url or ''
             return url
         except Exception as e:
             # Log error but don't fail - use fallback
-            logger.warning(f"Content {self.id}: Error getting secure URL: {str(e)}, using file_url as fallback")
+            logger.warning(
+                f"Content {self.id}: Error getting secure URL: {str(e)} "
+                f"(file_url={bool(self.file_url)}, storage_path={bool(self.storage_path)}), "
+                "using file_url fallback"
+            )
             # Fallback to regular file_url
             return self.file_url or ''
     
@@ -1450,8 +1458,14 @@ class Content(models.Model):
         """
         # Validate file_url for file-based content
         if self.type in ['image', 'video', 'webview']:
-            if not self.file_url and not self.storage_path:
+            normalized_file_url = (self.file_url or '').strip()
+            normalized_storage_path = (self.storage_path or '').strip()
+            if not normalized_file_url and not normalized_storage_path:
                 return False, f"{self.type} content requires file_url or storage_path"
+            if normalized_file_url != (self.file_url or ''):
+                self.file_url = normalized_file_url or None
+            if normalized_storage_path != (self.storage_path or ''):
+                self.storage_path = normalized_storage_path or None
             
             # Validate URL format if file_url is provided
             if self.file_url:

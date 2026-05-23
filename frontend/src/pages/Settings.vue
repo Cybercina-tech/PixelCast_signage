@@ -448,7 +448,7 @@
                     {{ billingGraceBanner }}
                   </div>
                   <div
-                    v-if="subscription.plan_key === 'per_screen'"
+                    v-if="isPerScreenPlan"
                     class="mt-3 rounded-lg border border-border-color/60 px-3 py-2"
                   >
                     <p class="text-xs text-muted mb-2">Change number of screens</p>
@@ -581,6 +581,12 @@ const {
 const billingBusy = ref(false)
 const billingChangeBusy = ref(false)
 const billingScreenQuantity = ref(1)
+const isPerScreenPlan = computed(() => {
+  const s = subscription.value
+  if (!s) return false
+  const kind = String(s.metadata?.plan_kind || '').toLowerCase()
+  return kind === 'per_screen' || s.plan_key === 'per_screen'
+})
 const userInitials = computed(() => {
   if (!user.value?.username) return 'U'
   const parts = user.value.username.split(' ')
@@ -790,7 +796,7 @@ function goToPricing() {
 
 async function changeScreenQuantity() {
   const s = subscription.value
-  if (!s || s.plan_key !== 'per_screen') return
+  if (!s || !isPerScreenPlan.value) return
   const qty = Math.max(1, Number(billingScreenQuantity.value) || 1)
   billingChangeBusy.value = true
   try {

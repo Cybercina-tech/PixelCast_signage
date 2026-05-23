@@ -506,11 +506,23 @@ class ContentStorageManager:
         Returns:
             URL string (reliable and consistent)
         """
-        if not content_instance.file_url:
-            raise StorageError("Content has no file_url")
-        
         storage = cls._get_storage_backend()
         file_url = content_instance.file_url
+
+        # Legacy fallback: derive URL from storage_path when file_url is missing.
+        if not file_url and getattr(content_instance, 'storage_path', None):
+            storage_path = str(content_instance.storage_path).replace('\\', '/').strip('/')
+            if hasattr(storage, 'url'):
+                try:
+                    return storage.url(storage_path)
+                except Exception:
+                    media_url = getattr(settings, 'MEDIA_URL', '/media/').rstrip('/')
+                    return f"{media_url}/{storage_path}"
+            media_url = getattr(settings, 'MEDIA_URL', '/media/').rstrip('/')
+            return f"{media_url}/{storage_path}"
+
+        if not file_url:
+            raise StorageError("Content has no file_url and no storage_path")
         
         # Check if using S3 storage
         if hasattr(storage, 'url') and 's3' in str(type(storage)).lower():
@@ -580,38 +592,21 @@ class ContentStorageManager:
                 # Fallback to regular URL
                 return file_url
         
-        # For local storage, return consistent media URL
-        # If file_url is already a full HTTP(S) URL, return it as-is
-        if file_url.startswith('http://') or file_url.startswith('https://'):
-            return file_url
-        
-        # Normalize the file_url path
-        clean_path = file_url.replace('\\', '/').strip('/')
-        
-        # If it's already a proper media URL path, return it
+        # For local storage, return /media/... path (frontend resolves same-origin) or public absolute URL
+        from core.media_urls import resolve_public_media_url
+
+        public_url = resolve_public_media_url(file_url)
+        if public_url:
+            logger.debug(f"Generated content URL: {public_url}")
+            return public_url
+
         media_url = getattr(settings, 'MEDIA_URL', '/media/')
-        media_url_clean = media_url.rstrip('/')
-        
-        # If file_url already starts with media_url, return as-is (normalized)
-        if clean_path.startswith(media_url_clean.lstrip('/')):
-            # Ensure it starts with /
-            if not clean_path.startswith('/'):
-                clean_path = '/' + clean_path
-            return clean_path
-        
-        # Construct proper media URL
-        # Ensure media_url ends with / and clean_path doesn't start with /
-        if clean_path.startswith('/'):
-            clean_path = clean_path.lstrip('/')
-        
-        result_url = f"{media_url_clean}/{clean_path}"
-        if not (result_url.startswith('http://') or result_url.startswith('https://')):
-            while '//' in result_url:
-                result_url = result_url.replace('//', '/')
-        if not result_url.startswith('http') and not result_url.startswith('/'):
+        clean_path = file_url.replace('\\', '/').strip('/')
+        result_url = f"{media_url.rstrip('/')}/{clean_path.lstrip('/')}"
+        while '//' in result_url.replace('://', ''):
+            result_url = result_url.replace('//', '/')
+        if not result_url.startswith('/'):
             result_url = '/' + result_url
-        
-        logger.debug(f"Generated content URL: {result_url}")
         return result_url
     
     @classmethod

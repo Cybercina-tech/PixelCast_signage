@@ -6,19 +6,22 @@ and role-based access control (RBAC).
 """
 import json
 import logging
+import re
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from django.utils import timezone
 from django.core.exceptions import ObjectDoesNotExist
+from django.core.cache import cache
 from rest_framework_simplejwt.tokens import UntypedToken
 from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from jwt import decode as jwt_decode
 from django.conf import settings
-from channels.layers import get_channel_layer
+from urllib.parse import parse_qs, unquote
 
 from accounts.models import User
 from signage.models import Screen
 from commands.models import Command
+from commands.realtime_metrics import increment_metric
 
 logger = logging.getLogger(__name__)
 
@@ -34,14 +37,31 @@ class AdminDashboardConsumer(AsyncWebsocketConsumer):
     - Organization-based filtering
     """
     
+    MAX_CONNECTIONS_PER_MINUTE_PER_IP = 30
+    MAX_CONNECTIONS_PER_MINUTE_PER_USER = 20
+    ACL_CACHE_TTL_SECONDS = 30
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        ws_security = getattr(settings, 'DASHBOARD_WS_SECURITY', {})
+        self.MAX_CONNECTIONS_PER_MINUTE_PER_IP = ws_security.get(
+            'MAX_CONNECTIONS_PER_MINUTE_PER_IP',
+            self.MAX_CONNECTIONS_PER_MINUTE_PER_IP
+        )
+        self.MAX_CONNECTIONS_PER_MINUTE_PER_USER = ws_security.get(
+            'MAX_CONNECTIONS_PER_MINUTE_PER_USER',
+            self.MAX_CONNECTIONS_PER_MINUTE_PER_USER
+        )
+        self.ACL_CACHE_TTL_SECONDS = ws_security.get(
+            'ACL_CACHE_TTL_SECONDS',
+            self.ACL_CACHE_TTL_SECONDS
+        )
         self.user = None
         self.user_id = None
         self.organization_name = None
         self.user_role = None
         self.client_ip = None
-        self.dashboard_group = 'dashboard_updates'
+        self.dashboard_groups = []
     
     async def connect(self):
         """
@@ -55,31 +75,35 @@ class AdminDashboardConsumer(AsyncWebsocketConsumer):
         
         # Parse query string
         query_string = self.scope.get('query_string', b'').decode()
-        query_params = {}
-        if query_string:
-            for param in query_string.split('&'):
-                if '=' in param:
-                    key, value = param.split('=', 1)
-                    query_params[key] = value
+        query_params = parse_qs(query_string, keep_blank_values=False)
         
         # Get JWT token from query string
-        token = query_params.get('token')
+        token_values = query_params.get('token') or []
+        token = unquote(token_values[0]) if token_values else None
         
         if not token:
+            increment_metric("dashboard_ws_connect_rejected_total")
+            increment_metric("dashboard_ws_auth_rejected_total")
             logger.warning(f"Dashboard WebSocket connection rejected: missing token from IP {self.client_ip}")
             await self.close(code=4001)  # Unauthorized
             return
         
         # Authenticate user with JWT
         try:
-            self.user = await self.authenticate_user(token)
+            self.user, auth_reason = await self.authenticate_user(token)
             if not self.user:
-                logger.warning(f"Dashboard WebSocket connection rejected: invalid token from IP {self.client_ip}")
+                increment_metric("dashboard_ws_connect_rejected_total")
+                increment_metric("dashboard_ws_auth_rejected_total")
+                logger.warning(
+                    f"Dashboard WebSocket connection rejected: {auth_reason} from IP {self.client_ip}"
+                )
                 await self.close(code=4001)  # Unauthorized
                 return
             
             # Check if user is active
             if not self.user.is_active:
+                increment_metric("dashboard_ws_connect_rejected_total")
+                increment_metric("dashboard_ws_auth_rejected_total")
                 logger.warning(f"Dashboard WebSocket connection rejected: inactive user {self.user.id}")
                 await self.close(code=4001)  # Unauthorized
                 return
@@ -87,18 +111,28 @@ class AdminDashboardConsumer(AsyncWebsocketConsumer):
             self.user_id = str(self.user.id)
             self.organization_name = self.user.organization_name
             self.user_role = self.user.role
+
+            if not self.check_connection_rate_limit():
+                increment_metric("dashboard_ws_connect_rejected_total")
+                increment_metric("dashboard_ws_rate_limited_total")
+                logger.warning(
+                    f"Dashboard WebSocket connection rejected: rate limit exceeded for user {self.user_id} from IP {self.client_ip}"
+                )
+                await self.close(code=4003)
+                return
             
             # Check permissions (all authenticated users can connect, but data is filtered)
             # Viewer role has read-only access
             # Operator, Manager, Admin, SuperAdmin have full access
             
-            # Add to dashboard group
-            await self.channel_layer.group_add(
-                self.dashboard_group,
-                self.channel_name
-            )
+            # Add to scoped dashboard groups to reduce global fan-out.
+            self.dashboard_groups = self.resolve_dashboard_groups()
+            for group in self.dashboard_groups:
+                await self.channel_layer.group_add(group, self.channel_name)
             
             await self.accept()
+            increment_metric("dashboard_ws_connect_success_total")
+            increment_metric("dashboard_ws_active_connections")
             
             # Update user's last_seen
             await self.update_user_last_seen()
@@ -115,6 +149,7 @@ class AdminDashboardConsumer(AsyncWebsocketConsumer):
             }))
             
         except Exception as e:
+            increment_metric("dashboard_ws_connect_rejected_total")
             logger.error(f"Error during dashboard WebSocket connection: {str(e)}", exc_info=True)
             await self.close(code=4002)  # Internal error
     
@@ -125,11 +160,10 @@ class AdminDashboardConsumer(AsyncWebsocketConsumer):
         Removes user from dashboard group.
         """
         if self.user_id:
+            increment_metric("dashboard_ws_active_connections", delta=-1)
             # Remove from group
-            await self.channel_layer.group_discard(
-                self.dashboard_group,
-                self.channel_name
-            )
+            for group in self.dashboard_groups:
+                await self.channel_layer.group_discard(group, self.channel_name)
             
             logger.info(f"Dashboard user {self.user_id} disconnected (code: {close_code}) from IP {self.client_ip}")
     
@@ -170,6 +204,8 @@ class AdminDashboardConsumer(AsyncWebsocketConsumer):
         Filters data based on user permissions and organization.
         """
         data = event['data']
+        if not self.is_event_visible_for_user(data):
+            return
         
         # Check if user has permission to see this command
         if await self.can_access_command(data.get('command_id')):
@@ -185,6 +221,8 @@ class AdminDashboardConsumer(AsyncWebsocketConsumer):
         Filters data based on user permissions and organization.
         """
         data = event['data']
+        if not self.is_event_visible_for_user(data):
+            return
         
         # Check if user has permission to see this screen
         if await self.can_access_screen(data.get('screen_id')):
@@ -200,6 +238,8 @@ class AdminDashboardConsumer(AsyncWebsocketConsumer):
         Filters data based on user permissions and organization.
         """
         data = event['data']
+        if not self.is_event_visible_for_user(data):
+            return
         
         # Check if user has permission to see this screen
         if await self.can_access_screen(data.get('screen_id')):
@@ -215,6 +255,8 @@ class AdminDashboardConsumer(AsyncWebsocketConsumer):
         Filters data based on user permissions and organization.
         """
         data = event['data']
+        if not self.is_event_visible_for_user(data):
+            return
         
         # Check if user has permission to see this screen
         if await self.can_access_screen(data.get('screen_id')):
@@ -282,7 +324,7 @@ class AdminDashboardConsumer(AsyncWebsocketConsumer):
             }))
             return
         
-        # Commands are broadcast via dashboard_updates group, no need for separate subscription
+        # Commands are pushed via scoped dashboard groups, no separate command group needed
     
     async def handle_ping(self):
         """Handle ping message"""
@@ -305,6 +347,11 @@ class AdminDashboardConsumer(AsyncWebsocketConsumer):
         if self.user.is_developer() or self.user.is_manager():
             return True
 
+        cache_key = f"dashboard_acl:screen:{self.user_id}:{screen_id}"
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return bool(cached)
+
         try:
             screen = await database_sync_to_async(
                 lambda: Screen.objects.select_related('owner').get(id=screen_id)
@@ -316,9 +363,12 @@ class AdminDashboardConsumer(AsyncWebsocketConsumer):
                 and screen.owner
                 and getattr(screen.owner, 'organization_name', None) == self.organization_name
             ):
+                cache.set(cache_key, True, self.ACL_CACHE_TTL_SECONDS)
                 return True
+            cache.set(cache_key, False, self.ACL_CACHE_TTL_SECONDS)
             return False
         except ObjectDoesNotExist:
+            cache.set(cache_key, False, self.ACL_CACHE_TTL_SECONDS)
             return False
     
     async def can_access_command(self, command_id):
@@ -336,6 +386,11 @@ class AdminDashboardConsumer(AsyncWebsocketConsumer):
         if self.user.is_developer() or self.user.is_manager():
             return True
 
+        cache_key = f"dashboard_acl:command:{self.user_id}:{command_id}"
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return bool(cached)
+
         try:
             command = await database_sync_to_async(
                 lambda: Command.objects.select_related('screen', 'screen__owner').get(id=command_id)
@@ -348,9 +403,12 @@ class AdminDashboardConsumer(AsyncWebsocketConsumer):
                 and screen.owner
                 and getattr(screen.owner, 'organization_name', None) == self.organization_name
             ):
+                cache.set(cache_key, True, self.ACL_CACHE_TTL_SECONDS)
                 return True
+            cache.set(cache_key, False, self.ACL_CACHE_TTL_SECONDS)
             return False
         except ObjectDoesNotExist:
+            cache.set(cache_key, False, self.ACL_CACHE_TTL_SECONDS)
             return False
     
     @database_sync_to_async
@@ -362,7 +420,7 @@ class AdminDashboardConsumer(AsyncWebsocketConsumer):
             token: JWT access token string
             
         Returns:
-            User instance if valid, None otherwise
+            Tuple[User|None, str] as (user, reason)
         """
         try:
             # Validate token structure
@@ -377,26 +435,79 @@ class AdminDashboardConsumer(AsyncWebsocketConsumer):
             user_id = decoded_data.get('user_id')
             
             if not user_id:
-                logger.warning("JWT token missing user_id claim")
-                return None
+                return None, "invalid token (missing user_id claim)"
             
             # Get user
             try:
                 user = User.objects.get(id=user_id, is_active=True)
-                return user
+                return user, "ok"
             except ObjectDoesNotExist:
-                logger.warning(f"User {user_id} not found or inactive")
-                return None
+                return None, f"user {user_id} not found or inactive"
                 
         except (InvalidToken, TokenError) as e:
+            reason = str(e).lower()
+            if "expired" in reason:
+                logger.warning(f"Invalid JWT token: {str(e)}")
+                return None, "expired token"
             logger.warning(f"Invalid JWT token: {str(e)}")
-            return None
+            return None, "invalid token"
         except Exception as e:
             logger.error(f"Error authenticating user: {str(e)}", exc_info=True)
-            return None
+            return None, "authentication error"
     
     @database_sync_to_async
     def update_user_last_seen(self):
         """Update user's last_seen timestamp"""
         if self.user:
             self.user.update_last_seen()
+
+    def check_connection_rate_limit(self):
+        """Rate limit dashboard websocket connect attempts by IP and user."""
+        ip = self.client_ip or "unknown"
+        user = self.user_id or "unknown"
+        ip_key = f"dashboard_ws_conn_rate:ip:{ip}"
+        user_key = f"dashboard_ws_conn_rate:user:{user}"
+
+        ip_count = cache.get(ip_key, 0)
+        user_count = cache.get(user_key, 0)
+
+        if ip_count >= self.MAX_CONNECTIONS_PER_MINUTE_PER_IP:
+            return False
+        if user_count >= self.MAX_CONNECTIONS_PER_MINUTE_PER_USER:
+            return False
+
+        cache.set(ip_key, ip_count + 1, 60)
+        cache.set(user_key, user_count + 1, 60)
+        return True
+
+    def resolve_dashboard_groups(self):
+        """Select dashboard groups for this user to avoid global broadcasts for all users."""
+        groups = set()
+        if self.user and (self.user.is_developer() or self.user.is_manager()):
+            groups.add('dashboard_global_updates')
+        else:
+            org_group = self._org_group_name(self.organization_name)
+            if org_group:
+                groups.add(org_group)
+        if not groups:
+            groups.add('dashboard_global_updates')
+        return list(groups)
+
+    def is_event_visible_for_user(self, data):
+        """Fast path filter using event organization before DB checks."""
+        event_org = (data or {}).get('organization_name')
+        if not event_org:
+            return True
+        if self.user and (self.user.is_developer() or self.user.is_manager()):
+            return True
+        return event_org == self.organization_name
+
+    @staticmethod
+    def _org_group_name(organization_name):
+        if not organization_name:
+            return None
+        normalized = re.sub(r'[^a-z0-9_]', '_', str(organization_name).strip().lower())
+        normalized = re.sub(r'_+', '_', normalized).strip('_')
+        if not normalized:
+            return None
+        return f"dashboard_org_{normalized}"

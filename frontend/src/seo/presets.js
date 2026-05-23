@@ -36,7 +36,7 @@ function appPage(title) {
 export const SEO_BY_ROUTE_NAME = {
   landing: publicSeo(
     `${SITE_NAME} — Digital Signage Software & Display Management`,
-    `Commercial digital signage solutions for retail, restaurants, corporate offices, and screen networks.${UK} Templates, scheduling, remote players, and fleet monitoring in one platform.`
+    `Turn any TV with a browser into digital signage with no media players required.${UK} Manage templates, schedules, and screen fleets from one PixelCast platform.`
   ),
   blog: publicSeo(
     `Blog — Guides & Best Practices | ${SITE_NAME}`,
@@ -52,15 +52,34 @@ export const SEO_BY_ROUTE_NAME = {
   ),
   install: publicSeo(
     `Install ${SITE_NAME} — Digital Signage Setup Wizard`,
-    'Self-hosted digital signage installation: configure your environment, admin account, and get your screen network online with guided setup.'
+    'Self-hosted digital signage installation: configure your environment, admin account, and get your screen network online with guided setup.',
+    { robots: 'noindex, nofollow' }
   ),
   login: publicSeo(
     `Sign In — ${SITE_NAME} Digital Signage`,
-    'Sign in to manage digital signage displays, menu boards, templates, schedules, and remote device commands from your PixelCast dashboard.'
+    'Sign in to manage digital signage displays, menu boards, templates, schedules, and remote device commands from your PixelCast dashboard.',
+    { robots: 'noindex, nofollow' }
   ),
   signup: publicSeo(
     `Start Free Trial — Digital Signage Software | ${SITE_NAME}`,
-    'Create your account and start managing commercial digital signage: template editor, content library, schedules, and secure web players for business displays.'
+    'Create your account and start managing commercial digital signage: template editor, content library, schedules, and secure web players for business displays.',
+    { robots: 'noindex, nofollow' }
+  ),
+  'solution-browser-signage': publicSeo(
+    `Browser-Based Digital Signage Software for Teams | ${SITE_NAME}`,
+    'Browser-based digital signage software for organizations, retailers, and restaurant operators. Launch screens in minutes, manage templates centrally, and scale securely.'
+  ),
+  'guide-smart-tv-signboard': publicSeo(
+    `How to Turn a Smart TV into a Digital Signboard (Step-by-Step) | ${SITE_NAME}`,
+    'Learn how to turn a smart TV into a digital signboard using PixelCast web pairing, cloud scheduling, and remote content updates.'
+  ),
+  'solution-free-menu-boards': publicSeo(
+    `Free Digital Signage for Menu Boards | ${SITE_NAME}`,
+    'Run free digital signage for menu boards with cloud controls, daypart scheduling, and fast updates for restaurants, cafes, and quick-service brands.'
+  ),
+  'solution-cloud-tv-browser': publicSeo(
+    `Cloud Digital Signage for Running on TV Browser | ${SITE_NAME}`,
+    'Cloud digital signage for running on TV browser environments, including Samsung, LG, and kiosk displays. Deploy quickly and manage every screen remotely.'
   ),
   'forgot-password': publicSeo(
     `Reset Password — ${SITE_NAME}`,

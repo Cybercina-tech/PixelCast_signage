@@ -165,9 +165,18 @@ class PlatformBillingSettingsSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 {'stripe_publishable_key': 'Stripe publishable key must start with pk_live_ or pk_test_.'}
             )
-        if sk and not (sk.startswith('sk_live_') or sk.startswith('sk_test_')):
+        if sk and not (
+            sk.startswith('sk_live_')
+            or sk.startswith('sk_test_')
+            or sk.startswith('rk_live_')
+            or sk.startswith('rk_test_')
+        ):
             raise serializers.ValidationError(
-                {'stripe_secret_key': 'Stripe secret key must start with sk_live_ or sk_test_.'}
+                {
+                    'stripe_secret_key': (
+                        'Stripe secret key must start with sk_live_, sk_test_, rk_live_, or rk_test_.'
+                    )
+                }
             )
         if wh and not wh.startswith('whsec_'):
             raise serializers.ValidationError(

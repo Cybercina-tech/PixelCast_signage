@@ -34,6 +34,16 @@ def _stripe_env_status() -> dict:
     active_paid_plans = SubscriptionPlan.objects.filter(
         is_active=True,
     ).exclude(kind=SubscriptionPlan.KIND_FREE).exclude(stripe_price_id='').count()
+    checkout_blocking_reasons: list[str] = []
+    portal_blocking_reasons: list[str] = []
+    if not secret:
+        checkout_blocking_reasons.append('Stripe secret key is missing.')
+        portal_blocking_reasons.append('Stripe secret key is missing.')
+    if active_paid_plans == 0 and not legacy_price:
+        checkout_blocking_reasons.append('No active paid plan with Stripe price id is configured.')
+    if not bool(cfg.customer_portal_enabled):
+        portal_blocking_reasons.append('Stripe customer portal is disabled in platform settings.')
+
     return {
         'config_source': 'database',
         'has_env_fallback': bool(
@@ -48,6 +58,9 @@ def _stripe_env_status() -> dict:
         'default_currency': (cfg.default_currency or 'usd').lower(),
         'customer_portal_enabled': bool(cfg.customer_portal_enabled),
         'checkout_ready': secret and (active_paid_plans > 0 or legacy_price),
+        'checkout_blocking_reasons': checkout_blocking_reasons,
+        'portal_ready': secret and bool(cfg.customer_portal_enabled),
+        'portal_blocking_reasons': portal_blocking_reasons,
         'webhook_ready': secret and webhook,
         'active_paid_plans_with_price': active_paid_plans,
         'public_web_app_url': (getattr(settings, 'PUBLIC_WEB_APP_URL', '') or '').strip(),
@@ -191,7 +204,7 @@ def platform_stripe_connection_health(request):
         stripe.api_key = secret
         account = stripe.Account.retrieve()
         diag['api_reachable'] = True
-        diag['mode'] = 'live' if secret.startswith('sk_live_') else 'test'
+        diag['mode'] = 'live' if (secret.startswith('sk_live_') or secret.startswith('rk_live_')) else 'test'
         diag['account_id'] = str(getattr(account, 'id', '') or account.get('id', ''))
         diag['charges_enabled'] = bool(
             getattr(account, 'charges_enabled', None)

@@ -129,7 +129,7 @@ const handleLogoutAll = async () => {
     notify.success('Logged out from all sessions')
     
     // Clear auth state and redirect to login
-    authStore.logout()
+    await authStore.logout({ skipServer: true })
     router.push('/login')
   } catch (err) {
     const errorMessage = err.response?.data?.detail || err.response?.data?.error || 'Failed to logout from all sessions'

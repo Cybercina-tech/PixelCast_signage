@@ -57,8 +57,45 @@ export function buildWebPageGraph(origin, opts) {
   }
 }
 
+export function buildBreadcrumbGraph(origin, path, items) {
+  const url = `${origin}${path === '/' ? '/' : path.replace(/\/$/, '')}`
+  return {
+    '@type': 'BreadcrumbList',
+    '@id': `${url}#breadcrumb`,
+    itemListElement: items.map((item, index) => ({
+      '@type': 'ListItem',
+      position: index + 1,
+      name: item.name,
+      item: `${origin}${item.path}`,
+    })),
+  }
+}
+
+export function buildSoftwareApplicationGraph(origin, opts) {
+  const { path, name, description, offers = [] } = opts
+  const url = `${origin}${path === '/' ? '/' : path.replace(/\/$/, '')}`
+  return {
+    '@type': 'SoftwareApplication',
+    '@id': `${url}#software`,
+    name,
+    applicationCategory: 'BusinessApplication',
+    operatingSystem: 'Web Browser',
+    description,
+    url,
+    publisher: { '@id': orgId(origin) },
+    offers: offers.map((offer) => ({
+      '@type': 'Offer',
+      name: offer.name,
+      price: offer.price,
+      priceCurrency: offer.currency || 'USD',
+      availability: 'https://schema.org/InStock',
+      url: `${origin}${offer.path || path}`,
+    })),
+  }
+}
+
 export function buildBlogPostingGraph(origin, opts) {
-  const { path, headline, description, datePublished, dateModified } = opts
+  const { path, headline, description, datePublished, dateModified, image } = opts
   const url = `${origin}${path}`
   const { org, website } = buildOrganizationAndWebsite(origin)
   const article = {
@@ -73,6 +110,9 @@ export function buildBlogPostingGraph(origin, opts) {
     author: { '@type': 'Organization', name: SITE_NAME },
     publisher: { '@id': orgId(origin) },
     isPartOf: { '@id': websiteId(origin) },
+  }
+  if (image) {
+    article.image = [image]
   }
   const webPage = {
     '@type': 'WebPage',
@@ -100,10 +140,23 @@ export function buildFaqPageGraph(origin, faqPath, faqItems) {
   }))
   return {
     '@context': 'https://schema.org',
+    ...buildFaqNode(url, faqItems),
+  }
+}
+
+export function buildFaqNode(url, faqItems) {
+  return {
     '@type': 'FAQPage',
     '@id': `${url}#faq`,
     url,
-    mainEntity,
+    mainEntity: faqItems.map((item) => ({
+      '@type': 'Question',
+      name: item.question,
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: item.answer,
+      },
+    })),
   }
 }
 

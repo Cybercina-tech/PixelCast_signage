@@ -258,6 +258,11 @@ main() {
     
     # 3. Collect static files (always run, doesn't require database)
     collect_static || log_warning "Static file collection had issues, but continuing..."
+
+    # Media must be readable by Nginx in the frontend container (shared backend_media volume)
+    log_info "Ensuring media directory permissions for shared volume..."
+    mkdir -p /app/media
+    chmod -R a+rX /app/media 2>/dev/null || log_warning "Could not chmod /app/media (may be OK on some hosts)"
     
     # 4. Start Gunicorn with Uvicorn workers for ASGI support
     log_info "=========================================="

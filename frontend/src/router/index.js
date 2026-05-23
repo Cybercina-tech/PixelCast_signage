@@ -91,6 +91,10 @@ import Sessions from '../pages/Sessions.vue'
 import PrivacyPolicy from '../pages/PrivacyPolicy.vue'
 import TermsOfService from '../pages/TermsOfService.vue'
 import DataCenter from '../pages/DataCenter.vue'
+import SolutionBrowserSignage from '../pages/SolutionBrowserSignage.vue'
+import GuideSmartTvSignboard from '../pages/GuideSmartTvSignboard.vue'
+import SolutionFreeMenuBoards from '../pages/SolutionFreeMenuBoards.vue'
+import SolutionCloudTvBrowser from '../pages/SolutionCloudTvBrowser.vue'
 // Error Pages
 import NotFound from '../pages/errors/NotFound.vue'
 import Unauthorized from '../pages/errors/Unauthorized.vue'
@@ -188,6 +192,30 @@ const routes = [
     path: '/pricing',
     name: 'pricing',
     component: () => import('../pages/Pricing.vue'),
+    meta: { public: true },
+  },
+  {
+    path: '/solutions/browser-based-digital-signage-software',
+    name: 'solution-browser-signage',
+    component: SolutionBrowserSignage,
+    meta: { public: true },
+  },
+  {
+    path: '/guides/turn-smart-tv-into-digital-signboard',
+    name: 'guide-smart-tv-signboard',
+    component: GuideSmartTvSignboard,
+    meta: { public: true },
+  },
+  {
+    path: '/solutions/free-digital-signage-menu-boards',
+    name: 'solution-free-menu-boards',
+    component: SolutionFreeMenuBoards,
+    meta: { public: true },
+  },
+  {
+    path: '/solutions/cloud-digital-signage-tv-browser',
+    name: 'solution-cloud-tv-browser',
+    component: SolutionCloudTvBrowser,
     meta: { public: true },
   },
   {

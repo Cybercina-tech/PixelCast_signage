@@ -66,8 +66,10 @@ test.describe('Super Admin smoke', () => {
   test('super admin pricing exposes stripe runtime form', async ({ page }) => {
     await page.goto(`${base}/super-admin/pricing`)
     await expect(page.getByRole('heading', { name: /Pricing catalog/i })).toBeVisible({ timeout: 15000 })
+    await expect(page.getByText(/Stripe runtime configuration/i)).toBeVisible({ timeout: 15000 })
     await expect(page.locator('input[placeholder="pk_live_..."]')).toBeVisible()
     await expect(page.locator('input[placeholder="whsec_..."]')).toBeVisible()
+    await expect(page.getByRole('button', { name: /Run health check/i })).toBeVisible()
     await expect(page.getByRole('button', { name: /Save Stripe configuration/i })).toBeVisible()
   })
 

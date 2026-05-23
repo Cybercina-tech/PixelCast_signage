@@ -131,6 +131,7 @@ def create_checkout_session(request):
             'tenant_id': str(tenant.id),
             'user_id': str(request.user.id),
             'plan_key': meta_plan_key,
+            'plan_kind': plan.kind if plan_key else '',
         }
         if meta_device_limit:
             subscription_metadata['device_limit'] = meta_device_limit
@@ -242,6 +243,7 @@ def change_subscription(request):
         next_meta = {
             **current_meta,
             'plan_key': resolved.plan_key,
+            'plan_kind': plan.kind,
             'tenant_id': str(tenant.id),
             'user_id': str(request.user.id),
             'device_limit': resolved.device_limit_meta,

@@ -64,10 +64,10 @@
               v-model.trim="settingsForm.stripe_secret_key"
               type="password"
               class="input-base w-full px-3 py-2 rounded-lg font-mono text-xs"
-              :placeholder="settingsForm.stripe_secret_key_masked || 'sk_live_...'"
+              :placeholder="settingsForm.stripe_secret_key_masked || 'sk_live_... / rk_live_...'"
               autocomplete="new-password"
             />
-            <p class="text-xs text-muted mt-1">Leave empty to keep current value. Enter `clear` to remove.</p>
+            <p class="text-xs text-muted mt-1">Accepts `sk_*` and restricted `rk_*`. Leave empty to keep current value. Enter `clear` to remove.</p>
           </div>
           <div>
             <label class="label-base block text-sm mb-1">Webhook signing secret</label>

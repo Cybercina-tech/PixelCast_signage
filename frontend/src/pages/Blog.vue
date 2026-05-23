@@ -33,6 +33,23 @@
       <p class="blog-lead text-sm sm:text-base max-w-2xl mb-8">
         Product updates, digital signage best practices, and how to run your screen network with confidence.
       </p>
+      <div class="mb-8 rounded-xl border border-cyan-400/20 bg-cyan-950/20 p-4 sm:p-5">
+        <p class="text-xs uppercase tracking-wider text-cyan-300 font-semibold mb-2">Start with intent guides</p>
+        <div class="flex flex-wrap gap-x-5 gap-y-2 text-sm">
+          <router-link to="/solutions/browser-based-digital-signage-software" class="text-cyan-200 hover:text-cyan-100">
+            Browser-based digital signage software
+          </router-link>
+          <router-link to="/guides/turn-smart-tv-into-digital-signboard" class="text-cyan-200 hover:text-cyan-100">
+            Turn a smart TV into a digital signboard
+          </router-link>
+          <router-link to="/solutions/free-digital-signage-menu-boards" class="text-cyan-200 hover:text-cyan-100">
+            Free digital signage for menu boards
+          </router-link>
+          <router-link to="/solutions/cloud-digital-signage-tv-browser" class="text-cyan-200 hover:text-cyan-100">
+            Cloud signage for TV browser
+          </router-link>
+        </div>
+      </div>
 
       <div v-if="loading" class="text-center py-16 text-white/60">Loading articles…</div>
       <div v-else-if="error" class="rounded-xl border border-amber-500/30 bg-amber-950/30 px-4 py-3 text-amber-100 text-sm">

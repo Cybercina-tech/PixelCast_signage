@@ -42,6 +42,38 @@ function getGitVersion() {
 
 const gitVersion = getGitVersion()
 
+function collectBlogSlugPaths() {
+  const slugs = new Set()
+  const fromEnv = process.env.VITE_SITEMAP_BLOG_SLUGS || ''
+  for (const token of String(fromEnv).split(/[,\n]/)) {
+    const slug = token.trim().replace(/^\/+|\/+$/g, '')
+    if (slug) slugs.add(slug)
+  }
+
+  const migrationDirs = [
+    path.resolve(process.cwd(), '../app/blog/migrations'),
+    path.resolve(process.cwd(), 'app/blog/migrations'),
+  ]
+  const slugPattern = /slug\s*=\s*['"]([^'"]+)['"]/g
+
+  for (const migrationsDir of migrationDirs) {
+    if (!fs.existsSync(migrationsDir)) continue
+    const files = fs.readdirSync(migrationsDir).filter((f) => f.endsWith('.py'))
+    for (const file of files) {
+      const body = fs.readFileSync(path.join(migrationsDir, file), 'utf-8')
+      let m = slugPattern.exec(body)
+      while (m) {
+        const slug = String(m[1] || '').trim()
+        if (slug) slugs.add(slug)
+        m = slugPattern.exec(body)
+      }
+      slugPattern.lastIndex = 0
+    }
+  }
+
+  return Array.from(slugs).map((slug) => `/blog/${slug}`)
+}
+
 /** Emit robots.txt + sitemap.xml into dist using VITE_PUBLIC_SITE_ORIGIN (fallback for local preview). */
 function seoStaticFilesPlugin() {
   let outDir = 'dist'
@@ -56,20 +88,24 @@ function seoStaticFilesPlugin() {
       const origin = String(raw).trim().replace(/\/$/, '')
       const indexablePaths = [
         '/',
+        '/pricing',
         '/blog',
-        '/login',
-        '/signup',
-        '/install',
         '/privacy',
         '/terms',
         '/data-center',
         '/docs',
         '/docs/changelog',
+        '/solutions/browser-based-digital-signage-software',
+        '/guides/turn-smart-tv-into-digital-signboard',
+        '/solutions/free-digital-signage-menu-boards',
+        '/solutions/cloud-digital-signage-tv-browser',
       ]
-      const urlset = indexablePaths
+      const blogPaths = collectBlogSlugPaths()
+      const uniquePaths = Array.from(new Set([...indexablePaths, ...blogPaths]))
+      const urlset = uniquePaths
         .map((p) => {
           const loc = p === '/' ? `${origin}/` : `${origin}${p}`
-          const priority = p === '/' ? '1.0' : '0.8'
+          const priority = p === '/' ? '1.0' : p.startsWith('/blog/') ? '0.7' : '0.8'
           return `  <url>
     <loc>${loc}</loc>
     <changefreq>weekly</changefreq>

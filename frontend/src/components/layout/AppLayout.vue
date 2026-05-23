@@ -11,6 +11,22 @@
     <div class="flex-1 flex flex-col overflow-hidden lg:ml-0 relative z-10">
       <Navbar :title="title" @toggle-sidebar="sidebarOpen = !sidebarOpen" />
       <div
+        v-if="showWsBanner"
+        class="shrink-0 border-b border-amber-500/30 bg-amber-500/10 px-4 py-2.5 flex items-center gap-3 text-sm text-amber-200"
+      >
+        <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M8.288 15.038a5.25 5.25 0 017.424 0M5.106 11.856c3.807-3.808 9.98-3.808 13.788 0M2.924 8.674c5.565-5.565 14.587-5.565 20.152 0M12 18.75h.008v.008H12v-.008z" />
+        </svg>
+        <span class="flex-1">{{ wsBannerMessage }}</span>
+        <button
+          type="button"
+          class="shrink-0 rounded-lg border border-amber-500/40 px-3 py-1 text-xs font-medium text-amber-100 hover:bg-amber-500/20"
+          @click="handleWsReconnect"
+        >
+          Reconnect
+        </button>
+      </div>
+      <div
         v-if="authStore.isRestrictedMode"
         class="shrink-0 border-b border-rose-500/30 bg-rose-500/10 px-4 py-2.5 flex items-center gap-3 text-sm text-rose-300"
       >
@@ -65,37 +81,75 @@ const restrictionBannerText = computed(() => {
   return `${msg}${untilStr}`
 })
 const screensStore = useScreensStore()
-const { connect, disconnect, on, off, isConnected } = useWebSocket()
+const {
+  connect,
+  disconnect,
+  reconnect,
+  on,
+  off,
+  isConnected,
+  reconnectExhausted,
+  lastCloseReason,
+} = useWebSocket()
+
+const wsBannerMessage = ref('')
+
+const showWsBanner = computed(
+  () => authStore.isAuthenticated && Boolean(wsBannerMessage.value)
+)
+
+function handleWsReconnect() {
+  wsBannerMessage.value = 'Reconnecting live updates…'
+  reconnect()
+}
+
+function onReconnectExhausted(data) {
+  wsBannerMessage.value =
+    data?.message ||
+    'Live updates could not be restored. Try Reconnect or refresh the page.'
+}
+
+const onScreenStatusUpdate = (data) => {
+  if (data?.screen) {
+    screensStore.handleScreenStatusUpdate(data.screen)
+  }
+}
+
+const onScreenHeartbeat = (data) => {
+  if (data?.screen_id) {
+    screensStore.fetchSingleScreenStatus(data.screen_id).catch((err) => {
+      if (import.meta.env.DEV) {
+        console.warn('Failed to fetch screen status after heartbeat:', err)
+      }
+    })
+  }
+}
 
 // Set up WebSocket listener for screen status updates
 onMounted(() => {
   if (authStore.isAuthenticated && authStore.token) {
-    // Connect WebSocket (JWT access token lives on `token`, not accessToken)
     connect(authStore.token)
-    
-    // Listen for screen status updates
-    on('screen_status_update', (data) => {
-      if (data && data.screen) {
-        screensStore.handleScreenStatusUpdate(data.screen)
-      }
+    on('screen_status_update', onScreenStatusUpdate)
+    on('screen_heartbeat', onScreenHeartbeat)
+    on('reconnect_exhausted', onReconnectExhausted)
+    on('connected', () => {
+      wsBannerMessage.value = ''
     })
-    
-    // Listen for screen heartbeat updates
-    on('screen_heartbeat', (data) => {
-      if (data && data.screen_id) {
-        // Fetch updated status for this screen
-        screensStore.fetchSingleScreenStatus(data.screen_id).catch(err => {
-          console.warn('Failed to fetch screen status after heartbeat:', err)
-        })
+    on('disconnected', (data) => {
+      if (data?.code !== 1000 && !reconnectExhausted.value) {
+        wsBannerMessage.value =
+          lastCloseReason.value || 'Live updates disconnected. Reconnecting…'
       }
     })
   }
 })
 
 onUnmounted(() => {
-  // Clean up WebSocket listeners
-  off('screen_status_update')
-  off('screen_heartbeat')
+  off('screen_status_update', onScreenStatusUpdate)
+  off('screen_heartbeat', onScreenHeartbeat)
+  off('reconnect_exhausted', onReconnectExhausted)
+  off('connected')
+  off('disconnected')
   disconnect()
 })
 </script>

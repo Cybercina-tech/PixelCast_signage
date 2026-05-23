@@ -419,9 +419,9 @@ watch(unreadNotifications, (newCount) => {
   previousUnreadCount = newCount
 })
 
-const handleLogout = () => {
-  authStore.logout()
-  router.push('/')
+const handleLogout = async () => {
+  await authStore.logout()
+  router.push('/login')
 }
 
 onMounted(() => {

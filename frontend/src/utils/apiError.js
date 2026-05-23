@@ -70,6 +70,17 @@ export function normalizeApiError(error) {
       error?.message ||
       'An unexpected error occurred.'
   )
+  if (status === 0 && !error?.response) {
+    const msg = String(error?.message || '').toLowerCase()
+    if (
+      msg.includes('network error') ||
+      msg.includes('err_network') ||
+      (typeof navigator !== 'undefined' && navigator.onLine === false)
+    ) {
+      userMessage =
+        'Your internet connection is unstable. We will retry automatically when the network is back.'
+    }
+  }
   if (status === 503 && data.error === 'installation_required') {
     userMessage = `${userMessage} Open /install to complete setup.`
   }

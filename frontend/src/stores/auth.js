@@ -19,6 +19,34 @@ export const useAuthStore = defineStore('auth', {
     }
   },
   actions: {
+    setTokens(accessToken, refreshToken = null) {
+      this.token = accessToken || null
+      if (refreshToken) {
+        this.refreshToken = refreshToken
+      }
+      if (this.token) {
+        localStorage.setItem('auth_token', this.token)
+      } else {
+        localStorage.removeItem('auth_token')
+      }
+      if (this.refreshToken) {
+        localStorage.setItem('refresh_token', this.refreshToken)
+      } else {
+        localStorage.removeItem('refresh_token')
+      }
+      this.isAuthenticated = Boolean(this.token)
+    },
+    clearAuthState() {
+      this.token = null
+      this.refreshToken = null
+      this.user = null
+      this.isAuthenticated = false
+      this.impersonation = null
+      this.restriction = null
+      localStorage.removeItem('auth_token')
+      localStorage.removeItem('refresh_token')
+      sessionStorage.removeItem('platform_admin_refresh')
+    },
     async login(credentials) {
       this.loading = true
       this.error = null
@@ -32,10 +60,7 @@ export const useAuthStore = defineStore('auth', {
         }
         // Backend returns: {status: 'success', user: {...}, tokens: {refresh, access}}
         if (response.data.tokens) {
-          this.token = response.data.tokens.access
-          this.refreshToken = response.data.tokens.refresh
-          localStorage.setItem('auth_token', this.token)
-          localStorage.setItem('refresh_token', this.refreshToken)
+          this.setTokens(response.data.tokens.access, response.data.tokens.refresh)
         }
         
         // Set user info from response
@@ -64,10 +89,7 @@ export const useAuthStore = defineStore('auth', {
           code: String(code || '').trim(),
         })
         if (response.data.tokens) {
-          this.token = response.data.tokens.access
-          this.refreshToken = response.data.tokens.refresh
-          localStorage.setItem('auth_token', this.token)
-          localStorage.setItem('refresh_token', this.refreshToken)
+          this.setTokens(response.data.tokens.access, response.data.tokens.refresh)
         }
         if (response.data.user) {
           this.user = response.data.user
@@ -83,24 +105,23 @@ export const useAuthStore = defineStore('auth', {
         this.loading = false
       }
     },
-    async logout() {
+    async logout({ skipServer = false } = {}) {
       try {
         const refreshToken = this.refreshToken || localStorage.getItem('refresh_token')
-        if (refreshToken) {
+        if (!skipServer && refreshToken) {
           await authAPI.logout({ refresh_token: refreshToken })
         }
       } catch (error) {
         // Ignore errors on logout - clear local state anyway
         console.error('Logout error:', error)
       } finally {
-        this.token = null
-        this.refreshToken = null
-        this.user = null
-        this.isAuthenticated = false
-        this.impersonation = null
-        localStorage.removeItem('auth_token')
-        localStorage.removeItem('refresh_token')
-        sessionStorage.removeItem('platform_admin_refresh')
+        this.clearAuthState()
+        try {
+          const { dashboardWebSocket } = await import('@/composables/useWebSocket')
+          dashboardWebSocket.disconnect()
+        } catch {
+          /* WS module optional during tests */
+        }
       }
     },
     async fetchMe() {
@@ -112,34 +133,27 @@ export const useAuthStore = defineStore('auth', {
       } catch (error) {
         // If fetch fails, clear auth
         if (error.response?.status === 401 || error.response?.status === 403) {
-          this.token = null
-          this.refreshToken = null
-          this.user = null
-          this.isAuthenticated = false
-          localStorage.removeItem('auth_token')
-          localStorage.removeItem('refresh_token')
+          this.clearAuthState()
         }
         throw error
       }
     },
     async refreshAccessToken() {
       if (!this.refreshToken) {
+        this.refreshToken = localStorage.getItem('refresh_token')
+      }
+      if (!this.refreshToken) {
         throw new Error('No refresh token available')
       }
       try {
         const response = await authAPI.refreshToken(this.refreshToken)
         if (response.data.access) {
-          this.token = response.data.access
-          localStorage.setItem('auth_token', this.token)
-          if (response.data.refresh) {
-            this.refreshToken = response.data.refresh
-            localStorage.setItem('refresh_token', this.refreshToken)
-          }
+          this.setTokens(response.data.access, response.data.refresh || this.refreshToken)
         }
         return this.token
       } catch (error) {
         // Refresh failed, logout user
-        await this.logout()
+        await this.logout({ skipServer: true })
         throw error
       }
     },
@@ -158,10 +172,7 @@ export const useAuthStore = defineStore('auth', {
       if (adminRefresh) {
         sessionStorage.setItem('platform_admin_refresh', adminRefresh)
       }
-      this.token = data.tokens.access
-      this.refreshToken = data.tokens.refresh
-      localStorage.setItem('auth_token', this.token)
-      localStorage.setItem('refresh_token', this.refreshToken)
+      this.setTokens(data.tokens.access, data.tokens.refresh)
       this.impersonation = data.impersonation || { active: true }
       await this.fetchMe()
     },
@@ -173,10 +184,7 @@ export const useAuthStore = defineStore('auth', {
       }
       const { data } = await platformAPI.impersonateStop(adminRefresh)
       sessionStorage.removeItem('platform_admin_refresh')
-      this.token = data.tokens.access
-      this.refreshToken = data.tokens.refresh
-      localStorage.setItem('auth_token', this.token)
-      localStorage.setItem('refresh_token', this.refreshToken)
+      this.setTokens(data.tokens.access, data.tokens.refresh)
       this.impersonation = null
       await this.fetchMe()
     },
@@ -196,11 +204,7 @@ export const useAuthStore = defineStore('auth', {
           }
         } catch (error) {
           // Token invalid, clear it
-          this.token = null
-          this.refreshToken = null
-          this.isAuthenticated = false
-          localStorage.removeItem('auth_token')
-          localStorage.removeItem('refresh_token')
+          this.clearAuthState()
         }
       }
       this.initialized = true

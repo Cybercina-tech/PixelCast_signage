@@ -19,6 +19,9 @@ test.describe('Stripe checkout', () => {
 
     const disabled = await checkoutButton.isDisabled()
     if (disabled) {
+      await expect(
+        page.getByText(/stripe actions are currently blocked|configure stripe in super admin/i).first()
+      ).toBeVisible({ timeout: 10000 })
       test.skip(true, 'Stripe checkout button is disabled; verify STRIPE_* env and pricing catalog.')
       return
     }

@@ -12,7 +12,7 @@ from django.utils import timezone
 from rest_framework.test import APIClient
 
 from accounts.models import UserSubscription
-from saas_platform.models import PlatformExpense, Tenant, TenantAuditLog, TenantWebhookEndpoint
+from saas_platform.models import BillingWebhookEvent, PlatformExpense, Tenant, TenantAuditLog, TenantWebhookEndpoint
 from saas_platform.pricing_models import StripeBillingConfig, SubscriptionPlan
 
 
@@ -1067,6 +1067,9 @@ def test_platform_stripe_status_developer(superadmin_user):
     assert r.status_code == 200
     assert 'stripe_secret_key_configured' in r.data
     assert 'checkout_ready' in r.data
+    assert 'portal_ready' in r.data
+    assert 'checkout_blocking_reasons' in r.data
+    assert 'portal_blocking_reasons' in r.data
     assert 'public_web_app_url' in r.data
 
 
@@ -1105,6 +1108,25 @@ def test_platform_pricing_settings_can_store_stripe_keys(superadmin_user):
     cfg = StripeBillingConfig.get_solo()
     assert cfg.get_secret_key() == 'sk_live_12345'
     assert cfg.get_webhook_secret() == 'whsec_12345'
+
+
+@pytest.mark.django_db
+@override_settings(
+    PLATFORM_SAAS_ENABLED=True,
+    NOTIFICATION_ENCRYPTION_KEY='MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=',
+)
+def test_platform_pricing_settings_accepts_restricted_stripe_key(superadmin_user):
+    client = APIClient()
+    client.force_authenticate(user=superadmin_user)
+    payload = {
+        'stripe_publishable_key': 'pk_test_12345',
+        'stripe_secret_key': 'rk_test_12345',
+    }
+    r = client.patch('/api/platform/pricing/settings/', payload, format='json')
+    assert r.status_code == 200
+    assert r.data['stripe_secret_key_configured'] is True
+    cfg = StripeBillingConfig.get_solo()
+    assert cfg.get_secret_key() == 'rk_test_12345'
 
 
 @pytest.mark.django_db
@@ -1162,6 +1184,64 @@ def test_billing_checkout_uses_db_secret_config(manager_with_tenant, monkeypatch
     )
     assert r.status_code == 200
     assert _FakeSession.seen_api_key == 'sk_test_db_987'
+
+
+@pytest.mark.django_db
+@override_settings(
+    PLATFORM_SAAS_ENABLED=True,
+    STRIPE_SECRET_KEY='',
+    NOTIFICATION_ENCRYPTION_KEY='MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=',
+)
+def test_billing_checkout_includes_plan_kind_metadata(manager_with_tenant, monkeypatch):
+    import sys
+    from types import SimpleNamespace
+
+    cfg = StripeBillingConfig.get_solo()
+    cfg.set_secret_key('sk_test_db_meta')
+    cfg.save()
+
+    SubscriptionPlan.objects.create(
+        key='bundle-five-meta',
+        label='Bundle',
+        kind=SubscriptionPlan.KIND_BUNDLE,
+        included_screens=5,
+        stripe_price_id='price_meta_12345',
+        min_quantity=1,
+        currency='usd',
+        sort_order=1,
+        is_active=True,
+    )
+
+    class _FakeCustomer:
+        @staticmethod
+        def create(**kwargs):
+            return SimpleNamespace(id='cus_test_db_meta')
+
+    class _FakeSession:
+        seen_payload = None
+
+        @staticmethod
+        def create(**kwargs):
+            _FakeSession.seen_payload = kwargs
+            return SimpleNamespace(id='cs_test_meta_1', url='https://checkout.stripe.test/session')
+
+    fake_stripe = SimpleNamespace(
+        api_key='',
+        Customer=_FakeCustomer,
+        checkout=SimpleNamespace(Session=_FakeSession),
+    )
+    monkeypatch.setitem(sys.modules, 'stripe', fake_stripe)
+
+    client = APIClient()
+    client.force_authenticate(user=manager_with_tenant)
+    r = client.post(
+        '/api/platform/billing/checkout-session/',
+        {'plan_key': 'bundle-five-meta'},
+        format='json',
+    )
+    assert r.status_code == 200
+    assert _FakeSession.seen_payload is not None
+    assert _FakeSession.seen_payload['subscription_data']['metadata']['plan_kind'] == SubscriptionPlan.KIND_BUNDLE
 
 
 @pytest.mark.django_db
@@ -1358,6 +1438,75 @@ def test_stripe_webhook_no_secret():
     )
     # 400 when stripe is installed (secret not configured), 500 when stripe pkg absent
     assert r.status_code in (400, 500)
+
+
+@pytest.mark.django_db
+@override_settings(PLATFORM_SAAS_ENABLED=True, STRIPE_WEBHOOK_SECRET='whsec_test')
+def test_stripe_webhook_subscription_created_syncs_tenant(monkeypatch, tenant):
+    import sys
+    from types import SimpleNamespace
+
+    tenant.stripe_customer_id = 'cus_evt_001'
+    tenant.subscription_status = 'none'
+    tenant.stripe_subscription_id = ''
+    tenant.save(update_fields=['stripe_customer_id', 'subscription_status', 'stripe_subscription_id'])
+
+    payload = {
+        'id': 'evt_sub_created_1',
+        'type': 'customer.subscription.created',
+        'data': {
+            'object': {
+                'id': 'sub_created_001',
+                'status': 'active',
+                'customer': 'cus_evt_001',
+                'metadata': {'plan_key': 'bundle_5', 'device_limit': '5'},
+                'items': {
+                    'data': [
+                        {
+                            'id': 'si_created_1',
+                            'quantity': 1,
+                            'price': {
+                                'id': 'price_created_1',
+                                'nickname': 'Bundle 5',
+                                'recurring': {'interval': 'month'},
+                            },
+                        }
+                    ]
+                },
+                'current_period_start': 1700000000,
+                'current_period_end': 1702600000,
+                'trial_end': None,
+                'cancel_at_period_end': False,
+            }
+        },
+    }
+
+    class _FakeEvent:
+        def to_dict(self):
+            return payload
+
+    class _FakeWebhook:
+        @staticmethod
+        def construct_event(_raw, _sig, _secret):
+            return _FakeEvent()
+
+    fake_stripe = SimpleNamespace(Webhook=_FakeWebhook)
+    monkeypatch.setitem(sys.modules, 'stripe', fake_stripe)
+
+    client = APIClient()
+    r = client.post(
+        '/api/platform/stripe/webhook/',
+        data=b'{}',
+        content_type='application/json',
+        HTTP_STRIPE_SIGNATURE='v1=test_sig',
+    )
+    assert r.status_code == 200
+
+    tenant.refresh_from_db()
+    assert tenant.subscription_status == 'active'
+    assert tenant.stripe_subscription_id == 'sub_created_001'
+    assert tenant.device_limit == 5
+    assert BillingWebhookEvent.objects.filter(stripe_event_id='evt_sub_created_1').exists()
 
 
 # ---------------------------------------------------------------------------

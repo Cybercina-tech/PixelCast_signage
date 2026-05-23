@@ -78,7 +78,11 @@ def stripe_webhook_view(request):
     err_msg = ''
 
     try:
-        if event_type == 'customer.subscription.updated' or event_type == 'customer.subscription.deleted':
+        if event_type in {
+            'customer.subscription.created',
+            'customer.subscription.updated',
+            'customer.subscription.deleted',
+        }:
             cid = data_object.get('customer')
             if isinstance(cid, dict):
                 cid = cid.get('id')

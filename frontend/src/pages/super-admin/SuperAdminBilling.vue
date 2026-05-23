@@ -13,8 +13,8 @@
         <button
           type="button"
           class="btn-primary px-4 py-2 rounded-lg text-sm"
-          :disabled="billingBusy || !stripeConfigured"
-          :title="stripeConfigured ? '' : 'Configure Stripe in Super Admin → Pricing'"
+          :disabled="billingBusy || !checkoutReady"
+          :title="checkoutUnavailableReason"
           @click="openCheckout"
         >
           {{ billingBusy ? 'Opening...' : 'Stripe Checkout' }}
@@ -22,8 +22,8 @@
         <button
           type="button"
           class="btn-outline px-4 py-2 rounded-lg text-sm"
-          :disabled="billingBusy || !stripeConfigured"
-          :title="stripeConfigured ? '' : 'Configure Stripe in Super Admin → Pricing'"
+          :disabled="billingBusy || !portalReady"
+          :title="portalUnavailableReason"
           @click="openPortal"
         >
           Customer Portal
@@ -40,6 +40,16 @@
       class="rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-900 dark:text-amber-100"
     >
       {{ loadError }}
+    </div>
+    <div
+      v-if="billingBlockingReasons.length"
+      class="rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-900 dark:text-amber-100"
+    >
+      <p class="font-semibold mb-2">Stripe actions are currently blocked:</p>
+      <ul class="space-y-1 text-xs">
+        <li v-for="(reason, idx) in billingBlockingReasons" :key="idx">- {{ reason }}</li>
+      </ul>
+      <p class="text-xs mt-2">Go to Super Admin → Pricing to fix Stripe configuration.</p>
     </div>
 
     <!-- Loading skeleton -->
@@ -325,7 +335,7 @@ const licenseInfo = ref(null)
 const licenseError = ref(null)
 const billingBusy = ref(false)
 const expenses = ref([])
-const stripeConfigured = ref(false)
+const stripeStatus = ref(null)
 const expenseModal = ref(false)
 const expenseSaving = ref(false)
 const expenseForm = ref({
@@ -339,6 +349,31 @@ const expenseForm = ref({
 })
 
 const PALETTE = ['#06b6d4', '#8b5cf6', '#ec4899', '#f97316', '#22c55e', '#eab308', '#ef4444', '#3b82f6', '#14b8a6']
+
+const checkoutReady = computed(() => Boolean(stripeStatus.value?.checkout_ready))
+const portalReady = computed(() => Boolean(stripeStatus.value?.portal_ready))
+const checkoutBlockingReasons = computed(() => {
+  const list = stripeStatus.value?.checkout_blocking_reasons
+  return Array.isArray(list) ? list : []
+})
+const portalBlockingReasons = computed(() => {
+  const list = stripeStatus.value?.portal_blocking_reasons
+  return Array.isArray(list) ? list : []
+})
+const billingBlockingReasons = computed(() => {
+  const merged = [...checkoutBlockingReasons.value, ...portalBlockingReasons.value]
+  return [...new Set(merged)]
+})
+const checkoutUnavailableReason = computed(() => {
+  if (checkoutReady.value) return ''
+  if (checkoutBlockingReasons.value.length) return checkoutBlockingReasons.value.join(' ')
+  return 'Configure Stripe in Super Admin → Pricing'
+})
+const portalUnavailableReason = computed(() => {
+  if (portalReady.value) return ''
+  if (portalBlockingReasons.value.length) return portalBlockingReasons.value.join(' ')
+  return 'Configure Stripe in Super Admin → Pricing'
+})
 
 function formatMoney(cents) {
   if (cents == null) return '---'
@@ -569,12 +604,14 @@ async function load() {
   loadError.value = null
   licenseError.value = null
   try {
-    const [{ data: ov }, licResult, expResult] = await Promise.all([
+    const [{ data: ov }, licResult, expResult, stripeResult] = await Promise.all([
       platformAPI.overview(),
       licenseAPI.status().catch(e => ({ error: e })),
       platformAPI.expenses.list({ page_size: 25 }).catch(() => ({ data: { results: [] } })),
+      platformAPI.stripeStatus().catch(() => ({ data: null })),
     ])
     overview.value = ov
+    stripeStatus.value = stripeResult?.data || null
     if (licResult.error) {
       licenseInfo.value = null
       licenseError.value = normalizeApiError(licResult.error).userMessage || 'License info unavailable'
@@ -673,12 +710,6 @@ async function deleteExpense(exp) {
 }
 
 onMounted(async () => {
-  try {
-    const { data } = await platformAPI.stripeStatus()
-    stripeConfigured.value = Boolean(data?.checkout_ready)
-  } catch {
-    stripeConfigured.value = false
-  }
   await load()
 })
 </script>

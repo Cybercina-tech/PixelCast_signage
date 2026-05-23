@@ -51,6 +51,8 @@ Env template: [`.env.production.example`](.env.production.example) → copy to `
 | `VITE_PUBLIC_SITE_ORIGIN` | `https://pixelcast.uk` (frontend **rebuild**) |
 | `SECRET_KEY` | Strong random (required when `DEBUG=False`) |
 | `DB_PASSWORD` | Same as `POSTGRES_PASSWORD` |
+| `CHANNEL_LAYERS_BACKEND` | **`redis`** (required for WebSocket broadcasts with multiple Gunicorn workers) |
+| `REDIS_HOST` | `redis` |
 
 Rebuild frontend after `VITE_*` changes:
 
@@ -77,6 +79,23 @@ Webhook URL:
 - `https://pixelcast.uk/api/health/` → OK
 - Login: `POST https://pixelcast.uk/api/auth/login/` (same host, not `backend:8000`)
 - `https://pixelcast.uk/sitemap.xml` lists `https://pixelcast.uk/...`
+
+### WebSocket (live dashboard updates)
+
+1. Log in to the app, open DevTools → **Network** → filter **WS**.
+2. Expect: `wss://pixelcast.uk/ws/dashboard/?token=...` with status **101 Switching Protocols**.
+3. Messages should include `connection_confirmed` and periodic `pong` responses to client `ping`.
+4. Backend env must include `CHANNEL_LAYERS_BACKEND=redis` (not `memory` in production).
+5. Nginx proxies `/ws/` to `backend:8000` with long timeouts (see `frontend/nginx.conf`).
+
+If WS fails with code **1006** in a loop: redeploy **frontend + backend**, sign out/in (fresh JWT), and confirm Traefik WebSocket support on the domain (HTTPS → container port **80**).
+
+### Upload works but preview shows "Failed to load media"
+
+1. Rebuild **frontend + backend** (nginx `/media/` uses `root /app`; API returns public `https://pixelcast.uk/media/...` URLs).
+2. Open a file URL directly: `https://pixelcast.uk/media/...` — should return the image (not 404).
+3. Ensure `BASE_URL` and `PUBLIC_WEB_APP_URL` are `https://pixelcast.uk` (not `http://backend:8000`).
+4. Both services must mount the same volume `backend_media` at `/app/media`.
 
 ## Troubleshooting
 

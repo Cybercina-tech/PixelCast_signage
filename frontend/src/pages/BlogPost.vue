@@ -83,6 +83,23 @@
           >
             Log in
           </router-link>
+          <router-link
+            to="/pricing"
+            class="inline-flex items-center justify-center rounded-lg border border-cyan-400/40 bg-cyan-500/10 px-4 py-2.5 text-sm font-semibold text-cyan-100 hover:bg-cyan-500/20"
+          >
+            Pricing
+          </router-link>
+        </div>
+        <div class="mt-4 flex flex-wrap gap-3 text-xs sm:text-sm">
+          <router-link class="text-cyan-300 hover:text-cyan-200" to="/solutions/browser-based-digital-signage-software">
+            Browser-based digital signage software
+          </router-link>
+          <router-link class="text-cyan-300 hover:text-cyan-200" to="/solutions/free-digital-signage-menu-boards">
+            Free digital signage for menu boards
+          </router-link>
+          <router-link class="text-cyan-300 hover:text-cyan-200" to="/solutions/cloud-digital-signage-tv-browser">
+            Cloud digital signage for TV browser
+          </router-link>
         </div>
       </section>
     </article>
@@ -96,7 +113,7 @@ import { useHead, useSeoMeta } from '@unhead/vue'
 import { publicAPI, setupAPI } from '@/services/api'
 import { renderMarkdown } from '@/utils/renderMarkdown'
 import { SITE_NAME, getSiteOrigin } from '@/seo/siteConfig'
-import { buildBlogPostingGraph } from '@/seo/jsonLd'
+import { buildBlogPostingGraph, buildBreadcrumbGraph } from '@/seo/jsonLd'
 
 const route = useRoute()
 const post = ref(null)
@@ -130,11 +147,28 @@ const pageDescription = computed(() => {
   return post.value.meta_description || post.value.excerpt || ''
 })
 
+const canonicalUrl = computed(() => {
+  const p = post.value
+  const origin = getSiteOrigin()
+  if (!p || !origin) return ''
+  return `${origin}/blog/${p.slug}`
+})
+
+const articleImage = computed(() => post.value?.featured_image_url || undefined)
+const twitterCardType = computed(() => (articleImage.value ? 'summary_large_image' : 'summary'))
+
 useSeoMeta({
   title: pageTitle,
   description: pageDescription,
   ogTitle: pageTitle,
   ogDescription: pageDescription,
+  ogType: 'article',
+  ogUrl: canonicalUrl,
+  ogImage: articleImage,
+  twitterCard: twitterCardType,
+  twitterTitle: pageTitle,
+  twitterDescription: pageDescription,
+  twitterImage: articleImage,
 })
 
 const blogPostingJsonLd = computed(() => {
@@ -148,18 +182,34 @@ const blogPostingJsonLd = computed(() => {
     description: pageDescription.value,
     datePublished: p.published_at ? p.published_at.slice(0, 10) : undefined,
     dateModified: p.updated_at ? p.updated_at.slice(0, 10) : undefined,
+    image: p.featured_image_url || undefined,
   })
 })
 
 useHead({
+  link: computed(() => {
+    const href = canonicalUrl.value
+    if (!href) return []
+    return [{ rel: 'canonical', href }]
+  }),
   script: computed(() => {
     const graph = blogPostingJsonLd.value
-    if (!graph) return []
+    const origin = getSiteOrigin()
+    const p = post.value
+    if (!graph || !origin || !p) return []
+    const breadcrumbs = buildBreadcrumbGraph(origin, `/blog/${p.slug}`, [
+      { name: 'Home', path: '/' },
+      { name: 'Blog', path: '/blog' },
+      { name: p.title, path: `/blog/${p.slug}` },
+    ])
     return [
       {
         key: 'blog-post-jsonld',
         type: 'application/ld+json',
-        children: JSON.stringify(graph),
+        children: JSON.stringify({
+          '@context': 'https://schema.org',
+          '@graph': [...graph['@graph'], breadcrumbs],
+        }),
       },
     ]
   }),

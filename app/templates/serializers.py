@@ -13,6 +13,7 @@ from .models import (
     QRScanEvent,
 )
 from accounts.permissions import RolePermissions
+from core.media_urls import resolve_public_media_url
 
 
 def _extract_local_storage_path(file_url: str) -> str | None:
@@ -81,46 +82,13 @@ class ContentSerializer(serializers.ModelSerializer):
         ]
     
     def get_absolute_file_url(self, obj):
-        """Return absolute URL for the file"""
+        """Return absolute URL for the file (browser-reachable, not Docker-internal hosts)."""
         if not obj.file_url:
             return None
         if not _local_file_exists(obj):
             return None
-        
-        # If already absolute URL, return as is
-        if obj.file_url.startswith('http://') or obj.file_url.startswith('https://'):
-            return obj.file_url
-        
-        # Get request context for building absolute URL
         request = self.context.get('request')
-        actual_request = None
-        if request:
-            # DRF Request object has _request attribute
-            actual_request = getattr(request, '_request', request)
-            if hasattr(actual_request, 'build_absolute_uri'):
-                try:
-                    # file_url is stored like /media/... — build_absolute_uri handles it
-                    if obj.file_url.startswith('/'):
-                        return actual_request.build_absolute_uri(obj.file_url)
-                except Exception:
-                    pass
-        
-        # Fallback: construct absolute URL from settings (no duplicate /media/)
-        from django.conf import settings
-        base_url = getattr(settings, 'BASE_URL', 'http://localhost:8000')
-        media_url = getattr(settings, 'MEDIA_URL', '/media/')
-        media_prefix = media_url.rstrip('/').lstrip('/')  # "media"
-
-        raw = obj.file_url.strip()
-        if raw.startswith('/'):
-            return f"{base_url.rstrip('/')}{raw}"
-
-        clean_url = raw.lstrip('/')
-        # Already "media/users/..." or full relative path under site root
-        if clean_url.startswith(f'{media_prefix}/'):
-            return f"{base_url.rstrip('/')}/{clean_url}"
-
-        return f"{base_url.rstrip('/')}{media_url.rstrip('/')}/{clean_url}"
+        return resolve_public_media_url(obj.file_url, request=request)
     
     def get_secure_url(self, obj):
         """Return secure URL for the content file"""

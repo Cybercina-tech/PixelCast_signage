@@ -3,6 +3,9 @@
  */
 
 export const SITE_NAME = 'PixelCast'
+export const DEFAULT_OG_IMAGE_PATH = '/favicon.png'
+export const DEFAULT_OG_LOCALE = 'en_GB'
+export const DEFAULT_TWITTER_SITE = '@pixelcast'
 
 /** @returns {string} Origin without trailing slash, or '' if unset (canonical/OG omitted). */
 export function getSiteOrigin() {
@@ -29,6 +32,10 @@ export function getDefaultOgImageUrl() {
   const full = import.meta.env.VITE_OG_IMAGE_URL
   if (full && String(full).trim().startsWith('http')) {
     return String(full).trim()
+  }
+  const origin = getSiteOrigin()
+  if (origin) {
+    return `${origin}${DEFAULT_OG_IMAGE_PATH}`
   }
   return ''
 }

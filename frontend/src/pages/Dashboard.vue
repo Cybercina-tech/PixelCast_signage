@@ -780,6 +780,28 @@ const createStars = () => {
 
 let clockInterval = null
 let refreshInterval = null
+let onlineRefreshTimer = null
+
+function refreshDashboardData() {
+  return Promise.allSettled([
+    dashboardStore.fetchStats(),
+    dashboardStore.fetchActivities(),
+    fetchStorageStats(),
+  ]).then(() => {
+    pushTrendPoint()
+  })
+}
+
+function handleBrowserOnline() {
+  if (onlineRefreshTimer) clearTimeout(onlineRefreshTimer)
+  onlineRefreshTimer = setTimeout(() => {
+    onlineRefreshTimer = null
+    refreshDashboardData()
+    import('@/composables/useWebSocket').then(({ dashboardWebSocket }) => {
+      dashboardWebSocket.reconnect()
+    })
+  }, 500)
+}
 
 onMounted(async () => {
   // Initialize clock
@@ -829,23 +851,20 @@ onMounted(async () => {
     loading.value = false
   }
   
-  // Refresh stats every 30 seconds - only global endpoints
+  window.addEventListener('online', handleBrowserOnline)
+
   refreshInterval = setInterval(async () => {
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      return
+    }
     try {
-      await Promise.allSettled([
-        dashboardStore.fetchStats(),
-        dashboardStore.fetchActivities(),
-        fetchStorageStats(),
-      ])
-      pushTrendPoint()
+      await refreshDashboardData()
     } catch (error) {
-      // Suppress screen_id errors and network errors
-      if (error?.response?.data?.message?.includes('screen_id') || 
+      if (error?.response?.data?.message?.includes('screen_id') ||
           error?.response?.data?.error?.includes('screen_id')) {
-        console.debug('Suppressed screen_id error during refresh')
         return
       }
-      if (error.message && !error.message.includes('Broken pipe')) {
+      if (import.meta.env.DEV && error.message && !error.message.includes('Broken pipe')) {
         console.error('Error refreshing dashboard data:', error)
       }
     }
@@ -853,6 +872,10 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
+  window.removeEventListener('online', handleBrowserOnline)
+  if (onlineRefreshTimer) {
+    clearTimeout(onlineRefreshTimer)
+  }
   if (clockInterval) {
     clearInterval(clockInterval)
   }

@@ -36,6 +36,7 @@ class UserSubscriptionSerializer(serializers.Serializer):
     provider_customer_id = serializers.CharField(read_only=True, allow_blank=True)
     provider_subscription_id = serializers.CharField(read_only=True, allow_blank=True)
     device_limit = serializers.IntegerField(read_only=True, allow_null=True)
+    metadata = serializers.JSONField(read_only=True)
     billing_grace_until = serializers.DateTimeField(read_only=True, allow_null=True)
     payment_failed_count = serializers.IntegerField(read_only=True, allow_null=True)
 
@@ -181,6 +182,7 @@ class UserSerializer(serializers.ModelSerializer):
                 'provider_customer_id': sub.provider_customer_id,
                 'provider_subscription_id': sub.provider_subscription_id,
                 'device_limit': sub.device_limit,
+                'metadata': getattr(sub, 'metadata', {}) or {},
                 'billing_grace_until': getattr(obj.tenant, 'billing_grace_until', None) if getattr(obj, 'tenant', None) else None,
                 'payment_failed_count': getattr(obj.tenant, 'payment_failed_count', None) if getattr(obj, 'tenant', None) else None,
             }
@@ -202,6 +204,7 @@ class UserSerializer(serializers.ModelSerializer):
             'provider_customer_id': getattr(tenant, 'stripe_customer_id', '') or '',
             'provider_subscription_id': getattr(tenant, 'stripe_subscription_id', '') or '',
             'device_limit': getattr(tenant, 'device_limit', None),
+            'metadata': {},
             'billing_grace_until': getattr(tenant, 'billing_grace_until', None),
             'payment_failed_count': getattr(tenant, 'payment_failed_count', None),
         }

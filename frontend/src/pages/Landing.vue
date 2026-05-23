@@ -67,6 +67,18 @@
             >
               Pricing
             </router-link>
+            <router-link
+              to="/solutions/browser-based-digital-signage-software"
+              class="px-2 py-1.5 text-xs sm:text-sm text-white/80 hover:text-white transition-colors whitespace-nowrap"
+            >
+              Solutions
+            </router-link>
+            <router-link
+              to="/guides/turn-smart-tv-into-digital-signboard"
+              class="px-2 py-1.5 text-xs sm:text-sm text-white/80 hover:text-white transition-colors whitespace-nowrap"
+            >
+              Smart TV Guide
+            </router-link>
             <a
               v-if="codecanyonItemUrl"
               :href="codecanyonItemUrl"
@@ -204,6 +216,24 @@
               </router-link>
             </li>
             <li>
+              <router-link
+                to="/solutions/browser-based-digital-signage-software"
+                class="landing-drawer-quicklink"
+                @click="closeSectionMenu"
+              >
+                Browser-based signage
+              </router-link>
+            </li>
+            <li>
+              <router-link
+                to="/guides/turn-smart-tv-into-digital-signboard"
+                class="landing-drawer-quicklink"
+                @click="closeSectionMenu"
+              >
+                Smart TV signboard guide
+              </router-link>
+            </li>
+            <li>
               <a
                 href="#codecanyon"
                 class="landing-drawer-quicklink"
@@ -246,15 +276,18 @@
               <div
                 class="text-center lg:text-left section-fade-in space-y-5 md:space-y-6 max-w-2xl mx-auto lg:mx-0 lg:max-w-none"
               >
+                <p class="inline-flex items-center gap-2 rounded-full border border-cyan-400/30 bg-cyan-500/10 px-3 py-1.5 text-[11px] sm:text-xs uppercase tracking-[0.12em] text-cyan-200 font-semibold">
+                  Zero-Hardware Cost Positioning
+                </p>
                 <h1 class="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight tracking-tight">
                   <span class="bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-500 bg-clip-text text-transparent">
-                    Command Your Screens
+                    Turn Any TV with a Browser
                   </span>
                   <br>
-                  <span class="text-white">From Deep Space</span>
+                  <span class="text-white">into Digital Signage</span>
                 </h1>
                 <p class="text-lg md:text-xl text-white/70 leading-relaxed max-w-xl mx-auto lg:mx-0">
-                  Cloud and self-hosted digital signage software for commercial displays—LCD and LED screen networks, menu boards, and advertising screens with secure setup, remote control, and fleet monitoring.
+                  No media players required. Launch commercial digital signage on existing smart TVs and browser-capable displays, then control templates, schedules, and updates centrally with PixelCast.
                 </p>
                 <div
                   class="hero-cta-grid grid grid-cols-2 gap-2.5 sm:gap-3 md:gap-4 pt-1 w-full max-w-md sm:max-w-lg md:max-w-xl mx-auto lg:mx-0"
@@ -280,13 +313,13 @@
                   >
                     Data Center
                   </router-link>
-                  <button 
-                    type="button"
-                    @click="scrollToSectionById('features'); trackLandingCta('hero_explore', 'Explore Features')" 
+                  <router-link
+                    to="/blog/turn-any-tv-browser-into-digital-signage-no-media-player-required"
                     class="hero-cta-btn glass-card rounded-xl font-semibold !text-white hover:!text-white border border-white/20 hover:border-white/40 transition-all duration-300 text-center inline-flex items-center justify-center w-full min-w-0 min-h-[3rem] sm:min-h-[3.25rem] px-2.5 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm md:text-base leading-tight"
+                    @click="trackLandingCta('hero_zero_hardware_article', 'Read zero hardware guide')"
                   >
-                    Explore Features
-                  </button>
+                    Read Zero-Hardware Guide
+                  </router-link>
                 </div>
                 <div class="flex flex-wrap gap-x-6 gap-y-2 justify-center lg:justify-start pt-2 text-white/60 text-sm">
                   <div class="flex items-center gap-2">
@@ -299,7 +332,7 @@
                     <svg class="w-4 h-4 text-cyan-400 shrink-0" fill="currentColor" viewBox="0 0 20 20">
                       <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
                     </svg>
-                    <span>14-Day Trial</span>
+                    <span>No Media Players Required</span>
                   </div>
                 </div>
               </div>
@@ -427,6 +460,12 @@
                   </div>
                   <p class="text-xs text-white/50 text-center sm:text-left">
                     Setting up from your phone? Copy the link, then open it on the TV browser.
+                  </p>
+                  <p class="text-xs text-cyan-200/85 text-center sm:text-left">
+                    Need a full walkthrough?
+                    <router-link class="underline underline-offset-2 hover:text-cyan-100" to="/guides/turn-smart-tv-into-digital-signboard">
+                      Read the Smart TV digital signboard guide.
+                    </router-link>
                   </p>
                 </div>
               </div>
@@ -848,6 +887,12 @@
             <router-link to="/terms" class="hover:text-white transition-colors">Terms</router-link>
             <a :href="productDocsUrl" class="hover:text-white transition-colors">Docs</a>
             <router-link to="/blog" class="hover:text-white transition-colors">Blog</router-link>
+            <router-link to="/solutions/browser-based-digital-signage-software" class="hover:text-white transition-colors">
+              Browser signage
+            </router-link>
+            <router-link to="/solutions/free-digital-signage-menu-boards" class="hover:text-white transition-colors">
+              Free menu boards
+            </router-link>
             <router-link to="/data-center" class="hover:text-white transition-colors">Data Center</router-link>
           </div>
         </div>

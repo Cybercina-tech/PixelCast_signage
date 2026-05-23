@@ -547,6 +547,13 @@ ASGI_APPLICATION = 'Screengram.asgi.application'
 # For development: use in-memory channel layer
 # For production: use Redis
 CHANNEL_LAYERS_BACKEND = env('CHANNEL_LAYERS_BACKEND', default='memory')
+ALLOW_INMEMORY_CHANNEL_LAYER_IN_PROD = env('ALLOW_INMEMORY_CHANNEL_LAYER_IN_PROD', default=False, cast=bool)
+
+if not DEBUG and not _LOADING_TEST_SETTINGS and CHANNEL_LAYERS_BACKEND != 'redis' and not ALLOW_INMEMORY_CHANNEL_LAYER_IN_PROD:
+    raise ImproperlyConfigured(
+        "CHANNEL_LAYERS_BACKEND must be 'redis' in production. "
+        "Set ALLOW_INMEMORY_CHANNEL_LAYER_IN_PROD=true only for temporary emergency fallback."
+    )
 
 if CHANNEL_LAYERS_BACKEND == 'redis':
     REDIS_HOST = env('REDIS_HOST', default='127.0.0.1')
@@ -566,6 +573,19 @@ else:
             'BACKEND': 'channels.layers.InMemoryChannelLayer',
         },
     }
+    if not DEBUG:
+        import logging
+        logging.getLogger(__name__).warning(
+            'CHANNEL_LAYERS_BACKEND is not redis in production — '
+            'WebSocket broadcasts may fail across Gunicorn workers. Set CHANNEL_LAYERS_BACKEND=redis.'
+        )
+
+# Dashboard WebSocket guardrails (connection storm protection and ACL cache tuning)
+DASHBOARD_WS_SECURITY = {
+    'MAX_CONNECTIONS_PER_MINUTE_PER_IP': env('DASHBOARD_WS_MAX_CONNECTIONS_PER_MINUTE_PER_IP', default=30, cast=int),
+    'MAX_CONNECTIONS_PER_MINUTE_PER_USER': env('DASHBOARD_WS_MAX_CONNECTIONS_PER_MINUTE_PER_USER', default=20, cast=int),
+    'ACL_CACHE_TTL_SECONDS': env('DASHBOARD_WS_ACL_CACHE_TTL_SECONDS', default=30, cast=int),
+}
 
 # Security settings for screen communication
 SCREEN_COMMUNICATION = {

@@ -19,6 +19,7 @@ from signage.models import Screen
 from commands.models import Command
 from commands.connection_registry import ScreenConnectionRegistry
 from commands.security import ScreenSecurity, SecurityError, InvalidSignatureError, TimestampExpiredError, ReplayAttackError
+from commands.realtime_broadcast import dashboard_target_groups
 from log.models import CommandExecutionLog
 
 logger = logging.getLogger(__name__)
@@ -377,20 +378,16 @@ class ScreenConsumer(AsyncWebsocketConsumer):
     
     async def broadcast_screen_status(self, status):
         """Broadcast screen online/offline status to dashboard users"""
-        channel_layer = get_channel_layer()
-        if channel_layer:
-            await channel_layer.group_send(
-                'dashboard_updates',
-                {
-                    'type': 'screen_status_update',
-                    'data': {
-                        'screen_id': self.screen_id,
-                        'screen_name': self.screen.name if self.screen else None,
-                        'status': status,
-                        'timestamp': timezone.now().isoformat()
-                    }
-                }
-            )
+        await self._broadcast_dashboard_event(
+            'screen_status_update',
+            {
+                'screen_id': self.screen_id,
+                'screen_name': self.screen.name if self.screen else None,
+                'organization_name': getattr(self.screen.owner, 'organization_name', None) if self.screen else None,
+                'status': status,
+                'timestamp': timezone.now().isoformat()
+            }
+        )
     
     async def handle_command_ack(self, data):
         """
@@ -497,23 +494,19 @@ class ScreenConsumer(AsyncWebsocketConsumer):
         error_message = data.get('error_message', '')
         
         # Broadcast to dashboard
-        channel_layer = get_channel_layer()
-        if channel_layer:
-            await channel_layer.group_send(
-                'dashboard_updates',
-                {
-                    'type': 'content_sync_progress',
-                    'data': {
-                        'screen_id': screen_id or self.screen_id,
-                        'template_id': template_id,
-                        'content_id': content_id,
-                        'progress': progress,
-                        'status': status,
-                        'error_message': error_message,
-                        'timestamp': timezone.now().isoformat()
-                    }
-                }
-            )
+        await self._broadcast_dashboard_event(
+            'content_sync_progress',
+            {
+                'screen_id': screen_id or self.screen_id,
+                'template_id': template_id,
+                'content_id': content_id,
+                'progress': progress,
+                'status': status,
+                'error_message': error_message,
+                'organization_name': getattr(self.screen.owner, 'organization_name', None) if self.screen else None,
+                'timestamp': timezone.now().isoformat()
+            }
+        )
         
         logger.debug(f"Content sync progress for screen {self.screen_id}: {progress}%")
     
@@ -529,19 +522,12 @@ class ScreenConsumer(AsyncWebsocketConsumer):
             'memory_usage': data.get('memory_usage'),
             'disk_usage': data.get('disk_usage'),
             'uptime': data.get('uptime'),
+            'organization_name': getattr(self.screen.owner, 'organization_name', None) if self.screen else None,
             'timestamp': timezone.now().isoformat()
         }
         
         # Broadcast to dashboard
-        channel_layer = get_channel_layer()
-        if channel_layer:
-            await channel_layer.group_send(
-                'dashboard_updates',
-                {
-                    'type': 'screen_health_update',
-                    'data': health_data
-                }
-            )
+        await self._broadcast_dashboard_event('screen_health_update', health_data)
     
     async def handle_heartbeat(self, data):
         """
@@ -554,22 +540,32 @@ class ScreenConsumer(AsyncWebsocketConsumer):
     
     async def broadcast_command_update(self, command, status, progress=None, message=None):
         """Broadcast command update to dashboard users"""
+        await self._broadcast_dashboard_event(
+            'command_status_update',
+            {
+                'command_id': str(command.id),
+                'screen_id': str(command.screen.id),
+                'screen_name': command.screen.name,
+                'command_type': command.type,
+                'status': status,
+                'progress': progress,
+                'message': message,
+                'organization_name': getattr(command.screen.owner, 'organization_name', None),
+                'timestamp': timezone.now().isoformat()
+            }
+        )
+
+    async def _broadcast_dashboard_event(self, event_type, data):
+        """Send dashboard events to scoped groups (global + organization)."""
         channel_layer = get_channel_layer()
-        if channel_layer:
+        if not channel_layer:
+            return
+        for group in dashboard_target_groups(data.get('organization_name')):
             await channel_layer.group_send(
-                'dashboard_updates',
+                group,
                 {
-                    'type': 'command_status_update',
-                    'data': {
-                        'command_id': str(command.id),
-                        'screen_id': str(command.screen.id),
-                        'screen_name': command.screen.name,
-                        'command_type': command.type,
-                        'status': status,
-                        'progress': progress,
-                        'message': message,
-                        'timestamp': timezone.now().isoformat()
-                    }
+                    'type': event_type,
+                    'data': data
                 }
             )
     

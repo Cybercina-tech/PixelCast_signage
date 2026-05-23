@@ -34,6 +34,16 @@ export function getBackendOrigin() {
  *   - If it is relative (e.g. /api from Docker + Vite), use window.location.origin so
  *     /media/ is requested from the dev server (Vite proxies /media to Django).
  */
+function isInternalMediaHostname(hostname) {
+  if (!hostname) return true
+  const h = String(hostname).toLowerCase()
+  if (isDockerServiceHostname(h)) return true
+  if (h === 'localhost' || h === '127.0.0.1' || h === '0.0.0.0' || h === 'backend') {
+    return true
+  }
+  return false
+}
+
 export function resolveMediaFileUrl(fileUrl) {
   if (fileUrl == null || String(fileUrl).trim() === '') return null
 
@@ -42,11 +52,21 @@ export function resolveMediaFileUrl(fileUrl) {
   if (url.startsWith('http://') || url.startsWith('https://')) {
     try {
       const parsed = new URL(url)
-      if (!isDockerServiceHostname(parsed.hostname)) {
-        return url
+      const pageOrigin =
+        typeof window !== 'undefined' && window.location?.origin
+          ? window.location.origin
+          : getBackendOrigin()
+      if (isInternalMediaHostname(parsed.hostname)) {
+        return `${pageOrigin}${parsed.pathname}${parsed.search}${parsed.hash}`
       }
-      const publicOrigin = getBackendOrigin()
-      return `${publicOrigin}${parsed.pathname}${parsed.search}${parsed.hash}`
+      if (
+        typeof window !== 'undefined' &&
+        window.location?.hostname &&
+        parsed.hostname !== window.location.hostname
+      ) {
+        return `${pageOrigin}${parsed.pathname}${parsed.search}${parsed.hash}`
+      }
+      return url
     } catch {
       return url
     }

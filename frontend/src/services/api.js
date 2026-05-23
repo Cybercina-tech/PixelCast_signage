@@ -7,6 +7,7 @@ import {
   normalizeApiBaseForBrowser,
   rewriteAxiosConfigIfDockerInternalHost,
 } from '@/utils/apiBaseUrl'
+import { isTransientNetworkError } from '@/utils/networkError'
 
 /** Avoid stacking identical "Too many requests" toasts when many API calls hit 429 at once */
 let lastGlobal429ToastAt = 0
@@ -110,6 +111,21 @@ api.interceptors.response.use(
       await new Promise((r) => setTimeout(r, Math.min(delay, 10_000)))
       return api(originalRequest)
     }
+
+    // Retry GET on transient network errors (Wi‑Fi/VPN switch, ERR_NETWORK_CHANGED)
+    if (
+      originalRequest &&
+      isTransientNetworkError(error) &&
+      String(originalRequest.method || 'get').toLowerCase() === 'get'
+    ) {
+      const attempt = originalRequest._networkRetryCount || 0
+      if (attempt < 2) {
+        originalRequest._networkRetryCount = attempt + 1
+        const delay = attempt === 0 ? 1000 : 3000
+        await new Promise((r) => setTimeout(r, delay))
+        return api(originalRequest)
+      }
+    }
     
     // Handle installation required (503 with installation_required error)
     if (status === 503 && (errorData.error === 'installation_required' || errorData.status === 'not_installed')) {
@@ -181,8 +197,14 @@ api.interceptors.response.use(
       
       if (!refreshToken) {
         // No refresh token, clear everything and redirect to login
-        localStorage.removeItem('auth_token')
-        localStorage.removeItem('refresh_token')
+        try {
+          const { useAuthStore } = await import('@/stores/auth')
+          const authStore = useAuthStore()
+          await authStore.logout({ skipServer: true })
+        } catch {
+          localStorage.removeItem('auth_token')
+          localStorage.removeItem('refresh_token')
+        }
         isRefreshing = false
         processQueue(new Error('No refresh token'), null)
         
@@ -200,10 +222,23 @@ api.interceptors.response.use(
       try {
         const response = await authAPI.refreshToken(refreshToken)
         const { access } = response.data
-        
-        localStorage.setItem('auth_token', access)
-        if (response.data.refresh) {
-          localStorage.setItem('refresh_token', response.data.refresh)
+
+        try {
+          const { useAuthStore } = await import('@/stores/auth')
+          const authStore = useAuthStore()
+          authStore.setTokens(access, response.data.refresh || refreshToken)
+        } catch {
+          localStorage.setItem('auth_token', access)
+          if (response.data.refresh) {
+            localStorage.setItem('refresh_token', response.data.refresh)
+          }
+        }
+
+        try {
+          const { dashboardWebSocket } = await import('@/composables/useWebSocket')
+          dashboardWebSocket.reconnectWithToken(access)
+        } catch {
+          /* WS module optional during tests */
         }
         
         originalRequest.headers.Authorization = `Bearer ${access}`
@@ -213,8 +248,14 @@ api.interceptors.response.use(
         return api(originalRequest)
       } catch (refreshError) {
         // Refresh failed, clear tokens and redirect to login
-        localStorage.removeItem('auth_token')
-        localStorage.removeItem('refresh_token')
+        try {
+          const { useAuthStore } = await import('@/stores/auth')
+          const authStore = useAuthStore()
+          await authStore.logout({ skipServer: true })
+        } catch {
+          localStorage.removeItem('auth_token')
+          localStorage.removeItem('refresh_token')
+        }
         isRefreshing = false
         processQueue(refreshError, null)
         
