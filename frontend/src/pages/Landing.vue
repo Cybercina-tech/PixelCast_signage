@@ -1,5 +1,5 @@
 <template>
-  <div class="landing-page" :class="{ 'landing-menu-open': sectionMenuOpen, 'landing-light': !themeStore.isDarkMode }">
+  <div class="landing-page" :class="{ 'landing-menu-open': sectionMenuOpen }">
     <!-- Scroll Progress Indicator -->
     <div class="fixed top-0 left-0 right-0 h-1 z-50">
       <div 
@@ -46,9 +46,6 @@
               PixelCast
             </span>
           </router-link>
-          </div>
-          <div class="shrink-0 lg:hidden">
-            <ThemeToggle />
           </div>
           <!-- Desktop / large: full nav (mobile uses burger drawer only) -->
           <div class="hidden lg:flex flex-wrap items-center justify-end gap-x-2 gap-y-1 xl:gap-2.5 shrink-0">
@@ -140,7 +137,6 @@
                 Install
               </router-link>
             </template>
-            <ThemeToggle />
           </div>
         </div>
       </div>
@@ -955,11 +951,8 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { setupAPI, publicAPI } from '@/services/api'
 import { pushCtaClick } from '@/analytics/dataLayer'
-import { useThemeStore } from '@/stores/theme'
-import ThemeToggle from '@/components/common/ThemeToggle.vue'
 
 const router = useRouter()
-const themeStore = useThemeStore()
 
 function trackLandingCta(ctaId, label) {
   pushCtaClick(ctaId, label, { page: 'landing' })
@@ -1238,44 +1231,33 @@ onUnmounted(() => {
   min-height: 100dvh;
   height: 100dvh;
   overflow: hidden;
-  /* Always use light copy tokens here — global :root is light-theme when html has no .dark */
-  --text-body: #e2e8f0;
-  --text-main: #e2e8f0;
-  --text-heading: #f8fafc;
-  --text-muted: #94a3b8;
-  color: var(--text-body);
-  color-scheme: dark;
-  background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 25%, #0f172a 50%, #1e293b 75%, #0a0e27 100%);
-  background-size: 400% 400%;
-  animation: gradientShift 20s ease infinite;
-}
-
-.landing-page.landing-light {
+  /* Landing is intentionally always-light, independent from global app theme. */
   --text-body: #334155;
   --text-main: #1e293b;
   --text-heading: #0f172a;
   --text-muted: #64748b;
+  color: var(--text-body);
   color-scheme: light;
   background: linear-gradient(135deg, #f8fafc 0%, #eef2ff 42%, #e2e8f0 100%);
   animation: none;
 }
 
-.landing-page.landing-light .landing-nav {
+.landing-nav {
   background: rgba(255, 255, 255, 0.85);
   border-color: rgba(15, 23, 42, 0.08);
 }
 
-.landing-page.landing-light .landing-nav a,
-.landing-page.landing-light .landing-nav button {
+.landing-nav a,
+.landing-nav button {
   color: #334155;
 }
 
-.landing-page.landing-light .landing-nav a:hover,
-.landing-page.landing-light .landing-nav button:hover {
+.landing-nav a:hover,
+.landing-nav button:hover {
   color: #0f172a;
 }
 
-.landing-page.landing-light .landing-burger {
+.landing-burger {
   border-color: rgba(15, 23, 42, 0.16);
   background: rgba(255, 255, 255, 0.9);
   color: #334155;
@@ -1299,15 +1281,15 @@ onUnmounted(() => {
   width: 2.5rem;
   height: 2.5rem;
   border-radius: 0.625rem;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  background: rgba(255, 255, 255, 0.06);
-  color: #fff;
+  border: 1px solid rgba(15, 23, 42, 0.16);
+  background: rgba(255, 255, 255, 0.9);
+  color: #334155;
   transition: background 0.2s ease, border-color 0.2s ease;
 }
 
 .landing-burger:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 1);
+  border-color: rgba(15, 23, 42, 0.22);
 }
 
 .landing-burger-bar {
@@ -1345,7 +1327,7 @@ onUnmounted(() => {
   font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.4);
+  color: var(--text-muted);
   margin-bottom: 0.5rem;
   padding-left: 0.35rem;
 }
@@ -1355,13 +1337,13 @@ onUnmounted(() => {
   padding: 0.5rem 0.75rem;
   border-radius: 0.5rem;
   font-size: 0.875rem;
-  color: rgba(255, 255, 255, 0.85);
+  color: var(--text-body);
   transition: background 0.15s ease, color 0.15s ease;
 }
 
 .landing-drawer-quicklink:hover {
-  background: rgba(255, 255, 255, 0.06);
-  color: #fff;
+  background: rgba(37, 99, 235, 0.08);
+  color: var(--text-heading);
 }
 
 .landing-drawer-cta {
@@ -1375,6 +1357,20 @@ onUnmounted(() => {
   background: linear-gradient(135deg, #06b6d4 0%, #8b5cf6 100%);
   box-shadow: 0 0 18px rgba(6, 182, 212, 0.28);
   transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.landing-section-drawer {
+  border-left-color: rgba(15, 23, 42, 0.1) !important;
+  background: rgba(255, 255, 255, 0.94) !important;
+  box-shadow: -8px 0 30px rgba(15, 23, 42, 0.12) !important;
+}
+
+.landing-section-drawer .border-b {
+  border-bottom-color: rgba(15, 23, 42, 0.1) !important;
+}
+
+.landing-menu-backdrop {
+  background: rgba(15, 23, 42, 0.22) !important;
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -1478,7 +1474,7 @@ onUnmounted(() => {
 
 /* Starfield Background */
 .starfield-background {
-  background: radial-gradient(ellipse at bottom, #1b2735 0%, #090a0f 100%);
+  background: radial-gradient(ellipse at top, #ffffff 0%, #f8fafc 45%, #eef2ff 100%);
   overflow: hidden;
 }
 
@@ -1490,16 +1486,16 @@ onUnmounted(() => {
   width: 100%;
   height: 100%;
   background-image: 
-    radial-gradient(2px 2px at 20% 30%, white, transparent),
-    radial-gradient(2px 2px at 60% 70%, white, transparent),
-    radial-gradient(1px 1px at 50% 50%, white, transparent),
-    radial-gradient(1px 1px at 80% 10%, white, transparent),
-    radial-gradient(2px 2px at 30% 80%, white, transparent),
-    radial-gradient(1px 1px at 90% 40%, white, transparent);
+    radial-gradient(2px 2px at 20% 30%, rgba(37, 99, 235, 0.12), transparent),
+    radial-gradient(2px 2px at 60% 70%, rgba(99, 102, 241, 0.11), transparent),
+    radial-gradient(1px 1px at 50% 50%, rgba(37, 99, 235, 0.1), transparent),
+    radial-gradient(1px 1px at 80% 10%, rgba(139, 92, 246, 0.11), transparent),
+    radial-gradient(2px 2px at 30% 80%, rgba(59, 130, 246, 0.12), transparent),
+    radial-gradient(1px 1px at 90% 40%, rgba(79, 70, 229, 0.1), transparent);
   background-repeat: repeat;
   background-size: 200% 200%;
-  animation: starfield 20s linear infinite;
-  opacity: 0.6;
+  animation: starfield 24s linear infinite;
+  opacity: 0.45;
 }
 
 @keyframes starfield {
@@ -1513,10 +1509,11 @@ onUnmounted(() => {
  * (e.g. full viewport vs DevTools docked).
  */
 .glass-card {
-  background: rgba(15, 23, 42, 0.78);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(15, 23, 42, 0.1);
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08), 0 2px 6px rgba(15, 23, 42, 0.05);
 }
 
 /* Neon Buttons */
@@ -1548,15 +1545,23 @@ onUnmounted(() => {
 
 /* Hero CTAs: body/link inherit would otherwise use --text-body (dark in light mode). */
 .hero-cta-grid .hero-cta-btn {
-  color: #ffffff !important;
-  -webkit-text-fill-color: #ffffff;
+  color: var(--text-heading) !important;
+  -webkit-text-fill-color: var(--text-heading);
 }
 
 .hero-cta-grid .hero-cta-btn:hover,
 .hero-cta-grid .hero-cta-btn:visited,
 .hero-cta-grid .hero-cta-btn:active {
+  color: var(--text-heading) !important;
+  -webkit-text-fill-color: var(--text-heading);
+}
+
+.hero-cta-grid .hero-cta-btn.neon-button-large,
+.hero-cta-grid .hero-cta-btn.neon-button-large:hover,
+.hero-cta-grid .hero-cta-btn.neon-button-large:visited,
+.hero-cta-grid .hero-cta-btn.neon-button-large:active {
   color: #ffffff !important;
-  -webkit-text-fill-color: #ffffff;
+  -webkit-text-fill-color: #ffffff !important;
 }
 
 /* Floating 3D Mockup */
@@ -1651,8 +1656,101 @@ onUnmounted(() => {
 }
 
 .industry-tabs::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(37, 99, 235, 0.35);
   border-radius: 4px;
+}
+
+/* ===== Landing always-light contrast normalization ===== */
+.landing-page :deep(.text-white),
+.landing-page :deep(.!text-white) {
+  color: var(--text-heading) !important;
+  -webkit-text-fill-color: var(--text-heading) !important;
+}
+
+.landing-page :deep(.text-white\/90),
+.landing-page :deep(.text-white\/80),
+.landing-page :deep(.text-white\/70),
+.landing-page :deep(.text-white\/60),
+.landing-page :deep(.text-white\/55),
+.landing-page :deep(.text-white\/50),
+.landing-page :deep(.text-white\/45),
+.landing-page :deep(.text-white\/40) {
+  color: var(--text-muted) !important;
+  -webkit-text-fill-color: var(--text-muted) !important;
+}
+
+.landing-page :deep(.text-cyan-300),
+.landing-page :deep(.text-cyan-200),
+.landing-page :deep(.hover\:text-cyan-200:hover),
+.landing-page :deep(.text-indigo-300),
+.landing-page :deep(.text-indigo-200),
+.landing-page :deep(.text-emerald-300),
+.landing-page :deep(.text-amber-300) {
+  color: var(--accent-color) !important;
+  -webkit-text-fill-color: var(--accent-color) !important;
+}
+
+.landing-page :deep(.border-white\/10),
+.landing-page :deep(.border-white\/15),
+.landing-page :deep(.border-white\/20),
+.landing-page :deep(.hover\:border-white\/40:hover) {
+  border-color: rgba(15, 23, 42, 0.14) !important;
+}
+
+.landing-page :deep(.bg-black\/35),
+.landing-page :deep(.bg-black\/40),
+.landing-page :deep(.bg-slate-900\/40),
+.landing-page :deep(.bg-slate-900\/50),
+.landing-page :deep(.bg-slate-950\/60),
+.landing-page :deep(.bg-slate-950\/80) {
+  background: rgba(255, 255, 255, 0.78) !important;
+}
+
+.landing-page :deep(.bg-white\/5),
+.landing-page :deep(.bg-white\/10) {
+  background: rgba(15, 23, 42, 0.05) !important;
+}
+
+.landing-page :deep(.hover\:bg-white\/5:hover),
+.landing-page :deep(.hover\:bg-white\/10:hover) {
+  background: rgba(15, 23, 42, 0.08) !important;
+}
+
+.landing-page :deep(.text-on-starfield),
+.landing-page :deep(.!text-on-starfield) {
+  color: var(--text-body) !important;
+  -webkit-text-fill-color: var(--text-body) !important;
+}
+
+.landing-page :deep(.text-on-starfield-muted) {
+  color: var(--text-muted) !important;
+  -webkit-text-fill-color: var(--text-muted) !important;
+}
+
+.landing-page :deep(.hero-cta-btn.neon-button),
+.landing-page :deep(.hero-cta-btn.neon-button-large),
+.landing-page :deep(.landing-drawer-cta),
+.landing-page :deep(.neon-button),
+.landing-page :deep(.neon-button-large) {
+  color: #fff !important;
+  -webkit-text-fill-color: #fff !important;
+}
+
+.landing-page :deep(.hero-cta-btn.glass-card) {
+  color: var(--text-heading) !important;
+  -webkit-text-fill-color: var(--text-heading) !important;
+}
+
+.landing-page :deep(.cursor-not-allowed.bg-white\/10) {
+  background: rgba(15, 23, 42, 0.07) !important;
+  color: #94a3b8 !important;
+}
+
+.landing-page :deep(a:focus-visible),
+.landing-page :deep(button:focus-visible) {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.28);
+  border-radius: 0.5rem;
 }
 
 @media (hover: hover) and (pointer: fine) {
