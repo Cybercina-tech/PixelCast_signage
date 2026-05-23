@@ -1,5 +1,5 @@
 <template>
-  <div class="auth-page cosmic-auth min-h-screen flex">
+  <div class="auth-page cosmic-auth min-h-screen flex" :class="{ 'theme-light': !themeStore.isDarkMode }">
     <!-- Deep space gradient base -->
     <div class="cosmic-bg" aria-hidden="true" />
 
@@ -9,6 +9,9 @@
     <!-- Nebula accents (blurred glow in corners) -->
     <div class="nebula nebula--indigo" aria-hidden="true" />
     <div class="nebula nebula--purple" aria-hidden="true" />
+    <div class="absolute top-4 right-4 z-20">
+      <ThemeToggle />
+    </div>
 
     <!-- Left: Brand (visible on lg+) -->
     <div
@@ -312,9 +315,11 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { authAPI } from '@/services/api'
 import { useAuthStore } from '@/stores/auth'
+import { useThemeStore } from '@/stores/theme'
 import { useNotification } from '@/composables/useNotification'
 import { normalizeApiError } from '@/utils/apiError'
 import { pushSignUp } from '@/analytics/dataLayer'
+import ThemeToggle from '@/components/common/ThemeToggle.vue'
 import {
   UserIcon,
   EnvelopeIcon,
@@ -328,6 +333,7 @@ import {
 
 const router = useRouter()
 const authStore = useAuthStore()
+const themeStore = useThemeStore()
 const notify = useNotification()
 
 const form = ref({
@@ -474,6 +480,10 @@ onMounted(() => {
   font-family: 'Plus Jakarta Sans', sans-serif;
 }
 
+.theme-light {
+  color-scheme: light;
+}
+
 /* Deep space gradient */
 .cosmic-bg {
   position: fixed;
@@ -481,6 +491,10 @@ onMounted(() => {
   z-index: 0;
   background: linear-gradient(to bottom right, #0B0E14, #161B22, #0B0E14);
   pointer-events: none;
+}
+
+.theme-light .cosmic-bg {
+  background: linear-gradient(135deg, #f8fafc 0%, #eef2ff 40%, #e2e8f0 100%);
 }
 
 /* Animated starfield (CSS-only twinkling stars via box-shadow) */
@@ -491,6 +505,10 @@ onMounted(() => {
   pointer-events: none;
   opacity: 0.6;
   animation: cosmicTwinkle 6s ease-in-out infinite;
+}
+
+.theme-light .cosmic-starfield {
+  opacity: 0.22;
 }
 
 .cosmic-starfield::before {
@@ -532,6 +550,10 @@ onMounted(() => {
   z-index: 1;
   opacity: 0.25;
 }
+
+.theme-light .nebula {
+  opacity: 0.16;
+}
 .nebula--indigo {
   width: 400px;
   height: 400px;
@@ -558,6 +580,12 @@ onMounted(() => {
     inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
+.theme-light .glass-portal {
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.14);
+}
+
 /* Galactic typography */
 .cosmic-title,
 .cosmic-heading {
@@ -569,9 +597,19 @@ onMounted(() => {
 .cosmic-input {
   border-color: rgba(255, 255, 255, 0.1);
 }
+.theme-light .cosmic-input {
+  border-color: rgba(15, 23, 42, 0.14);
+  background: rgba(255, 255, 255, 0.95) !important;
+  color: #0f172a !important;
+}
 .cosmic-input:focus {
   border-color: #6366F1;
   box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25), 0 0 20px rgba(99, 102, 241, 0.15);
+}
+
+.theme-light .cosmic-input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.22), 0 0 16px rgba(37, 99, 235, 0.1);
 }
 
 /* Neon icon glow */
@@ -628,6 +666,22 @@ onMounted(() => {
 
 .floating-label--active.cosmic-floating-label {
   color: rgb(165 180 252);
+}
+
+.theme-light .floating-label {
+  background: rgba(255, 255, 255, 0.96);
+}
+
+.theme-light :deep(.text-white) {
+  color: #0f172a !important;
+}
+
+.theme-light :deep(.text-slate-400) {
+  color: #64748b !important;
+}
+
+.theme-light :deep(.text-slate-500) {
+  color: #64748b !important;
 }
 
 .cosmic-input:-webkit-autofill,

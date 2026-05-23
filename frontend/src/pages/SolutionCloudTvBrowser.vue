@@ -1,13 +1,22 @@
 <template>
-  <main class="min-h-screen bg-slate-950 text-slate-100">
+  <div class="min-h-screen bg-slate-950 text-slate-100">
+    <LandingNav />
+    <main class="pt-16">
     <section class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-14 sm:py-16">
-      <p class="text-xs uppercase tracking-[0.16em] text-cyan-300 font-semibold">Cloud Digital Signage</p>
+      <router-link
+        to="/"
+        class="inline-flex items-center gap-2 rounded-lg border border-white/15 px-3 py-2 text-sm text-slate-200 hover:border-white/35 hover:text-white transition-colors"
+      >
+        <span aria-hidden="true">←</span>
+        Back to home
+      </router-link>
+      <p class="mt-5 text-xs uppercase tracking-[0.16em] text-cyan-300 font-semibold">Cloud Digital Signage</p>
       <h1 class="mt-3 text-3xl sm:text-4xl font-bold leading-tight">
         Cloud digital signage for running on TV browser
       </h1>
       <p class="mt-4 text-slate-300 text-base sm:text-lg leading-relaxed max-w-3xl">
-        PixelCast delivers cloud digital signage for running on TV browser workflows. Pair smart TVs securely, schedule
-        content centrally, and keep playback consistent across your screen network.
+        PixelCast is optimized for cloud-managed playback on TV browsers. Pair screens securely, control schedules
+        centrally, and maintain consistent playback quality without local USB workflows.
       </p>
       <div class="mt-8 flex flex-wrap gap-3">
         <router-link
@@ -31,13 +40,24 @@
         <ul class="mt-3 list-disc pl-6 text-slate-300 space-y-2">
           <li>Centralized playlist and template scheduling by location and time window.</li>
           <li>Role-based access control for operations, marketing, and IT teams.</li>
-          <li>Monitoring and remote commands for quick issue recovery.</li>
+          <li>Monitoring, logs, and remote commands for quick issue recovery.</li>
+          <li>Consistent rollout process from pilot branch to full multi-site deployment.</li>
         </ul>
+      </article>
+      <article class="rounded-2xl border border-white/10 bg-white/5 p-6">
+        <h2 class="text-xl font-semibold">Deployment model</h2>
+        <ol class="mt-3 list-decimal pl-6 text-slate-300 space-y-2">
+          <li>Connect each TV browser to the dashboard using secure pairing.</li>
+          <li>Assign screen groups and attach templates or playlists to each group.</li>
+          <li>Publish schedules with timing rules and branch-specific targeting.</li>
+          <li>Monitor heartbeat, execution status, and content sync from reports.</li>
+        </ol>
       </article>
       <article class="rounded-2xl border border-white/10 bg-white/5 p-6">
         <h2 class="text-xl font-semibold">Deployment fit</h2>
         <p class="mt-3 text-slate-300">
-          Ideal for organizations that want fast rollout without on-site USB updates or heavy player management.
+          Ideal for organizations that need fast expansion, minimal on-site maintenance, and centralized governance for
+          screens across multiple cities or business units.
         </p>
       </article>
       <div class="text-sm flex flex-wrap gap-3">
@@ -49,5 +69,10 @@
         </router-link>
       </div>
     </section>
-  </main>
+    </main>
+  </div>
 </template>
+
+<script setup>
+import LandingNav from '@/components/landing/LandingNav.vue'
+</script>

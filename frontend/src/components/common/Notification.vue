@@ -68,7 +68,7 @@
                   'text-sm font-medium underline',
                   typeClasses.action,
                   'hover:opacity-80 transition-opacity',
-                  'focus:outline-none focus:ring-2 focus:ring-offset-2 rounded',
+                  'focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[var(--focus-ring)] rounded',
                   typeClasses.actionFocus,
                 ]"
               >
@@ -85,7 +85,7 @@
                 'inline-flex rounded-md p-1.5',
                 'text-slate-400 hover:text-slate-600 dark:text-slate-400 dark:hover:text-slate-200',
                 'focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-slate-800',
-                'focus:ring-slate-500 dark:focus:ring-slate-400',
+                'focus:ring-[var(--focus-ring)]',
                 'transition-colors',
               ]"
               aria-label="Close notification"
@@ -99,7 +99,7 @@
       <!-- Progress Bar (if auto-dismiss) -->
       <div
         v-if="duration > 0 && showProgress"
-        class="h-1 bg-slate-200/50 dark:bg-slate-700"
+        class="h-1 bg-surface-inset"
       >
         <div
           :class="[

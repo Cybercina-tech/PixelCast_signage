@@ -1,5 +1,5 @@
 <template>
-  <div class="landing-page" :class="{ 'landing-menu-open': sectionMenuOpen }">
+  <div class="landing-page" :class="{ 'landing-menu-open': sectionMenuOpen, 'landing-light': !themeStore.isDarkMode }">
     <!-- Scroll Progress Indicator -->
     <div class="fixed top-0 left-0 right-0 h-1 z-50">
       <div 
@@ -47,6 +47,9 @@
             </span>
           </router-link>
           </div>
+          <div class="shrink-0 lg:hidden">
+            <ThemeToggle />
+          </div>
           <!-- Desktop / large: full nav (mobile uses burger drawer only) -->
           <div class="hidden lg:flex flex-wrap items-center justify-end gap-x-2 gap-y-1 xl:gap-2.5 shrink-0">
             <a
@@ -55,29 +58,56 @@
             >
               Docs
             </a>
-            <router-link
-              to="/blog"
-              class="px-2 py-1.5 text-xs sm:text-sm text-white/80 hover:text-white transition-colors whitespace-nowrap"
-            >
-              Blog
-            </router-link>
+            <div class="relative group">
+              <button
+                type="button"
+                class="inline-flex items-center gap-1 px-2 py-1.5 text-xs sm:text-sm text-white/80 hover:text-white transition-colors whitespace-nowrap"
+                aria-label="Open blog resources"
+              >
+                Blog
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+              <div class="invisible opacity-0 group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100 absolute right-0 mt-1 w-80 rounded-xl border border-white/15 bg-slate-950/95 backdrop-blur-xl p-3 shadow-2xl transition-all duration-150">
+                <router-link
+                  to="/blog"
+                  class="block rounded-md px-2 py-1.5 text-sm font-semibold text-cyan-300 hover:bg-white/5 hover:text-cyan-200"
+                >
+                  Blog
+                </router-link>
+                <p class="px-2 pt-2 pb-1 text-[11px] uppercase tracking-wide text-white/40">Guides & Solutions</p>
+                <router-link
+                  to="/guides/turn-smart-tv-into-digital-signboard"
+                  class="block rounded-md px-2 py-1.5 text-sm text-white/80 hover:bg-white/5 hover:text-white"
+                >
+                  Guide: Smart TV signboard setup
+                </router-link>
+                <router-link
+                  to="/solutions/browser-based-digital-signage-software"
+                  class="block rounded-md px-2 py-1.5 text-sm text-white/80 hover:bg-white/5 hover:text-white"
+                >
+                  Solution: Browser-based digital signage
+                </router-link>
+                <router-link
+                  to="/solutions/free-digital-signage-menu-boards"
+                  class="block rounded-md px-2 py-1.5 text-sm text-white/80 hover:bg-white/5 hover:text-white"
+                >
+                  Solution: Free menu board signage
+                </router-link>
+                <router-link
+                  to="/solutions/cloud-digital-signage-tv-browser"
+                  class="block rounded-md px-2 py-1.5 text-sm text-white/80 hover:bg-white/5 hover:text-white"
+                >
+                  Solution: Cloud TV browser signage
+                </router-link>
+              </div>
+            </div>
             <router-link
               to="/pricing"
               class="px-2 py-1.5 text-xs sm:text-sm text-white/80 hover:text-white transition-colors whitespace-nowrap"
             >
               Pricing
-            </router-link>
-            <router-link
-              to="/solutions/browser-based-digital-signage-software"
-              class="px-2 py-1.5 text-xs sm:text-sm text-white/80 hover:text-white transition-colors whitespace-nowrap"
-            >
-              Solutions
-            </router-link>
-            <router-link
-              to="/guides/turn-smart-tv-into-digital-signboard"
-              class="px-2 py-1.5 text-xs sm:text-sm text-white/80 hover:text-white transition-colors whitespace-nowrap"
-            >
-              Smart TV Guide
             </router-link>
             <a
               v-if="codecanyonItemUrl"
@@ -110,6 +140,7 @@
                 Install
               </router-link>
             </template>
+            <ThemeToggle />
           </div>
         </div>
       </div>
@@ -201,6 +232,42 @@
                 Blog
               </router-link>
             </li>
+            <li class="pl-3 pt-1">
+              <router-link
+                to="/guides/turn-smart-tv-into-digital-signboard"
+                class="landing-drawer-quicklink"
+                @click="closeSectionMenu"
+              >
+                - Guide: Smart TV signboard setup
+              </router-link>
+            </li>
+            <li class="pl-3">
+              <router-link
+                to="/solutions/browser-based-digital-signage-software"
+                class="landing-drawer-quicklink"
+                @click="closeSectionMenu"
+              >
+                - Solution: Browser-based signage
+              </router-link>
+            </li>
+            <li class="pl-3">
+              <router-link
+                to="/solutions/free-digital-signage-menu-boards"
+                class="landing-drawer-quicklink"
+                @click="closeSectionMenu"
+              >
+                - Solution: Free menu boards
+              </router-link>
+            </li>
+            <li class="pl-3">
+              <router-link
+                to="/solutions/cloud-digital-signage-tv-browser"
+                class="landing-drawer-quicklink"
+                @click="closeSectionMenu"
+              >
+                - Solution: Cloud TV browser
+              </router-link>
+            </li>
             <li>
               <a
                 href="#tv-connect"
@@ -213,24 +280,6 @@
             <li>
               <router-link to="/pricing" class="landing-drawer-quicklink" @click="closeSectionMenu">
                 Pricing
-              </router-link>
-            </li>
-            <li>
-              <router-link
-                to="/solutions/browser-based-digital-signage-software"
-                class="landing-drawer-quicklink"
-                @click="closeSectionMenu"
-              >
-                Browser-based signage
-              </router-link>
-            </li>
-            <li>
-              <router-link
-                to="/guides/turn-smart-tv-into-digital-signboard"
-                class="landing-drawer-quicklink"
-                @click="closeSectionMenu"
-              >
-                Smart TV signboard guide
               </router-link>
             </li>
             <li>
@@ -906,8 +955,11 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { setupAPI, publicAPI } from '@/services/api'
 import { pushCtaClick } from '@/analytics/dataLayer'
+import { useThemeStore } from '@/stores/theme'
+import ThemeToggle from '@/components/common/ThemeToggle.vue'
 
 const router = useRouter()
+const themeStore = useThemeStore()
 
 function trackLandingCta(ctaId, label) {
   pushCtaClick(ctaId, label, { page: 'landing' })
@@ -1196,6 +1248,37 @@ onUnmounted(() => {
   background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 25%, #0f172a 50%, #1e293b 75%, #0a0e27 100%);
   background-size: 400% 400%;
   animation: gradientShift 20s ease infinite;
+}
+
+.landing-page.landing-light {
+  --text-body: #334155;
+  --text-main: #1e293b;
+  --text-heading: #0f172a;
+  --text-muted: #64748b;
+  color-scheme: light;
+  background: linear-gradient(135deg, #f8fafc 0%, #eef2ff 42%, #e2e8f0 100%);
+  animation: none;
+}
+
+.landing-page.landing-light .landing-nav {
+  background: rgba(255, 255, 255, 0.85);
+  border-color: rgba(15, 23, 42, 0.08);
+}
+
+.landing-page.landing-light .landing-nav a,
+.landing-page.landing-light .landing-nav button {
+  color: #334155;
+}
+
+.landing-page.landing-light .landing-nav a:hover,
+.landing-page.landing-light .landing-nav button:hover {
+  color: #0f172a;
+}
+
+.landing-page.landing-light .landing-burger {
+  border-color: rgba(15, 23, 42, 0.16);
+  background: rgba(255, 255, 255, 0.9);
+  color: #334155;
 }
 
 .safe-area-pt {

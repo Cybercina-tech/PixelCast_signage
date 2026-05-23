@@ -67,7 +67,7 @@ const handleClick = (event) => {
 }
 
 const fabClasses = computed(() => {
-  const base = 'fixed z-50 rounded-full shadow-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center'
+  const base = 'group fixed z-50 rounded-full shadow-soft transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-brand/40 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-slate-900 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center'
   
   const sizes = {
     sm: 'w-12 h-12',
@@ -83,8 +83,8 @@ const fabClasses = computed(() => {
   }
   
   const variants = {
-    primary: 'bg-slate-900 text-white hover:bg-slate-800 active:bg-slate-950 focus:ring-slate-500 dark:bg-slate-700 dark:hover:bg-slate-600',
-    secondary: 'bg-slate-100 text-slate-900 hover:bg-slate-200 active:bg-slate-300 focus:ring-slate-500 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700',
+    primary: 'bg-brand text-white hover:bg-brand-hover active:bg-brand-active',
+    secondary: 'bg-surface-2 border border-border-color text-primary hover:bg-surface-3 active:scale-95',
     success: 'bg-green-600 text-white hover:bg-green-700 active:bg-green-800 focus:ring-green-500',
     danger: 'bg-red-600 text-white hover:bg-red-700 active:bg-red-800 focus:ring-red-500',
   }
@@ -108,7 +108,7 @@ const iconClasses = computed(() => {
 })
 
 const tooltipClasses = computed(() => {
-  const base = 'absolute whitespace-nowrap px-3 py-1.5 text-sm font-medium text-white bg-slate-900 rounded-lg shadow-lg opacity-0 pointer-events-none transition-opacity duration-200'
+  const base = 'absolute whitespace-nowrap px-3 py-1.5 text-sm font-medium text-primary bg-surface-3 border border-border-color rounded-lg shadow-soft opacity-0 pointer-events-none transition-opacity duration-200'
   
   const positions = {
     'bottom-right': 'right-full mr-2 bottom-1/2 translate-y-1/2',

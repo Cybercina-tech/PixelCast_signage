@@ -7,19 +7,19 @@
         @click.self="$emit('close')"
       >
         <!-- Backdrop -->
-        <div class="fixed inset-0 bg-black/80 backdrop-blur-md transition-opacity" aria-hidden="true"></div>
+        <div class="fixed inset-0 backdrop-overlay transition-opacity" aria-hidden="true"></div>
 
         <!-- Modal Content -->
         <div class="flex items-center justify-center min-h-screen px-4 py-8">
           <div
-            class="relative backdrop-blur-lg bg-gray-900/95 border border-white/10 rounded-2xl shadow-2xl max-w-7xl w-full max-h-[90vh] overflow-hidden"
+            class="relative backdrop-blur-lg bg-card border border-border-color rounded-2xl shadow-2xl max-w-7xl w-full max-h-[90vh] overflow-hidden"
             @click.stop
           >
             <!-- Header -->
-            <div class="flex items-center justify-between px-6 py-4 border-b border-white/10">
+            <div class="flex items-center justify-between px-6 py-4 border-b border-border-color">
               <div class="flex items-center gap-3">
                 <div class="w-2 h-2 rounded-full bg-green-500"></div>
-                <h3 class="text-lg font-semibold text-white">{{ mediaName || 'Media Preview' }}</h3>
+                <h3 class="text-lg font-semibold text-primary">{{ mediaName || 'Media Preview' }}</h3>
                 <span
                   v-if="mediaType"
                   :class="[
@@ -32,7 +32,7 @@
               </div>
               <button
                 @click="$emit('close')"
-                class="p-2 text-gray-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors duration-200"
+                class="p-2 text-muted hover:text-primary hover:bg-surface-inset rounded-lg transition-colors duration-200"
               >
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -72,7 +72,7 @@
                   <!-- Video Info Overlay -->
                   <div
                     v-if="videoDuration"
-                    class="absolute bottom-4 left-4 px-3 py-2 bg-black/70 backdrop-blur-sm text-white text-sm rounded-lg"
+                    class="absolute bottom-4 left-4 px-3 py-2 bg-surface-3/90 border border-border-color backdrop-blur-sm text-primary text-sm rounded-lg"
                   >
                     Duration: {{ formatDuration(videoDuration) }}
                   </div>
@@ -107,24 +107,24 @@
             <!-- Footer with Metadata -->
             <div
               v-if="metadata && !error"
-              class="px-6 py-4 border-t border-white/10 bg-gray-900/50"
+              class="px-6 py-4 border-t border-border-color bg-surface-inset"
             >
               <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                 <div v-if="metadata.width && metadata.height">
-                  <span class="text-gray-400">Dimensions:</span>
-                  <span class="text-white ml-2">{{ metadata.width }}×{{ metadata.height }}</span>
+                  <span class="text-muted">Dimensions:</span>
+                  <span class="text-primary ml-2">{{ metadata.width }}×{{ metadata.height }}</span>
                 </div>
                 <div v-if="metadata.fileSize">
-                  <span class="text-gray-400">Size:</span>
-                  <span class="text-white ml-2">{{ formatFileSize(metadata.fileSize) }}</span>
+                  <span class="text-muted">Size:</span>
+                  <span class="text-primary ml-2">{{ formatFileSize(metadata.fileSize) }}</span>
                 </div>
                 <div v-if="metadata.duration">
-                  <span class="text-gray-400">Duration:</span>
-                  <span class="text-white ml-2">{{ formatDuration(metadata.duration) }}</span>
+                  <span class="text-muted">Duration:</span>
+                  <span class="text-primary ml-2">{{ formatDuration(metadata.duration) }}</span>
                 </div>
                 <div v-if="metadata.createdAt">
-                  <span class="text-gray-400">Uploaded:</span>
-                  <span class="text-white ml-2">{{ formatDate(metadata.createdAt) }}</span>
+                  <span class="text-muted">Uploaded:</span>
+                  <span class="text-primary ml-2">{{ formatDate(metadata.createdAt) }}</span>
                 </div>
               </div>
             </div>

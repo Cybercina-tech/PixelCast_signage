@@ -14,16 +14,16 @@
   --brand-primary-active: #047857;
 
   /* Light Mode — Antler: warm paper + soft depth (avoid harsh #fff) */
-  --bg-primary: #F4F6FA;
-  --bg-secondary: #EEF1F7;
-  --bg-color: radial-gradient(circle at 10% 0%, #fafbfc 0%, #f4f6fa 45%, #eef1f7 100%);
-  --bg-color-solid: #F4F6FA;
-  --card-bg: rgba(250, 251, 252, 0.94);
+  --bg-primary: #F8FAFC;
+  --bg-secondary: #F1F5F9;
+  --bg-color: #F8FAFC;
+  --bg-color-solid: #F8FAFC;
+  --card-bg: #FFFFFF;
   --card-bg-backdrop: blur(16px);
   --glass-bg: rgba(255, 255, 255, 0.88);
   --border-color: rgba(30, 41, 59, 0.1);
-  --shadow-soft: 0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 20px rgba(51, 65, 85, 0.08);
-  --shadow-medium: 0 8px 20px rgba(15, 23, 42, 0.1), 0 18px 32px rgba(51, 65, 85, 0.12);
+  --shadow-soft: 0 1px 2px 0 rgba(15, 23, 42, 0.06), 0 1px 3px 0 rgba(15, 23, 42, 0.04);
+  --shadow-medium: 0 4px 12px rgba(15, 23, 42, 0.08), 0 10px 24px rgba(15, 23, 42, 0.06);
   --shadow-strong: 0 12px 28px rgba(15, 23, 42, 0.12), 0 28px 48px rgba(51, 65, 85, 0.16);
 
   /* Form fields — track surfaces without fighting parent panels */
@@ -38,9 +38,17 @@
   --icon-color: #2D3436;
   --accent-color: #2563eb;
   --button-primary: #2563eb;
+  --button-primary-hover: #1d4ed8;
   --button-text: #FFFFFF;
   --button-shadow: 0 8px 18px rgba(37, 99, 235, 0.2), 0 2px 6px rgba(37, 99, 235, 0.12);
   --button-shadow-hover: 0 12px 24px rgba(37, 99, 235, 0.28), 0 6px 10px rgba(37, 99, 235, 0.16);
+  --focus-ring: rgba(37, 99, 235, 0.28);
+  --backdrop-overlay: rgba(15, 23, 42, 0.32);
+  --scrollbar-track: rgba(148, 163, 184, 0.15);
+  --scrollbar-thumb: rgba(37, 99, 235, 0.62);
+  --scrollbar-thumb-hover: rgba(37, 99, 235, 0.78);
+  --skeleton-base: #e2e8f0;
+  --skeleton-highlight: #f8fafc;
   --grid-color: #E2E8F0;
   --notification-error-bg: rgba(255, 235, 235, 0.8); /* Pastel red with 80% opacity */
   --notification-success-bg: rgba(235, 255, 235, 0.8); /* Pastel green with 80% opacity */
@@ -119,9 +127,17 @@
   --icon-color: #06b6d4;
   --accent-color: #00d2ff;
   --button-primary: #06b6d4;
+  --button-primary-hover: #0891b2;
   --button-text: #ffffff;
   --button-shadow: 0 0 20px rgba(6, 182, 212, 0.3);
   --button-shadow-hover: 0 0 30px rgba(6, 182, 212, 0.5);
+  --focus-ring: rgba(6, 182, 212, 0.34);
+  --backdrop-overlay: rgba(2, 6, 23, 0.72);
+  --scrollbar-track: rgba(51, 65, 85, 0.35);
+  --scrollbar-thumb: rgba(6, 182, 212, 0.58);
+  --scrollbar-thumb-hover: rgba(6, 182, 212, 0.82);
+  --skeleton-base: rgba(51, 65, 85, 0.75);
+  --skeleton-highlight: rgba(71, 85, 105, 0.82);
   --grid-color: rgba(255, 255, 255, 0.12);
   --notification-error-bg: rgba(15, 23, 42, 0.96);
   --notification-success-bg: rgba(15, 23, 42, 0.96);
@@ -720,7 +736,7 @@
   }
 
   .btn-primary:hover {
-    background: #0a7bc7;
+    background: var(--button-primary-hover);
     box-shadow: var(--button-shadow-hover);
     transform: translateY(-1px);
   }
@@ -742,11 +758,11 @@
 
   .btn-primary:focus {
     outline: none;
-    box-shadow: var(--button-shadow), 0 0 0 3px rgba(9, 132, 227, 0.3);
+    box-shadow: var(--button-shadow), 0 0 0 3px var(--focus-ring);
   }
 
   .dark .btn-primary:focus {
-    box-shadow: 0 0 20px rgba(6, 182, 212, 0.3), 0 0 0 3px rgba(6, 182, 212, 0.3);
+    box-shadow: 0 0 20px rgba(6, 182, 212, 0.3), 0 0 0 3px var(--focus-ring);
   }
   
   .btn-secondary {
@@ -853,6 +869,17 @@
   
   .table-base {
     @apply min-w-full divide-y divide-slate-200 dark:divide-slate-700;
+  }
+
+  .focus-ring {
+    outline: none;
+    box-shadow: 0 0 0 3px var(--focus-ring);
+  }
+
+  .skeleton-base {
+    background: linear-gradient(90deg, var(--skeleton-base) 0%, var(--skeleton-highlight) 50%, var(--skeleton-base) 100%);
+    background-size: 200% 100%;
+    animation: skeleton-shimmer 1.4s ease-in-out infinite;
   }
   
   .table-thead {
@@ -1160,6 +1187,15 @@
   }
 }
 
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
 /* Auth Pages - Premium SaaS (Login/Signup) */
 .auth-page {
   --auth-bg-light: #FDF8F3;
@@ -1285,7 +1321,7 @@
 /* Firefox: thin rail + Electric Indigo thumb, subtle track */
 * {
   scrollbar-width: thin;
-  scrollbar-color: var(--cosmic-primary) rgba(255, 255, 255, 0.02);
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
 }
 
 /* WebKit (Chrome, Safari, Edge): 6px rail, gradient thumb, neon hover */
@@ -1295,24 +1331,25 @@
 }
 
 *::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--scrollbar-track);
 }
 
 *::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, var(--cosmic-primary) 0%, var(--cosmic-secondary) 100%);
+  background: var(--scrollbar-thumb);
   border-radius: 3px;
   transition: box-shadow 0.2s ease;
 }
 
 *::-webkit-scrollbar-thumb:hover {
-  box-shadow: 0 0 8px var(--cosmic-primary);
+  background: var(--scrollbar-thumb-hover);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--scrollbar-thumb-hover) 45%, transparent);
 }
 
 /* Custom Scrollbar Styles - Thin and Elegant (legacy class, inherits global) */
 @layer utilities {
   .custom-scrollbar {
     scrollbar-width: thin;
-    scrollbar-color: var(--cosmic-primary) rgba(255, 255, 255, 0.02);
+    scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
     overscroll-behavior-y: contain;
   }
   
@@ -1322,17 +1359,18 @@
   }
   
   .custom-scrollbar::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.02);
+    background: var(--scrollbar-track);
   }
   
   .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: linear-gradient(180deg, var(--cosmic-primary) 0%, var(--cosmic-secondary) 100%);
+    background: var(--scrollbar-thumb);
     border-radius: 3px;
     transition: box-shadow 0.2s ease;
   }
   
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    box-shadow: 0 0 8px var(--cosmic-primary);
+    background: var(--scrollbar-thumb-hover);
+    box-shadow: 0 0 8px color-mix(in srgb, var(--scrollbar-thumb-hover) 45%, transparent);
   }
   
   /* Prevent scroll chaining */
@@ -1394,4 +1432,10 @@
     color: var(--text-muted) !important;
     -webkit-text-fill-color: var(--text-muted);
   }
+}
+
+.backdrop-overlay {
+  background: var(--backdrop-overlay);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
 }

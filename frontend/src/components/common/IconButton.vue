@@ -73,7 +73,7 @@ const handleClick = (event) => {
 }
 
 const buttonClasses = computed(() => {
-  const base = 'relative inline-flex items-center justify-center rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed'
+  const base = 'relative inline-flex items-center justify-center rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-brand/40 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-slate-900 disabled:opacity-50 disabled:cursor-not-allowed'
   
   const sizes = {
     sm: 'w-7 h-7',
@@ -82,11 +82,11 @@ const buttonClasses = computed(() => {
   }
   
   const variants = {
-    ghost: 'text-slate-600 hover:bg-slate-100 active:bg-slate-200 focus:ring-slate-500 dark:text-slate-400 dark:hover:bg-slate-800 dark:active:bg-slate-700',
-    primary: 'bg-slate-900 text-white hover:bg-slate-800 active:bg-slate-950 focus:ring-slate-500 dark:bg-slate-700 dark:hover:bg-slate-600',
-    secondary: 'bg-slate-100 text-slate-700 hover:bg-slate-200 active:bg-slate-300 focus:ring-slate-500 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700',
-    danger: 'text-red-600 hover:bg-red-50 active:bg-red-100 focus:ring-red-500 dark:text-red-400 dark:hover:bg-red-900/20 dark:active:bg-red-900/30',
-    success: 'text-green-600 hover:bg-green-50 active:bg-green-100 focus:ring-green-500 dark:text-green-400 dark:hover:bg-green-900/20 dark:active:bg-green-900/30',
+    ghost: 'text-muted hover:bg-surface-inset hover:text-primary active:scale-95',
+    primary: 'bg-brand text-white hover:bg-brand-hover active:bg-brand-active shadow-soft',
+    secondary: 'bg-surface-inset text-secondary border border-border-color hover:bg-surface-2 active:scale-95',
+    danger: 'text-red-600 hover:bg-red-50 active:bg-red-100 dark:text-red-400 dark:hover:bg-red-900/20 dark:active:bg-red-900/30',
+    success: 'text-emerald-700 hover:bg-emerald-50 active:bg-emerald-100 dark:text-emerald-400 dark:hover:bg-emerald-900/20 dark:active:bg-emerald-900/30',
   }
   
   return [

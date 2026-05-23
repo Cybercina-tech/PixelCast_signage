@@ -55,7 +55,7 @@
     <!-- Loading skeleton -->
     <div v-if="loading" class="space-y-4">
       <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <div v-for="i in 8" :key="i" class="card-base rounded-2xl p-6 animate-pulse h-28" />
+        <div v-for="i in 8" :key="i" class="card-base rounded-2xl p-6 skeleton-base h-28" />
       </div>
     </div>
 

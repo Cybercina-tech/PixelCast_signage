@@ -616,12 +616,13 @@ const profileSettings = ref({
 })
 
 const displaySettings = ref({
-  theme: themeStore.theme || 'dark',
+  theme: themeStore.preference || 'system',
   orientation: 'landscape',
   refreshInterval: 30,
 })
 
 const themes = [
+  { id: 'system', label: 'System', icon: ComputerDesktopIcon },
   { id: 'dark', label: 'Deep Space', icon: MoonIcon },
   { id: 'light', label: 'Light', icon: SunIcon },
 ]
@@ -899,8 +900,8 @@ const saveChanges = async () => {
     }
 
     if (activeTab.value === 'display') {
-      if (displaySettings.value.theme !== themeStore.theme) {
-        themeStore.setTheme(displaySettings.value.theme)
+      if (displaySettings.value.theme !== themeStore.preference) {
+        themeStore.setPreference(displaySettings.value.theme)
       }
       localStorage.setItem('displaySettings', JSON.stringify(displaySettings.value))
       originalSettings.value.display = JSON.parse(JSON.stringify(displaySettings.value))
@@ -970,7 +971,7 @@ async function logoutAllSessions() {
   try {
     await authAPI.logoutAll()
     notify.success('Logged out from all sessions')
-    authStore.logout()
+    await authStore.logout({ skipServer: true, userInitiated: true })
     router.push('/login')
   } catch (err) {
     notify.error(
@@ -984,7 +985,9 @@ async function logoutAllSessions() {
 const loadSettings = () => {
   const savedDisplay = localStorage.getItem('displaySettings')
   if (savedDisplay) {
-    displaySettings.value = { ...displaySettings.value, ...JSON.parse(savedDisplay) }
+    const parsed = JSON.parse(savedDisplay)
+    const validTheme = ['system', 'dark', 'light'].includes(parsed?.theme) ? parsed.theme : themeStore.preference
+    displaySettings.value = { ...displaySettings.value, ...parsed, theme: validTheme }
   }
 
   const savedSystem = localStorage.getItem('systemSettings')

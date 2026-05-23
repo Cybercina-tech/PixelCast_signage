@@ -56,6 +56,23 @@ api.interceptors.request.use(
 // Response interceptor for error handling and token refresh
 let isRefreshing = false
 let failedQueue = []
+const USER_INITIATED_LOGOUT_KEY = 'user_initiated_logout_at'
+const USER_INITIATED_LOGOUT_WINDOW_MS = 15000
+
+const isRecentUserInitiatedLogout = () => {
+  const raw = sessionStorage.getItem(USER_INITIATED_LOGOUT_KEY)
+  if (!raw) return false
+  const ts = Number(raw)
+  if (!Number.isFinite(ts)) {
+    sessionStorage.removeItem(USER_INITIATED_LOGOUT_KEY)
+    return false
+  }
+  const recent = Date.now() - ts <= USER_INITIATED_LOGOUT_WINDOW_MS
+  if (!recent) {
+    sessionStorage.removeItem(USER_INITIATED_LOGOUT_KEY)
+  }
+  return recent
+}
 
 const processQueue = (error, token = null) => {
   failedQueue.forEach(prom => {
@@ -208,8 +225,10 @@ api.interceptors.response.use(
         isRefreshing = false
         processQueue(new Error('No refresh token'), null)
         
-        const notify = getNotification()
-        notify.error('Session expired. Please log in again.')
+        if (!isRecentUserInitiatedLogout()) {
+          const notify = getNotification()
+          notify.error('Session expired. Please log in again.')
+        }
         
         if (window.location.pathname !== '/login' && 
             window.location.pathname !== '/' &&
@@ -259,8 +278,10 @@ api.interceptors.response.use(
         isRefreshing = false
         processQueue(refreshError, null)
         
-        const notify = getNotification()
-        notify.error('Session expired. Please log in again.')
+        if (!isRecentUserInitiatedLogout()) {
+          const notify = getNotification()
+          notify.error('Session expired. Please log in again.')
+        }
         
         if (window.location.pathname !== '/login' && 
             window.location.pathname !== '/' &&

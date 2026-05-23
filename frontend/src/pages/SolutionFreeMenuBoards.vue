@@ -1,13 +1,22 @@
 <template>
-  <main class="min-h-screen bg-slate-950 text-slate-100">
+  <div class="min-h-screen bg-slate-950 text-slate-100">
+    <LandingNav />
+    <main class="pt-16">
     <section class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-14 sm:py-16">
-      <p class="text-xs uppercase tracking-[0.16em] text-cyan-300 font-semibold">Restaurant Solution</p>
+      <router-link
+        to="/"
+        class="inline-flex items-center gap-2 rounded-lg border border-white/15 px-3 py-2 text-sm text-slate-200 hover:border-white/35 hover:text-white transition-colors"
+      >
+        <span aria-hidden="true">←</span>
+        Back to home
+      </router-link>
+      <p class="mt-5 text-xs uppercase tracking-[0.16em] text-cyan-300 font-semibold">Restaurant Solution</p>
       <h1 class="mt-3 text-3xl sm:text-4xl font-bold leading-tight">
         Free digital signage for menu boards
       </h1>
       <p class="mt-4 text-slate-300 text-base sm:text-lg leading-relaxed max-w-3xl">
-        PixelCast offers free digital signage for menu boards so restaurants and cafes can launch quickly. Schedule
-        breakfast, lunch, and dinner layouts, then update every location from one cloud console.
+        PixelCast gives restaurants and cafes a practical starting point for digital menu boards. Launch quickly on
+        browser-based screens, schedule dayparts, and keep pricing or promotions synchronized across all branches.
       </p>
       <div class="mt-8 flex flex-wrap gap-3">
         <router-link
@@ -30,14 +39,25 @@
         <h2 class="text-xl font-semibold">Built for food and beverage teams</h2>
         <ul class="mt-3 list-disc pl-6 text-slate-300 space-y-2">
           <li>Daypart scheduling for breakfast, lunch, and dinner menus.</li>
-          <li>Fast promotion changes for limited-time offers and seasonal items.</li>
-          <li>Template reuse across single stores or franchise fleets.</li>
+          <li>Fast price or promotion updates for limited-time and seasonal campaigns.</li>
+          <li>Template reuse across single stores, chains, and franchise operations.</li>
+          <li>Central quality control while each branch keeps local operational flexibility.</li>
         </ul>
+      </article>
+      <article class="rounded-2xl border border-white/10 bg-white/5 p-6">
+        <h2 class="text-xl font-semibold">Menu board workflow in PixelCast</h2>
+        <ol class="mt-3 list-decimal pl-6 text-slate-300 space-y-2">
+          <li>Pair screens in the player flow and assign each display to a branch.</li>
+          <li>Create menu templates and upload approved product media.</li>
+          <li>Schedule breakfast, lunch, and dinner blocks with location-level targeting.</li>
+          <li>Use monitoring and logs to verify content delivery and playback stability.</li>
+        </ol>
       </article>
       <article class="rounded-2xl border border-white/10 bg-white/5 p-6">
         <h2 class="text-xl font-semibold">Recommended next step</h2>
         <p class="mt-3 text-slate-300">
-          Pair your first screen in minutes, publish a menu template, then use remote commands to maintain uptime.
+          Pair one pilot screen first, publish a validated menu template, then scale to additional branches with the
+          same workflow and centralized controls.
         </p>
       </article>
       <div class="text-sm flex flex-wrap gap-3">
@@ -49,5 +69,10 @@
         </router-link>
       </div>
     </section>
-  </main>
+    </main>
+  </div>
 </template>
+
+<script setup>
+import LandingNav from '@/components/landing/LandingNav.vue'
+</script>

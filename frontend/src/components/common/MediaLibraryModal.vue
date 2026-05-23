@@ -3,7 +3,7 @@
     <Transition name="modal">
       <div v-if="show" class="fixed inset-0 z-50 overflow-y-auto" @click.self="$emit('close')">
         <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
-          <div class="fixed inset-0 transition-opacity bg-black/40 dark:bg-black/60 backdrop-blur-md" aria-hidden="true"></div>
+          <div class="fixed inset-0 transition-opacity backdrop-overlay" aria-hidden="true"></div>
           <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
           <div
             class="inline-block align-bottom bg-card backdrop-blur-lg rounded-2xl text-left overflow-hidden shadow-2xl border border-border-color transform transition-all duration-400 sm:my-8 sm:align-middle sm:max-w-5xl sm:w-full"
@@ -349,7 +349,7 @@
                         <span class="text-sm text-primary font-medium truncate flex-1">{{ file.name }}</span>
                         <span class="text-xs text-muted ml-2">{{ Math.round(file.progress) }}%</span>
                       </div>
-                      <div class="w-full bg-card rounded-full h-2" style="background: rgba(0, 0, 0, 0.1);">
+                      <div class="w-full bg-surface-inset rounded-full h-2">
                         <div
                           class="h-2 rounded-full transition-all duration-300"
                           :style="{ width: `${file.progress}%`, background: 'var(--accent-color)' }"
@@ -369,7 +369,7 @@
                         <svg class="w-5 h-5 text-green-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                         </svg>
-                        <span class="text-sm text-white font-medium truncate">{{ file.name }}</span>
+                        <span class="text-sm text-primary font-medium truncate">{{ file.name }}</span>
                       </div>
                       <button
                         @click="selectUploadedFile(file)"

@@ -244,7 +244,7 @@
                 v-for="u in userResults"
                 :key="u.id"
                 type="button"
-                class="w-full text-left px-3 py-2 hover:bg-slate-800/40 text-sm flex items-center justify-between gap-2 border-b border-border-color/40 last:border-0"
+                class="w-full text-left px-3 py-2 hover:bg-surface-inset text-sm flex items-center justify-between gap-2 border-b border-border-color/40 last:border-0"
                 @click="selectUser(u)"
               >
                 <div class="min-w-0">
@@ -412,7 +412,7 @@
                 v-for="u in assignResults"
                 :key="u.id"
                 type="button"
-                class="w-full text-left px-3 py-2 hover:bg-slate-800/40 text-sm flex items-center justify-between gap-2 border-b border-border-color/40 last:border-0"
+                class="w-full text-left px-3 py-2 hover:bg-surface-inset text-sm flex items-center justify-between gap-2 border-b border-border-color/40 last:border-0"
                 @click="selectAgent(u)"
               >
                 <div class="min-w-0">
@@ -500,14 +500,14 @@ function statusClass(status) {
     in_progress: 'border-violet-500/30 bg-violet-500/10 text-violet-300',
     pending: 'border-amber-500/30 bg-amber-500/10 text-amber-300',
     resolved: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300',
-    closed: 'border-slate-500/30 bg-slate-500/10 text-slate-400',
+    closed: 'border-border-color/70 bg-surface-inset text-muted',
   }
   return map[status] || 'border-border-color/70 bg-card text-muted'
 }
 
 function priorityClass(priority) {
   const map = {
-    low: 'border-slate-500/30 bg-slate-500/10 text-slate-400',
+    low: 'border-border-color/70 bg-surface-inset text-muted',
     medium: 'border-blue-500/30 bg-blue-500/10 text-blue-300',
     high: 'border-orange-500/30 bg-orange-500/10 text-orange-300',
     critical: 'border-red-500/30 bg-red-500/10 text-red-300',

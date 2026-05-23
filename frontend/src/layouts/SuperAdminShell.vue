@@ -22,7 +22,7 @@
       ]"
       aria-label="Super Admin navigation"
     >
-      <div :class="['p-4 border-b', isDarkTheme ? 'border-slate-700/70' : 'border-slate-200']">
+      <div class="p-4 border-b border-border-color">
         <div class="flex items-center gap-3">
           <div
             class="w-10 h-10 rounded-xl flex items-center justify-center bg-gradient-to-br from-cyan-500/90 to-violet-600/90 text-white shadow-lg shrink-0"
@@ -30,14 +30,14 @@
             <ShieldCheckIcon class="w-6 h-6" />
           </div>
           <div class="min-w-0 flex-1">
-            <p :class="['text-sm font-bold truncate', isDarkTheme ? 'text-white' : 'text-slate-900']">Super Admin</p>
-            <p :class="['text-xs truncate', isDarkTheme ? 'text-slate-400' : 'text-slate-500']">SaaS control plane</p>
+            <p class="text-sm font-bold truncate text-primary">Super Admin</p>
+            <p class="text-xs truncate text-muted">SaaS control plane</p>
           </div>
           <span :class="['text-[10px] px-2 py-1 rounded-full', isDarkTheme ? 'border-cyan-500/30 bg-cyan-500/12 text-cyan-300' : 'border-cyan-600/30 bg-cyan-600/10 text-cyan-700']">
             LIVE
           </span>
         </div>
-        <div :class="['mt-3 rounded-xl border px-3 py-2 text-xs', isDarkTheme ? 'border-slate-700/70 bg-slate-800/70 text-slate-400' : 'border-slate-200 bg-white/75 text-slate-500']">
+        <div class="mt-3 rounded-xl border border-border-color bg-surface-inset px-3 py-2 text-xs text-muted">
           {{ activeGroupLabel }}
           <span class="mx-1">•</span>
           {{ navItemCount }} sections
@@ -46,7 +46,7 @@
 
       <nav class="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-4">
         <div v-for="group in SUPER_ADMIN_NAV_GROUPS" :key="group.id">
-          <p :class="['px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-wider', isDarkTheme ? 'text-slate-400' : 'text-slate-500']">
+          <p class="px-3 mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted">
             {{ group.label }}
           </p>
           <ul class="space-y-1">
@@ -65,7 +65,7 @@
         </div>
       </nav>
 
-      <div :class="['p-3 border-t space-y-2', isDarkTheme ? 'border-slate-700/70' : 'border-slate-200']">
+      <div class="p-3 border-t border-border-color space-y-2">
         <router-link
           to="/dashboard"
           :class="[
@@ -235,9 +235,7 @@ const pageTitle = computed(() => route.meta.superAdminTitle || 'Super Admin')
 const isDarkTheme = computed(() => themeStore.isDarkMode)
 
 const sidebarSurfaceClass = computed(() =>
-  isDarkTheme.value
-    ? 'border-r border-slate-700/80 bg-slate-900/90'
-    : 'border-r border-slate-200 bg-white/90'
+  'border-r border-border-color bg-card/95'
 )
 
 const pageSubtitle = computed(() => {

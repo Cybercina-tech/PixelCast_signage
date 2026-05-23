@@ -109,7 +109,7 @@
 
     <!-- Loading -->
     <div v-if="loading" class="space-y-3">
-      <div v-for="i in 5" :key="i" class="card-base rounded-2xl p-5 animate-pulse h-16" />
+      <div v-for="i in 5" :key="i" class="card-base rounded-2xl p-5 skeleton-base h-16" />
     </div>
 
     <!-- Empty -->
@@ -222,19 +222,19 @@
             </span>
           </div>
           <div class="grid grid-cols-2 gap-2 text-xs">
-            <div class="rounded-lg bg-slate-800/30 px-2 py-1.5">
+            <div class="rounded-lg bg-surface-inset px-2 py-1.5">
               <p class="text-muted">Screens</p>
               <p class="font-semibold">{{ row.active_screens_count ?? 0 }} / {{ row.total_screens_count ?? 0 }}</p>
             </div>
-            <div class="rounded-lg bg-slate-800/30 px-2 py-1.5">
+            <div class="rounded-lg bg-surface-inset px-2 py-1.5">
               <p class="text-muted">Storage</p>
               <p class="font-semibold">{{ formatBytes(row.storage_used_bytes) }}</p>
             </div>
-            <div class="rounded-lg bg-slate-800/30 px-2 py-1.5">
+            <div class="rounded-lg bg-surface-inset px-2 py-1.5">
               <p class="text-muted">Tenant</p>
               <p class="font-semibold truncate">{{ row.tenant_name || '—' }}</p>
             </div>
-            <div class="rounded-lg bg-slate-800/30 px-2 py-1.5">
+            <div class="rounded-lg bg-surface-inset px-2 py-1.5">
               <p class="text-muted">Plan</p>
               <p class="font-semibold">{{ row.subscription_plan || '—' }}</p>
               <p class="text-[10px] text-muted">Trial: {{ row.trial_days_remaining ?? '—' }}d</p>

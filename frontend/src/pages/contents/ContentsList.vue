@@ -87,9 +87,9 @@
       <!-- Bulk Actions Bar -->
       <div
         v-if="selectedItems.length > 0"
-        class="backdrop-blur-md bg-indigo-500/20 border border-indigo-500/30 rounded-2xl p-4 flex items-center justify-between"
+        class="card-base rounded-2xl p-4 flex items-center justify-between"
       >
-        <div class="text-white font-medium">
+        <div class="text-primary font-medium">
           {{ selectedItems.length }} {{ selectedItems.length === 1 ? 'item' : 'items' }} selected
         </div>
         <div class="flex gap-2">
@@ -104,7 +104,7 @@
           </button>
           <button
             @click="selectedItems = []"
-            class="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg text-sm font-medium transition-colors duration-200"
+            class="px-4 py-2 bg-surface-inset hover:bg-surface-2 text-secondary rounded-lg text-sm font-medium transition-colors duration-200"
           >
             Clear Selection
           </button>
@@ -194,7 +194,7 @@
                   'w-6 h-6 rounded border-2 flex items-center justify-center transition-all duration-200',
                   selectedItems.includes(content.id)
                     ? 'bg-indigo-500 border-indigo-500'
-                    : 'bg-black/50 border-white/30 group-hover:border-white/50'
+                    : 'bg-surface-3/90 border-border-color group-hover:border-accent-color'
                 ]"
               >
                 <svg

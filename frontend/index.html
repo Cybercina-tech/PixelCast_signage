@@ -28,11 +28,30 @@
     <script>
       // Prevent theme flash by setting theme before Vue loads
       (function() {
-        const storedTheme = localStorage.getItem('pixelcast-signage_theme');
-        if (storedTheme === 'dark' || storedTheme === 'light') {
-          document.documentElement.classList.toggle('dark', storedTheme === 'dark');
-        } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        function normalizePreference(raw) {
+          if (!raw) return null;
+          if (raw === 'dark' || raw === 'light' || raw === 'system') return raw;
+          try {
+            const parsed = JSON.parse(raw);
+            if (parsed && (parsed.preference === 'dark' || parsed.preference === 'light' || parsed.preference === 'system')) {
+              return parsed.preference;
+            }
+          } catch (_) {
+            // no-op
+          }
+          return null;
+        }
+
+        const storedValue = localStorage.getItem('pixelcast-signage_theme');
+        const preference = normalizePreference(storedValue) || 'system';
+        const resolvedTheme = preference === 'system'
+          ? ((window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light')
+          : preference;
+
+        if (resolvedTheme === 'dark') {
           document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
         }
       })();
     </script>

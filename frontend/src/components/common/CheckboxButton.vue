@@ -77,7 +77,7 @@ const handleToggle = () => {
 }
 
 const buttonClasses = computed(() => {
-  const base = 'inline-flex items-center gap-2 px-4 py-2 rounded-lg border-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed'
+  const base = 'inline-flex items-center gap-2 px-4 py-2 rounded-lg border-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-brand/40 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-slate-900 disabled:opacity-50 disabled:cursor-not-allowed'
   
   const sizes = {
     sm: 'text-sm py-1.5 px-3',
@@ -87,17 +87,17 @@ const buttonClasses = computed(() => {
   
   const variants = {
     default: props.modelValue
-      ? 'border-slate-900 bg-slate-900 text-white hover:bg-slate-800 focus:ring-slate-500 dark:border-slate-700 dark:bg-slate-700 dark:hover:bg-slate-600'
-      : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50 focus:ring-slate-500 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700',
+      ? 'border-brand bg-brand text-white hover:bg-brand-hover'
+      : 'border-border-color bg-surface-3 text-secondary hover:bg-surface-inset',
     primary: props.modelValue
-      ? 'border-slate-900 bg-slate-900 text-white hover:bg-slate-800 focus:ring-slate-500'
-      : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50 focus:ring-slate-500',
+      ? 'border-brand bg-brand text-white hover:bg-brand-hover'
+      : 'border-border-color bg-surface-3 text-secondary hover:bg-surface-inset',
     success: props.modelValue
       ? 'border-green-600 bg-green-600 text-white hover:bg-green-700 focus:ring-green-500'
-      : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50 focus:ring-slate-500',
+      : 'border-border-color bg-surface-3 text-secondary hover:bg-surface-inset',
     danger: props.modelValue
       ? 'border-red-600 bg-red-600 text-white hover:bg-red-700 focus:ring-red-500'
-      : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50 focus:ring-slate-500',
+      : 'border-border-color bg-surface-3 text-secondary hover:bg-surface-inset',
   }
   
   return [
@@ -120,7 +120,7 @@ const checkboxClasses = computed(() => {
   return [
     base,
     sizes[props.size],
-    props.modelValue ? 'bg-slate-900 border-slate-900 dark:bg-slate-700 dark:border-slate-700' : 'border-slate-300 dark:border-slate-600',
+    props.modelValue ? 'bg-brand border-brand' : 'border-border-color bg-white dark:bg-slate-900',
   ].join(' ')
 })
 

@@ -81,11 +81,11 @@
                 </span>
               </div>
               <div class="mt-3 grid grid-cols-2 gap-2 text-xs">
-                <div class="rounded-lg bg-slate-800/30 px-2 py-1">
+                <div class="rounded-lg bg-surface-inset px-2 py-1">
                   <p class="text-muted">Health</p>
                   <p class="font-semibold">{{ row.health?.score != null ? row.health.score : '—' }}</p>
                 </div>
-                <div class="rounded-lg bg-slate-800/30 px-2 py-1">
+                <div class="rounded-lg bg-surface-inset px-2 py-1">
                   <p class="text-muted">Screens</p>
                   <p class="font-semibold">{{ row.engagement?.screen_count ?? '—' }}</p>
                 </div>
@@ -273,7 +273,7 @@ defineProps({
 })
 
 function healthClass(score) {
-  if (score == null) return 'bg-slate-700/40 text-muted'
+  if (score == null) return 'bg-surface-inset text-muted'
   if (score >= 71) return 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300'
   if (score >= 41) return 'bg-amber-500/20 text-amber-800 dark:text-amber-200'
   return 'bg-red-500/20 text-red-800 dark:text-red-200'

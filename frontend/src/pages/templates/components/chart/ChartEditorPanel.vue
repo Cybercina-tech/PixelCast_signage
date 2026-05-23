@@ -1,7 +1,7 @@
 <template>
   <div class="space-y-4">
     <div class="flex items-center justify-between gap-2">
-      <h3 class="text-sm font-semibold text-gray-300 uppercase">Chart Properties</h3>
+      <h3 class="text-sm font-semibold text-muted uppercase">Chart Properties</h3>
       <div class="flex items-center gap-2">
         <button class="btn-outline px-2 py-1 rounded text-xs" @click="resetConfig">Reset</button>
         <select class="select-base px-2 py-1 text-xs" @change="applyPreset($event.target.value)">
@@ -11,7 +11,7 @@
       </div>
     </div>
 
-    <div class="grid grid-cols-2 rounded-lg bg-gray-800/50 p-1">
+    <div class="grid grid-cols-2 rounded-lg bg-surface-inset p-1">
       <button
         class="rounded-md px-3 py-1.5 text-xs font-medium transition-colors"
         :class="mode === 'basic' ? 'bg-accent-color text-white' : 'text-muted hover:text-primary'"
@@ -29,7 +29,7 @@
     </div>
 
     <div class="space-y-3">
-      <label class="block text-xs font-medium text-gray-400">Chart Type</label>
+      <label class="block text-xs font-medium text-muted">Chart Type</label>
       <select class="select-base w-full px-3 py-2 text-sm" :value="config.type" @change="setChartType($event.target.value)">
         <option v-for="type in chartTypeOptions" :key="type" :value="type">{{ type }}</option>
       </select>

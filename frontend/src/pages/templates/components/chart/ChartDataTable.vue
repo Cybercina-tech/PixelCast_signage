@@ -1,16 +1,16 @@
 <template>
   <div class="space-y-3">
     <div class="flex items-center justify-between">
-      <h4 class="text-xs font-semibold uppercase text-gray-400">Data Table</h4>
+      <h4 class="text-xs font-semibold uppercase text-muted">Data Table</h4>
       <div class="flex gap-2">
         <button class="btn-outline px-2 py-1 rounded text-xs" @click="addRow">Add Row</button>
         <button class="btn-outline px-2 py-1 rounded text-xs" @click="addDataset">Add Series</button>
       </div>
     </div>
 
-    <div class="overflow-x-auto rounded-lg border border-slate-700">
+    <div class="overflow-x-auto rounded-lg border border-border-color">
       <table class="min-w-full text-xs">
-        <thead class="bg-slate-800/70 text-gray-300">
+        <thead class="bg-surface-inset text-secondary">
           <tr>
             <th class="px-2 py-2 text-left w-36">Label</th>
             <th v-for="(dataset, datasetIndex) in localDatasets" :key="`h-${datasetIndex}`" class="px-2 py-2 text-left min-w-32">
@@ -31,7 +31,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="(label, rowIndex) in localLabels" :key="`r-${rowIndex}`" class="border-t border-slate-800 bg-slate-900/40">
+          <tr v-for="(label, rowIndex) in localLabels" :key="`r-${rowIndex}`" class="border-t border-border-color bg-card/60">
             <td class="px-2 py-2">
               <input
                 :value="label"

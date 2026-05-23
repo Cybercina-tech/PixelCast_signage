@@ -240,6 +240,7 @@ import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useNotificationsStore } from '@/stores/notificationsStore'
+import { useNotification } from '@/composables/useNotification'
 import {
   Bars3Icon,
   ChevronRightIcon,
@@ -264,6 +265,7 @@ const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
 const notificationsStore = useNotificationsStore()
+const notify = useNotification()
 
 async function exitImpersonation() {
   try {
@@ -420,7 +422,8 @@ watch(unreadNotifications, (newCount) => {
 })
 
 const handleLogout = async () => {
-  await authStore.logout()
+  await authStore.logout({ userInitiated: true })
+  notify.success('Logged out successfully')
   router.push('/login')
 }
 

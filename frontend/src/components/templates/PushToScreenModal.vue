@@ -11,7 +11,7 @@
       >
         <!-- Backdrop -->
         <div
-          class="fixed inset-0 transition-opacity bg-black/50 dark:bg-black/70 backdrop-blur-sm"
+          class="fixed inset-0 transition-opacity backdrop-overlay"
           aria-hidden="true"
         ></div>
         
@@ -20,10 +20,10 @@
           <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
           
           <div
-            class="inline-block align-bottom bg-gray-800/95 backdrop-blur-lg rounded-2xl text-left overflow-hidden shadow-2xl border border-white/10 transform transition-all duration-300 sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full"
+            class="inline-block align-bottom bg-card backdrop-blur-lg rounded-2xl text-left overflow-hidden shadow-2xl border border-border-color transform transition-all duration-300 sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full"
           >
             <!-- Header -->
-            <div class="bg-gradient-to-r from-purple-600/20 to-indigo-600/20 border-b border-white/10 px-6 py-4">
+            <div class="bg-surface-inset border-b border-border-color px-6 py-4">
               <div class="flex items-center justify-between">
                 <div class="flex items-center gap-3">
                   <div class="w-10 h-10 rounded-lg bg-purple-600/20 flex items-center justify-center">
@@ -32,15 +32,15 @@
                     </svg>
                   </div>
                   <div>
-                    <h3 id="push-to-screen-title" class="text-xl font-semibold text-white">
+                    <h3 id="push-to-screen-title" class="text-xl font-semibold text-primary">
                       Push Template to Screen
                     </h3>
-                    <p class="text-sm text-gray-400 mt-0.5">Select an online screen to push this template</p>
+                    <p class="text-sm text-muted mt-0.5">Select an online screen to push this template</p>
                   </div>
                 </div>
                 <button
                   @click="$emit('close')"
-                  class="text-gray-400 hover:text-white transition-colors p-1 rounded-lg hover:bg-white/10"
+                  class="text-muted hover:text-primary transition-colors p-1 rounded-lg hover:bg-surface-2"
                 >
                   <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -52,7 +52,7 @@
             <!-- Content -->
             <div class="px-6 py-6">
               <!-- Template Info -->
-              <div class="mb-6 p-4 bg-gray-900/50 rounded-lg border border-white/5">
+              <div class="mb-6 p-4 bg-surface-inset rounded-lg border border-border-color/70">
                 <div class="flex items-center gap-3">
                   <div class="w-12 h-12 rounded-lg bg-indigo-600/20 flex items-center justify-center">
                     <svg class="w-6 h-6 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -60,8 +60,8 @@
                     </svg>
                   </div>
                   <div class="flex-1 min-w-0">
-                    <h4 class="text-sm font-medium text-white truncate">{{ template?.name || 'Template' }}</h4>
-                    <p class="text-xs text-gray-400 mt-0.5">
+                    <h4 class="text-sm font-medium text-primary truncate">{{ template?.name || 'Template' }}</h4>
+                    <p class="text-xs text-muted mt-0.5">
                       {{ template?.width }}×{{ template?.height }}
                     </p>
                   </div>
@@ -70,10 +70,10 @@
 
               <!-- Search -->
               <div class="mb-4">
-                <label class="block text-sm font-medium text-gray-300 mb-2">Search Screens</label>
+                <label class="block text-sm font-medium text-secondary mb-2">Search Screens</label>
                 <div class="relative">
                   <svg
-                    class="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400"
+                    class="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-muted"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -84,7 +84,7 @@
                     v-model="searchQuery"
                     type="text"
                     placeholder="Search by name, device ID, or location..."
-                    class="w-full pl-10 pr-4 py-2.5 bg-gray-900/50 border border-white/10 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 transition-all"
+                    class="input-base w-full pl-10 pr-4 py-2.5 rounded-lg text-primary placeholder:text-muted focus:ring-brand/40 transition-all"
                   />
                 </div>
               </div>
@@ -105,7 +105,7 @@
                   :key="screen.id"
                   @click="handleSelectScreen(screen)"
                   :disabled="loading"
-                  class="w-full p-4 bg-gray-900/50 hover:bg-gray-900 border border-white/5 hover:border-purple-500/50 rounded-lg transition-all duration-200 text-left group"
+                  class="w-full p-4 bg-surface-inset hover:bg-surface-2 border border-border-color/70 hover:border-brand/40 rounded-lg transition-all duration-200 text-left group"
                   :class="{ 'opacity-50 cursor-not-allowed': loading }"
                 >
                   <div class="flex items-center justify-between">
@@ -117,17 +117,17 @@
                       
                       <!-- Screen Info -->
                       <div class="flex-1 min-w-0">
-                        <h4 class="text-sm font-semibold text-white truncate group-hover:text-purple-400 transition-colors">
+                        <h4 class="text-sm font-semibold text-primary truncate group-hover:text-brand transition-colors">
                           {{ screen.name || 'Unnamed Screen' }}
                         </h4>
                         <div class="flex items-center gap-3 mt-1">
-                          <p class="text-xs text-gray-400 font-mono">{{ screen.device_id }}</p>
-                          <span class="text-xs text-gray-500">•</span>
-                          <p class="text-xs text-gray-400">
+                          <p class="text-xs text-muted font-mono">{{ screen.device_id }}</p>
+                          <span class="text-xs text-muted">•</span>
+                          <p class="text-xs text-muted">
                             {{ screen.screen_width }}×{{ screen.screen_height }}
                           </p>
                         </div>
-                        <p v-if="screen.location" class="text-xs text-gray-500 mt-1 truncate">
+                        <p v-if="screen.location" class="text-xs text-muted mt-1 truncate">
                           {{ screen.location }}
                         </p>
                       </div>
@@ -136,7 +136,7 @@
                     <!-- Arrow Icon -->
                     <div class="flex-shrink-0 ml-4">
                       <svg
-                        class="w-5 h-5 text-gray-400 group-hover:text-purple-400 group-hover:translate-x-1 transition-all"
+                        class="w-5 h-5 text-muted group-hover:text-brand group-hover:translate-x-1 transition-all"
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
@@ -150,7 +150,7 @@
             </div>
 
             <!-- Footer -->
-            <div class="bg-gray-900/50 border-t border-white/10 px-6 py-4 flex items-center justify-between">
+            <div class="bg-surface-inset border-t border-border-color px-6 py-4 flex items-center justify-between">
               <div v-if="loading" class="flex items-center gap-2 text-sm text-blue-400">
                 <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-400"></div>
                 <span>Pushing template to screen...</span>
@@ -159,7 +159,7 @@
               <button
                 @click="$emit('close')"
                 :disabled="loading"
-                class="px-4 py-2 text-gray-300 hover:text-white transition-colors rounded-lg hover:bg-white/10 disabled:opacity-50"
+                class="px-4 py-2 text-secondary hover:text-primary transition-colors rounded-lg hover:bg-surface-2 disabled:opacity-50"
               >
                 Cancel
               </button>

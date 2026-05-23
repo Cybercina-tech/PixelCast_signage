@@ -2,6 +2,8 @@ import { defineStore } from 'pinia'
 import { authAPI, usersAPI, platformAPI } from '../services/api'
 import { normalizeApiError } from '../utils/apiError'
 
+const USER_INITIATED_LOGOUT_KEY = 'user_initiated_logout_at'
+
 export const useAuthStore = defineStore('auth', {
   state: () => {
     const token = localStorage.getItem('auth_token')
@@ -105,8 +107,11 @@ export const useAuthStore = defineStore('auth', {
         this.loading = false
       }
     },
-    async logout({ skipServer = false } = {}) {
+    async logout({ skipServer = false, userInitiated = false } = {}) {
       try {
+        if (userInitiated) {
+          sessionStorage.setItem(USER_INITIATED_LOGOUT_KEY, String(Date.now()))
+        }
         const refreshToken = this.refreshToken || localStorage.getItem('refresh_token')
         if (!skipServer && refreshToken) {
           await authAPI.logout({ refresh_token: refreshToken })
