@@ -11,6 +11,7 @@ Nginx in **`frontend`** serves the SPA and proxies `/api`, `/iot`, `/ws`, `/medi
 | Host network (once) | `docker network create dokploy-network` |
 | Domain | `pixelcast.uk` → service **`frontend`** |
 | Do **not** expose | `backend:8000`, `db`, `redis` |
+| Do **not** attach `backend` to `dokploy-network` | Traefik may steal `pixelcast.uk` traffic → 404 on `/health` and `/` |
 
 > Note: Docker Compose `--watch` hot-reload is for manual `docker compose` runs. Dokploy deploys from git/build jobs and does not run `up --watch` continuously.
 
@@ -100,6 +101,24 @@ If WS fails with code **1006** in a loop: redeploy **frontend + backend**, sign 
 4. Both services must mount the same volume `backend_media` at `/app/media`.
 
 ## Troubleshooting
+
+### `/health` or the whole site returns **404** (Traefik hits Django instead of Nginx)
+
+**Symptom:** Browser DevTools shows `GET /health` → **404**, or every page is 404.  
+**Cause:** `backend` is on `dokploy-network` **and** Traefik auto-discovers it. Some requests go to **Gunicorn :8000** (no `/health`, no Vue SPA) instead of **frontend Nginx :80**.
+
+**Fix (pick one):**
+
+1. **Recommended:** Remove `dokploy-network` from service `backend` in compose (only `frontend` needs it). Redeploy.
+2. Or add on `backend`: `traefik.enable=false`
+3. Domain in Dokploy must stay on service **`frontend`**, container port **80**.
+
+**Quick test:**
+
+| URL | If routed to Nginx (correct) | If routed to Django (wrong) |
+|-----|------------------------------|-----------------------------|
+| `https://pixelcast.uk/health` | `200` + body `healthy` | **404** |
+| `https://pixelcast.uk/api/health/live/` | `200` JSON | `200` JSON (misleading — API works but site broken) |
 
 ### Domain shows **404** but Dokploy domain settings look correct
 

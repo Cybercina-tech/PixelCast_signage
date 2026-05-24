@@ -13,8 +13,10 @@
 # - Services load `.env` when present; Dokploy Environment vars override without needing a repo `.env`.
 # - `.env.example` is documentation/template only; never loaded by Compose.
 #
-# Dokploy / Traefik: attach `frontend` and `backend` to an external proxy network so Traefik can reach them.
-# Default name matches Dokploy: `docker network create dokploy-network`. Override with DOKPLOY_EXTERNAL_NETWORK.
+# Dokploy / Traefik: only `frontend` joins the external proxy network. Nginx proxies /api to `backend` on the
+# internal Compose network. Do NOT attach `backend` to dokploy-network — Traefik may route pixelcast.uk to
+# Django :8000 (no /health, no SPA) and the browser shows 404 on / and /health.
+# Default network name: `docker network create dokploy-network`. Override with DOKPLOY_EXTERNAL_NETWORK.
 # Do not bind-mount `./documentation` here — that path may not exist on the server build context and can break the container.
 
 services:
@@ -124,7 +126,6 @@ services:
     restart: always
     networks:
       - default
-      - dokploy-network
 
   celery-worker:
     build:

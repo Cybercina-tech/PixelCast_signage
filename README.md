@@ -242,7 +242,7 @@ Set at least:
 | `VITE_PUBLIC_SITE_ORIGIN` | `https://pixelcast.uk` (rebuild frontend after change) |
 | `DB_PASSWORD` | Must stay in sync with `POSTGRES_PASSWORD` / `db` service |
 
-`frontend` and `backend` join the external network **`dokploy-network`** so an edge proxy can reach them without binding host port 80 on the stack.
+Only **`frontend`** joins the external network **`dokploy-network`** so Traefik can reach Nginx. **`backend`** stays on the internal Compose network only (Nginx proxies `/api` to it). Putting `backend` on `dokploy-network` can make Traefik route the domain to Django and return **404** on `/health` and the SPA.
 
 ---
 
