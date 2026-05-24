@@ -1260,6 +1260,8 @@ onUnmounted(() => {
 
 .landing-nav-link {
   border-radius: 0.55rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
 }
 
 .landing-nav-dropdown {

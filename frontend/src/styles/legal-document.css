@@ -182,3 +182,167 @@
     animation: none !important;
   }
 }
+
+/* Light theme variants for Terms + Privacy pages */
+.terms-page.theme-light {
+  --legal-text-body: #334155;
+  --legal-text-heading: #0f172a;
+  --legal-text-muted: #64748b;
+  --legal-accent: #2563eb;
+  color: var(--legal-text-body);
+  color-scheme: light;
+}
+
+.terms-page.theme-light .terms-animated-bg {
+  background: linear-gradient(135deg, #f8fafc 0%, #eef2ff 45%, #e2e8f0 100%);
+  animation: none;
+}
+
+.terms-page.theme-light .terms-starfield::before {
+  background-image:
+    radial-gradient(2px 2px at 20% 30%, rgba(37, 99, 235, 0.12), transparent),
+    radial-gradient(2px 2px at 60% 70%, rgba(79, 70, 229, 0.11), transparent),
+    radial-gradient(1px 1px at 50% 50%, rgba(37, 99, 235, 0.09), transparent),
+    radial-gradient(1px 1px at 80% 10%, rgba(124, 58, 237, 0.1), transparent),
+    radial-gradient(2px 2px at 30% 80%, rgba(59, 130, 246, 0.1), transparent);
+  opacity: 0.4;
+}
+
+.terms-page.theme-light .terms-glass {
+  border-color: rgba(148, 163, 184, 0.28);
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+}
+
+.terms-page.theme-light .terms-h2 {
+  border-bottom-color: rgba(148, 163, 184, 0.28);
+  color: var(--legal-text-heading);
+}
+
+.terms-page.theme-light .terms-h3 {
+  color: #1e293b;
+}
+
+.terms-page.theme-light .terms-section-num {
+  border-color: rgba(37, 99, 235, 0.3);
+  background: rgba(37, 99, 235, 0.1);
+  color: var(--legal-accent);
+}
+
+.terms-page.theme-light .terms-prose p,
+.terms-page.theme-light .terms-list {
+  color: rgba(51, 65, 85, 0.96);
+}
+
+.terms-page.theme-light .terms-prose strong {
+  color: var(--legal-text-heading);
+}
+
+.terms-page.theme-light .terms-link {
+  color: var(--legal-accent);
+}
+
+.terms-page.theme-light .terms-link:hover {
+  color: #1d4ed8;
+}
+
+.terms-page.theme-light .terms-table-wrap {
+  border-color: rgba(148, 163, 184, 0.34);
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.terms-page.theme-light .terms-table {
+  color: #334155;
+}
+
+.terms-page.theme-light .terms-table th,
+.terms-page.theme-light .terms-table td {
+  border-bottom-color: rgba(148, 163, 184, 0.3);
+}
+
+.terms-page.theme-light .terms-table th {
+  background: rgba(37, 99, 235, 0.1);
+  color: #0f172a;
+}
+
+.terms-page.theme-light .terms-table td {
+  background: rgba(248, 250, 252, 0.9);
+}
+
+.terms-page.theme-light header {
+  border-bottom-color: rgba(148, 163, 184, 0.32) !important;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.9) 100%) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.terms-page.theme-light footer {
+  border-top-color: rgba(148, 163, 184, 0.28) !important;
+  background: rgba(255, 255, 255, 0.86) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.terms-page.theme-light section[class*='from-slate-900/90'] {
+  border-color: rgba(37, 99, 235, 0.24) !important;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(241, 245, 249, 0.86) 100%) !important;
+  box-shadow: 0 12px 30px rgba(37, 99, 235, 0.1) !important;
+}
+
+.terms-page.theme-light [class*='from-cyan-500/20'] {
+  border-color: rgba(37, 99, 235, 0.3) !important;
+  background: linear-gradient(135deg, rgba(219, 234, 254, 0.82) 0%, rgba(224, 231, 255, 0.75) 100%) !important;
+  box-shadow: 0 12px 28px rgba(37, 99, 235, 0.12) !important;
+}
+
+.terms-page.theme-light .text-white,
+.terms-page.theme-light .text-white\/80 {
+  color: var(--legal-text-heading) !important;
+}
+
+.terms-page.theme-light .text-white\/70,
+.terms-page.theme-light .text-white\/55,
+.terms-page.theme-light .text-white\/45 {
+  color: var(--legal-text-muted) !important;
+}
+
+.terms-page.theme-light .text-white\/20 {
+  color: rgba(148, 163, 184, 0.55) !important;
+}
+
+.terms-page.theme-light .text-slate-400 {
+  color: #475569 !important;
+}
+
+.terms-page.theme-light .text-cyan-300,
+.terms-page.theme-light .text-cyan-300\/90,
+.terms-page.theme-light .text-cyan-400,
+.terms-page.theme-light .text-cyan-400\/90,
+.terms-page.theme-light .text-cyan-400\/80,
+.terms-page.theme-light .text-cyan-200,
+.terms-page.theme-light .text-purple-400\/90 {
+  color: var(--legal-accent) !important;
+}
+
+.terms-page.theme-light .hover\:text-cyan-300:hover {
+  color: #1d4ed8 !important;
+}
+
+.terms-page.theme-light .border-white\/10 {
+  border-color: rgba(148, 163, 184, 0.32) !important;
+}
+
+.terms-page.theme-light .border-cyan-400\/20,
+.terms-page.theme-light .border-cyan-400\/25,
+.terms-page.theme-light .border-cyan-400\/35 {
+  border-color: rgba(37, 99, 235, 0.28) !important;
+}
+
+.terms-page.theme-light .bg-slate-950\/75,
+.terms-page.theme-light .bg-slate-950\/60,
+.terms-page.theme-light .bg-slate-900\/90,
+.terms-page.theme-light .bg-slate-950\/95 {
+  background: rgba(255, 255, 255, 0.9) !important;
+}

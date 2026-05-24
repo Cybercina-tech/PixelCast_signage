@@ -172,6 +172,18 @@ cp .env.example .env
 docker compose up --build
 ```
 
+Hot reload + auto-update on file changes (all compose stacks support this):
+
+```bash
+# Local development stack
+docker compose up --watch
+
+# Production compose file (when you run it manually on a host)
+docker compose -f docker-compose.prod.yml up --watch
+```
+
+`--watch` will sync/restart backend & celery on code changes and rebuild frontend when needed.
+
 Then open the **Vite dev app** (the browser talks to the API on the **same origin** via proxy):
 
 | What | URL |
@@ -207,6 +219,12 @@ The script expects a populated `.env`; on first run it may copy from `.env.examp
 ```bash
 docker network create dokploy-network   # once per host, if using Traefik/Dokploy attachment
 docker compose -f docker-compose.prod.yml up -d --build
+```
+
+Optional auto-update loop for manual (non-Dokploy) hosts:
+
+```bash
+docker compose -f docker-compose.prod.yml up --watch
 ```
 
 The production bundle exposes the **Nginx** frontend on host **port 8080** (mapped `8080:80` in `docker-compose.prod.yml`). Nginx serves the built SPA and proxies `/api`, `/iot`, and `/ws` to the backend. In Dokploy, point **`pixelcast.uk`** (and optional `www`) at the **`frontend`** container on port **80** via `dokploy-network`.

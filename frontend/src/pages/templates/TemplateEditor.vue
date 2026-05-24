@@ -385,9 +385,11 @@ import MediaLibraryModal from '@/components/common/MediaLibraryModal.vue'
 import PushToScreenModal from '@/components/templates/PushToScreenModal.vue'
 import { useScreensStore } from '@/stores/screens'
 import { useAuthStore } from '@/stores/auth'
+import { useCommandsStore } from '@/stores/commands'
 import { hasPermission } from '@/utils/permissions'
 import { resolveWidgetBackgroundColor } from '@/utils/widgetBackground'
 import { WIDGET_FONT_OPTIONS } from '@/constants/widgetFonts'
+import { contentsAPI } from '@/services/api'
 import {
   COUNTDOWN_THEMES,
   getCountdownThemePreset,
@@ -1300,7 +1302,6 @@ const handleMediaSelect = async (data) => {
       
       if (isBackendWidget) {
         // Widget is saved to backend - link content to widget (PATCH: partial update; PUT would omit required fields)
-        const { contentsAPI } = await import('@/services/api')
         await contentsAPI.patch(data.content.id, {
           widget: selectedWidget.value.id
         })
@@ -2032,7 +2033,6 @@ const handlePushToScreenSelect = async (screen) => {
     )
     
     // Step 2: Send RELOAD command to the screen
-    const { useCommandsStore } = await import('@/stores/commands')
     const commandsStore = useCommandsStore()
     
     await commandsStore.createCommand({

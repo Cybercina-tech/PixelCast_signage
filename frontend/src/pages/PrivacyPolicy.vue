@@ -1,5 +1,5 @@
 <template>
-  <div class="terms-page min-h-screen text-slate-200">
+  <div class="terms-page min-h-screen text-slate-200" :class="{ 'theme-light': !themeStore.isDarkMode }">
     <div class="terms-starfield pointer-events-none fixed inset-0 z-0" aria-hidden="true" />
     <div class="terms-animated-bg fixed inset-0 z-0 opacity-90" aria-hidden="true" />
 
@@ -461,6 +461,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useAuthStore } from '@/stores/auth'
+import { useThemeStore } from '@/stores/theme'
 import {
   ArrowLeftIcon,
   ClockIcon,
@@ -469,6 +470,7 @@ import {
 } from '@heroicons/vue/24/outline'
 
 const authStore = useAuthStore()
+const themeStore = useThemeStore()
 
 const lastUpdated = ref('April 4, 2026')
 const currentYear = ref(new Date().getFullYear())

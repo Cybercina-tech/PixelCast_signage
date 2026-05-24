@@ -12,6 +12,8 @@ Nginx in **`frontend`** serves the SPA and proxies `/api`, `/iot`, `/ws`, `/medi
 | Domain | `pixelcast.uk` → service **`frontend`** |
 | Do **not** expose | `backend:8000`, `db`, `redis` |
 
+> Note: Docker Compose `--watch` hot-reload is for manual `docker compose` runs. Dokploy deploys from git/build jobs and does not run `up --watch` continuously.
+
 ### Domain panel (match these fields exactly)
 
 Use this in **Domains → Add/Edit** for `pixelcast.uk`:

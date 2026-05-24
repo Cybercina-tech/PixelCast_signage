@@ -1,14 +1,10 @@
 import axios from 'axios'
 import { getBackendOrigin } from '@/utils/mediaUrl'
 import { normalizeApiError } from '@/utils/apiError'
-import {
-  getBrowserIotBaseUrl,
-  normalizeApiBaseForBrowser,
-  rewriteAxiosConfigIfDockerInternalHost,
-} from '@/utils/apiBaseUrl'
+import { rewriteAxiosConfigIfDockerInternalHost } from '@/utils/apiBaseUrl'
 
-/** Same-origin /iot unless overridden — Vite/nginx proxy to Django. */
-const IOT_BASE_URL = normalizeApiBaseForBrowser(getBrowserIotBaseUrl(), { emptyFallback: '/iot' })
+/** Keep player API same-origin for runtime DNS resilience. */
+const IOT_BASE_URL = '/iot'
 
 export const MEDIA_BASE_URL = import.meta.env.VITE_MEDIA_BASE_URL || getBackendOrigin()
 
@@ -20,11 +16,10 @@ const playerApi = axios.create({
   validateStatus: (status) => (status >= 200 && status < 300) || status === 304,
 })
 
-// Same as main api client: env may point at Docker-only hosts baked at module load time.
+// Same as main api client: always keep base URL same-origin.
 playerApi.interceptors.request.use((config) => {
-  const next = normalizeApiBaseForBrowser(getBrowserIotBaseUrl(), { emptyFallback: '/iot' })
-  config.baseURL = next
-  playerApi.defaults.baseURL = next
+  config.baseURL = IOT_BASE_URL
+  playerApi.defaults.baseURL = IOT_BASE_URL
   return rewriteAxiosConfigIfDockerInternalHost(config)
 })
 
@@ -139,7 +134,7 @@ export const sendHeartbeat = async (systemInfo = {}, override = {}) => {
 
 export const sendDisconnectSignal = async (override = {}) => {
   const identity = resolveIdentity(override)
-  const base = normalizeApiBaseForBrowser(getBrowserIotBaseUrl(), { emptyFallback: '/iot' }).replace(/\/+$/, '')
+  const base = IOT_BASE_URL.replace(/\/+$/, '')
   const url = `${base}/screens/disconnect/`
   const payload = JSON.stringify({ screen_id: identity.screenId })
 

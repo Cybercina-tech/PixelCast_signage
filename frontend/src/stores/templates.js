@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { templatesAPI, layersAPI, widgetsAPI } from '../services/api'
 import { smartUpdateObject } from '../utils/deepCompare'
 import { normalizeApiError } from '../utils/apiError'
+import { useScreensStore } from '@/stores/screens'
 
 export const useTemplatesStore = defineStore('templates', {
   state: () => ({
@@ -164,8 +165,6 @@ export const useTemplatesStore = defineStore('templates', {
         // CRITICAL: Update screen in screens store immediately if response includes screen data
         // This ensures UI updates without waiting for next fetch
         if (response.data && response.data.screen) {
-          // Import screens store to update screen data (lazy import to avoid circular dependency)
-          const { useScreensStore } = await import('@/stores/screens')
           const screensStore = useScreensStore()
           
           // Update screen in store with returned data

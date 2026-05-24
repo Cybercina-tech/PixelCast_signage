@@ -84,4 +84,20 @@ test.describe('Super Admin smoke', () => {
     await page.goto(`${base}/super-admin/users`)
     await expect(page.getByRole('link', { name: /Plan/i })).toBeVisible({ timeout: 15000 })
   })
+
+  test('profile shows compact billing summary card', async ({ page }) => {
+    await page.goto(`${base}/profile`)
+    await expect(page.getByText(/^Billing Summary$/i)).toBeVisible({ timeout: 15000 })
+    const hasPlaceholder = await page.getByText(/Billing summary is not available yet\./i).first().isVisible().catch(() => false)
+    if (!hasPlaceholder) {
+      await expect(page.getByRole('link', { name: /Manage/i })).toBeVisible({ timeout: 15000 })
+      await expect(page.getByRole('link', { name: /Upgrade/i })).toBeVisible({ timeout: 15000 })
+    }
+  })
+
+  test('dashboard shows compact billing summary card', async ({ page }) => {
+    await page.goto(`${base}/dashboard`)
+    const billingCard = page.locator('.card-base').filter({ hasText: /Billing summary is not available yet\.|Plan:/i }).first()
+    await expect(billingCard).toBeVisible({ timeout: 15000 })
+  })
 })

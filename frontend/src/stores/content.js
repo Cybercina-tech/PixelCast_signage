@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { contentsAPI } from '../services/api'
+import { smartUpdateObject } from '@/utils/deepCompare'
 
 export const useContentStore = defineStore('content', {
   state: () => ({
@@ -210,9 +211,6 @@ export const useContentStore = defineStore('content', {
         // This ensures UI updates without waiting for next fetch
         if (response.data && response.data.content) {
           console.log('DEBUG [retryDownload]: Updating Content Store with:', response.data.content)
-          
-          // Import smart update utility
-          const { smartUpdateObject } = await import('@/utils/deepCompare')
           
           // Find content in current list and update
           const index = this.contents.findIndex(c => c.id === contentId)

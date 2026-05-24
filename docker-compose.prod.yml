@@ -57,6 +57,7 @@ services:
     build:
       context: ./app
       dockerfile: Dockerfile
+    image: pixelcast_signage-backend-prod
     command: sh /app/entrypoint.sh
     env_file:
       - path: .env
@@ -97,9 +98,24 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    develop:
+      watch:
+        - action: sync+restart
+          path: ./app
+          target: /app
+          ignore:
+            - .venv/
+            - __pycache__/
+            - "**/*.pyc"
+            - media/
+            - staticfiles/
+        - action: rebuild
+          path: ./app/requirements.txt
+        - action: rebuild
+          path: ./app/Dockerfile
     healthcheck:
       # /api/health/live/ — no DB; allowed before install. First boot may run migrations 2–5 min.
-      test: ["CMD-SHELL", "curl -sf http://127.0.0.1:8000/api/health/live/ >/dev/null || exit 1"]
+      test: ["CMD-SHELL", "curl -sf -H 'Host: localhost' http://127.0.0.1:8000/api/health/live/ >/dev/null || exit 1"]
       interval: 15s
       timeout: 10s
       retries: 40
@@ -138,6 +154,21 @@ services:
         condition: service_healthy
       backend:
         condition: service_started
+    develop:
+      watch:
+        - action: sync+restart
+          path: ./app
+          target: /app
+          ignore:
+            - .venv/
+            - __pycache__/
+            - "**/*.pyc"
+            - media/
+            - staticfiles/
+        - action: rebuild
+          path: ./app/requirements.txt
+        - action: rebuild
+          path: ./app/Dockerfile
     restart: always
     networks:
       - default
@@ -170,6 +201,21 @@ services:
         condition: service_healthy
       backend:
         condition: service_started
+    develop:
+      watch:
+        - action: sync+restart
+          path: ./app
+          target: /app
+          ignore:
+            - .venv/
+            - __pycache__/
+            - "**/*.pyc"
+            - media/
+            - staticfiles/
+        - action: rebuild
+          path: ./app/requirements.txt
+        - action: rebuild
+          path: ./app/Dockerfile
     restart: always
     networks:
       - default
@@ -178,6 +224,7 @@ services:
     # Context = repo root; Vue SPA includes /docs (product documentation).
     # VITE_* are build-time: must be /api so the browser hits Nginx, which proxies to backend:8000.
     # Do not rely on host .env for these — wrong values (e.g. https://backend:8000/api) break the browser.
+    image: pixelcast_signage-frontend-prod
     build:
       context: .
       dockerfile: frontend/Dockerfile
@@ -193,6 +240,17 @@ services:
     depends_on:
       backend:
         condition: service_healthy
+    develop:
+      watch:
+        - action: rebuild
+          path: ./frontend
+          ignore:
+            - node_modules/
+            - dist/
+        - action: rebuild
+          path: ./frontend/nginx.conf
+        - action: rebuild
+          path: ./frontend/Dockerfile
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/health || exit 1"]
       interval: 15s

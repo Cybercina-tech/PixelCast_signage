@@ -251,6 +251,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useCommandsStore } from '@/stores/commands'
 import { hasPermission } from '@/utils/permissions'
 import { useTemplatesStore } from '@/stores/templates'
 import { useScreensStore } from '@/stores/screens'
@@ -363,7 +364,6 @@ const handlePushToScreen = async (screen) => {
     )
     
     // Step 2: Send RELOAD command to the screen
-    const { useCommandsStore } = await import('@/stores/commands')
     const commandsStore = useCommandsStore()
     
     await commandsStore.createCommand({

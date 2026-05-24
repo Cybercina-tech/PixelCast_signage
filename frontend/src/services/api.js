@@ -1,20 +1,15 @@
 import axios from 'axios'
 import { getNotification } from '@/composables/useNotification'
 import { normalizeApiError } from '@/utils/apiError'
-import {
-  getBrowserApiBaseUrl,
-  ensureBrowserReachableApiBase,
-  normalizeApiBaseForBrowser,
-  rewriteAxiosConfigIfDockerInternalHost,
-} from '@/utils/apiBaseUrl'
+import { rewriteAxiosConfigIfDockerInternalHost } from '@/utils/apiBaseUrl'
 import { isTransientNetworkError } from '@/utils/networkError'
 
 /** Avoid stacking identical "Too many requests" toasts when many API calls hit 429 at once */
 let lastGlobal429ToastAt = 0
 const GLOBAL_429_TOAST_COOLDOWN_MS = 5000
 
-// API base URL — Docker-only hostnames (backend:8000) are rewritten for the browser (see apiBaseUrl.js)
-const API_BASE_URL = normalizeApiBaseForBrowser(ensureBrowserReachableApiBase(getBrowserApiBaseUrl(), '/api'))
+// Keep API same-origin in browser runtime for DNS resilience behind reverse proxies.
+const API_BASE_URL = '/api'
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -23,11 +18,10 @@ const api = axios.create({
   },
 })
 
-// Always resolve API base in the browser (env may wrongly point at Docker-only hosts like backend:8000)
+// Force same-origin API base on every request.
 api.interceptors.request.use((config) => {
-  const next = normalizeApiBaseForBrowser(ensureBrowserReachableApiBase(getBrowserApiBaseUrl(), '/api'))
-  config.baseURL = next
-  api.defaults.baseURL = next
+  config.baseURL = API_BASE_URL
+  api.defaults.baseURL = API_BASE_URL
   return rewriteAxiosConfigIfDockerInternalHost(config)
 })
 
@@ -160,7 +154,6 @@ api.interceptors.response.use(
         const { useAuthStore } = await import('@/stores/auth')
         const authStore = useAuthStore()
         authStore.restriction = errorData.restriction
-        const { getNotification } = await import('@/composables/useNotification')
         const notify = getNotification()
         if (notify) {
           notify.error(errorData.restriction.message || 'Access Restricted', { title: 'Access Restricted', duration: 6000 })
@@ -382,7 +375,7 @@ export const authAPI = {
   refreshToken: (refresh) => {
     // Use a separate axios instance without interceptors to avoid infinite loop
     const refreshApi = axios.create({
-      baseURL: normalizeApiBaseForBrowser(ensureBrowserReachableApiBase(getBrowserApiBaseUrl(), '/api')),
+      baseURL: API_BASE_URL,
       headers: {
         'Content-Type': 'application/json',
       },
@@ -938,7 +931,7 @@ export const publicAPI = {
       meta: { suppressGlobalErrorToast: true },
     }),
   deployment: () =>
-    axios.get(`${normalizeApiBaseForBrowser(ensureBrowserReachableApiBase(getBrowserApiBaseUrl(), '/api'))}/public/deployment/`, {
+    axios.get(`${API_BASE_URL}/public/deployment/`, {
       headers: { 'Content-Type': 'application/json' },
     }),
   pricing: () =>

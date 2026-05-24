@@ -12,14 +12,10 @@
     <div class="flex flex-col h-full relative">
       <!-- Header -->
       <div class="sidebar-header">
-        <div class="flex items-center gap-3 px-4 py-4">
-          <div class="logo-container">
-            <div class="logo-icon">
-              <BoltIcon class="w-6 h-6" />
-            </div>
-          </div>
+        <router-link to="/dashboard" class="logo-link flex items-center gap-3 px-4 py-4">
+          <BrandLogo :size="40" />
           <h2 class="logo-text">PixelCast Signage</h2>
-        </div>
+        </router-link>
       </div>
       
       <!-- Navigation -->
@@ -201,6 +197,7 @@ import { useAuthStore } from '@/stores/auth'
 import { useSidebarStore } from '@/stores/sidebar'
 import { isDeveloperOrSuperuser, isRouteAllowedInRestrictedMode } from '@/utils/permissions'
 import ErrorDashboard from '@/components/admin/ErrorDashboard.vue'
+import BrandLogo from '@/components/brand/BrandLogo.vue'
 
 defineProps({
   isOpen: {
@@ -370,28 +367,14 @@ watch(() => authStore.user, async (newUser) => {
   box-shadow: none;
 }
 
-.logo-container {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
+.logo-link {
+  text-decoration: none;
+  min-width: 0;
+  transition: opacity 0.2s ease;
 }
 
-.logo-icon {
-  width: 40px;
-  height: 40px;
-  background: var(--accent-color);
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  box-shadow: 0 2px 8px rgba(9, 132, 227, 0.3);
-  transition: all 0.4s ease;
-}
-
-.dark .logo-icon {
-  background: linear-gradient(135deg, #06b6d4, #8b5cf6);
-  box-shadow: 0 0 20px rgba(6, 182, 212, 0.5);
+.logo-link:hover {
+  opacity: 0.92;
 }
 
 .logo-text {

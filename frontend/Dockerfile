@@ -39,7 +39,7 @@ COPY --from=builder /app/dist /usr/share/nginx/html
 
 COPY frontend/nginx.conf /etc/nginx/conf.d/default.conf
 COPY frontend/docker-entrypoint-prod.sh /docker-entrypoint-prod.sh
-RUN chmod +x /docker-entrypoint-prod.sh
+RUN sed -i 's/\r$//' /docker-entrypoint-prod.sh && chmod +x /docker-entrypoint-prod.sh
 
 EXPOSE 80
 

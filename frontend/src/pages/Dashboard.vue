@@ -489,6 +489,7 @@ import { useScreensStore } from '@/stores/screens'
 import { useNotification } from '@/composables/useNotification'
 import { useBillingTrial } from '@/composables/useBillingTrial'
 import { contentsAPI } from '@/services/api'
+import { dashboardWebSocket } from '@/composables/useWebSocket'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import OnboardingChecklist from '@/components/onboarding/OnboardingChecklist.vue'
 import Chart from '@/components/common/Chart.vue'
@@ -797,9 +798,7 @@ function handleBrowserOnline() {
   onlineRefreshTimer = setTimeout(() => {
     onlineRefreshTimer = null
     refreshDashboardData()
-    import('@/composables/useWebSocket').then(({ dashboardWebSocket }) => {
-      dashboardWebSocket.reconnect()
-    })
+    dashboardWebSocket.reconnect()
   }, 500)
 }
 

@@ -1,8 +1,11 @@
 <template>
-  <div class="pricing-page min-h-screen min-h-[100dvh] bg-slate-950 text-white relative overflow-hidden">
+  <div
+    class="pricing-page min-h-screen min-h-[100dvh] bg-slate-950 text-white relative overflow-hidden"
+    :class="{ 'theme-light': !themeStore.isDarkMode }"
+  >
     <div class="fixed inset-0 starfield-background pointer-events-none opacity-90 z-0" aria-hidden="true" />
 
-    <header class="sticky top-0 z-40 border-b border-white/10 bg-slate-950/85 backdrop-blur-md safe-area-pt">
+    <header class="pricing-header sticky top-0 z-40 border-b safe-area-pt">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div class="flex items-center gap-3 min-w-0">
           <router-link to="/" class="flex items-center gap-2 shrink-0">
@@ -15,22 +18,17 @@
               PixelCast
             </span>
           </router-link>
-          <span class="text-white/40 hidden sm:inline">/</span>
-          <h1 class="text-lg font-semibold text-white truncate">Plans &amp; pricing</h1>
+          <span class="pricing-header-slash hidden sm:inline">/</span>
+          <h1 class="pricing-header-title text-lg font-semibold truncate">Plans &amp; pricing</h1>
         </div>
-        <div class="flex flex-wrap gap-2">
-          <router-link
-            to="/"
-            class="px-4 py-2 rounded-lg text-sm border border-white/15 hover:border-cyan-400/40 transition-colors"
-          >
+        <div class="flex flex-wrap gap-2 items-center">
+          <router-link to="/" class="pricing-nav-btn px-4 py-2 rounded-lg text-sm transition-colors">
             Home
           </router-link>
-          <router-link
-            to="/docs"
-            class="px-4 py-2 rounded-lg text-sm border border-white/15 hover:border-white/35 transition-colors"
-          >
+          <router-link to="/docs" class="pricing-nav-btn px-4 py-2 rounded-lg text-sm transition-colors">
             Docs
           </router-link>
+          <ThemeToggle />
         </div>
       </div>
     </header>
@@ -59,10 +57,7 @@
           <router-link to="/" class="neon-button px-5 py-2.5 rounded-lg text-sm font-semibold text-white">
             Back to home
           </router-link>
-          <router-link
-            to="/install"
-            class="px-5 py-2.5 rounded-lg text-sm font-semibold border border-white/20 hover:border-white/40"
-          >
+          <router-link to="/install" class="pricing-nav-btn pricing-nav-btn-lg px-5 py-2.5 rounded-lg text-sm font-semibold">
             Installation
           </router-link>
         </div>
@@ -91,7 +86,7 @@
                 <p v-if="plan.badge" class="text-xs font-semibold text-cyan-300/90 mt-1">{{ plan.badge }}</p>
               </div>
               <span
-                class="text-xs uppercase tracking-wide font-semibold px-2 py-1 rounded-md"
+                class="pricing-kind-badge text-xs uppercase tracking-wide font-semibold px-2 py-1 rounded-md"
                 :class="kindBadgeClass(plan.kind)"
               >
                 {{ kindLabel(plan.kind) }}
@@ -164,6 +159,8 @@
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useThemeStore } from '@/stores/theme'
+import ThemeToggle from '@/components/common/ThemeToggle.vue'
 import { publicAPI, platformAPI } from '@/services/api'
 import { normalizeApiError } from '@/utils/apiError'
 import { useRouteHead } from '@/composables/useRouteHead'
@@ -173,6 +170,7 @@ useRouteHead()
 const router = useRouter()
 const route = useRoute()
 const auth = useAuthStore()
+const themeStore = useThemeStore()
 
 const loading = ref(true)
 const loadError = ref('')
@@ -210,11 +208,11 @@ function kindLabel(kind) {
 }
 
 function kindBadgeClass(kind) {
-  if (kind === 'free') return 'bg-slate-700/80 text-slate-200'
-  if (kind === 'bundle') return 'bg-purple-500/20 text-purple-200'
-  if (kind === 'per_screen') return 'bg-amber-500/15 text-amber-100'
-  if (kind === 'vip') return 'bg-emerald-500/15 text-emerald-100'
-  return 'bg-white/10 text-slate-200'
+  if (kind === 'free') return 'pricing-kind-badge--free'
+  if (kind === 'bundle') return 'pricing-kind-badge--bundle'
+  if (kind === 'per_screen') return 'pricing-kind-badge--per-screen'
+  if (kind === 'vip') return 'pricing-kind-badge--vip'
+  return 'pricing-kind-badge--default'
 }
 
 function defaultDescription(plan) {
@@ -360,5 +358,218 @@ onMounted(() => {
 .neon-button-large {
   background: linear-gradient(135deg, rgba(6, 182, 212, 0.35) 0%, rgba(124, 58, 237, 0.45) 100%);
   box-shadow: 0 0 20px rgba(34, 211, 238, 0.15);
+}
+
+.pricing-header {
+  border-bottom-color: rgba(255, 255, 255, 0.12);
+  background: rgba(2, 6, 23, 0.88);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.pricing-header-slash {
+  color: rgba(248, 250, 252, 0.4);
+}
+
+.pricing-header-title {
+  color: #f8fafc;
+}
+
+.pricing-nav-btn {
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(15, 23, 42, 0.42);
+  color: rgba(226, 232, 240, 0.94);
+  text-decoration: none;
+}
+
+.pricing-nav-btn:hover {
+  border-color: rgba(103, 232, 249, 0.45);
+  background: rgba(15, 23, 42, 0.58);
+  color: #ffffff;
+}
+
+.pricing-nav-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(103, 232, 249, 0.28);
+}
+
+.pricing-page.theme-light {
+  --text-body: #334155;
+  --text-main: #1e293b;
+  --text-heading: #0f172a;
+  --text-muted: #64748b;
+  --accent-color: #2563eb;
+  color-scheme: light;
+  color: var(--text-body);
+  background: linear-gradient(135deg, #f8fafc 0%, #eef2ff 45%, #e2e8f0 100%);
+}
+
+.pricing-page.theme-light .pricing-header {
+  border-bottom-color: rgba(148, 163, 184, 0.36);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.94) 0%, rgba(248, 250, 252, 0.9) 100%);
+}
+
+.pricing-page.theme-light .pricing-header-slash {
+  color: #94a3b8;
+}
+
+.pricing-page.theme-light .pricing-header-title {
+  color: #0f172a;
+}
+
+.pricing-page.theme-light .pricing-nav-btn {
+  border-color: rgba(148, 163, 184, 0.52);
+  background: rgba(255, 255, 255, 0.94);
+  color: #334155;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.06);
+}
+
+.pricing-page.theme-light .pricing-nav-btn:hover {
+  border-color: rgba(37, 99, 235, 0.42);
+  background: #ffffff;
+  color: #0f172a;
+}
+
+.pricing-page.theme-light .pricing-nav-btn:focus-visible {
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.22);
+}
+
+.pricing-page.theme-light .starfield-background {
+  background: radial-gradient(ellipse at top, #ffffff 0%, #f8fafc 45%, #eef2ff 100%);
+}
+
+.pricing-page.theme-light .starfield-background::before {
+  background-image: radial-gradient(1px 1px at 20px 30px, rgba(37, 99, 235, 0.15), transparent),
+    radial-gradient(1px 1px at 40px 70px, rgba(99, 102, 241, 0.14), transparent);
+  opacity: 0.4;
+}
+
+.pricing-page.theme-light .glass-card {
+  background: rgba(255, 255, 255, 0.9);
+  border-color: rgba(148, 163, 184, 0.3);
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+}
+
+.pricing-page.theme-light :deep(.text-white) {
+  color: var(--text-heading) !important;
+}
+
+.pricing-page.theme-light :deep(.text-white\/60),
+.pricing-page.theme-light :deep(.text-white\/55),
+.pricing-page.theme-light :deep(.text-white\/50),
+.pricing-page.theme-light :deep(.text-white\/45),
+.pricing-page.theme-light :deep(.text-slate-500) {
+  color: var(--text-muted) !important;
+}
+
+.pricing-page.theme-light :deep(.text-on-starfield),
+.pricing-page.theme-light :deep(.text-on-starfield-muted) {
+  color: var(--text-body) !important;
+  -webkit-text-fill-color: var(--text-body) !important;
+}
+
+.pricing-page.theme-light :deep(.text-cyan-300),
+.pricing-page.theme-light :deep(.text-cyan-300\/90),
+.pricing-page.theme-light :deep(.text-cyan-100),
+.pricing-page.theme-light :deep(.text-amber-100),
+.pricing-page.theme-light :deep(.text-purple-200),
+.pricing-page.theme-light :deep(.text-emerald-100) {
+  color: var(--accent-color) !important;
+}
+
+.pricing-page.theme-light :deep(.border-white\/10),
+.pricing-page.theme-light :deep(.border-white\/15),
+.pricing-page.theme-light :deep(.border-white\/20),
+.pricing-page.theme-light :deep(.border-cyan-400\/35) {
+  border-color: rgba(148, 163, 184, 0.34) !important;
+}
+
+.pricing-page.theme-light :deep(.bg-slate-950\/85),
+.pricing-page.theme-light :deep(.bg-slate-900\/80),
+.pricing-page.theme-light :deep(.bg-slate-900\/50),
+.pricing-page.theme-light :deep(.bg-white\/5),
+.pricing-page.theme-light :deep(.bg-white\/10),
+.pricing-page.theme-light :deep(.bg-cyan-500\/10),
+.pricing-page.theme-light :deep(.bg-amber-500\/10) {
+  background: rgba(255, 255, 255, 0.86) !important;
+}
+
+.pricing-page.theme-light :deep(.hover\:border-cyan-400\/40:hover),
+.pricing-page.theme-light :deep(.hover\:border-white\/35:hover),
+.pricing-page.theme-light :deep(.hover\:border-white\/40:hover) {
+  border-color: rgba(37, 99, 235, 0.4) !important;
+}
+
+.pricing-page.theme-light .neon-button-large {
+  box-shadow: 0 10px 24px rgba(37, 99, 235, 0.2);
+}
+
+.pricing-page header :deep(button.bg-card) {
+  background: rgba(15, 23, 42, 0.76);
+  border-color: rgba(148, 163, 184, 0.28);
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+.pricing-page.theme-light header :deep(button.bg-card) {
+  background: rgba(255, 255, 255, 0.94);
+  border-color: rgba(148, 163, 184, 0.46);
+  color: #334155;
+}
+
+/* Plan kind badges (Free, Bundle, Per screen, VIP) */
+.pricing-kind-badge--free {
+  background: rgba(51, 65, 85, 0.82);
+  color: #e2e8f0;
+}
+
+.pricing-kind-badge--bundle {
+  background: rgba(147, 51, 234, 0.22);
+  color: #e9d5ff;
+}
+
+.pricing-kind-badge--per-screen {
+  background: rgba(245, 158, 11, 0.18);
+  color: #fde68a;
+}
+
+.pricing-kind-badge--vip {
+  background: rgba(16, 185, 129, 0.18);
+  color: #a7f3d0;
+}
+
+.pricing-kind-badge--default {
+  background: rgba(255, 255, 255, 0.12);
+  color: #e2e8f0;
+}
+
+.pricing-page.theme-light .pricing-kind-badge--free {
+  background: #e2e8f0;
+  color: #334155;
+  border: 1px solid rgba(100, 116, 139, 0.45);
+}
+
+.pricing-page.theme-light .pricing-kind-badge--bundle {
+  background: rgba(237, 233, 254, 0.95);
+  color: #6d28d9;
+  border: 1px solid rgba(167, 139, 250, 0.45);
+}
+
+.pricing-page.theme-light .pricing-kind-badge--per-screen {
+  background: rgba(254, 243, 199, 0.95);
+  color: #b45309;
+  border: 1px solid rgba(251, 191, 36, 0.45);
+}
+
+.pricing-page.theme-light .pricing-kind-badge--vip {
+  background: rgba(209, 250, 229, 0.95);
+  color: #047857;
+  border: 1px solid rgba(52, 211, 153, 0.45);
+}
+
+.pricing-page.theme-light .pricing-kind-badge--default {
+  background: rgba(241, 245, 249, 0.95);
+  color: #475569;
+  border: 1px solid rgba(148, 163, 184, 0.4);
 }
 </style>
