@@ -101,6 +101,28 @@ If WS fails with code **1006** in a loop: redeploy **frontend + backend**, sign 
 
 ## Troubleshooting
 
+### Domain shows **404** but Dokploy domain settings look correct
+
+Most often **`frontend` never started** because it waited for `backend` to become healthy (first deploy: migrations can take 5–10 minutes). Traefik then has no container to route to → **404**.
+
+**On the server (SSH), run:**
+
+```bash
+docker ps -a --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}" | grep -E "frontend|backend|NAMES"
+curl -sS http://127.0.0.1:8080/health || echo "8080 not reachable"
+docker logs "$(docker ps -aq -f name=backend | head -1)" --tail 80
+```
+
+| What you see | Meaning |
+|--------------|---------|
+| No `frontend` container, or `Created` / `Exited` | Frontend blocked on backend; fix backend first, redeploy with latest `docker-compose.prod.yml` (frontend starts after `backend` is **started**, not only healthy). |
+| `curl` → `healthy` but domain 404 | Traefik/network: confirm `docker network inspect dokploy-network` lists the **frontend** container; domain service = `frontend`, container port **80**. |
+| `curl` fails | Stack not up or wrong compose file (`docker-compose.yml` = Vite dev). |
+| Backend logs: `ImproperlyConfigured` / `SECRET_KEY` / `CHANNEL_LAYERS` | Set env in Dokploy from [`.env.production.example`](.env.production.example). |
+| Backend logs: `password authentication failed` | `DB_PASSWORD` must match the **existing** Postgres volume from first deploy. |
+
+After pulling the compose fix: **Redeploy → Rebuild** all services. Then open `https://pixelcast.uk/health` (should be `healthy`) and `https://pixelcast.uk/install` on first boot.
+
 ### API returns **400** on `pixelcast.uk` (`/api/setup/status/`, `/api/public/...`)
 
 **Cause:** Django `USE_X_FORWARDED_HOST=True` with an **empty** `X-Forwarded-Host` from Nginx → `DisallowedHost` (shows as 400).

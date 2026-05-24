@@ -10,11 +10,11 @@
 # often taken by Traefik/reverse proxy.
 #
 # Environment policy:
-# - Compose services load ONLY `.env` (required).
+# - Services load `.env` when present; Dokploy Environment vars override without needing a repo `.env`.
 # - `.env.example` is documentation/template only; never loaded by Compose.
-# - Dokploy can still inject/override env vars at runtime.
 #
-# Dokploy / Traefik: attach `frontend` and `backend` to `dokploy-network` (external) so the proxy can reach them.
+# Dokploy / Traefik: attach `frontend` and `backend` to an external proxy network so Traefik can reach them.
+# Default name matches Dokploy: `docker network create dokploy-network`. Override with DOKPLOY_EXTERNAL_NETWORK.
 # Do not bind-mount `./documentation` here — that path may not exist on the server build context and can break the container.
 
 services:
@@ -22,8 +22,9 @@ services:
   db:
     image: postgres:15-alpine
     env_file:
+      # Dokploy Environment tab works without a repo `.env` file when required: false.
       - path: .env
-        required: true
+        required: false
     environment:
       - POSTGRES_DB=${DB_NAME:-pixelcast_signage_db}
       - POSTGRES_USER=${DB_USER:-pixelcast_signage_user}
@@ -61,7 +62,7 @@ services:
     command: sh /app/entrypoint.sh
     env_file:
       - path: .env
-        required: true
+        required: false
     environment:
       - SECRET_KEY=${SECRET_KEY:-wN9vQx2!mK7pR4tY8uH3cD6sL1zA5eB9fG2jT7nV4qP8xM3rK6hC1wZ}
       - DEBUG=${DEBUG:-False}
@@ -132,7 +133,7 @@ services:
     command: celery -A Screengram worker -l info
     env_file:
       - path: .env
-        required: true
+        required: false
     environment:
       - SECRET_KEY=${SECRET_KEY:-wN9vQx2!mK7pR4tY8uH3cD6sL1zA5eB9fG2jT7nV4qP8xM3rK6hC1wZ}
       - DEBUG=${DEBUG:-False}
@@ -180,7 +181,7 @@ services:
     command: celery -A Screengram beat -l info
     env_file:
       - path: .env
-        required: true
+        required: false
     environment:
       - SECRET_KEY=${SECRET_KEY:-wN9vQx2!mK7pR4tY8uH3cD6sL1zA5eB9fG2jT7nV4qP8xM3rK6hC1wZ}
       - DEBUG=${DEBUG:-False}
@@ -237,9 +238,11 @@ services:
         VITE_GTM_CONTAINER_ID: ${VITE_GTM_CONTAINER_ID:-}
     volumes:
       - backend_media:/app/media:ro
+    # Start Nginx even while backend is still migrating (first deploy can take several minutes).
+    # Traefik 404 often means this container never started because backend stayed "unhealthy".
     depends_on:
       backend:
-        condition: service_healthy
+        condition: service_started
     develop:
       watch:
         - action: rebuild
@@ -273,5 +276,7 @@ volumes:
 
 networks:
   # Create once on the host if missing: `docker network create dokploy-network`
+  # If Traefik uses another name, set DOKPLOY_EXTERNAL_NETWORK in Dokploy Environment.
   dokploy-network:
+    name: ${DOKPLOY_EXTERNAL_NETWORK:-dokploy-network}
     external: true
