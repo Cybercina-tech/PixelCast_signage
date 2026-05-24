@@ -24,27 +24,27 @@
         :transition="{ duration: 500 }"
         class="max-w-md"
       >
-        <div class="cosmic-icon-wrap inline-flex items-center justify-center w-14 h-14 rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 text-indigo-400 shadow-lg mb-8">
+        <div class="cosmic-icon-wrap auth-brand-mark inline-flex items-center justify-center w-14 h-14 rounded-xl mb-8">
           <svg class="w-7 h-7 cosmic-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.75">
             <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
           </svg>
         </div>
-        <h1 class="cosmic-title text-3xl xl:text-4xl font-bold text-white tracking-wide mb-3">
+        <h1 class="cosmic-title auth-title text-3xl xl:text-4xl font-bold tracking-wide mb-3">
           PixelCast Signage
         </h1>
-        <p class="text-slate-400 text-lg leading-relaxed">
+        <p class="auth-copy text-lg leading-relaxed">
           Secure digital signage management. Sign in to manage screens, content, and schedules.
         </p>
-        <div class="mt-12 rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 p-8 shadow-xl">
-          <div class="flex items-center gap-4 text-slate-500">
-            <div class="flex-1 h-2 rounded-full bg-white/20" />
-            <div class="flex-1 h-2 rounded-full bg-indigo-500/40" />
-            <div class="flex-1 h-2 rounded-full bg-white/20" />
+        <div class="auth-preview-card mt-12 rounded-2xl p-8">
+          <div class="flex items-center gap-4">
+            <div class="auth-preview-track-muted flex-1 h-2 rounded-full" />
+            <div class="auth-preview-track-active flex-1 h-2 rounded-full" />
+            <div class="auth-preview-track-muted flex-1 h-2 rounded-full" />
           </div>
           <div class="mt-4 flex gap-3">
-            <div class="w-16 h-12 rounded-xl bg-white/10" />
-            <div class="w-20 h-12 rounded-xl bg-indigo-500/20" />
-            <div class="w-14 h-12 rounded-xl bg-white/10" />
+            <div class="auth-preview-chip-muted w-16 h-12 rounded-xl" />
+            <div class="auth-preview-chip-active w-20 h-12 rounded-xl" />
+            <div class="auth-preview-chip-muted w-14 h-12 rounded-xl" />
           </div>
         </div>
       </div>
@@ -60,17 +60,17 @@
         class="w-full max-w-md"
       >
         <div class="lg:hidden text-center mb-8">
-          <h1 class="cosmic-title text-2xl font-bold text-white">PixelCast Signage</h1>
-          <p class="text-sm text-slate-400 mt-1">Sign in to your account</p>
+          <h1 class="cosmic-title auth-title text-2xl font-bold">PixelCast Signage</h1>
+          <p class="auth-subtitle text-sm mt-1">Sign in to your account</p>
         </div>
 
         <!-- Glass-portal card -->
         <div class="glass-portal rounded-2xl overflow-hidden">
           <div class="px-6 sm:px-8 py-8 sm:py-10">
-            <h2 class="cosmic-heading text-xl font-bold text-white mb-1">
+            <h2 class="cosmic-heading auth-heading text-xl font-bold mb-1">
               {{ needs2fa ? 'Two-factor authentication' : 'Welcome back' }}
             </h2>
-            <p class="text-sm text-slate-400 mb-6">
+            <p class="auth-subtitle text-sm mb-6">
               {{
                 needs2fa
                   ? 'Enter the 6-digit code from your authenticator app or a backup code.'
@@ -90,10 +90,10 @@
               >
                 <div
                   v-if="authStore.error"
-                  class="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300 flex items-start gap-2"
+                  class="auth-alert rounded-xl px-4 py-3 text-sm flex items-start gap-2"
                   role="alert"
                 >
-                  <ExclamationCircleIcon class="h-5 w-5 flex-shrink-0 mt-0.5 text-red-400 cosmic-icon" />
+                  <ExclamationCircleIcon class="auth-alert-icon h-5 w-5 flex-shrink-0 mt-0.5 cosmic-icon" />
                   <span class="flex-1">{{ authStore.error }}</span>
                 </div>
               </transition>
@@ -101,7 +101,7 @@
               <!-- Username / Email (floating label) -->
               <div class="input-wrap">
                 <div class="input-group relative group">
-                  <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-500 group-focus-within:text-indigo-400 transition-colors duration-300 cosmic-icon-wrap">
+                  <div class="auth-input-icon absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none transition-colors duration-300 cosmic-icon-wrap">
                     <UserIcon class="h-5 w-5 cosmic-icon" />
                   </div>
                   <input
@@ -110,14 +110,14 @@
                     type="text"
                     required
                     autocomplete="username"
-                    class="auth-input cosmic-input w-full pl-11 pr-4 py-3 rounded-xl border border-white/10 bg-black/40 text-white placeholder-transparent focus:outline-none focus:border-indigo-500 hover:border-white/20 transition-all duration-300"
+                    class="auth-input cosmic-input w-full pl-11 pr-4 py-3 rounded-xl placeholder-transparent transition-all duration-300"
                     placeholder=" "
                     @focus="focusUsername = true"
                     @blur="focusUsername = false"
                   />
                   <label
                     for="login-username"
-                    class="floating-label cosmic-floating-label"
+                    class="floating-label cosmic-floating-label auth-floating-label"
                     :class="{ 'floating-label--active': form.username || focusUsername }"
                   >
                     Username or Email
@@ -128,7 +128,7 @@
               <!-- Password (floating label) -->
               <div class="input-wrap">
                 <div class="input-group relative group">
-                  <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-500 group-focus-within:text-indigo-400 transition-colors duration-300 cosmic-icon-wrap">
+                  <div class="auth-input-icon absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none transition-colors duration-300 cosmic-icon-wrap">
                     <LockClosedIcon class="h-5 w-5 cosmic-icon" />
                   </div>
                   <input
@@ -137,14 +137,14 @@
                     :type="showPassword ? 'text' : 'password'"
                     required
                     autocomplete="current-password"
-                    class="auth-input cosmic-input w-full pl-11 pr-12 py-3 rounded-xl border border-white/10 bg-black/40 text-white placeholder-transparent focus:outline-none focus:border-indigo-500 hover:border-white/20 transition-all duration-300"
+                    class="auth-input cosmic-input w-full pl-11 pr-12 py-3 rounded-xl placeholder-transparent transition-all duration-300"
                     placeholder=" "
                     @focus="focusPassword = true"
                     @blur="focusPassword = false"
                   />
                   <label
                     for="login-password"
-                    class="floating-label cosmic-floating-label"
+                    class="floating-label cosmic-floating-label auth-floating-label"
                     :class="{ 'floating-label--active': form.password || focusPassword }"
                   >
                     Password
@@ -152,7 +152,7 @@
                   <button
                     type="button"
                     @click="showPassword = !showPassword"
-                    class="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-500 hover:text-cyan-400 focus:outline-none transition-colors duration-300 cosmic-icon-wrap"
+                    class="auth-password-toggle absolute inset-y-0 right-0 pr-4 flex items-center focus:outline-none transition-colors duration-300 cosmic-icon-wrap"
                     tabindex="-1"
                     :aria-label="showPassword ? 'Hide password' : 'Show password'"
                   >
@@ -167,7 +167,7 @@
                 <button
                   type="submit"
                   :disabled="authStore.loading"
-                  class="cosmic-btn auth-btn w-full py-3.5 px-4 rounded-xl font-semibold text-white bg-indigo-600 hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-[#0B0E14] disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:bg-indigo-600 transition-all duration-300 flex items-center justify-center gap-2 min-h-[48px] shadow-lg hover:shadow-indigo-500/40 hover:shadow-xl active:scale-95"
+                  class="cosmic-btn auth-btn w-full py-3.5 px-4 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center gap-2 min-h-[48px]"
                 >
                   <template v-if="authStore.loading">
                     <svg
@@ -190,7 +190,7 @@
               </div>
 
               <p class="text-right text-xs">
-                <router-link to="/forgot-password" class="text-indigo-400 hover:text-indigo-300">
+                <router-link to="/forgot-password" class="auth-inline-link">
                   Forgot password?
                 </router-link>
               </p>
@@ -198,35 +198,35 @@
 
             <form v-else @submit.prevent="handle2fa" class="space-y-5">
               <div class="input-wrap">
-                <label class="block text-sm text-slate-400 mb-2">Authenticator code</label>
+                <label class="auth-subtitle block text-sm mb-2">Authenticator code</label>
                 <input
                   v-model="code2fa"
                   type="text"
                   inputmode="numeric"
                   autocomplete="one-time-code"
                   maxlength="12"
-                  class="auth-input cosmic-input w-full px-4 py-3 rounded-xl border border-white/10 bg-black/40 text-white focus:outline-none focus:border-indigo-500"
+                  class="auth-input cosmic-input w-full px-4 py-3 rounded-xl"
                   placeholder="123456"
                 />
               </div>
               <button
                 type="submit"
                 :disabled="authStore.loading"
-                class="cosmic-btn auth-btn w-full py-3.5 px-4 rounded-xl font-semibold text-white bg-indigo-600 hover:bg-indigo-500 disabled:opacity-60"
+                class="cosmic-btn auth-btn w-full py-3.5 px-4 rounded-xl font-semibold disabled:opacity-60"
               >
                 {{ authStore.loading ? 'Verifying…' : 'Verify & continue' }}
               </button>
-              <button type="button" class="text-sm text-slate-400 hover:text-white" @click="cancel2fa">
+              <button type="button" class="auth-text-link text-sm" @click="cancel2fa">
                 Back to login
               </button>
             </form>
 
             <!-- Secondary action: Sign up -->
             <div class="mt-6 text-center">
-              <p class="text-sm text-slate-400 mb-3">Don't have an account?</p>
+              <p class="auth-subtitle text-sm mb-3">Don't have an account?</p>
               <router-link
                 to="/signup"
-                class="cosmic-secondary-link inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl border border-white/20 text-slate-300 font-medium text-sm hover:border-cyan-400/60 hover:text-cyan-400 hover:bg-cyan-400/10 focus:outline-none focus:ring-2 focus:ring-cyan-400/30 focus:ring-offset-2 focus:ring-offset-[#0B0E14] transition-all duration-300"
+                class="cosmic-secondary-link auth-secondary-link inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-medium text-sm transition-all duration-300"
               >
                 Sign up
               </router-link>
@@ -236,7 +236,7 @@
 
         <router-link
           to="/"
-          class="mt-6 flex items-center justify-center gap-2 text-sm text-slate-500 hover:text-slate-300 focus:outline-none focus:underline transition-colors duration-300"
+          class="auth-back-link mt-6 flex items-center justify-center gap-2 text-sm focus:outline-none focus:underline transition-colors duration-300"
         >
           <ArrowLeftIcon class="h-4 w-4" />
           Back to home
@@ -341,10 +341,96 @@ onMounted(() => {
 .auth-page {
   position: relative;
   font-family: 'Plus Jakarta Sans', sans-serif;
+  --auth-bg-start: #0b0e14;
+  --auth-bg-mid: #161b22;
+  --auth-bg-end: #0b0e14;
+  --auth-star-opacity: 0.6;
+  --auth-nebula-opacity: 0.25;
+  --auth-text-primary: #f8fafc;
+  --auth-text-secondary: #94a3b8;
+  --auth-text-tertiary: #64748b;
+  --auth-card-bg: rgba(255, 255, 255, 0.05);
+  --auth-card-border: rgba(255, 255, 255, 0.1);
+  --auth-card-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  --auth-brand-mark-bg: rgba(255, 255, 255, 0.05);
+  --auth-brand-mark-border: rgba(255, 255, 255, 0.1);
+  --auth-brand-mark-color: #818cf8;
+  --auth-preview-muted: rgba(255, 255, 255, 0.18);
+  --auth-preview-active: rgba(99, 102, 241, 0.38);
+  --auth-input-bg: rgba(2, 6, 23, 0.5);
+  --auth-input-border: rgba(255, 255, 255, 0.12);
+  --auth-input-border-hover: rgba(255, 255, 255, 0.22);
+  --auth-input-border-focus: #6366f1;
+  --auth-input-text: #f8fafc;
+  --auth-input-placeholder: #94a3b8;
+  --auth-input-icon: #64748b;
+  --auth-input-icon-focus: #818cf8;
+  --auth-focus-ring: rgba(99, 102, 241, 0.28);
+  --auth-focus-offset: #0b0e14;
+  --auth-link: #818cf8;
+  --auth-link-hover: #a5b4fc;
+  --auth-secondary-bg: rgba(34, 211, 238, 0.08);
+  --auth-secondary-border: rgba(255, 255, 255, 0.22);
+  --auth-secondary-border-hover: rgba(34, 211, 238, 0.55);
+  --auth-secondary-text: #cbd5e1;
+  --auth-secondary-text-hover: #22d3ee;
+  --auth-btn-bg: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+  --auth-btn-shadow: 0 4px 20px rgba(99, 102, 241, 0.35);
+  --auth-btn-shadow-hover: 0 10px 30px rgba(99, 102, 241, 0.45);
+  --auth-label-bg: rgba(11, 14, 20, 0.92);
+  --auth-label-text: #94a3b8;
+  --auth-label-active: #a5b4fc;
+  --auth-alert-border: rgba(239, 68, 68, 0.35);
+  --auth-alert-bg: rgba(239, 68, 68, 0.12);
+  --auth-alert-text: #fca5a5;
+  --auth-autofill-bg: rgba(2, 6, 23, 0.56);
 }
 
 .theme-light {
   color-scheme: light;
+  --auth-bg-start: #f8fafc;
+  --auth-bg-mid: #eef2ff;
+  --auth-bg-end: #e2e8f0;
+  --auth-star-opacity: 0.22;
+  --auth-nebula-opacity: 0.16;
+  --auth-text-primary: #0f172a;
+  --auth-text-secondary: #475569;
+  --auth-text-tertiary: #64748b;
+  --auth-card-bg: rgba(255, 255, 255, 0.9);
+  --auth-card-border: rgba(148, 163, 184, 0.32);
+  --auth-card-shadow: 0 18px 40px rgba(15, 23, 42, 0.14);
+  --auth-brand-mark-bg: linear-gradient(140deg, #dbeafe 0%, #bfdbfe 45%, #ddd6fe 100%);
+  --auth-brand-mark-border: rgba(99, 102, 241, 0.28);
+  --auth-brand-mark-color: #1d4ed8;
+  --auth-preview-muted: rgba(148, 163, 184, 0.35);
+  --auth-preview-active: rgba(79, 70, 229, 0.32);
+  --auth-input-bg: rgba(255, 255, 255, 0.96);
+  --auth-input-border: rgba(148, 163, 184, 0.48);
+  --auth-input-border-hover: rgba(100, 116, 139, 0.62);
+  --auth-input-border-focus: #2563eb;
+  --auth-input-text: #0f172a;
+  --auth-input-placeholder: #94a3b8;
+  --auth-input-icon: #64748b;
+  --auth-input-icon-focus: #2563eb;
+  --auth-focus-ring: rgba(37, 99, 235, 0.24);
+  --auth-focus-offset: #ffffff;
+  --auth-link: #2563eb;
+  --auth-link-hover: #1d4ed8;
+  --auth-secondary-bg: rgba(37, 99, 235, 0.07);
+  --auth-secondary-border: rgba(148, 163, 184, 0.38);
+  --auth-secondary-border-hover: rgba(37, 99, 235, 0.42);
+  --auth-secondary-text: #334155;
+  --auth-secondary-text-hover: #1d4ed8;
+  --auth-btn-bg: linear-gradient(135deg, #2563eb 0%, #4338ca 100%);
+  --auth-btn-shadow: 0 8px 22px rgba(37, 99, 235, 0.24);
+  --auth-btn-shadow-hover: 0 14px 30px rgba(37, 99, 235, 0.28);
+  --auth-label-bg: rgba(255, 255, 255, 0.98);
+  --auth-label-text: #64748b;
+  --auth-label-active: #1d4ed8;
+  --auth-alert-border: rgba(239, 68, 68, 0.26);
+  --auth-alert-bg: rgba(254, 242, 242, 0.92);
+  --auth-alert-text: #b91c1c;
+  --auth-autofill-bg: rgba(255, 255, 255, 0.98);
 }
 
 /* Deep space gradient */
@@ -352,12 +438,8 @@ onMounted(() => {
   position: fixed;
   inset: 0;
   z-index: 0;
-  background: linear-gradient(to bottom right, #0B0E14, #161B22, #0B0E14);
+  background: linear-gradient(135deg, var(--auth-bg-start) 0%, var(--auth-bg-mid) 42%, var(--auth-bg-end) 100%);
   pointer-events: none;
-}
-
-.theme-light .cosmic-bg {
-  background: linear-gradient(135deg, #f8fafc 0%, #eef2ff 40%, #e2e8f0 100%);
 }
 
 /* Animated starfield (CSS-only twinkling stars via box-shadow) */
@@ -366,12 +448,8 @@ onMounted(() => {
   inset: 0;
   z-index: 1;
   pointer-events: none;
-  opacity: 0.6;
+  opacity: var(--auth-star-opacity);
   animation: cosmicTwinkle 6s ease-in-out infinite;
-}
-
-.theme-light .cosmic-starfield {
-  opacity: 0.22;
 }
 
 .cosmic-starfield::before {
@@ -411,11 +489,7 @@ onMounted(() => {
   filter: blur(100px);
   pointer-events: none;
   z-index: 1;
-  opacity: 0.25;
-}
-
-.theme-light .nebula {
-  opacity: 0.16;
+  opacity: var(--auth-nebula-opacity);
 }
 .nebula--indigo {
   width: 400px;
@@ -434,19 +508,13 @@ onMounted(() => {
 
 /* Glass-portal card */
 .glass-portal {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--auth-card-bg);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--auth-card-border);
   box-shadow:
-    0 25px 50px -12px rgba(0, 0, 0, 0.5),
+    var(--auth-card-shadow),
     inset 0 1px 0 rgba(255, 255, 255, 0.05);
-}
-
-.theme-light .glass-portal {
-  background: rgba(255, 255, 255, 0.88);
-  border: 1px solid rgba(15, 23, 42, 0.1);
-  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.14);
 }
 
 /* Galactic typography */
@@ -454,25 +522,6 @@ onMounted(() => {
 .cosmic-heading {
   letter-spacing: 0.05em;
   text-shadow: 0 0 30px rgba(99, 102, 241, 0.2);
-}
-
-/* Input: dark sleek, power-up glow on focus */
-.cosmic-input {
-  border-color: rgba(255, 255, 255, 0.1);
-}
-.theme-light .cosmic-input {
-  border-color: rgba(15, 23, 42, 0.14);
-  background: rgba(255, 255, 255, 0.95) !important;
-  color: #0f172a !important;
-}
-.cosmic-input:focus {
-  border-color: #6366F1;
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25), 0 0 20px rgba(99, 102, 241, 0.15);
-}
-
-.theme-light .cosmic-input:focus {
-  border-color: #2563eb;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.22), 0 0 16px rgba(37, 99, 235, 0.1);
 }
 
 /* Neon icon glow */
@@ -483,25 +532,51 @@ onMounted(() => {
   filter: drop-shadow(0 0 6px rgba(99, 102, 241, 0.6));
 }
 
-/* Primary button: Electric Indigo + Cyan accent */
-.cosmic-btn {
-  background: linear-gradient(135deg, #6366F1 0%, #4F46E5 100%);
-  box-shadow: 0 4px 20px rgba(99, 102, 241, 0.35);
-}
-.cosmic-btn:hover:not(:disabled) {
-  box-shadow: 0 8px 30px rgba(99, 102, 241, 0.45), 0 0 40px rgba(34, 211, 238, 0.15);
-}
-.cosmic-btn:focus:not(:disabled) {
-  box-shadow: 0 0 0 2px #0B0E14, 0 0 0 4px rgba(99, 102, 241, 0.5), 0 0 30px rgba(99, 102, 241, 0.3);
+.auth-title,
+.auth-heading {
+  color: var(--auth-text-primary);
 }
 
-/* Floating label (cosmic): when active, label sits above input so it never overlaps typed text */
-.cosmic-floating-label {
-  color: rgb(148 163 184);
+.auth-copy,
+.auth-subtitle,
+.auth-helper,
+.auth-back-link {
+  color: var(--auth-text-secondary);
 }
-.floating-label--active.cosmic-floating-label {
-  color: rgb(148 163 184);
+
+.auth-brand-mark {
+  background: var(--auth-brand-mark-bg);
+  border: 1px solid var(--auth-brand-mark-border);
+  color: var(--auth-brand-mark-color);
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.14);
 }
+
+.auth-preview-card {
+  background: color-mix(in oklab, var(--auth-card-bg) 92%, transparent);
+  border: 1px solid var(--auth-card-border);
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.12);
+}
+
+.auth-preview-track-muted,
+.auth-preview-chip-muted {
+  background: var(--auth-preview-muted);
+}
+
+.auth-preview-track-active,
+.auth-preview-chip-active {
+  background: var(--auth-preview-active);
+}
+
+.auth-alert {
+  border: 1px solid var(--auth-alert-border);
+  background: var(--auth-alert-bg);
+  color: var(--auth-alert-text);
+}
+
+.auth-alert-icon {
+  color: var(--auth-alert-text);
+}
+
 .input-wrap {
   position: relative;
 }
@@ -520,41 +595,116 @@ onMounted(() => {
   z-index: 2;
   padding: 0 0.35rem;
   border-radius: 999px;
-  background: rgba(11, 14, 20, 0.92);
+  background: var(--auth-label-bg);
   line-height: 1.2;
+  color: var(--auth-label-text);
 }
 .floating-label--active {
   top: -0.55rem;
 }
 
 .floating-label--active.cosmic-floating-label {
-  color: rgb(165 180 252);
+  color: var(--auth-label-active);
 }
 
-.theme-light .floating-label {
-  background: rgba(255, 255, 255, 0.96);
+.auth-input {
+  border: 1px solid var(--auth-input-border);
+  background: var(--auth-input-bg);
+  color: var(--auth-input-text);
 }
 
-.theme-light :deep(.text-white) {
-  color: #0f172a !important;
+.auth-input:hover {
+  border-color: var(--auth-input-border-hover);
 }
 
-.theme-light :deep(.text-slate-400) {
-  color: #64748b !important;
+.auth-input:focus {
+  border-color: var(--auth-input-border-focus);
+  box-shadow: 0 0 0 3px var(--auth-focus-ring);
+  outline: none;
 }
 
-.theme-light :deep(.text-slate-500) {
-  color: #64748b !important;
+.auth-input::placeholder {
+  color: var(--auth-input-placeholder);
+}
+
+.auth-input-icon {
+  color: var(--auth-input-icon);
+}
+
+.group:focus-within .auth-input-icon {
+  color: var(--auth-input-icon-focus);
+}
+
+.auth-password-toggle {
+  color: var(--auth-input-icon);
+}
+
+.auth-password-toggle:hover {
+  color: var(--auth-input-icon-focus);
+}
+
+.auth-btn {
+  color: #ffffff;
+  background: var(--auth-btn-bg);
+  box-shadow: var(--auth-btn-shadow);
+}
+
+.auth-btn:hover:not(:disabled) {
+  box-shadow: var(--auth-btn-shadow-hover);
+  transform: translateY(-1px);
+}
+
+.auth-btn:focus-visible {
+  outline: none;
+  box-shadow: var(--auth-btn-shadow), 0 0 0 3px var(--auth-focus-ring);
+}
+
+.auth-inline-link {
+  color: var(--auth-link);
+}
+
+.auth-inline-link:hover {
+  color: var(--auth-link-hover);
+}
+
+.auth-secondary-link {
+  border: 1px solid var(--auth-secondary-border);
+  color: var(--auth-secondary-text);
+  background: transparent;
+}
+
+.auth-secondary-link:hover {
+  border-color: var(--auth-secondary-border-hover);
+  color: var(--auth-secondary-text-hover);
+  background: var(--auth-secondary-bg);
+}
+
+.auth-secondary-link:focus-visible,
+.auth-back-link:focus-visible,
+.auth-text-link:focus-visible,
+.auth-inline-link:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--auth-focus-ring);
+  border-radius: 0.6rem;
+}
+
+.auth-text-link {
+  color: var(--auth-text-secondary);
+}
+
+.auth-text-link:hover,
+.auth-back-link:hover {
+  color: var(--auth-text-primary);
 }
 
 .cosmic-input:-webkit-autofill,
 .cosmic-input:-webkit-autofill:hover,
 .cosmic-input:-webkit-autofill:focus,
 .cosmic-input:-webkit-autofill:active {
-  -webkit-text-fill-color: #e2e8f0 !important;
-  box-shadow: 0 0 0 1000px rgba(2, 6, 23, 0.55) inset !important;
-  -webkit-box-shadow: 0 0 0 1000px rgba(2, 6, 23, 0.55) inset !important;
-  caret-color: #e2e8f0 !important;
+  -webkit-text-fill-color: var(--auth-input-text) !important;
+  box-shadow: 0 0 0 1000px var(--auth-autofill-bg) inset !important;
+  -webkit-box-shadow: 0 0 0 1000px var(--auth-autofill-bg) inset !important;
+  caret-color: var(--auth-input-text) !important;
   transition: background-color 9999s ease-in-out 0s;
 }
 </style>

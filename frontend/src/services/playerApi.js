@@ -137,6 +137,30 @@ export const sendHeartbeat = async (systemInfo = {}, override = {}) => {
   }
 }
 
+export const sendDisconnectSignal = async (override = {}) => {
+  const identity = resolveIdentity(override)
+  const base = normalizeApiBaseForBrowser(getBrowserIotBaseUrl(), { emptyFallback: '/iot' }).replace(/\/+$/, '')
+  const url = `${base}/screens/disconnect/`
+  const payload = JSON.stringify({ screen_id: identity.screenId })
+
+  try {
+    // keepalive allows request to continue during page unload/navigation.
+    await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Device-Token': identity.deviceToken,
+      },
+      body: payload,
+      keepalive: true,
+      credentials: 'omit',
+      mode: 'cors',
+    })
+  } catch (_) {
+    // Best-effort endpoint; heartbeat timeout/stale checks will still handle fallback.
+  }
+}
+
 export const fetchPendingCommands = async (override = {}) => {
   const identity = resolveIdentity(override)
   try {
@@ -174,6 +198,7 @@ const playerAPI = {
   getScreenId,
   fetchTemplate,
   sendHeartbeat,
+  sendDisconnectSignal,
   fetchPendingCommands,
   updateCommandStatus,
 }

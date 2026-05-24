@@ -3,6 +3,32 @@ import { screensAPI } from '../services/api'
 import { smartUpdateArray, smartUpdateObject, deepEqual } from '../utils/deepCompare'
 import { normalizeApiError } from '../utils/apiError'
 
+const HEARTBEAT_STALE_MINUTES = 5
+
+const isHeartbeatStale = (screen, staleMinutes = HEARTBEAT_STALE_MINUTES) => {
+  if (!screen) return true
+
+  if (typeof screen.is_heartbeat_stale === 'boolean') {
+    return screen.is_heartbeat_stale
+  }
+
+  if (!screen.last_heartbeat_at) {
+    return true
+  }
+
+  const lastHeartbeat = new Date(screen.last_heartbeat_at)
+  if (Number.isNaN(lastHeartbeat.getTime())) {
+    return true
+  }
+
+  return Date.now() - lastHeartbeat.getTime() > staleMinutes * 60 * 1000
+}
+
+const isScreenEffectivelyOnline = (screen) => {
+  if (!screen || !screen.is_online) return false
+  return !isHeartbeatStale(screen)
+}
+
 export const useScreensStore = defineStore('screens', {
   state: () => ({
     screens: [],
@@ -16,8 +42,8 @@ export const useScreensStore = defineStore('screens', {
     },
   }),
   getters: {
-    onlineScreens: (state) => state.screens.filter(s => s.is_online),
-    offlineScreens: (state) => state.screens.filter(s => !s.is_online),
+    onlineScreens: (state) => state.screens.filter((s) => isScreenEffectivelyOnline(s)),
+    offlineScreens: (state) => state.screens.filter((s) => !isScreenEffectivelyOnline(s)),
     filteredScreens: (state) => {
       let filtered = state.screens
       if (state.filters.search) {
@@ -29,9 +55,9 @@ export const useScreensStore = defineStore('screens', {
         )
       }
       if (state.filters.status === 'online') {
-        filtered = filtered.filter(s => s.is_online)
+        filtered = filtered.filter((s) => isScreenEffectivelyOnline(s))
       } else if (state.filters.status === 'offline') {
-        filtered = filtered.filter(s => !s.is_online)
+        filtered = filtered.filter((s) => !isScreenEffectivelyOnline(s))
       }
       return filtered
     },
@@ -41,45 +67,27 @@ export const useScreensStore = defineStore('screens', {
      */
     getScreenStatus: (state) => (screen) => {
       if (!screen) {
-        console.log('DEBUG [getScreenStatus]: Screen is null/undefined')
         return 'offline'
       }
-      
-      // DEBUG: Log screen status check
-      console.log(`DEBUG [getScreenStatus]: Checking status for screen "${screen.name || screen.id}"`, {
-        is_online: screen.is_online,
-        created_at: screen.created_at,
-        last_heartbeat_at: screen.last_heartbeat_at,
-        _isNew: screen._isNew,
-        _createdAt: screen._createdAt,
-      })
-      
-      // If screen is online, return online
-      if (screen.is_online) {
-        console.log('DEBUG [getScreenStatus]: Screen is online')
+
+      // Online only when backend says online AND heartbeat is still fresh.
+      if (isScreenEffectivelyOnline(screen)) {
         return 'online'
       }
-      
+
       // Check if screen was created recently (< 1 minute ago) and has no heartbeat
       const createdDateStr = screen._createdAt || screen.created_at
       if (createdDateStr) {
         const createdDate = new Date(createdDateStr)
         const now = new Date()
         const ageMinutes = (now - createdDate) / (1000 * 60)
-        
-        console.log(`DEBUG [getScreenStatus]: Screen age: ${ageMinutes.toFixed(2)} minutes, has heartbeat: ${!!screen.last_heartbeat_at}`)
-        
+
         // If created < 1 minute ago and no heartbeat, show "connecting"
         if (ageMinutes < 1 && !screen.last_heartbeat_at) {
-          console.log('DEBUG [getScreenStatus]: Screen is connecting (new, no heartbeat)')
           return 'connecting'
         }
-      } else {
-        console.log('DEBUG [getScreenStatus]: No created_at or _createdAt found')
       }
-      
-      // Default to offline
-      console.log('DEBUG [getScreenStatus]: Screen is offline')
+
       return 'offline'
     },
   },

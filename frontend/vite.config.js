@@ -212,6 +212,9 @@ function warnIfDockerInternalViteApiBase(mode) {
 export default defineConfig(({ mode }) => {
   warnIfDockerInternalViteApiBase(mode)
   return {
+    // Keep chunk/font URLs same-origin ("/assets/...") in all environments.
+    // This prevents accidental absolute-host asset URLs that can break dynamic imports.
+    base: '/',
     plugins: [documentationDevPlugin(), vue(), seoStaticFilesPlugin()],
     server: {
       host: true,

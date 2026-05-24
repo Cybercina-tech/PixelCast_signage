@@ -263,6 +263,46 @@ def heartbeat_endpoint(request):
         return response
 
 
+@csrf_exempt
+@api_view(['POST', 'OPTIONS'])
+@authentication_classes([])
+@permission_classes([AllowAny])
+def iot_disconnect_endpoint(request):
+    """
+    POST /iot/screens/disconnect/
+
+    Best-effort signal from player when tab/page is closing.
+    Requires X-Device-Token header + screen_id.
+    """
+    from django.http import JsonResponse
+
+    screen, err = authenticate_device_request(request)
+    if err:
+        return err
+
+    try:
+        was_online = bool(screen.is_online)
+        if was_online:
+            screen.mark_offline()
+
+        response = JsonResponse({
+            'status': 'success',
+            'message': 'Disconnect signal received',
+            'screen_id': str(screen.id),
+            'was_online': was_online,
+            'is_online': False,
+        }, status=200)
+        response['Access-Control-Allow-Origin'] = '*'
+        response['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
+        response['Access-Control-Allow-Headers'] = 'Content-Type, X-Device-Token'
+        return response
+    except Exception as e:
+        logger.error(f"Disconnect endpoint error: {e}", exc_info=True)
+        resp = JsonResponse({'error': 'Internal server error', 'message': str(e)}, status=500)
+        resp['Access-Control-Allow-Origin'] = '*'
+        return resp
+
+
 @api_view(['GET'])
 @permission_classes([AllowAny])
 @authentication_classes([])  # Screen-based authentication via auth_token + secret_key

@@ -1,5 +1,5 @@
 <template>
-  <div class="landing-page" :class="{ 'landing-menu-open': sectionMenuOpen }">
+  <div class="landing-page" :class="{ 'landing-menu-open': sectionMenuOpen, 'landing-light': !themeStore.isDarkMode }">
     <!-- Scroll Progress Indicator -->
     <div class="fixed top-0 left-0 right-0 h-1 z-50">
       <div 
@@ -13,7 +13,7 @@
 
     <!-- Top bar: burger (mobile) + logo + auth -->
     <nav class="landing-nav fixed top-0 left-0 right-0 z-40 backdrop-blur-xl bg-black/20 border-b border-white/10 safe-area-pt">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
+      <div class="landing-nav-inner max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
         <div class="flex items-center justify-between gap-2 sm:gap-3 min-h-[2.5rem]">
           <div class="flex items-center gap-2 min-w-0 shrink">
           <!-- Wrapper hides entire control on lg+ so .landing-burger display:inline-flex cannot override lg:hidden -->
@@ -33,16 +33,19 @@
               <span class="landing-burger-bar" aria-hidden="true" />
             </button>
           </div>
+          <div class="shrink-0 lg:hidden">
+            <ThemeToggle />
+          </div>
           <router-link
             to="/"
-            class="flex items-center gap-2 min-w-0 shrink"
+            class="landing-brand flex items-center gap-2 min-w-0 shrink"
           >
-            <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-400 to-purple-600 flex items-center justify-center shrink-0">
-              <svg class="w-[1.125rem] h-[1.125rem] text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div class="landing-brand-mark w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-400 to-purple-600 flex items-center justify-center shrink-0">
+              <svg class="landing-brand-mark-icon w-[1.125rem] h-[1.125rem] text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
               </svg>
             </div>
-            <span class="text-base sm:text-lg font-bold bg-gradient-to-r from-cyan-400 to-purple-500 bg-clip-text text-transparent truncate">
+            <span class="landing-brand-text text-base sm:text-lg font-bold bg-gradient-to-r from-cyan-400 to-purple-500 bg-clip-text text-transparent truncate">
               PixelCast
             </span>
           </router-link>
@@ -51,14 +54,14 @@
           <div class="hidden lg:flex flex-wrap items-center justify-end gap-x-2 gap-y-1 xl:gap-2.5 shrink-0">
             <a
               :href="productDocsUrl"
-              class="px-2 py-1.5 text-xs sm:text-sm text-white/80 hover:text-white transition-colors whitespace-nowrap"
+              class="landing-nav-link px-2 py-1.5 text-xs sm:text-sm text-white/80 hover:text-white transition-colors whitespace-nowrap"
             >
               Docs
             </a>
             <div class="relative group">
               <button
                 type="button"
-                class="inline-flex items-center gap-1 px-2 py-1.5 text-xs sm:text-sm text-white/80 hover:text-white transition-colors whitespace-nowrap"
+                class="landing-nav-link inline-flex items-center gap-1 px-2 py-1.5 text-xs sm:text-sm text-white/80 hover:text-white transition-colors whitespace-nowrap"
                 aria-label="Open blog resources"
               >
                 Blog
@@ -66,35 +69,35 @@
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                 </svg>
               </button>
-              <div class="invisible opacity-0 group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100 absolute right-0 mt-1 w-80 rounded-xl border border-white/15 bg-slate-950/95 backdrop-blur-xl p-3 shadow-2xl transition-all duration-150">
+              <div class="landing-nav-dropdown invisible opacity-0 group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100 absolute right-0 mt-1 w-80 rounded-xl backdrop-blur-xl p-3 transition-all duration-150">
                 <router-link
                   to="/blog"
-                  class="block rounded-md px-2 py-1.5 text-sm font-semibold text-cyan-300 hover:bg-white/5 hover:text-cyan-200"
+                  class="landing-nav-dropdown-item landing-nav-dropdown-item-primary block rounded-md px-2 py-1.5 text-sm font-semibold"
                 >
                   Blog
                 </router-link>
-                <p class="px-2 pt-2 pb-1 text-[11px] uppercase tracking-wide text-white/40">Guides & Solutions</p>
+                <p class="landing-nav-dropdown-label px-2 pt-2 pb-1 text-[11px] uppercase tracking-wide">Guides & Solutions</p>
                 <router-link
                   to="/guides/turn-smart-tv-into-digital-signboard"
-                  class="block rounded-md px-2 py-1.5 text-sm text-white/80 hover:bg-white/5 hover:text-white"
+                  class="landing-nav-dropdown-item block rounded-md px-2 py-1.5 text-sm"
                 >
                   Guide: Smart TV signboard setup
                 </router-link>
                 <router-link
                   to="/solutions/browser-based-digital-signage-software"
-                  class="block rounded-md px-2 py-1.5 text-sm text-white/80 hover:bg-white/5 hover:text-white"
+                  class="landing-nav-dropdown-item block rounded-md px-2 py-1.5 text-sm"
                 >
                   Solution: Browser-based digital signage
                 </router-link>
                 <router-link
                   to="/solutions/free-digital-signage-menu-boards"
-                  class="block rounded-md px-2 py-1.5 text-sm text-white/80 hover:bg-white/5 hover:text-white"
+                  class="landing-nav-dropdown-item block rounded-md px-2 py-1.5 text-sm"
                 >
                   Solution: Free menu board signage
                 </router-link>
                 <router-link
                   to="/solutions/cloud-digital-signage-tv-browser"
-                  class="block rounded-md px-2 py-1.5 text-sm text-white/80 hover:bg-white/5 hover:text-white"
+                  class="landing-nav-dropdown-item block rounded-md px-2 py-1.5 text-sm"
                 >
                   Solution: Cloud TV browser signage
                 </router-link>
@@ -102,7 +105,7 @@
             </div>
             <router-link
               to="/pricing"
-              class="px-2 py-1.5 text-xs sm:text-sm text-white/80 hover:text-white transition-colors whitespace-nowrap"
+              class="landing-nav-link px-2 py-1.5 text-xs sm:text-sm text-white/80 hover:text-white transition-colors whitespace-nowrap"
             >
               Pricing
             </router-link>
@@ -111,14 +114,14 @@
               :href="codecanyonItemUrl"
               target="_blank"
               rel="noopener noreferrer"
-              class="px-2 py-1.5 text-xs sm:text-sm text-white/80 hover:text-white transition-colors whitespace-nowrap"
+              class="landing-nav-link px-2 py-1.5 text-xs sm:text-sm text-white/80 hover:text-white transition-colors whitespace-nowrap"
             >
               CodeCanyon
             </a>
             <template v-if="isInstalled">
               <router-link
                 to="/login"
-                class="px-2 py-1.5 text-xs sm:text-sm text-white/80 hover:text-white transition-colors"
+                class="landing-nav-link px-2 py-1.5 text-xs sm:text-sm text-white/80 hover:text-white transition-colors"
               >
                 Login
               </router-link>
@@ -137,6 +140,7 @@
                 Install
               </router-link>
             </template>
+            <ThemeToggle />
           </div>
         </div>
       </div>
@@ -391,45 +395,22 @@
                     <div
                       class="hero-device glass-card rounded-2xl p-3 lg:p-4 shadow-2xl transform rotate-y-12 border border-white/15"
                     >
-                      <div
-                        class="hero-device-display relative overflow-hidden rounded-xl border border-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]"
-                      >
-                        <div
-                          class="relative aspect-[4/3] bg-gradient-to-br from-[#0c0828] via-[#1e1b4b] to-[#5b21b6] p-4 lg:p-5"
-                        >
-                          <div
-                            class="pointer-events-none absolute inset-0 bg-gradient-to-tr from-transparent via-white/[0.04] to-transparent"
-                            aria-hidden="true"
-                          ></div>
-                          <div
-                            class="pointer-events-none absolute inset-0 backdrop-blur-[1px] bg-white/[0.02]"
-                            aria-hidden="true"
-                          ></div>
-                          <div
-                            class="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-indigo-950/20"
-                            aria-hidden="true"
-                          ></div>
+                      <div class="hero-device-display relative overflow-hidden rounded-xl border border-white/10">
+                        <div class="hero-device-canvas relative aspect-[4/3] p-4 lg:p-5">
+                          <div class="hero-device-gloss pointer-events-none absolute inset-0" aria-hidden="true"></div>
+                          <div class="hero-device-haze pointer-events-none absolute inset-0" aria-hidden="true"></div>
+                          <div class="hero-device-vignette pointer-events-none absolute inset-0" aria-hidden="true"></div>
                           <div class="relative z-10 flex h-full min-h-[11rem] flex-col lg:min-h-[14rem]">
                             <div class="mb-4 flex items-center justify-between">
-                              <div class="h-2 w-20 rounded-full bg-white/25 lg:w-28"></div>
-                              <div
-                                class="h-2.5 w-2.5 animate-pulse rounded-full bg-cyan-400/90 shadow-[0_0_10px_rgba(34,211,238,0.55)]"
-                              ></div>
+                              <div class="hero-device-status-bar h-2 w-20 rounded-full lg:w-28"></div>
+                              <div class="hero-device-status-dot h-2.5 w-2.5 animate-pulse rounded-full"></div>
                             </div>
                             <div class="mb-4 grid flex-1 grid-cols-3 gap-2">
-                              <div
-                                class="rounded-lg border border-white/10 bg-white/[0.06] backdrop-blur-sm"
-                              ></div>
-                              <div
-                                class="rounded-lg border border-white/10 bg-white/[0.06] backdrop-blur-sm"
-                              ></div>
-                              <div
-                                class="rounded-lg border border-white/10 bg-white/[0.06] backdrop-blur-sm"
-                              ></div>
+                              <div class="hero-device-tile rounded-lg"></div>
+                              <div class="hero-device-tile rounded-lg"></div>
+                              <div class="hero-device-tile rounded-lg"></div>
                             </div>
-                            <div
-                              class="h-16 rounded-lg border border-cyan-400/20 bg-gradient-to-r from-cyan-500/15 via-violet-500/10 to-purple-500/20 lg:h-20"
-                            ></div>
+                            <div class="hero-device-footer h-16 rounded-lg lg:h-20"></div>
                           </div>
                         </div>
                       </div>
@@ -447,7 +428,7 @@
         <div class="section-content py-6 sm:py-8 lg:py-10">
           <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full section-fade-in">
             <div
-              class="glass-card rounded-2xl border border-cyan-400/30 bg-gradient-to-br from-cyan-500/10 via-slate-900/50 to-slate-950/80 p-5 sm:p-6 lg:p-8"
+              class="glass-card landing-panel-strong rounded-2xl border border-cyan-400/30 bg-gradient-to-br from-cyan-500/10 via-slate-900/50 to-slate-950/80 p-5 sm:p-6 lg:p-8"
             >
               <div class="flex flex-col lg:flex-row lg:items-center gap-6 lg:gap-10">
                 <div class="flex gap-4 min-w-0 flex-1">
@@ -482,7 +463,7 @@
                     class="rounded-xl border border-white/15 bg-black/35 px-3 py-2.5 flex items-center gap-2 min-w-0"
                   >
                     <code
-                      class="flex-1 min-w-0 text-xs sm:text-sm text-cyan-100/95 font-mono break-all leading-relaxed select-all"
+                      class="landing-connect-url flex-1 min-w-0 text-xs sm:text-sm text-cyan-100/95 font-mono break-all leading-relaxed select-all"
                     >
                       {{ playerConnectUrl }}
                     </code>
@@ -506,9 +487,12 @@
                   <p class="text-xs text-white/50 text-center sm:text-left">
                     Setting up from your phone? Copy the link, then open it on the TV browser.
                   </p>
-                  <p class="text-xs text-cyan-200/85 text-center sm:text-left">
+                  <p class="text-xs text-on-starfield-muted text-center sm:text-left">
                     Need a full walkthrough?
-                    <router-link class="underline underline-offset-2 hover:text-cyan-100" to="/guides/turn-smart-tv-into-digital-signboard">
+                    <router-link
+                      class="underline underline-offset-2 text-cyan-300 hover:text-cyan-200"
+                      to="/guides/turn-smart-tv-into-digital-signboard"
+                    >
                       Read the Smart TV digital signboard guide.
                     </router-link>
                   </p>
@@ -527,7 +511,7 @@
         <div class="section-content">
           <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
             <div
-              class="glass-card rounded-2xl p-6 lg:p-10 border border-amber-500/20 bg-gradient-to-br from-amber-500/10 via-slate-900/40 to-slate-950/60 section-fade-in"
+              class="glass-card landing-panel-strong rounded-2xl p-6 lg:p-10 border border-amber-500/20 bg-gradient-to-br from-amber-500/10 via-slate-900/40 to-slate-950/60 section-fade-in"
             >
               <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
                 <div class="max-w-2xl space-y-3">
@@ -660,7 +644,7 @@
                     <span class="text-white font-semibold">{{ screen.content }}</span>
                   </div>
                 </div>
-                <div class="mt-4 h-2 bg-slate-700/50 rounded-full overflow-hidden">
+                <div class="landing-progress-track mt-4 h-2 bg-slate-700/50 rounded-full overflow-hidden">
                   <div 
                     class="h-full bg-gradient-to-r from-cyan-400 to-purple-500 rounded-full transition-all duration-1000"
                     :style="{ width: screen.status === 'Online' ? '100%' : '0%' }"
@@ -800,7 +784,7 @@
                   </ul>
                 </div>
                 <div class="relative">
-                  <div class="glass-card p-4 lg:p-6 rounded-xl bg-gradient-to-br from-slate-800/50 to-slate-900/50">
+                  <div class="glass-card landing-industry-preview p-4 lg:p-6 rounded-xl bg-gradient-to-br from-slate-800/50 to-slate-900/50">
                     <div class="aspect-video rounded-lg overflow-hidden bg-gradient-to-br from-cyan-500/20 to-purple-500/20 flex items-center justify-center">
                       <div class="text-center">
                         <svg class="w-16 lg:w-24 h-16 lg:h-24 mx-auto text-cyan-400/50 mb-3 lg:mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -871,7 +855,7 @@
                   v-for="p in latestPosts"
                   :key="p.id"
                   :to="{ name: 'blog-post', params: { slug: p.slug } }"
-                  class="group rounded-xl border border-white/10 bg-white/5 hover:border-cyan-400/30 hover:bg-white/10 transition-colors p-4 flex flex-col min-h-[7rem]"
+                  class="landing-blog-card group rounded-xl border border-white/10 bg-white/5 hover:border-cyan-400/30 hover:bg-white/10 transition-colors p-4 flex flex-col min-h-[7rem]"
                 >
                   <time v-if="p.published_at" class="text-[11px] text-white/45">{{ formatBlogDate(p.published_at) }}</time>
                   <h3 class="mt-2 text-base font-semibold text-white group-hover:text-cyan-100 line-clamp-2">{{ p.title }}</h3>
@@ -951,8 +935,11 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { setupAPI, publicAPI } from '@/services/api'
 import { pushCtaClick } from '@/analytics/dataLayer'
+import { useThemeStore } from '@/stores/theme'
+import ThemeToggle from '@/components/common/ThemeToggle.vue'
 
 const router = useRouter()
+const themeStore = useThemeStore()
 
 function trackLandingCta(ctaId, label) {
   pushCtaClick(ctaId, label, { page: 'landing' })
@@ -1231,33 +1218,191 @@ onUnmounted(() => {
   min-height: 100dvh;
   height: 100dvh;
   overflow: hidden;
-  /* Landing is intentionally always-light, independent from global app theme. */
+  --text-body: #e2e8f0;
+  --text-main: #f1f5f9;
+  --text-heading: #ffffff;
+  --text-muted: #cbd5e1;
+  --accent-color: #22d3ee;
+  color: var(--text-body);
+  color-scheme: dark;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 45%, #0f172a 100%);
+  background-size: 400% 400%;
+  animation: gradientShift 15s ease infinite;
+}
+
+.landing-nav {
+  background: rgba(15, 23, 42, 0.85);
+  border-color: rgba(148, 163, 184, 0.14);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.landing-nav-inner {
+  border-radius: 0.95rem;
+}
+
+.landing-brand {
+  border-radius: 0.75rem;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.landing-brand-mark {
+  box-shadow: 0 8px 18px rgba(14, 165, 233, 0.28), 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.landing-brand-mark-icon {
+  filter: drop-shadow(0 1px 1px rgba(2, 6, 23, 0.35));
+}
+
+.landing-brand-text {
+  letter-spacing: 0.01em;
+}
+
+.landing-nav-link {
+  border-radius: 0.55rem;
+}
+
+.landing-nav-dropdown {
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-color: rgba(148, 163, 184, 0.2);
+  background: rgba(2, 6, 23, 0.92);
+  box-shadow: 0 18px 34px rgba(2, 6, 23, 0.45);
+}
+
+.landing-nav-dropdown-label {
+  color: rgba(148, 163, 184, 0.72);
+}
+
+.landing-nav-dropdown-item {
+  border-radius: 0.55rem;
+  color: rgba(226, 232, 240, 0.9);
+}
+
+.landing-nav-dropdown-item:hover {
+  color: #ffffff;
+  background: rgba(148, 163, 184, 0.14);
+}
+
+.landing-nav-dropdown-item-primary {
+  color: #22d3ee;
+}
+
+.landing-nav-dropdown-item-primary:hover {
+  color: #67e8f9;
+}
+
+.landing-nav a,
+.landing-nav button {
+  color: #f1f5f9;
+}
+
+.landing-nav a:hover,
+.landing-nav button:hover {
+  color: #ffffff;
+}
+
+.landing-burger {
+  border-color: rgba(148, 163, 184, 0.24);
+  background: rgba(15, 23, 42, 0.78);
+  color: #f1f5f9;
+}
+
+.landing-page.landing-light {
   --text-body: #334155;
   --text-main: #1e293b;
   --text-heading: #0f172a;
   --text-muted: #64748b;
+  --accent-color: #2563eb;
   color: var(--text-body);
   color-scheme: light;
   background: linear-gradient(135deg, #f8fafc 0%, #eef2ff 42%, #e2e8f0 100%);
   animation: none;
 }
 
-.landing-nav {
-  background: rgba(255, 255, 255, 0.85);
-  border-color: rgba(15, 23, 42, 0.08);
+.landing-page.landing-light .landing-nav {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.92) 0%, rgba(248, 250, 252, 0.86) 100%);
+  border-color: rgba(148, 163, 184, 0.28);
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.08);
 }
 
-.landing-nav a,
-.landing-nav button {
-  color: #334155;
+.landing-nav :deep(button.bg-card) {
+  background: rgba(15, 23, 42, 0.74);
+  border-color: rgba(148, 163, 184, 0.24);
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
 }
 
-.landing-nav a:hover,
-.landing-nav button:hover {
+.landing-page.landing-light .landing-nav :deep(button.bg-card) {
+  background: rgba(255, 255, 255, 0.92);
+  border-color: rgba(15, 23, 42, 0.14);
+}
+
+.landing-page.landing-light .landing-nav a,
+.landing-page.landing-light .landing-nav button {
+  color: #475569;
+}
+
+.landing-page.landing-light .landing-nav a:hover,
+.landing-page.landing-light .landing-nav button:hover {
   color: #0f172a;
 }
 
-.landing-burger {
+.landing-page.landing-light .landing-brand:hover {
+  transform: translateY(-1px);
+}
+
+.landing-page.landing-light .landing-brand-mark {
+  background: linear-gradient(140deg, #dbeafe 0%, #bfdbfe 45%, #ddd6fe 100%);
+  border: 1px solid rgba(99, 102, 241, 0.28);
+  box-shadow: 0 8px 20px rgba(99, 102, 241, 0.2), 0 1px 0 rgba(255, 255, 255, 0.8) inset;
+}
+
+.landing-page.landing-light .landing-brand-mark-icon {
+  color: #1e40af;
+  filter: none;
+}
+
+.landing-page.landing-light .landing-brand-text {
+  background-image: linear-gradient(90deg, #0284c7 0%, #4f46e5 100%);
+}
+
+.landing-page.landing-light .landing-nav-link {
+  color: #475569 !important;
+}
+
+.landing-page.landing-light .landing-nav-link:hover {
+  color: #0f172a !important;
+  background: rgba(148, 163, 184, 0.14);
+}
+
+.landing-page.landing-light .landing-nav-dropdown {
+  border-color: rgba(148, 163, 184, 0.32);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 14px 28px rgba(15, 23, 42, 0.12);
+}
+
+.landing-page.landing-light .landing-nav-dropdown-label {
+  color: #64748b;
+}
+
+.landing-page.landing-light .landing-nav-dropdown-item {
+  color: #334155 !important;
+}
+
+.landing-page.landing-light .landing-nav-dropdown-item:hover {
+  color: #0f172a !important;
+  background: rgba(148, 163, 184, 0.14) !important;
+}
+
+.landing-page.landing-light .landing-nav-dropdown-item-primary {
+  color: #0284c7;
+}
+
+.landing-page.landing-light .landing-nav-dropdown-item-primary:hover {
+  color: #0369a1;
+}
+
+.landing-page.landing-light .landing-burger {
   border-color: rgba(15, 23, 42, 0.16);
   background: rgba(255, 255, 255, 0.9);
   color: #334155;
@@ -1281,13 +1426,24 @@ onUnmounted(() => {
   width: 2.5rem;
   height: 2.5rem;
   border-radius: 0.625rem;
-  border: 1px solid rgba(15, 23, 42, 0.16);
-  background: rgba(255, 255, 255, 0.9);
-  color: #334155;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  background: rgba(15, 23, 42, 0.78);
+  color: #f1f5f9;
   transition: background 0.2s ease, border-color 0.2s ease;
 }
 
 .landing-burger:hover {
+  background: rgba(30, 41, 59, 0.92);
+  border-color: rgba(148, 163, 184, 0.34);
+}
+
+.landing-page.landing-light .landing-burger {
+  border: 1px solid rgba(15, 23, 42, 0.16);
+  background: rgba(255, 255, 255, 0.9);
+  color: #334155;
+}
+
+.landing-page.landing-light .landing-burger:hover {
   background: rgba(255, 255, 255, 1);
   border-color: rgba(15, 23, 42, 0.22);
 }
@@ -1360,16 +1516,30 @@ onUnmounted(() => {
 }
 
 .landing-section-drawer {
+  border-left-color: rgba(148, 163, 184, 0.18) !important;
+  background: rgba(15, 23, 42, 0.94) !important;
+  box-shadow: -8px 0 30px rgba(2, 6, 23, 0.5) !important;
+}
+
+.landing-section-drawer .border-b {
+  border-bottom-color: rgba(148, 163, 184, 0.18) !important;
+}
+
+.landing-menu-backdrop {
+  background: rgba(2, 6, 23, 0.5) !important;
+}
+
+.landing-page.landing-light .landing-section-drawer {
   border-left-color: rgba(15, 23, 42, 0.1) !important;
   background: rgba(255, 255, 255, 0.94) !important;
   box-shadow: -8px 0 30px rgba(15, 23, 42, 0.12) !important;
 }
 
-.landing-section-drawer .border-b {
+.landing-page.landing-light .landing-section-drawer .border-b {
   border-bottom-color: rgba(15, 23, 42, 0.1) !important;
 }
 
-.landing-menu-backdrop {
+.landing-page.landing-light .landing-menu-backdrop {
   background: rgba(15, 23, 42, 0.22) !important;
 }
 
@@ -1474,7 +1644,7 @@ onUnmounted(() => {
 
 /* Starfield Background */
 .starfield-background {
-  background: radial-gradient(ellipse at top, #ffffff 0%, #f8fafc 45%, #eef2ff 100%);
+  background: radial-gradient(ellipse at top, #1e293b 0%, #0f172a 45%, #020617 100%);
   overflow: hidden;
 }
 
@@ -1486,15 +1656,30 @@ onUnmounted(() => {
   width: 100%;
   height: 100%;
   background-image: 
+    radial-gradient(2px 2px at 20% 30%, rgba(56, 189, 248, 0.3), transparent),
+    radial-gradient(2px 2px at 60% 70%, rgba(139, 92, 246, 0.22), transparent),
+    radial-gradient(1px 1px at 50% 50%, rgba(59, 130, 246, 0.3), transparent),
+    radial-gradient(1px 1px at 80% 10%, rgba(236, 72, 153, 0.2), transparent),
+    radial-gradient(2px 2px at 30% 80%, rgba(16, 185, 129, 0.22), transparent),
+    radial-gradient(1px 1px at 90% 40%, rgba(168, 85, 247, 0.2), transparent);
+  background-repeat: repeat;
+  background-size: 200% 200%;
+  animation: starfield 24s linear infinite;
+  opacity: 0.65;
+}
+
+.landing-page.landing-light .starfield-background {
+  background: radial-gradient(ellipse at top, #ffffff 0%, #f8fafc 45%, #eef2ff 100%);
+}
+
+.landing-page.landing-light .starfield-background::before {
+  background-image: 
     radial-gradient(2px 2px at 20% 30%, rgba(37, 99, 235, 0.12), transparent),
     radial-gradient(2px 2px at 60% 70%, rgba(99, 102, 241, 0.11), transparent),
     radial-gradient(1px 1px at 50% 50%, rgba(37, 99, 235, 0.1), transparent),
     radial-gradient(1px 1px at 80% 10%, rgba(139, 92, 246, 0.11), transparent),
     radial-gradient(2px 2px at 30% 80%, rgba(59, 130, 246, 0.12), transparent),
     radial-gradient(1px 1px at 90% 40%, rgba(79, 70, 229, 0.1), transparent);
-  background-repeat: repeat;
-  background-size: 200% 200%;
-  animation: starfield 24s linear infinite;
   opacity: 0.45;
 }
 
@@ -1509,11 +1694,74 @@ onUnmounted(() => {
  * (e.g. full viewport vs DevTools docked).
  */
 .glass-card {
-  background: rgba(255, 255, 255, 0.9);
-  border: 1px solid rgba(15, 23, 42, 0.1);
+  background: rgba(15, 23, 42, 0.78);
+  border: 1px solid rgba(148, 163, 184, 0.16);
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
+  box-shadow: 0 12px 28px rgba(2, 6, 23, 0.35), 0 2px 8px rgba(2, 6, 23, 0.25);
+}
+
+.landing-page.landing-light .glass-card {
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(15, 23, 42, 0.1);
   box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08), 0 2px 6px rgba(15, 23, 42, 0.05);
+}
+
+.landing-panel-strong {
+  box-shadow: 0 16px 36px rgba(2, 6, 23, 0.35), 0 3px 10px rgba(2, 6, 23, 0.25);
+}
+
+.landing-page.landing-light .landing-panel-strong {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.96) 0%, rgba(248, 250, 252, 0.94) 56%, rgba(238, 242, 255, 0.92) 100%) !important;
+  border-color: rgba(37, 99, 235, 0.16) !important;
+  box-shadow: 0 16px 34px rgba(15, 23, 42, 0.1), 0 3px 8px rgba(15, 23, 42, 0.05);
+}
+
+.landing-connect-url {
+  color: #e0f2fe;
+}
+
+.landing-page.landing-light .landing-connect-url {
+  color: #0f172a;
+}
+
+.landing-progress-track {
+  background: rgba(148, 163, 184, 0.34);
+}
+
+.landing-page.landing-light .landing-progress-track {
+  background: rgba(148, 163, 184, 0.28) !important;
+}
+
+.landing-industry-preview {
+  border-color: rgba(148, 163, 184, 0.24);
+}
+
+.landing-page.landing-light .landing-industry-preview {
+  background: linear-gradient(135deg, rgba(248, 250, 252, 0.92), rgba(226, 232, 240, 0.8)) !important;
+  border-color: rgba(148, 163, 184, 0.22);
+}
+
+.landing-blog-card {
+  transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.landing-page.landing-light .landing-blog-card {
+  background: rgba(255, 255, 255, 0.82) !important;
+}
+
+.landing-page.landing-light .landing-blog-card:hover {
+  box-shadow: 0 10px 22px rgba(37, 99, 235, 0.12);
+}
+
+.landing-footer {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.landing-page.landing-light .landing-footer {
+  background: rgba(255, 255, 255, 0.86) !important;
+  border-color: rgba(15, 23, 42, 0.1) !important;
 }
 
 /* Neon Buttons */
@@ -1545,15 +1793,15 @@ onUnmounted(() => {
 
 /* Hero CTAs: body/link inherit would otherwise use --text-body (dark in light mode). */
 .hero-cta-grid .hero-cta-btn {
-  color: var(--text-heading) !important;
-  -webkit-text-fill-color: var(--text-heading);
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff;
 }
 
 .hero-cta-grid .hero-cta-btn:hover,
 .hero-cta-grid .hero-cta-btn:visited,
 .hero-cta-grid .hero-cta-btn:active {
-  color: var(--text-heading) !important;
-  -webkit-text-fill-color: var(--text-heading);
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff;
 }
 
 .hero-cta-grid .hero-cta-btn.neon-button-large,
@@ -1598,6 +1846,105 @@ onUnmounted(() => {
   box-shadow:
     0 25px 50px -12px rgba(0, 0, 0, 0.45),
     0 0 0 1px rgba(255, 255, 255, 0.06) inset;
+}
+
+.hero-device-display {
+  border-color: rgba(148, 163, 184, 0.24);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+.hero-device-canvas {
+  background: linear-gradient(140deg, #0c0828 0%, #1e1b4b 52%, #5b21b6 100%);
+}
+
+.hero-device-gloss {
+  background: linear-gradient(to top right, transparent, rgba(255, 255, 255, 0.05), transparent);
+}
+
+.hero-device-haze {
+  background: rgba(255, 255, 255, 0.02);
+  backdrop-filter: blur(1px);
+}
+
+.hero-device-vignette {
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.28), transparent, rgba(49, 46, 129, 0.2));
+}
+
+.hero-device-status-bar {
+  background: rgba(255, 255, 255, 0.26);
+}
+
+.hero-device-status-dot {
+  background: rgba(34, 211, 238, 0.9);
+  box-shadow: 0 0 10px rgba(34, 211, 238, 0.55);
+}
+
+.hero-device-tile {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(4px);
+}
+
+.hero-device-footer {
+  border: 1px solid rgba(34, 211, 238, 0.22);
+  background: linear-gradient(
+    to right,
+    rgba(6, 182, 212, 0.18),
+    rgba(139, 92, 246, 0.14),
+    rgba(147, 51, 234, 0.2)
+  );
+}
+
+.landing-page.landing-light .hero-device {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.94) 0%, rgba(248, 250, 252, 0.98) 100%);
+  box-shadow:
+    0 24px 44px -14px rgba(15, 23, 42, 0.24),
+    0 0 0 1px rgba(148, 163, 184, 0.24) inset;
+}
+
+.landing-page.landing-light .hero-device-display {
+  border-color: rgba(148, 163, 184, 0.28);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.78);
+}
+
+.landing-page.landing-light .hero-device-canvas {
+  background: linear-gradient(145deg, #eff6ff 0%, #e0e7ff 50%, #ede9fe 100%);
+}
+
+.landing-page.landing-light .hero-device-gloss {
+  background: linear-gradient(to top right, rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0.08), transparent);
+}
+
+.landing-page.landing-light .hero-device-haze {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.landing-page.landing-light .hero-device-vignette {
+  background: linear-gradient(to top, rgba(15, 23, 42, 0.08), transparent, rgba(99, 102, 241, 0.08));
+}
+
+.landing-page.landing-light .hero-device-status-bar {
+  background: rgba(99, 102, 241, 0.32);
+}
+
+.landing-page.landing-light .hero-device-status-dot {
+  background: rgba(14, 165, 233, 0.92);
+  box-shadow: 0 0 10px rgba(14, 165, 233, 0.45);
+}
+
+.landing-page.landing-light .hero-device-tile {
+  border-color: rgba(99, 102, 241, 0.2);
+  background: rgba(255, 255, 255, 0.65);
+}
+
+.landing-page.landing-light .hero-device-footer {
+  border-color: rgba(14, 165, 233, 0.3);
+  background: linear-gradient(
+    to right,
+    rgba(14, 165, 233, 0.18),
+    rgba(99, 102, 241, 0.16),
+    rgba(139, 92, 246, 0.2)
+  );
 }
 
 /* Fade-in animations */
@@ -1660,94 +2007,116 @@ onUnmounted(() => {
   border-radius: 4px;
 }
 
-/* ===== Landing always-light contrast normalization ===== */
-.landing-page :deep(.text-white),
-.landing-page :deep([class*="!text-white"]) {
+/* ===== Landing light-mode contrast normalization ===== */
+.landing-page.landing-light :deep(.text-white),
+.landing-page.landing-light :deep([class*="!text-white"]) {
   color: var(--text-heading) !important;
   -webkit-text-fill-color: var(--text-heading) !important;
 }
 
-.landing-page :deep(.text-white\/90),
-.landing-page :deep(.text-white\/80),
-.landing-page :deep(.text-white\/70),
-.landing-page :deep(.text-white\/60),
-.landing-page :deep(.text-white\/55),
-.landing-page :deep(.text-white\/50),
-.landing-page :deep(.text-white\/45),
-.landing-page :deep(.text-white\/40) {
+.landing-page.landing-light :deep(.text-white\/90),
+.landing-page.landing-light :deep(.text-white\/80),
+.landing-page.landing-light :deep(.text-white\/70),
+.landing-page.landing-light :deep(.text-white\/60),
+.landing-page.landing-light :deep(.text-white\/55),
+.landing-page.landing-light :deep(.text-white\/50),
+.landing-page.landing-light :deep(.text-white\/45),
+.landing-page.landing-light :deep(.text-white\/40) {
   color: var(--text-muted) !important;
   -webkit-text-fill-color: var(--text-muted) !important;
 }
 
-.landing-page :deep(.text-cyan-300),
-.landing-page :deep(.text-cyan-200),
-.landing-page :deep(.hover\:text-cyan-200:hover),
-.landing-page :deep(.text-indigo-300),
-.landing-page :deep(.text-indigo-200),
-.landing-page :deep(.text-emerald-300),
-.landing-page :deep(.text-amber-300) {
+.landing-page.landing-light :deep(.text-cyan-300),
+.landing-page.landing-light :deep(.text-cyan-200),
+.landing-page.landing-light :deep(.text-cyan-300\/90),
+.landing-page.landing-light :deep(.text-cyan-400),
+.landing-page.landing-light :deep(.text-cyan-400\/90),
+.landing-page.landing-light :deep(.hover\:text-cyan-200:hover),
+.landing-page.landing-light :deep(.hover\:text-cyan-300:hover),
+.landing-page.landing-light :deep(.group:hover .group-hover\:text-cyan-100),
+.landing-page.landing-light :deep(.text-indigo-300),
+.landing-page.landing-light :deep(.text-indigo-200),
+.landing-page.landing-light :deep(.text-indigo-400),
+.landing-page.landing-light :deep(.text-emerald-300),
+.landing-page.landing-light :deep(.text-emerald-400\/90),
+.landing-page.landing-light :deep(.text-amber-300),
+.landing-page.landing-light :deep(.text-amber-300\/90) {
   color: var(--accent-color) !important;
   -webkit-text-fill-color: var(--accent-color) !important;
 }
 
-.landing-page :deep(.border-white\/10),
-.landing-page :deep(.border-white\/15),
-.landing-page :deep(.border-white\/20),
-.landing-page :deep(.hover\:border-white\/40:hover) {
+.landing-page.landing-light :deep(.border-white\/10),
+.landing-page.landing-light :deep(.border-white\/15),
+.landing-page.landing-light :deep(.border-white\/20),
+.landing-page.landing-light :deep(.border-cyan-400\/30),
+.landing-page.landing-light :deep(.border-amber-500\/20),
+.landing-page.landing-light :deep(.border-emerald-500\/25),
+.landing-page.landing-light :deep(.hover\:border-white\/40:hover) {
   border-color: rgba(15, 23, 42, 0.14) !important;
 }
 
-.landing-page :deep(.bg-black\/35),
-.landing-page :deep(.bg-black\/40),
-.landing-page :deep(.bg-slate-900\/40),
-.landing-page :deep(.bg-slate-900\/50),
-.landing-page :deep(.bg-slate-950\/60),
-.landing-page :deep(.bg-slate-950\/80) {
+.landing-page.landing-light :deep(.hover\:border-cyan-400\/40:hover),
+.landing-page.landing-light :deep(.hover\:border-cyan-400\/30:hover) {
+  border-color: rgba(37, 99, 235, 0.34) !important;
+}
+
+.landing-page.landing-light :deep(.bg-black\/35),
+.landing-page.landing-light :deep(.bg-black\/40),
+.landing-page.landing-light :deep(.bg-black\/20),
+.landing-page.landing-light :deep(.bg-slate-900\/40),
+.landing-page.landing-light :deep(.bg-slate-900\/50),
+.landing-page.landing-light :deep(.bg-slate-950\/92),
+.landing-page.landing-light :deep(.bg-slate-950\/95),
+.landing-page.landing-light :deep(.bg-slate-950\/60),
+.landing-page.landing-light :deep(.bg-slate-950\/80) {
   background: rgba(255, 255, 255, 0.78) !important;
 }
 
-.landing-page :deep(.bg-white\/5),
-.landing-page :deep(.bg-white\/10) {
+.landing-page.landing-light :deep(.bg-white\/5),
+.landing-page.landing-light :deep(.bg-white\/10),
+.landing-page.landing-light :deep(.bg-cyan-500\/10),
+.landing-page.landing-light :deep(.bg-emerald-500\/5),
+.landing-page.landing-light :deep(.bg-slate-700\/50) {
   background: rgba(15, 23, 42, 0.05) !important;
 }
 
-.landing-page :deep(.hover\:bg-white\/5:hover),
-.landing-page :deep(.hover\:bg-white\/10:hover) {
+.landing-page.landing-light :deep(.hover\:bg-white\/5:hover),
+.landing-page.landing-light :deep(.hover\:bg-white\/10:hover) {
   background: rgba(15, 23, 42, 0.08) !important;
 }
 
-.landing-page :deep(.text-on-starfield),
-.landing-page :deep([class*="!text-on-starfield"]) {
+.landing-page.landing-light :deep(.text-on-starfield),
+.landing-page.landing-light :deep([class*="!text-on-starfield"]) {
   color: var(--text-body) !important;
   -webkit-text-fill-color: var(--text-body) !important;
 }
 
-.landing-page :deep(.text-on-starfield-muted) {
+.landing-page.landing-light :deep(.text-on-starfield-muted) {
   color: var(--text-muted) !important;
   -webkit-text-fill-color: var(--text-muted) !important;
 }
 
-.landing-page :deep(.hero-cta-btn.neon-button),
-.landing-page :deep(.hero-cta-btn.neon-button-large),
-.landing-page :deep(.landing-drawer-cta),
-.landing-page :deep(.neon-button),
-.landing-page :deep(.neon-button-large) {
+.landing-page.landing-light :deep(.hero-cta-btn.neon-button),
+.landing-page.landing-light :deep(.hero-cta-btn.neon-button-large),
+.landing-page.landing-light :deep(.landing-drawer-cta),
+.landing-page.landing-light :deep(.neon-button),
+.landing-page.landing-light :deep(.neon-button-large) {
   color: #fff !important;
   -webkit-text-fill-color: #fff !important;
 }
 
-.landing-page :deep(.hero-cta-btn.glass-card) {
+.landing-page.landing-light :deep(.hero-cta-btn.glass-card) {
   color: var(--text-heading) !important;
   -webkit-text-fill-color: var(--text-heading) !important;
 }
 
-.landing-page :deep(.cursor-not-allowed.bg-white\/10) {
+.landing-page.landing-light :deep(.cursor-not-allowed.bg-white\/10) {
   background: rgba(15, 23, 42, 0.07) !important;
   color: #94a3b8 !important;
 }
 
-.landing-page :deep(a:focus-visible),
-.landing-page :deep(button:focus-visible) {
+.landing-page.landing-light :deep(a:focus-visible),
+.landing-page.landing-light :deep(button:focus-visible) {
   outline: none;
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.28);
   border-radius: 0.5rem;

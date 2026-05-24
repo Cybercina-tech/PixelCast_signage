@@ -181,6 +181,29 @@ class DeviceAuthEndpointTests(TestCase):
         )
         self.assertEqual(resp.status_code, 200)
 
+    def test_disconnect_marks_online_screen_offline(self):
+        self.screen.is_online = True
+        self.screen.save(update_fields=['is_online'])
+
+        resp = self.client.post(
+            '/iot/screens/disconnect/',
+            data=json.dumps({'screen_id': str(self.screen.id)}),
+            content_type='application/json',
+            **self._auth_headers(),
+        )
+
+        self.assertEqual(resp.status_code, 200)
+        self.screen.refresh_from_db()
+        self.assertFalse(self.screen.is_online)
+
+    def test_disconnect_without_token_rejected(self):
+        resp = self.client.post(
+            '/iot/screens/disconnect/',
+            data=json.dumps({'screen_id': str(self.screen.id)}),
+            content_type='application/json',
+        )
+        self.assertEqual(resp.status_code, 401)
+
     def test_heartbeat_without_token_rejected(self):
         resp = self.client.post(
             '/iot/screens/heartbeat/',

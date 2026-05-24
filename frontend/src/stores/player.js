@@ -331,6 +331,23 @@ export const usePlayerStore = defineStore('player', {
       }
     },
 
+    async sendDisconnectSignal(options = {}) {
+      const { force = false } = options
+      if (!this.hasDeviceIdentity(this.activeScreenId)) return
+
+      // Do not mark device offline on internal route changes unless explicitly forced.
+      if (!force && typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        return
+      }
+
+      try {
+        this.loadDeviceIdentity(this.activeScreenId)
+        await playerAPI.sendDisconnectSignal()
+      } catch (_) {
+        // Best-effort only.
+      }
+    },
+
     startConnectionLossMonitoring() {
       if (this.connectionLostTimer) clearTimeout(this.connectionLostTimer)
       this.connectionLostTimer = setTimeout(() => this.checkConnectionLoss(), 300000)

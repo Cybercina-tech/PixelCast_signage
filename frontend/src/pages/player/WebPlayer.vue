@@ -283,6 +283,9 @@ const templateScalerStyle = computed(() => {
 
 let contextMenuHandler = null
 let keydownHandler = null
+let beforeUnloadHandler = null
+let pageHideHandler = null
+let visibilityChangeHandler = null
 
 const toggleFullscreen = async () => {
   const el = playerContainer.value
@@ -314,6 +317,18 @@ onMounted(async () => {
   document.addEventListener('keydown', keydownHandler, true)
   document.addEventListener('selectstart', (e) => e.preventDefault())
   document.addEventListener('dragstart', (e) => e.preventDefault())
+
+  // Best-effort offline signal when player page is being closed/backgrounded.
+  beforeUnloadHandler = () => { playerStore.sendDisconnectSignal({ force: true }) }
+  pageHideHandler = () => { playerStore.sendDisconnectSignal({ force: true }) }
+  visibilityChangeHandler = () => {
+    if (document.visibilityState === 'hidden') {
+      playerStore.sendDisconnectSignal({ force: true })
+    }
+  }
+  window.addEventListener('beforeunload', beforeUnloadHandler)
+  window.addEventListener('pagehide', pageHideHandler)
+  document.addEventListener('visibilitychange', visibilityChangeHandler)
 
   if (isConnectRoute.value) {
     playerStore.setActiveScreen(null)
@@ -363,6 +378,9 @@ onUnmounted(() => {
   document.body.style.overflow = ''
   if (contextMenuHandler) document.removeEventListener('contextmenu', contextMenuHandler)
   if (keydownHandler) document.removeEventListener('keydown', keydownHandler, true)
+  if (beforeUnloadHandler) window.removeEventListener('beforeunload', beforeUnloadHandler)
+  if (pageHideHandler) window.removeEventListener('pagehide', pageHideHandler)
+  if (visibilityChangeHandler) document.removeEventListener('visibilitychange', visibilityChangeHandler)
   clearNoTemplateTimer()
   cleanupResizeListener()
   playerStore.stopPolling()

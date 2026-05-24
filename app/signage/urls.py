@@ -4,6 +4,7 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     ScreenViewSet,
     heartbeat_endpoint,
+    iot_disconnect_endpoint,
     command_pull_endpoint,
     command_response_endpoint,
     iot_command_pull_endpoint,
@@ -24,6 +25,7 @@ urlpatterns = [
     # CRITICAL: Explicit paths MUST come FIRST before router includes to prevent URL shadowing
     # The router's pattern would match /screens/heartbeat/ as /screens/{id}/ if these come after
     path('screens/heartbeat/', csrf_exempt(heartbeat_endpoint), name='screen-heartbeat'),
+    path('screens/disconnect/', csrf_exempt(iot_disconnect_endpoint), name='screen-disconnect'),
     path('player/template/', csrf_exempt(player_template_endpoint), name='player-template'),
     
     # IoT Command endpoints (using screen_id authentication)
