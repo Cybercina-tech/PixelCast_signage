@@ -43,8 +43,8 @@
         </div>
         
         <div v-if="sessions.length > 0" class="mt-6 pt-6 border-t border-border-color">
-          <div class="bg-card border border-border-color rounded-lg p-4">
-            <h3 class="font-medium text-primary mb-2">Danger Zone</h3>
+          <div class="danger-zone-panel rounded-lg p-4">
+            <h3 class="danger-zone-heading font-semibold mb-2">Danger Zone</h3>
             <p class="text-sm text-secondary mb-4">Log out from all devices. You'll need to log in again on all devices.</p>
             <button
               @click="showLogoutAllModal = true"

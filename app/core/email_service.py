@@ -116,6 +116,7 @@ def send_system_email(
     from_email: str | None = None,
     fail_silently: bool = False,
     html_message: str | None = None,
+    reply_to: Sequence[str] | None = None,
 ) -> int:
     """
     Send a transactional email using the system connection.
@@ -135,4 +136,6 @@ def send_system_email(
     )
     if html_message:
         msg.attach_alternative(html_message, 'text/html')
+    if reply_to:
+        msg.reply_to = [r for r in reply_to if r]
     return msg.send(fail_silently=fail_silently)

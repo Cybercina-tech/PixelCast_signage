@@ -884,22 +884,11 @@ class ContentViewSet(viewsets.ModelViewSet):
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
     def get_queryset(self):
-        """Filter queryset based on user permissions - returns all content for user/org"""
+        """Filter queryset to accessible widgets and tenant-scoped media library."""
+        from .content_access import filter_content_queryset_for_user
+
         queryset = super().get_queryset()
-        user = self.request.user
-
-        # Filter by user/organization ownership
-        if not user.has_full_access():
-            # Get accessible templates for widget-based content
-            accessible_templates = user.get_accessible_templates_queryset()
-
-            from .models import Layer, Widget
-            accessible_layers = Layer.objects.filter(template__in=accessible_templates)
-            accessible_widgets = Widget.objects.filter(layer__in=accessible_layers)
-
-            queryset = queryset.filter(
-                Q(widget__in=accessible_widgets) | Q(widget__isnull=True)
-            )
+        queryset = filter_content_queryset_for_user(queryset, self.request.user)
 
         # List-only: Media Library / Upload UI should show only standalone uploads (widget is null).
         # Widget-bound rows created by template sync stay out unless ?widget=<id> is used.
@@ -912,25 +901,34 @@ class ContentViewSet(viewsets.ModelViewSet):
                 if lib in ('1', 'true', 'yes', 'on'):
                     queryset = queryset.filter(widget__isnull=True)
 
+            download_status = (self.request.query_params.get('download_status') or '').strip().lower()
+            if download_status:
+                if download_status == 'downloading':
+                    queryset = queryset.filter(download_status='pending', downloaded=False)
+                else:
+                    queryset = queryset.filter(download_status=download_status)
+
         return queryset
 
     @action(detail=False, methods=['get'])
     def storage_stats(self, request):
         """
-        Return aggregated storage usage and configured limit for dashboard.
+        Return aggregated storage usage and per-account quota for the media library.
         """
-        scoped_queryset = self.get_queryset()
-        aggregate = scoped_queryset.aggregate(total_used_bytes=Sum('file_size'))
-        used_bytes = aggregate.get('total_used_bytes') or 0
-        max_file_size_bytes = getattr(settings, 'CONTENT_STORAGE', {}).get('MAX_FILE_SIZE', 5 * 1024 * 1024 * 1024)
+        from .content_access import get_tenant_storage_used_bytes, media_library_quota_bytes
+
+        used_bytes = get_tenant_storage_used_bytes(request.user)
+        limit_bytes = media_library_quota_bytes()
 
         used_percentage = 0
-        if max_file_size_bytes > 0:
-            used_percentage = round((used_bytes / max_file_size_bytes) * 100, 2)
+        if limit_bytes > 0:
+            used_percentage = round((used_bytes / limit_bytes) * 100, 2)
+
+        scoped_queryset = self.get_queryset().filter(widget__isnull=True)
 
         return Response({
             'used_bytes': used_bytes,
-            'limit_bytes': max_file_size_bytes,
+            'limit_bytes': limit_bytes,
             'used_percentage': min(100, used_percentage),
             'content_count': scoped_queryset.count(),
         }, status=status.HTTP_200_OK)
@@ -956,12 +954,15 @@ class ContentViewSet(viewsets.ModelViewSet):
                 raise PermissionDenied("Error checking permissions. Widget may have invalid relationships.")
         
         # Allow creating content without widget (standalone media library)
-        serializer.save()
+        serializer.save(uploaded_by=self.request.user)
     
     def perform_update(self, serializer):
         """Check permissions before update (widget is now optional)"""
+        from .content_access import assert_content_access
+
         content = self.get_object()
         user = self.request.user
+        assert_content_access(user, content)
         
         # Check if content has widget - if not, allow update (standalone media library)
         try:
@@ -981,7 +982,6 @@ class ContentViewSet(viewsets.ModelViewSet):
                 # Check permissions
                 if not RolePermissions.can_edit_resource(user, template):
                     raise PermissionDenied("You do not have permission to edit this content")
-            # If no widget, allow update (standalone media library)
             
         except AttributeError as e:
             logger.error(f"Error accessing content relationships during update: {str(e)}", exc_info=True)
@@ -998,7 +998,10 @@ class ContentViewSet(viewsets.ModelViewSet):
     
     def perform_destroy(self, instance):
         """Check permissions before delete (widget is optional)."""
+        from .content_access import assert_content_access
+
         user = self.request.user
+        assert_content_access(user, instance)
 
         # Content can be standalone (widget=None) when uploaded from media library.
         # Only enforce template-scoped permission checks when a widget chain exists.

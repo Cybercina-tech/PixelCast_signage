@@ -358,6 +358,10 @@ export const authAPI = {
     api.post('/auth/login/', credentials, { meta: { suppressGlobalErrorToast: true } }),
   login2fa: (data) =>
     api.post('/auth/login/2fa/', data, { meta: { suppressGlobalErrorToast: true } }),
+  emailVerificationSend: (data) =>
+    api.post('/auth/email-verification/send/', data, { meta: { suppressGlobalErrorToast: true } }),
+  emailVerificationConfirm: (data) =>
+    api.post('/auth/email-verification/confirm/', data, { meta: { suppressGlobalErrorToast: true } }),
   passwordResetRequest: (data) =>
     api.post('/auth/password-reset/request/', data, { meta: { suppressGlobalErrorToast: true } }),
   passwordResetConfirm: (data) =>

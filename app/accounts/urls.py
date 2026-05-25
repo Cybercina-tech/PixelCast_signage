@@ -19,6 +19,8 @@ from .invite_views import accept_invitation, team_invitations
 from .sso_views import sso_account_link_status, sso_providers_public
 from .api_auth_extras import (
     login_2fa_view,
+    email_verification_confirm_view,
+    email_verification_send_view,
     password_reset_confirm_view,
     password_reset_request_view,
     revoke_session_view,
@@ -39,6 +41,8 @@ urlpatterns = [
     path('auth/signup/', signup_view, name='auth-signup'),
     path('auth/login/', login_view, name='auth-login'),
     path('auth/login/2fa/', login_2fa_view, name='auth-login-2fa'),
+    path('auth/email-verification/send/', email_verification_send_view, name='auth-email-verification-send'),
+    path('auth/email-verification/confirm/', email_verification_confirm_view, name='auth-email-verification-confirm'),
     path('auth/password-reset/request/', password_reset_request_view, name='auth-password-reset-request'),
     path('auth/password-reset/confirm/', password_reset_confirm_view, name='auth-password-reset-confirm'),
     path('auth/2fa/setup/start/', twofa_setup_start_view, name='auth-2fa-setup-start'),

@@ -59,7 +59,7 @@
       v-else
       class="widget-error"
     >
-      Unknown widget type: {{ widget.type }}
+      Unknown widget type: {{ isKnownWidgetType(widget.type) ? widget.type : `Unknown: ${widget.type}` }}
     </div>
   </div>
 </template>
@@ -79,6 +79,7 @@ import WebviewWidget from './widgets/WebviewWidget.vue'
 import ChartWidget from './widgets/ChartWidget.vue'
 import QRActionWidget from './widgets/QRActionWidget.vue'
 import CountdownWidget from './widgets/CountdownWidget.vue'
+import { isKnownWidgetType } from '@/constants/widgets'
 
 const props = defineProps({
   widget: {
@@ -123,7 +124,8 @@ const widgetStyle = computed(() => {
     z_index = 0,
     content_json = {},
   } = props.widget
-  const rotation = Number(content_json.rotation || content_json.rotate || 0) || 0
+  const rotation =
+    Number(props.widget?.rotation ?? content_json.rotation ?? content_json.rotate ?? 0) || 0
 
   return {
     position: 'absolute',

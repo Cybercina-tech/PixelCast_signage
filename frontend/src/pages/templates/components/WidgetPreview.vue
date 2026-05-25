@@ -18,7 +18,7 @@
     <QRActionWidget v-else-if="widget.type === 'qr_action'" :widget="playerWidget" />
     <CountdownWidget v-else-if="widget.type === 'countdown'" :widget="playerWidget" />
     <div v-else class="default-widget-preview flex items-center justify-center w-full h-full bg-gray-300 text-gray-600 text-sm">
-      {{ widget.type }}
+      {{ isKnownWidgetType(widget.type) ? widget.type : `Unknown: ${widget.type}` }}
     </div>
   </div>
 </template>
@@ -38,6 +38,7 @@ import ChartWidget from '@/components/player/widgets/ChartWidget.vue'
 import QRActionWidget from '@/components/player/widgets/QRActionWidget.vue'
 import CountdownWidget from '@/components/player/widgets/CountdownWidget.vue'
 import { fromWidgetChartPayload } from '@/utils/chartConfig'
+import { isKnownWidgetType } from '@/constants/widgets'
 
 const props = defineProps({
   widget: {

@@ -75,6 +75,9 @@ class SystemEmailSettingsAPITests(TestCase):
         conn = get_system_email_connection()
         self.assertIsNotNone(conn)
 
+    def test_send_system_email_accepts_reply_to(self):
+        send_system_email('Hi', 'Body', ['a@b.com'], reply_to=['reply@example.com'])
+
     def test_test_endpoint(self):
         c = APIClient()
         c.force_authenticate(user=self.dev)

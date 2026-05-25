@@ -473,6 +473,12 @@ ALLOWED_HOSTS = list(
 # Enterprise SSO (OIDC/SAML) — off until IdP env vars are set
 SSO_ENABLED = env('SSO_ENABLED', default=False, cast=bool)
 
+# Two-factor authentication (TOTP). Off by default; set ENABLE_TWO_FACTOR_AUTH=true to require at login.
+ENABLE_TWO_FACTOR_AUTH = env('ENABLE_TWO_FACTOR_AUTH', default=False, cast=bool)
+
+# Email OTP step after login/signup. Off by default; set REQUIRE_EMAIL_VERIFICATION=true to enable.
+REQUIRE_EMAIL_VERIFICATION = env('REQUIRE_EMAIL_VERIFICATION', default=False, cast=bool)
+
 # Public download link for Android TV player APK (served via GET /api/public/downloads/)
 ANDROID_TV_APK_URL = env('ANDROID_TV_APK_URL', default='')
 
@@ -630,7 +636,8 @@ else:
 
 # Content Storage Settings
 CONTENT_STORAGE = {
-    'MAX_FILE_SIZE': 5 * 1024 * 1024 * 1024,  # 5 GB max file size
+    'MAX_FILE_SIZE': 5 * 1024 * 1024 * 1024,  # 5 GB max single file size
+    'MEDIA_LIBRARY_QUOTA_BYTES': 500 * 1024 * 1024,  # 500 MB per account (tenant)
     'ALLOWED_IMAGE_TYPES': ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'],
     'ALLOWED_VIDEO_TYPES': ['video/mp4', 'video/webm', 'video/ogg', 'video/quicktime'],
     'ALLOWED_WEBVIEW_TYPES': ['text/html', 'application/xhtml+xml'],

@@ -15,6 +15,9 @@ export default {
     'bg-editor-matte',
     'border',
     'border-border-color',
+    'elevation-card',
+    'elevation-inset',
+    'shadow-card',
   ],
   theme: {
     // Keep all custom tokens under `extend` — do not set `theme.colors` at the top level
@@ -25,6 +28,7 @@ export default {
       },
       colors: {
         // Surfaces — must stay in sync with style.css :root / .dark (single source: CSS variables)
+        main: 'var(--bg-main)',
         base: {
           DEFAULT: 'var(--bg-color-solid)',
         },
@@ -48,6 +52,7 @@ export default {
         'border-color': {
           DEFAULT: 'var(--border-color)',
         },
+        'border-light': 'var(--border-light)',
         // Semantic text — required for @apply in Vue SFC styles (maps to CSS variables on html)
         primary: 'var(--text-heading)',
         secondary: 'var(--text-main)',
@@ -135,6 +140,7 @@ export default {
       boxShadow: {
         'card-dark': '0 4px 20px -2px rgba(0, 0, 0, 0.5)',
         soft: 'var(--shadow-soft)',
+        card: 'var(--shadow-card)',
       },
     },
   },

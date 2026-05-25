@@ -1,12 +1,12 @@
 <template>
   <AppLayout>
-    <div v-if="loading" class="template-editor h-full min-h-0 w-full flex items-center justify-center bg-editor-workspace dark:bg-gray-900 text-primary dark:text-white overflow-hidden">
+    <div v-if="loading" class="template-editor h-full min-h-0 w-full flex items-center justify-center bg-editor-workspace dark:bg-gray-900 text-primary overflow-hidden">
       <div class="text-center">
         <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-accent-color mx-auto mb-4"></div>
         <p class="text-muted">Loading template...</p>
       </div>
     </div>
-    <div v-else class="template-editor h-full min-h-0 w-full flex flex-col bg-editor-workspace dark:bg-gray-900 text-primary dark:text-white overflow-hidden">
+    <div v-else class="template-editor h-full min-h-0 w-full flex flex-col bg-editor-workspace dark:bg-gray-900 text-primary overflow-hidden">
       <div
         v-if="!canEditTemplates"
         class="px-4 py-2.5 bg-amber-500/10 border-b border-amber-500/35 text-amber-100 text-sm text-center shrink-0"
@@ -388,8 +388,12 @@ import { useAuthStore } from '@/stores/auth'
 import { useCommandsStore } from '@/stores/commands'
 import { hasPermission } from '@/utils/permissions'
 import { resolveWidgetBackgroundColor } from '@/utils/widgetBackground'
-import { WIDGET_FONT_OPTIONS } from '@/constants/widgetFonts'
 import { contentsAPI } from '@/services/api'
+import {
+  buildContentLookupFromTemplateLayers,
+  hydrateAlbumPlaylistUrls,
+} from '@/utils/albumPlaylistHydrate'
+import { WIDGET_LIBRARY_SECTIONS } from '@/constants/widgets'
 import {
   COUNTDOWN_THEMES,
   getCountdownThemePreset,
@@ -574,45 +578,7 @@ function canvasTouchDistance(touchList) {
   return Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY)
 }
 const defaultTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
-const widgetLibrarySections = [
-  {
-    id: 'date-time',
-    label: 'Date & Time',
-    items: [
-      { type: 'clock', label: 'Add Clock', iconPath: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z' },
-      { type: 'date', label: 'Add Date', iconPath: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z' },
-      { type: 'weekday', label: 'Add Weekday', iconPath: 'M8 7V3m8 4V3m-9 9h10m-8 5h6M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z' },
-      { type: 'countdown', label: 'Add Countdown', iconPath: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M2 12h2m16 0h2M4.93 19.07l1.41-1.41m11.32-11.32l1.41-1.41' },
-    ]
-  },
-  {
-    id: 'text-live',
-    label: 'Text & Live Info',
-    items: [
-      { type: 'text', label: 'Add Text', iconPath: 'M4 6h16M4 12h16M4 18h7' },
-      { type: 'marquee', label: 'Add Marquee', iconPath: 'M4 12h16M4 7h7m6 0h3M4 17h5m8 0h3' },
-      { type: 'weather', label: 'Add Weather', iconPath: 'M3 15a4 4 0 014-4h.26A6 6 0 0119 13h1a3 3 0 010 6H7a4 4 0 01-4-4z' },
-      { type: 'qr_action', label: 'Add QR Action', iconPath: 'M4 4h5v5H4V4zm11 0h5v5h-5V4zM4 15h5v5H4v-5zm2-9h1v1H6V6zm10 0h1v1h-1V6zm-1 10h5v1h-5v-1zm-1-5h1v3h-1v-3zm-3 0h2v1h-2v-1zm-1 2h1v1h-1v-1zm2 2h1v1h-1v-1zm-2 2h2v1h-2v-1z' },
-    ]
-  },
-  {
-    id: 'media',
-    label: 'Media',
-    items: [
-      { type: 'image', label: 'Add Image', iconPath: 'M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z' },
-      { type: 'video', label: 'Add Video', iconPath: 'M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z' },
-      { type: 'album', label: 'Add Album Playlist', iconPath: 'M4 7h16M4 12h16M4 17h10m4 0h2M8 7v10M16 7v10' },
-    ]
-  },
-  {
-    id: 'web-data',
-    label: 'Web & Data',
-    items: [
-      { type: 'webview', label: 'Add Webview', iconPath: 'M21 12H3m0 0l4-4m-4 4l4 4m14-4l-4-4m4 4l-4 4' },
-      { type: 'chart', label: 'Add Chart', iconPath: 'M3 3v18h18M8 13l3-3 3 2 4-5' },
-    ]
-  },
-]
+const widgetLibrarySections = WIDGET_LIBRARY_SECTIONS
 const widgetSectionOpenState = ref({
   'date-time': true,
   'text-live': true,
@@ -1838,7 +1804,7 @@ const loadTemplateData = async () => {
           y: y,
           width: width,
           height: height,
-          rotation: widget.rotation || 0,
+          rotation: widget.rotation ?? widget.style?.rotation ?? 0,
           zIndex: widget.zIndex || widget.z_index || 0,
           visible: widget.visible !== undefined ? widget.visible : true, // Default to visible
           content: widget.content || '',
@@ -1873,6 +1839,20 @@ const loadTemplateData = async () => {
     
     // Sort by z-index
     widgets.value.sort((a, b) => a.zIndex - b.zIndex)
+
+    const albumWidgets = widgets.value.filter((w) => w.type === 'album')
+    if (albumWidgets.length) {
+      const contentLookup = buildContentLookupFromTemplateLayers(template)
+      await hydrateAlbumPlaylistUrls(
+        albumWidgets,
+        contentLookup,
+        async (id) => {
+          const response = await contentsAPI.detail(id)
+          return response.data
+        },
+      )
+      albumWidgets.forEach((w) => syncAlbumWidgetQueue(w))
+    }
     
   } catch (error) {
     console.error('Failed to load template:', error)
@@ -1933,7 +1913,10 @@ const saveTemplate = async () => {
           content_id: widget.content_id || null, // Include content_id if available
           content_ids: Array.isArray(widget.content_ids) ? widget.content_ids : [],
           playlist_items: Array.isArray(widget.style?.playlist) ? widget.style.playlist : [],
-          style: widget.style || {}
+          style: {
+            ...(widget.style || {}),
+            rotation: widget.rotation ?? widget.style?.rotation ?? 0,
+          },
         }))
       }
     }
@@ -2081,7 +2064,10 @@ const exportJSON = async () => {
           content_id: widget.content_id || null,
           content_ids: Array.isArray(widget.content_ids) ? widget.content_ids : [],
           playlist_items: Array.isArray(widget.style?.playlist) ? widget.style.playlist : [],
-          style: widget.style || {}
+          style: {
+            ...(widget.style || {}),
+            rotation: widget.rotation ?? widget.style?.rotation ?? 0,
+          },
         }))
       }
     }

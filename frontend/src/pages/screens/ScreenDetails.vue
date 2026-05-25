@@ -24,24 +24,24 @@
     </div>
 
     <!-- Main Content -->
-    <div v-else-if="screen" class="space-y-6 pb-6">
+    <div v-else-if="screen" class="space-y-4 sm:space-y-6 pb-4 sm:pb-6 px-0 sm:px-0 max-w-[100vw] overflow-x-hidden">
       <!-- Header -->
-      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div class="flex items-start gap-3 min-w-0">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+        <div class="flex items-start gap-2 sm:gap-3 min-w-0">
           <button
             type="button"
             @click="goToScreensList"
-            class="btn-outline px-3 py-2 rounded-lg text-sm font-medium transition-all duration-400 flex items-center gap-2 shrink-0 mt-0.5"
+            class="btn-outline px-2.5 sm:px-3 py-2 rounded-lg text-sm font-medium transition-all duration-400 flex items-center gap-2 shrink-0 mt-0.5"
             title="Back to Screens"
           >
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
             </svg>
-            Back
+            <span class="sr-only sm:not-sr-only sm:inline">Back</span>
           </button>
           <div class="min-w-0 flex-1">
             <div class="flex items-start gap-2 flex-wrap">
-              <h1 class="text-3xl font-bold text-primary mb-2">{{ screen.name || 'Unnamed Screen' }}</h1>
+              <h1 class="text-xl sm:text-2xl md:text-3xl font-bold text-primary mb-1 sm:mb-2 break-words">{{ screen.name || 'Unnamed Screen' }}</h1>
               <button
                 v-if="playerUrl"
                 type="button"
@@ -55,7 +55,7 @@
                 </svg>
               </button>
             </div>
-            <p class="text-secondary">{{ screen.device_id }}</p>
+            <p class="text-sm sm:text-base text-secondary font-mono break-all">{{ screen.device_id }}</p>
           </div>
         </div>
         <div class="flex items-center gap-2">
@@ -77,7 +77,7 @@
       <!-- Row 1: Live preview + remote controls (side-by-side on xl) -->
       <div class="grid grid-cols-1 xl:grid-cols-12 gap-4 md:gap-6">
         <div class="xl:col-span-7 min-w-0">
-          <div class="card-base rounded-2xl p-6 h-full flex flex-col">
+          <div class="card-base rounded-xl sm:rounded-2xl p-4 sm:p-6 h-full flex flex-col min-h-[280px] sm:min-h-0">
             <h2 class="text-lg font-semibold text-primary mb-4">Live Preview</h2>
             <div class="flex-1 min-h-0">
               <VirtualMonitor
@@ -91,7 +91,7 @@
           </div>
         </div>
         <div class="xl:col-span-5 min-w-0">
-          <div class="card-base rounded-2xl p-6 h-full flex flex-col">
+          <div class="card-base rounded-xl sm:rounded-2xl p-4 sm:p-6 h-full flex flex-col">
             <h2 class="text-lg font-semibold text-primary mb-4">Remote Actions</h2>
             <p class="text-sm text-muted mb-4">Control this display. Primary actions are available first.</p>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-auto">
@@ -146,31 +146,60 @@
 
       <!-- Row 2: General info + health -->
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-        <div class="card-base rounded-2xl p-6">
-          <h2 class="text-lg font-semibold text-primary mb-4">General Information</h2>
-          <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+        <div class="card-base rounded-xl sm:rounded-2xl p-4 sm:p-6">
+          <h2 class="text-base sm:text-lg font-semibold text-primary mb-3 sm:mb-4">General Information</h2>
+          <dl class="grid grid-cols-1 sm:grid-cols-2 gap-x-4 sm:gap-x-6 gap-y-4">
             <div>
               <dt class="text-xs font-medium text-muted uppercase tracking-wider mb-1">Device ID</dt>
               <dd class="text-sm text-primary font-mono break-all">{{ screen.device_id }}</dd>
             </div>
-            <div>
+            <div :class="editingName ? 'sm:col-span-2' : ''">
               <dt class="text-xs font-medium text-muted uppercase tracking-wider mb-1">Name</dt>
               <dd class="text-sm text-primary min-w-0">
-                <input
-                  v-if="editingName"
-                  v-model="editableName"
-                  class="input-base w-full px-2 py-1 rounded"
-                  autofocus
-                  @blur="handleSaveName"
-                  @keyup.enter="handleSaveName"
-                  @keyup.esc="cancelEditName"
-                />
-                <span v-else class="cursor-pointer hover:text-blue-400 transition-colors" @click="startEditName">
-                  {{ screen.name || 'Unnamed Screen' }}
-                  <svg class="inline w-4 h-4 ml-1 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div v-if="editingName" class="space-y-2">
+                  <input
+                    ref="nameInputRef"
+                    v-model="editableName"
+                    type="text"
+                    class="input-base w-full px-3 py-2 rounded-lg text-sm sm:text-base"
+                    :disabled="savingName"
+                    maxlength="255"
+                    autocomplete="off"
+                    @keyup.enter="handleSaveName"
+                    @keyup.esc="cancelEditName"
+                  />
+                  <div class="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      class="btn-primary px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-sm min-h-[40px] flex-1 sm:flex-none sm:min-w-[88px]"
+                      :disabled="savingName || !canSaveName"
+                      @mousedown.prevent
+                      @click="handleSaveName"
+                    >
+                      {{ savingName ? 'Saving…' : 'Save' }}
+                    </button>
+                    <button
+                      type="button"
+                      class="btn-outline px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-sm min-h-[40px] flex-1 sm:flex-none sm:min-w-[88px]"
+                      :disabled="savingName"
+                      @mousedown.prevent
+                      @click="cancelEditName"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+                <button
+                  v-else
+                  type="button"
+                  class="group inline-flex items-center gap-1 max-w-full text-left hover:text-blue-400 transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
+                  @click="startEditName"
+                >
+                  <span class="break-words">{{ screen.name || 'Unnamed Screen' }}</span>
+                  <svg class="w-4 h-4 shrink-0 opacity-50 group-hover:opacity-100" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                   </svg>
-                </span>
+                </button>
               </dd>
             </div>
             <div class="sm:col-span-2">
@@ -197,8 +226,8 @@
           </dl>
         </div>
 
-        <div class="card-base rounded-2xl p-6">
-          <h2 class="text-lg font-semibold text-primary mb-4">Health Metrics</h2>
+        <div class="card-base rounded-xl sm:rounded-2xl p-4 sm:p-6">
+          <h2 class="text-base sm:text-lg font-semibold text-primary mb-3 sm:mb-4">Health Metrics</h2>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
             <HealthGauge :value="healthMetrics.cpu_usage || 0" label="CPU" />
             <HealthGauge :value="healthMetrics.memory_usage || 0" label="Memory" />
@@ -225,8 +254,8 @@
       </div>
 
       <!-- Activity: commands vs logs -->
-      <div class="card-base rounded-2xl overflow-hidden">
-        <div class="px-4 pt-4 md:px-6 md:pt-6 border-b border-border-color/40">
+      <div class="card-base rounded-xl sm:rounded-2xl overflow-hidden">
+        <div class="px-3 pt-3 sm:px-4 sm:pt-4 md:px-6 md:pt-6 border-b border-border-color/40">
           <div class="flex gap-1 overflow-x-auto border-b border-border-color/40 pb-px -mb-px">
             <button
               type="button"
@@ -250,7 +279,7 @@
             </button>
           </div>
         </div>
-        <div class="p-4 md:p-6 pt-4">
+        <div class="p-3 sm:p-4 md:p-6 pt-3 sm:pt-4">
           <div v-show="activityTab === 'commands'" class="max-h-96 overflow-y-auto custom-scrollbar -mx-1 px-1">
             <CommandTimeline :commands="allCommands" />
           </div>
@@ -271,13 +300,24 @@
       </div>
 
       <!-- Danger Zone (collapsed by default) -->
-      <details class="danger-zone-details card-base rounded-2xl border-dusty-red/30">
+      <details class="danger-zone-details danger-zone-panel rounded-xl sm:rounded-2xl overflow-hidden">
         <summary
-          class="cursor-pointer list-none px-6 py-4 flex items-center justify-between gap-3 text-lg font-semibold text-dusty-red select-none [&::-webkit-details-marker]:hidden outline-none focus-visible:ring-2 focus-visible:ring-dusty-red/40 rounded-2xl"
+          class="danger-zone-summary cursor-pointer list-none px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between gap-3 text-base sm:text-lg font-semibold select-none [&::-webkit-details-marker]:hidden outline-none focus-visible:ring-2 focus-visible:ring-red-500/50 rounded-xl sm:rounded-2xl"
         >
-          <span>Danger Zone</span>
+          <span class="inline-flex items-center gap-2">
+            <svg
+              class="w-5 h-5 shrink-0 danger-zone-chevron"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+            </svg>
+            Danger Zone
+          </span>
           <svg
-            class="w-5 h-5 shrink-0 text-dusty-red/80 transition-transform duration-200"
+            class="w-5 h-5 shrink-0 danger-zone-chevron transition-transform duration-200"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -286,7 +326,7 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
           </svg>
         </summary>
-        <div class="px-6 pb-6 pt-0 space-y-6 border-t border-border-color/30">
+        <div class="px-4 sm:px-6 pb-4 sm:pb-6 pt-0 space-y-4 sm:space-y-6 border-t danger-zone-divider">
           <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <p class="text-sm text-primary font-medium">Revoke Device Token</p>
@@ -295,7 +335,7 @@
             <button
               type="button"
               :disabled="revokingToken"
-              class="px-5 py-2 border-2 border-amber-500/50 hover:bg-amber-500/20 hover:border-amber-500 text-amber-400 rounded-lg transition-all duration-200 font-semibold disabled:opacity-50 shrink-0"
+              class="px-5 py-2 border-2 border-amber-600/60 hover:bg-amber-500/15 hover:border-amber-600 text-amber-800 dark:text-amber-300 dark:border-amber-500/50 dark:hover:bg-amber-500/20 rounded-lg transition-all duration-200 font-semibold disabled:opacity-50 shrink-0"
               @click="handleRevokeToken"
             >
               {{ revokingToken ? 'Revoking...' : 'Revoke Token' }}
@@ -308,7 +348,7 @@
             </div>
             <button
               type="button"
-              class="px-6 py-2 border-2 border-red-500/50 hover:bg-red-500/20 hover:border-red-500 text-red-400 rounded-lg transition-all duration-200 font-semibold shrink-0"
+              class="px-6 py-2 border-2 border-red-600/60 hover:bg-red-500/15 hover:border-red-600 text-red-800 dark:text-red-300 dark:border-red-500/50 dark:hover:bg-red-500/20 rounded-lg transition-all duration-200 font-semibold shrink-0"
               @click="handleDeleteScreen"
             >
               Delete Screen
@@ -460,6 +500,8 @@ const showCommandModal = ref(false)
 const showTemplateModal = ref(false)
 const editingName = ref(false)
 const editableName = ref('')
+const savingName = ref(false)
+const nameInputRef = ref(null)
 const actionLoading = ref(false)
 const screenshotLoading = ref(false)
 const revokingToken = ref(false)
@@ -538,12 +580,22 @@ const formatLastHeartbeat = (dateString) => {
   }
 }
 
-const startEditName = () => {
+const canSaveName = computed(() => {
+  const trimmed = editableName.value.trim()
+  if (!trimmed) return false
+  const current = (screen.value?.name || '').trim()
+  return trimmed !== current
+})
+
+const startEditName = async () => {
   editingName.value = true
   editableName.value = screen.value?.name || ''
+  await nextTick()
+  nameInputRef.value?.focus()
 }
 
 const cancelEditName = () => {
+  if (savingName.value) return
   editingName.value = false
   editableName.value = ''
 }
@@ -554,17 +606,24 @@ const getErrorMessage = (error, fallback) => {
 }
 
 const handleSaveName = async () => {
-  if (!editableName.value.trim()) {
-    cancelEditName()
+  if (savingName.value || !canSaveName.value) {
+    if (!editableName.value.trim()) {
+      notify.error('Screen name cannot be empty')
+    }
     return
   }
-  
+
+  const newName = editableName.value.trim()
+  savingName.value = true
   try {
-    await screensStore.updateScreen(screen.value.id, { name: editableName.value.trim() })
+    await screensStore.updateScreen(screen.value.id, { name: newName })
     editingName.value = false
+    editableName.value = ''
     notify.success('Screen name updated')
   } catch (error) {
     notify.error(getErrorMessage(error, 'Failed to update name'))
+  } finally {
+    savingName.value = false
   }
 }
 

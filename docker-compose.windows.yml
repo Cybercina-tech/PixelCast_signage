@@ -1,0 +1,22 @@
+# Windows Docker Desktop workaround when bind mounts fail with:
+#   mkdir /run/desktop/mnt/host/c: file exists
+#
+# Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.windows.yml up -d --build
+#
+# Code is baked into images (no ./app or ./frontend host mounts). After edits:
+#   docker compose -f docker-compose.yml -f docker-compose.windows.yml up -d --build backend
+#   docker compose -f docker-compose.yml -f docker-compose.windows.yml up -d --build frontend
+# Or use watch (syncs without bind mounts):
+#   docker compose -f docker-compose.yml -f docker-compose.windows.yml up --watch
+
+services:
+  backend:
+    volumes:
+      - installation_state:/app/installation_state
+      - backend_media:/app/media
+      - backend_static:/app/staticfiles
+
+  frontend:
+    volumes:
+      - /app/node_modules

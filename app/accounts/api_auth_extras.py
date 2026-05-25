@@ -18,7 +18,11 @@ from rest_framework.response import Response
 from django.views.decorators.cache import never_cache
 
 from core.audit import AuditLogger
-from core.email_service import send_system_email
+from core.email_service import resolve_default_from_email, send_system_email
+
+from .email_verification import mask_email, send_user_verification_email
+from .email_verification_policy import is_email_verification_required
+from .twofa_policy import is_twofa_enabled
 
 from .jwt_sessions import blacklist_outstanding_id
 from .models import User
@@ -36,8 +40,11 @@ from .totp_utils import (
 logger = logging.getLogger(__name__)
 
 TWOFA_SIGNER = TimestampSigner(salt='pixelcast.auth.2fa')
+EMAIL_VERIFY_SIGNER = TimestampSigner(salt='pixelcast.auth.email_verify')
 _PENDING_2FA_CACHE_PREFIX = '2fa_pending_secret:'
 _PENDING_2FA_TTL = 600
+_EMAIL_VERIFY_SEND_CACHE_PREFIX = 'email_verify_send:'
+_EMAIL_VERIFY_SEND_COOLDOWN = 60
 
 
 def _client_ip(request):
@@ -48,8 +55,28 @@ def _client_ip(request):
 
 
 def issue_login_or_2fa_challenge(user, request):
-    """Return DRF Response: either full login payload or 2FA challenge."""
-    if getattr(user, 'is_2fa_enabled', False) and (user.totp_secret or '').strip():
+    """Return DRF Response: email verify, 2FA challenge, or full login payload."""
+    if is_email_verification_required() and not getattr(user, 'is_email_verified', True):
+        email = (user.email or '').strip()
+        if not email:
+            return Response(
+                {'error': 'Your account has no email address. Contact support.'},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+        token = EMAIL_VERIFY_SIGNER.sign(str(user.pk))
+        return Response(
+            {
+                'status': 'email_verification_required',
+                'verification_token': token,
+                'email': mask_email(email),
+            },
+            status=status.HTTP_200_OK,
+        )
+    if (
+        is_twofa_enabled()
+        and getattr(user, 'is_2fa_enabled', False)
+        and (user.totp_secret or '').strip()
+    ):
         tf = TWOFA_SIGNER.sign(str(user.pk))
         return Response(
             {
@@ -85,6 +112,7 @@ def build_login_success_response(user, request):
             'is_staff': user.is_staff,
             'is_superuser': user.is_superuser,
             'is_2fa_enabled': getattr(user, 'is_2fa_enabled', False),
+            'is_email_verified': getattr(user, 'is_email_verified', False),
         },
         'tokens': {
             'refresh': str(refresh),
@@ -98,6 +126,11 @@ def build_login_success_response(user, request):
 @never_cache
 def login_2fa_view(request):
     """POST /api/auth/login/2fa/ — complete login after password with TOTP or backup code."""
+    if not is_twofa_enabled():
+        return Response(
+            {'error': 'Two-factor authentication is not enabled on this platform.'},
+            status=status.HTTP_403_FORBIDDEN,
+        )
     tf = request.data.get('two_factor_token')
     code = (request.data.get('code') or '').strip()
     if not tf or not code:
@@ -138,6 +171,151 @@ def login_2fa_view(request):
     return Response(build_login_success_response(user, request), status=status.HTTP_200_OK)
 
 
+def _user_from_verification_token(token: str):
+    if not token:
+        return None, Response({'error': 'verification_token is required.'}, status=status.HTTP_400_BAD_REQUEST)
+    try:
+        uid = EMAIL_VERIFY_SIGNER.unsign(token, max_age=1800)
+    except SignatureExpired:
+        return None, Response(
+            {'error': 'Verification session expired. Please sign in again.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    except BadSignature:
+        return None, Response({'error': 'Invalid verification token.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    user = User.objects.filter(pk=int(uid), is_active=True).first()
+    if not user:
+        return None, Response({'error': 'Invalid verification token.'}, status=status.HTTP_400_BAD_REQUEST)
+    return user, None
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+@never_cache
+def email_verification_send_view(request):
+    """POST /api/auth/email-verification/send/ { verification_token }"""
+    if not is_email_verification_required():
+        return Response(
+            {'error': 'Email verification is not enabled on this platform.'},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+    token = (request.data.get('verification_token') or '').strip()
+    user, err = _user_from_verification_token(token)
+    if err:
+        return err
+
+    if user.is_email_verified:
+        return Response({'error': 'Email is already verified.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    cache_key = f'{_EMAIL_VERIFY_SEND_CACHE_PREFIX}{user.pk}'
+    if cache.get(cache_key):
+        return Response(
+            {'error': 'Please wait before requesting another code.', 'retry_after_seconds': _EMAIL_VERIFY_SEND_COOLDOWN},
+            status=status.HTTP_429_TOO_MANY_REQUESTS,
+        )
+
+    try:
+        send_user_verification_email(user, request=request)
+    except Exception as e:
+        logger.exception('email verification send failed: %s', e)
+        return Response(
+            {'error': 'Failed to send verification email. Check SMTP settings or try again later.'},
+            status=status.HTTP_503_SERVICE_UNAVAILABLE,
+        )
+
+    cache.set(cache_key, True, _EMAIL_VERIFY_SEND_COOLDOWN)
+    try:
+        AuditLogger.log_action(
+            action_type='email_verification_sent',
+            user=user,
+            resource=user,
+            description=f'Email verification code sent to {user.email} (login flow)',
+            request=request,
+        )
+    except Exception as e:
+        logger.error('audit email verify send: %s', e)
+
+    return Response(
+        {
+            'status': 'success',
+            'message': 'Verification code sent.',
+            'email': mask_email(user.email),
+            'retry_after_seconds': _EMAIL_VERIFY_SEND_COOLDOWN,
+        },
+        status=status.HTTP_200_OK,
+    )
+
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+@never_cache
+def email_verification_confirm_view(request):
+    """POST /api/auth/email-verification/confirm/ { verification_token, code }"""
+    if not is_email_verification_required():
+        return Response(
+            {'error': 'Email verification is not enabled on this platform.'},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+    token = (request.data.get('verification_token') or '').strip()
+    code = (request.data.get('code') or '').strip()
+    if not code:
+        return Response({'error': 'Verification code is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    user, err = _user_from_verification_token(token)
+    if err:
+        return err
+
+    if user.is_email_verified:
+        return issue_login_or_2fa_challenge(user, request)
+
+    if not user.verification_code:
+        return Response(
+            {'error': 'No verification code found. Request a new code.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if user.verification_code_expiry and user.verification_code_expiry < timezone.now():
+        user.verification_code = None
+        user.verification_code_expiry = None
+        user.save(update_fields=['verification_code', 'verification_code_expiry'])
+        return Response(
+            {'error': 'Verification code has expired. Request a new code.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if user.verification_code != code:
+        try:
+            AuditLogger.log_action(
+                action_type='email_verification_failed',
+                user=user,
+                resource=user,
+                description='Failed email verification attempt with invalid code (login flow)',
+                request=request,
+            )
+        except Exception as e:
+            logger.error('audit email verify fail: %s', e)
+        return Response({'error': 'Invalid verification code.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    user.is_email_verified = True
+    user.verification_code = None
+    user.verification_code_expiry = None
+    user.save(update_fields=['is_email_verified', 'verification_code', 'verification_code_expiry'])
+
+    try:
+        AuditLogger.log_action(
+            action_type='email_verified',
+            user=user,
+            resource=user,
+            description=f'Email address {user.email} verified successfully (login flow)',
+            request=request,
+        )
+    except Exception as e:
+        logger.error('audit email verified: %s', e)
+
+    return issue_login_or_2fa_challenge(user, request)
+
+
 @api_view(['POST'])
 @permission_classes([AllowAny])
 @never_cache
@@ -172,7 +350,12 @@ If you did not request this, you can ignore this email.
 — PixelCast Signage
 '''
     try:
-        send_system_email(subject=subject, message=message, recipient_list=[user.email])
+        send_system_email(
+            subject=subject,
+            message=message,
+            recipient_list=[user.email],
+            from_email=resolve_default_from_email(),
+        )
         try:
             AuditLogger.log_action(
                 action_type='password_reset_requested',
@@ -240,6 +423,11 @@ def password_reset_confirm_view(request):
 @never_cache
 def twofa_setup_start_view(request):
     """Begin TOTP enrollment; secret stored in cache until confirm."""
+    if not is_twofa_enabled():
+        return Response(
+            {'error': 'Two-factor authentication is not enabled on this platform.'},
+            status=status.HTTP_403_FORBIDDEN,
+        )
     user = request.user
     if getattr(user, 'is_2fa_enabled', False):
         return Response({'error': '2FA is already enabled.'}, status=status.HTTP_400_BAD_REQUEST)
@@ -262,6 +450,11 @@ def twofa_setup_start_view(request):
 @never_cache
 def twofa_setup_confirm_view(request):
     """Confirm TOTP and enable 2FA."""
+    if not is_twofa_enabled():
+        return Response(
+            {'error': 'Two-factor authentication is not enabled on this platform.'},
+            status=status.HTTP_403_FORBIDDEN,
+        )
     user = request.user
     code = (request.data.get('code') or '').strip()
     if not code:
@@ -307,6 +500,11 @@ def twofa_setup_confirm_view(request):
 @never_cache
 def twofa_disable_view(request):
     """Disable 2FA (requires password + TOTP or backup code)."""
+    if not is_twofa_enabled():
+        return Response(
+            {'error': 'Two-factor authentication is not enabled on this platform.'},
+            status=status.HTTP_403_FORBIDDEN,
+        )
     user = request.user
     password = request.data.get('password') or ''
     code = (request.data.get('code') or '').strip()

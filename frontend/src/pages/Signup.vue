@@ -319,6 +319,8 @@ import { useThemeStore } from '@/stores/theme'
 import { useNotification } from '@/composables/useNotification'
 import { normalizeApiError } from '@/utils/apiError'
 import { pushSignUp } from '@/analytics/dataLayer'
+import { storeEmailVerificationSession } from '@/utils/emailVerificationSession'
+import { ENABLE_EMAIL_VERIFICATION } from '@/config/features'
 import ThemeToggle from '@/components/common/ThemeToggle.vue'
 import {
   UserIcon,
@@ -440,6 +442,14 @@ async function handleSignup() {
     }
 
     const response = await authAPI.signup(userData)
+
+    if (response.data?.status === 'email_verification_required' && ENABLE_EMAIL_VERIFICATION) {
+      storeEmailVerificationSession(response.data.verification_token, response.data.email)
+      notify.success('Account created! Check your email for a verification code.')
+      pushSignUp('email')
+      router.push({ name: 'verify-email' })
+      return
+    }
 
     if (response.data?.tokens) {
       authStore.token = response.data.tokens.access

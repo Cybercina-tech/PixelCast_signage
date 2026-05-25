@@ -13,28 +13,38 @@
   --brand-primary-hover: #10b981;
   --brand-primary-active: #047857;
 
-  /* Light Mode — Antler: warm paper + soft depth (avoid harsh #fff) */
-  --bg-primary: #F8FAFC;
-  --bg-secondary: #F1F5F9;
-  --bg-color: #F8FAFC;
-  --bg-color-solid: #F8FAFC;
-  --card-bg: #FFFFFF;
+  /* Light Mode — 3-layer elevation (cool grey base, white cards, soft shadows) */
+  --bg-main: #F4F6F9;
+  --bg-sidebar: #FAFAFA;
+  --bg-topbar: #FFFFFF;
+  --bg-card: #FFFFFF;
+  --bg-primary: var(--bg-main);
+  --bg-secondary: #EEF2F6;
+  --bg-color: var(--bg-main);
+  --bg-color-solid: var(--bg-main);
+  --card-bg: var(--bg-card);
   --card-bg-backdrop: blur(16px);
-  --glass-bg: rgba(255, 255, 255, 0.88);
-  --border-color: rgba(30, 41, 59, 0.1);
+  --glass-bg: rgba(255, 255, 255, 0.92);
+  --border-light: #E2E8F0;
+  --border-color: var(--border-light);
+  --brand-accent: #2563EB;
+  --text-primary: #0F172A;
+  --text-secondary: #64748B;
   --shadow-soft: 0 1px 2px 0 rgba(15, 23, 42, 0.06), 0 1px 3px 0 rgba(15, 23, 42, 0.04);
+  --shadow-card: 0 1px 3px 0 rgba(15, 23, 42, 0.03), 0 4px 12px -2px rgba(15, 23, 42, 0.05);
   --shadow-medium: 0 4px 12px rgba(15, 23, 42, 0.08), 0 10px 24px rgba(15, 23, 42, 0.06);
   --shadow-strong: 0 12px 28px rgba(15, 23, 42, 0.12), 0 28px 48px rgba(51, 65, 85, 0.16);
+  --nav-active-bg: rgba(37, 99, 235, 0.08);
 
-  /* Form fields — track surfaces without fighting parent panels */
-  --input-bg: rgba(255, 255, 255, 0.96);
-  --input-border: rgba(30, 41, 59, 0.14);
-  --input-focus-ring: rgba(59, 130, 246, 0.2);
+  /* Form fields — white inputs on grey page */
+  --input-bg: #FFFFFF;
+  --input-border: #CBD5E1;
+  --input-focus-ring: rgba(37, 99, 235, 0.22);
   --text-main: #1e293b;
-  --text-heading: #0f172a;
-  --text-body: #1e293b;
-  --text-muted: #64748b;
-  --sidebar-bg: rgba(245, 248, 255, 0.92);
+  --text-heading: var(--text-primary);
+  --text-body: #334155;
+  --text-muted: var(--text-secondary);
+  --sidebar-bg: var(--bg-sidebar);
   --icon-color: #2D3436;
   --accent-color: #2563eb;
   --button-primary: #2563eb;
@@ -54,17 +64,23 @@
   --notification-success-bg: rgba(235, 255, 235, 0.8); /* Pastel green with 80% opacity */
   --notification-warning-bg: rgba(255, 248, 235, 0.8); /* Pastel yellow with 80% opacity */
   --notification-info-bg: rgba(235, 245, 255, 0.8); /* Pastel blue with 80% opacity */
-  --warm-tint: rgba(255, 250, 245, 0.4); /* Enhanced warm tint for blue light reduction */
+  --warm-tint: rgba(255, 250, 245, 0.12); /* Subtle warmth — reduced to avoid washout */
   --forest-green: #166534; /* Forest Green for online indicators */
   --dusty-red: #B91C1C; /* Muted Dusty Red for offline screens */
-  --cream-bg: #F8FAFC;
-  --zebra-stripe: #F1F5F9;
+  /* Destructive / danger zone — WCAG-friendly on tinted surfaces (light) */
+  --danger-zone-bg: #fef2f2;
+  --danger-zone-border: #fca5a5;
+  --danger-zone-heading: #991b1b;
+  --danger-zone-accent: #b91c1c;
+  --danger-zone-icon: #dc2626;
+  --cream-bg: var(--bg-main);
+  --zebra-stripe: var(--bg-secondary);
 
-  /* Elevation surfaces (additive; bg-card maps to --card-bg / level 2) */
-  --surface-1: var(--bg-color-solid);
-  --surface-2: var(--card-bg);
-  --surface-3: rgba(255, 255, 255, 0.97);
-  --surface-inset: rgba(241, 245, 249, 0.85);
+  /* Elevation surfaces — layer 1 page / 2 cards / 3 chrome */
+  --surface-1: var(--bg-main);
+  --surface-2: var(--bg-card);
+  --surface-3: var(--bg-topbar);
+  --surface-inset: #EEF2F6;
 
   /* Template editor chrome (Antler) — light */
   --editor-workspace-bg: #eceff4;
@@ -119,10 +135,12 @@
   --input-bg: rgba(30, 41, 59, 0.92);
   --input-border: rgba(148, 163, 184, 0.4);
   --input-focus-ring: rgba(16, 185, 129, 0.35);
-  --text-main: #e0e0e0;
-  --text-heading: #fafafa;
+  /* Cool slate ink (no warm/cream cast) */
+  --text-primary: #f8fafc;
+  --text-main: #f1f5f9;
+  --text-heading: #f8fafc;
   --text-body: #e2e8f0;
-  --text-muted: #a0a0a0;
+  --text-muted: #94a3b8;
   --sidebar-bg: rgba(15, 23, 42, 0.8);
   --icon-color: #06b6d4;
   --accent-color: #00d2ff;
@@ -146,6 +164,11 @@
   --warm-tint: transparent;
   --forest-green: #10b981;
   --dusty-red: #ef4444;
+  --danger-zone-bg: rgba(69, 10, 10, 0.42);
+  --danger-zone-border: rgba(248, 113, 113, 0.38);
+  --danger-zone-heading: #fecaca;
+  --danger-zone-accent: #fca5a5;
+  --danger-zone-icon: #f87171;
   --cream-bg: rgba(15, 23, 42, 0.9);
   --zebra-stripe: rgba(31, 41, 55, 0.5);
 
@@ -183,7 +206,7 @@
     background: var(--bg-color);
     background-color: var(--bg-color-solid);
     color: var(--text-body);
-    transition: background-color 0.4s ease, color 0.4s ease, background 0.4s ease, filter 0.4s ease;
+    transition: background-color 0.4s ease, color 0.4s ease, background 0.4s ease;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     margin: 0;
@@ -209,7 +232,22 @@
   }
 
   html:not(.dark) body::before {
-    opacity: 1;
+    opacity: 0.35;
+  }
+
+  html.dark body::before {
+    opacity: 0;
+    visibility: hidden;
+  }
+
+  html.dark body {
+    color: var(--text-body);
+    -webkit-text-fill-color: var(--text-body);
+  }
+
+  html.dark :is(h1, h2, h3, h4, h5, h6) {
+    color: var(--text-heading);
+    -webkit-text-fill-color: var(--text-heading);
   }
   
   #app {
@@ -365,7 +403,7 @@
       rgba(0, 0, 0, 0.02) 4px
     );
   background-size: 20px 20px;
-  opacity: 0.4;
+  opacity: 0.18;
   pointer-events: none;
   transition: opacity 0.4s ease;
 }
@@ -590,7 +628,8 @@
 
   .input-base:focus {
     outline: none;
-    box-shadow: var(--shadow-medium), 0 0 0 3px var(--input-focus-ring);
+    border-color: var(--brand-accent);
+    box-shadow: var(--shadow-soft), 0 0 0 3px var(--input-focus-ring);
   }
   
   .input-error {
@@ -623,7 +662,8 @@
 
   .select-base:focus {
     outline: none;
-    box-shadow: var(--shadow-medium), 0 0 0 3px var(--input-focus-ring);
+    border-color: var(--brand-accent);
+    box-shadow: var(--shadow-soft), 0 0 0 3px var(--input-focus-ring);
   }
 
   .select-base option {
@@ -728,11 +768,31 @@
   .btn-primary {
     background: var(--button-primary);
     color: var(--button-text);
+    -webkit-text-fill-color: var(--button-text);
     font-weight: 600;
     border: none;
     box-shadow: var(--button-shadow);
     transition: all 0.4s ease;
     border-radius: 8px;
+  }
+
+  /* Inside .text-primary, light theme forces dark -webkit-text-fill-color on descendants */
+  html:not(.dark) .btn-primary {
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+  }
+
+  /*
+   * Tailwind text-white on solid buttons/links — same inheritance bug as .btn-primary
+   * (e.g. bg-blue-600 in template inspector inside frosted panels).
+   */
+  /*
+   * Solid buttons with text-white (neon, primary CTAs). Exclude ghost nav/footer links —
+   * those use .landing-nav-link / .pricing-nav-btn and need dark ink on light hover.
+   */
+  html:not(.dark) :is(button, a, [role='button']).text-white:not(.landing-nav-link):not(.landing-footer-link):not(.pricing-nav-btn) {
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
   }
 
   .btn-primary:hover {
@@ -768,9 +828,15 @@
   .btn-secondary {
     background: var(--button-primary);
     color: var(--button-text);
+    -webkit-text-fill-color: var(--button-text);
     font-weight: 600;
     box-shadow: var(--button-shadow);
     transition: all 0.3s ease;
+  }
+
+  html:not(.dark) .btn-secondary {
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
   }
 
   .btn-secondary:hover {
@@ -883,44 +949,97 @@
   }
   
   .table-thead {
-    @apply bg-slate-50 dark:bg-slate-800;
+    background: var(--bg-secondary);
+  }
+
+  .dark .table-thead {
+    @apply bg-slate-800;
   }
   
   .table-th {
-    @apply px-6 py-3 text-left text-xs font-semibold;
-    @apply text-slate-700 dark:text-slate-300;
-    @apply uppercase tracking-wider;
-    @apply border-b border-slate-200 dark:border-slate-700;
+    @apply px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider border-b;
+    color: var(--text-primary);
+    border-color: var(--border-light);
+  }
+
+  .dark .table-th {
+    @apply text-slate-300 border-slate-700;
   }
   
   .table-tbody {
-    @apply bg-white dark:bg-slate-800/95;
-    @apply divide-y divide-slate-200 dark:divide-slate-700;
+    background: var(--bg-card);
+  }
+
+  .dark .table-tbody {
+    @apply bg-slate-800/95 divide-y divide-slate-700;
   }
   
   .table-tr {
-    @apply bg-white dark:bg-slate-800/95;
-    @apply hover:bg-slate-50 dark:hover:bg-slate-700/50;
-    @apply transition-colors duration-150;
+    background: var(--bg-card);
+    transition: background-color 0.15s ease;
+  }
+
+  html:not(.dark) .table-tr:hover {
+    background: var(--bg-secondary);
+  }
+
+  .dark .table-tr {
+    @apply bg-slate-800/95 hover:bg-slate-700/50;
   }
   
   .table-td {
-    @apply px-6 py-4 whitespace-nowrap;
-    @apply text-sm text-slate-900 dark:text-slate-100;
+    @apply px-6 py-4 whitespace-nowrap text-sm;
+    color: var(--text-primary);
+    border-color: var(--border-light);
+  }
+
+  .dark .table-td {
+    @apply text-slate-100;
   }
   
   .table-td-secondary {
-    @apply text-sm text-slate-600 dark:text-slate-400;
+    @apply text-sm;
+    color: var(--text-secondary);
+  }
+
+  .dark .table-td-secondary {
+    @apply text-slate-400;
   }
   
+  /* Elevation utilities (light: layered depth; dark: inherits card tokens) */
+  .elevation-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-light);
+    border-radius: 1rem;
+    box-shadow: var(--shadow-card);
+    transition: box-shadow 0.25s ease, border-color 0.25s ease, transform 0.25s ease;
+  }
+
+  .elevation-inset {
+    background: var(--surface-inset);
+    border: 1px solid var(--border-light);
+    border-radius: 0.75rem;
+  }
+
+  .dark .elevation-card {
+    background: var(--card-bg);
+    border-color: var(--border-color);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
+  }
+
+  .dark .elevation-inset {
+    background: var(--surface-inset);
+    border-color: var(--border-color);
+  }
+
   /* Cards — frosted glass + elevation */
   .card-base {
     background: var(--card-bg);
     backdrop-filter: var(--card-bg-backdrop);
     -webkit-backdrop-filter: var(--card-bg-backdrop);
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--border-light);
     border-radius: 1rem;
-    box-shadow: var(--shadow-soft);
+    box-shadow: var(--shadow-card);
     transition: all 0.4s ease;
   }
 
@@ -1028,13 +1147,23 @@
   
   /* File Upload / Drag & Drop Zones */
   .upload-zone {
-    @apply border-2 border-dashed;
-    @apply border-slate-300 dark:border-slate-600;
-    @apply bg-slate-50 dark:bg-slate-800/50;
-    @apply text-slate-600 dark:text-slate-400;
-    @apply hover:border-slate-400 dark:hover:border-slate-500;
-    @apply hover:bg-slate-100 dark:hover:bg-slate-800;
-    @apply transition-all duration-200;
+    @apply border-2 border-dashed transition-all duration-200;
+    border-color: var(--border-light);
+    background: var(--surface-inset);
+    color: var(--text-secondary);
+  }
+
+  .upload-zone:hover {
+    border-color: #94a3b8;
+    background: var(--bg-secondary);
+  }
+
+  .dark .upload-zone {
+    @apply border-slate-600 bg-slate-800/50 text-slate-400;
+  }
+
+  .dark .upload-zone:hover {
+    @apply border-slate-500 bg-slate-800;
   }
   
   .upload-zone-active {
@@ -1070,14 +1199,22 @@
   
   /* Metadata / Secondary Text */
   .text-meta {
-    @apply text-slate-500 dark:text-slate-400;
     @apply text-xs;
+    color: var(--text-secondary);
+  }
+
+  .dark .text-meta {
+    @apply text-slate-400;
   }
   
   /* Numbers / Data Display */
   .text-number {
-    @apply text-slate-900 dark:text-slate-100;
     @apply font-medium;
+    color: var(--text-primary);
+  }
+
+  .dark .text-number {
+    @apply text-slate-100;
   }
   
   /* Action Buttons - Small Icon Buttons for Tables */
@@ -1160,6 +1297,57 @@
 
   .text-dusty-red {
     color: var(--dusty-red);
+    -webkit-text-fill-color: var(--dusty-red);
+  }
+
+  html:not(.dark) .text-dusty-red {
+    color: var(--dusty-red) !important;
+    -webkit-text-fill-color: var(--dusty-red) !important;
+  }
+
+  .dark .text-dusty-red {
+    color: var(--dusty-red) !important;
+    -webkit-text-fill-color: var(--dusty-red) !important;
+  }
+
+  /* Danger zone — destructive actions (GitHub / Stripe pattern) */
+  .danger-zone-panel {
+    background: var(--danger-zone-bg) !important;
+    border: 1px solid var(--danger-zone-border) !important;
+    box-shadow: var(--shadow-soft);
+  }
+
+  .dark .danger-zone-panel {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  }
+
+  .danger-zone-heading,
+  .danger-zone-summary {
+    color: var(--danger-zone-heading);
+    -webkit-text-fill-color: var(--danger-zone-heading);
+  }
+
+  html:not(.dark) .danger-zone-heading,
+  html:not(.dark) .danger-zone-summary,
+  html.dark .danger-zone-heading,
+  html.dark .danger-zone-summary {
+    color: var(--danger-zone-heading) !important;
+    -webkit-text-fill-color: var(--danger-zone-heading) !important;
+  }
+
+  .danger-zone-chevron {
+    color: var(--danger-zone-icon);
+    -webkit-text-fill-color: var(--danger-zone-icon);
+  }
+
+  html:not(.dark) .danger-zone-chevron,
+  html.dark .danger-zone-chevron {
+    color: var(--danger-zone-icon) !important;
+    -webkit-text-fill-color: var(--danger-zone-icon) !important;
+  }
+
+  .danger-zone-divider {
+    border-color: var(--danger-zone-border);
   }
 
   /* Professional Action Buttons for Tables */
@@ -1393,6 +1581,12 @@
     -webkit-text-fill-color: var(--text-heading);
   }
 
+  /* Gradient clipped text must stay transparent — .text-primary fill rules break hero/brand gradients. */
+  .bg-clip-text.text-transparent,
+  .text-transparent.bg-clip-text {
+    -webkit-text-fill-color: transparent !important;
+  }
+
   /* Light theme: force ink + fill — inherited -webkit-text-fill-color (e.g. from blur layers) can stay white otherwise. */
   html:not(.dark) .text-primary {
     color: #0f172a !important;
@@ -1400,9 +1594,10 @@
   }
 
   html.dark .text-primary {
-    color: var(--text-heading);
-    -webkit-text-fill-color: var(--text-heading);
+    color: var(--text-heading) !important;
+    -webkit-text-fill-color: var(--text-heading) !important;
   }
+
   .text-secondary {
     color: var(--text-main);
     -webkit-text-fill-color: var(--text-main);
@@ -1414,8 +1609,8 @@
   }
 
   html.dark .text-secondary {
-    color: var(--text-main);
-    -webkit-text-fill-color: var(--text-main);
+    color: var(--text-main) !important;
+    -webkit-text-fill-color: var(--text-main) !important;
   }
 
   .text-muted {
@@ -1430,7 +1625,7 @@
 
   html.dark .text-muted {
     color: var(--text-muted) !important;
-    -webkit-text-fill-color: var(--text-muted);
+    -webkit-text-fill-color: var(--text-muted) !important;
   }
 }
 

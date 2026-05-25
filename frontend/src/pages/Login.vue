@@ -68,17 +68,17 @@
         <div class="glass-portal rounded-2xl overflow-hidden">
           <div class="px-6 sm:px-8 py-8 sm:py-10">
             <h2 class="cosmic-heading auth-heading text-xl font-bold mb-1">
-              {{ needs2fa ? 'Two-factor authentication' : 'Welcome back' }}
+              {{ show2faStep ? 'Two-factor authentication' : 'Welcome back' }}
             </h2>
             <p class="auth-subtitle text-sm mb-6">
               {{
-                needs2fa
+                show2faStep
                   ? 'Enter the 6-digit code from your authenticator app or a backup code.'
                   : 'Enter your credentials to continue'
               }}
             </p>
 
-            <form v-if="!needs2fa" @submit.prevent="handleLogin" class="space-y-5">
+            <form v-if="!show2faStep" @submit.prevent="handleLogin" class="space-y-5">
               <!-- Error -->
               <transition
                 enter-active-class="transition-all duration-300 ease-out"
@@ -196,7 +196,7 @@
               </p>
             </form>
 
-            <form v-else @submit.prevent="handle2fa" class="space-y-5">
+            <form v-else-if="ENABLE_2FA" @submit.prevent="handle2fa" class="space-y-5">
               <div class="input-wrap">
                 <label class="auth-subtitle block text-sm mb-2">Authenticator code</label>
                 <input
@@ -247,13 +247,15 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useThemeStore } from '@/stores/theme'
 import { useNotification } from '@/composables/useNotification'
 import { normalizeApiError } from '@/utils/apiError'
 import { pushLogin } from '@/analytics/dataLayer'
+import { ENABLE_2FA, ENABLE_EMAIL_VERIFICATION } from '@/config/features'
+import { storeEmailVerificationSession } from '@/utils/emailVerificationSession'
 import ThemeToggle from '@/components/common/ThemeToggle.vue'
 import {
   UserIcon,
@@ -281,6 +283,7 @@ const focusPassword = ref(false)
 const needs2fa = ref(false)
 const twoFactorToken = ref('')
 const code2fa = ref('')
+const show2faStep = computed(() => ENABLE_2FA && needs2fa.value)
 
 async function handleLogin() {
   try {
@@ -290,7 +293,12 @@ async function handleLogin() {
       password: form.value.password,
     }
     const result = await authStore.login(credentials)
-    if (result?.needs2fa) {
+    if (result?.needsEmailVerification && ENABLE_EMAIL_VERIFICATION) {
+      storeEmailVerificationSession(result.verificationToken, result.email)
+      router.push({ name: 'verify-email', query: route.query.redirect ? { redirect: route.query.redirect } : {} })
+      return
+    }
+    if (result?.needs2fa && ENABLE_2FA) {
       needs2fa.value = true
       twoFactorToken.value = result.twoFactorToken
       return

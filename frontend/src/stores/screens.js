@@ -212,7 +212,7 @@ export const useScreensStore = defineStore('screens', {
       this.loading = true
       this.error = null
       try {
-        const response = await screensAPI.update(id, data)
+        const response = await screensAPI.patch(id, data)
         const updatedScreen = response.data
         
         // Smart update: Fine-grained patch

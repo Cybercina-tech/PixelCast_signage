@@ -9,7 +9,7 @@
   >
     <section
       v-if="show"
-      class="onboarding-checklist relative isolate overflow-hidden rounded-2xl border border-border-color bg-card/90 backdrop-blur-sm shadow-lg shadow-black/5 dark:shadow-black/20 text-slate-600 dark:text-slate-300"
+      class="onboarding-checklist relative isolate overflow-hidden rounded-2xl border border-border-light elevation-card backdrop-blur-sm dark:border-border-color dark:bg-card/90 dark:shadow-lg dark:shadow-black/20 text-secondary dark:text-slate-300"
       role="region"
       aria-label="Getting started checklist"
     >
@@ -33,7 +33,7 @@
               >
                 <SparklesIcon class="h-4 w-4" />
               </span>
-              <h2 class="text-lg font-semibold tracking-tight text-slate-900 dark:text-white sm:text-xl">
+              <h2 class="text-lg font-semibold tracking-tight text-primary sm:text-xl">
                 Get started
               </h2>
             </div>
@@ -43,7 +43,7 @@
           </div>
           <button
             type="button"
-            class="group inline-flex shrink-0 items-center justify-center gap-1.5 self-end rounded-lg px-3 py-2 text-xs font-medium text-muted transition-colors hover:bg-slate-100 hover:text-slate-900 dark:hover:bg-slate-800/80 dark:hover:text-white sm:self-start"
+            class="group inline-flex shrink-0 items-center justify-center gap-1.5 self-end rounded-lg px-3 py-2 text-xs font-medium text-muted transition-colors hover:bg-surface-inset hover:text-primary dark:hover:bg-slate-800/80 dark:hover:text-white sm:self-start"
             @click="dismiss"
           >
             <span>Dismiss</span>
@@ -54,13 +54,13 @@
         <!-- Progress -->
         <div class="mt-5 space-y-2 sm:mt-6">
           <div class="flex items-center justify-between gap-3 text-xs sm:text-sm">
-            <span class="font-medium text-slate-800 dark:text-slate-200 tabular-nums">
+            <span class="font-medium text-primary dark:text-slate-200 tabular-nums">
               {{ completedCount }} of {{ steps.length }} complete
             </span>
             <span class="tabular-nums text-muted">{{ progressPercent }}%</span>
           </div>
           <div
-            class="h-2 overflow-hidden rounded-full bg-slate-200/80 dark:bg-slate-700/80"
+            class="h-2 overflow-hidden rounded-full bg-[var(--bg-secondary)] dark:bg-slate-700/80"
             role="progressbar"
             :aria-valuenow="progressPercent"
             aria-valuemin="0"

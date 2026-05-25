@@ -3,6 +3,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { canAccessRoute, isDeveloperOrSuperuser } from '@/utils/permissions'
 import { pushVirtualPageView } from '@/analytics/dataLayer'
+import { ENABLE_EMAIL_VERIFICATION } from '@/config/features'
 
 // Public pages
 import Landing from '../pages/Landing.vue'
@@ -50,7 +51,6 @@ import AnalyticsDashboard from '../pages/analytics/AnalyticsDashboard.vue'
 // Core Infrastructure
 import AuditLogs from '../pages/core/AuditLogs.vue'
 import Backups from '../pages/core/Backups.vue'
-import SystemEmailSettings from '../pages/core/SystemEmailSettings.vue'
 
 // Settings
 import Settings from '../pages/Settings.vue'
@@ -130,6 +130,12 @@ const routes = [
     path: '/signup',
     name: 'signup',
     component: Signup,
+    meta: { public: true },
+  },
+  {
+    path: '/verify-email',
+    name: 'verify-email',
+    component: () => import('../pages/VerifyEmail.vue'),
     meta: { public: true },
   },
   {
@@ -607,12 +613,6 @@ const routes = [
     meta: { requiresAuth: true, requiresRole: ['Developer'] },
   },
   {
-    path: '/core/email',
-    name: 'system-email-settings',
-    component: SystemEmailSettings,
-    meta: { requiresAuth: true, requiresRole: ['Developer'] },
-  },
-  {
     path: '/settings',
     name: 'settings',
     component: Settings,
@@ -694,12 +694,26 @@ router.beforeEach(async (to, from, next) => {
   
   // Allow public routes to load immediately
   if (to.meta.public) {
-    // If user is authenticated and trying to access public pages like login/signup
-    if (authStore.isAuthenticated && (to.name === 'login' || to.name === 'signup')) {
+    if (authStore.isAuthenticated && authStore.user?.is_email_verified && (to.name === 'login' || to.name === 'signup')) {
+      next({ name: 'dashboard' })
+      return
+    }
+    if (to.name === 'verify-email' && authStore.isAuthenticated && authStore.user?.is_email_verified) {
       next({ name: 'dashboard' })
       return
     }
     next()
+    return
+  }
+
+  if (
+    ENABLE_EMAIL_VERIFICATION &&
+    to.meta.requiresAuth &&
+    authStore.isAuthenticated &&
+    authStore.user &&
+    !authStore.user.is_email_verified
+  ) {
+    next({ name: 'verify-email', query: { redirect: to.fullPath } })
     return
   }
   

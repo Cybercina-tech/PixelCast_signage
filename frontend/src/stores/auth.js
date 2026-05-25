@@ -60,6 +60,13 @@ export const useAuthStore = defineStore('auth', {
             twoFactorToken: response.data.two_factor_token,
           }
         }
+        if (response.data.status === 'email_verification_required') {
+          return {
+            needsEmailVerification: true,
+            verificationToken: response.data.verification_token,
+            email: response.data.email,
+          }
+        }
         // Backend returns: {status: 'success', user: {...}, tokens: {refresh, access}}
         if (response.data.tokens) {
           this.setTokens(response.data.tokens.access, response.data.tokens.refresh)
@@ -77,6 +84,37 @@ export const useAuthStore = defineStore('auth', {
         return response.data
       } catch (error) {
         this.error = normalizeApiError(error).userMessage || 'Login failed. Please check your credentials.'
+        throw error
+      } finally {
+        this.loading = false
+      }
+    },
+    async completeEmailVerification({ verificationToken, code }) {
+      this.loading = true
+      this.error = null
+      try {
+        const response = await authAPI.emailVerificationConfirm({
+          verification_token: verificationToken,
+          code: String(code || '').trim(),
+        })
+        if (response.data.status === '2fa_required') {
+          return {
+            needs2fa: true,
+            twoFactorToken: response.data.two_factor_token,
+          }
+        }
+        if (response.data.tokens) {
+          this.setTokens(response.data.tokens.access, response.data.tokens.refresh)
+        }
+        if (response.data.user) {
+          this.user = response.data.user
+        } else {
+          await this.fetchMe()
+        }
+        this.isAuthenticated = true
+        return response.data
+      } catch (error) {
+        this.error = normalizeApiError(error).userMessage || 'Verification failed.'
         throw error
       } finally {
         this.loading = false

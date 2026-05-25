@@ -328,11 +328,12 @@ watch(() => authStore.user, async (newUser) => {
 
 /* Space Sidebar Base - Aether Identity */
 .space-sidebar {
-  background: var(--sidebar-bg); /* Frosted glass with 80% opacity */
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: none; /* No borders - Aether uses soft shadows */
-  box-shadow: var(--shadow-soft); /* Soft shadow instead of border */
+  background: var(--sidebar-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: none;
+  border-right: 1px solid var(--border-light);
+  box-shadow: none;
   height: 100vh; /* Full viewport height from top to bottom */
   min-height: 100vh; /* Ensure minimum full height */
   z-index: 50; /* Higher than footer (z-20) */
@@ -460,9 +461,9 @@ watch(() => authStore.user, async (newUser) => {
 }
 
 .menu-item:hover {
-  background: rgba(0, 0, 0, 0.03);
+  background: var(--bg-secondary);
   color: var(--text-heading);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  box-shadow: none;
 }
 
 .dark .menu-item:hover {
@@ -472,12 +473,10 @@ watch(() => authStore.user, async (newUser) => {
 }
 
 .menu-item-active {
-  background: rgba(9, 132, 227, 0.1);
-  border-left-color: var(--accent-color);
-  color: var(--accent-color);
-  box-shadow: 
-    inset 2px 0 0 var(--accent-color),
-    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  background: var(--nav-active-bg);
+  border-left-color: var(--brand-accent);
+  color: var(--brand-accent);
+  box-shadow: inset 2px 0 0 var(--brand-accent);
 }
 
 .dark .menu-item-active {
@@ -592,9 +591,9 @@ watch(() => authStore.user, async (newUser) => {
 }
 
 .submenu-item-active {
-  background: rgba(9, 132, 227, 0.1);
-  color: var(--accent-color);
-  border-left: 2px solid var(--accent-color);
+  background: var(--nav-active-bg);
+  color: var(--brand-accent);
+  border-left: 2px solid var(--brand-accent);
   padding-left: 0.875rem;
 }
 

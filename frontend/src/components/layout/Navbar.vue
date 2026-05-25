@@ -448,11 +448,12 @@ onUnmounted(() => {
   position: sticky;
   top: 0;
   z-index: 40;
-  background: var(--surface-3); /* More solid to avoid transparent look */
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: none; /* No borders - Aether uses soft shadows */
-  box-shadow: var(--shadow-soft); /* Soft shadow instead of border */
+  background: var(--bg-topbar);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: none;
+  border-bottom: 1px solid var(--border-light);
+  box-shadow: var(--shadow-soft);
   transition: all 0.4s ease;
 }
 

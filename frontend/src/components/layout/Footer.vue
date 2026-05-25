@@ -101,8 +101,8 @@ onUnmounted(() => {
   background: var(--card-bg);
   backdrop-filter: var(--card-bg-backdrop);
   -webkit-backdrop-filter: var(--card-bg-backdrop);
-  border-top: 1px solid var(--border-color);
-  box-shadow: 0 -1px 0 rgba(15, 23, 42, 0.04);
+  border-top: 1px solid var(--border-light);
+  box-shadow: 0 -1px 3px rgba(15, 23, 42, 0.04);
   padding: 0.375rem 1.5rem;
   height: 30px;
   max-height: 30px;

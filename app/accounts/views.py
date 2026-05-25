@@ -12,9 +12,11 @@ from django.core.exceptions import PermissionDenied, ValidationError
 from django.utils import timezone
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import never_cache
-from core.email_service import send_system_email
 from django.conf import settings
 from django.shortcuts import get_object_or_404
+
+from .api_auth_extras import EMAIL_VERIFY_SIGNER, build_login_success_response
+from .email_verification_policy import is_email_verification_required
 
 from .models import User
 from .serializers import (
@@ -891,32 +893,34 @@ def signup_view(request):
             )
         except Exception as e:
             logger.error(f'Failed to log signup audit: {e}')
-        
-        # Generate JWT tokens for auto-login
-        ua = request.META.get('HTTP_USER_AGENT', '') or ''
-        xff = request.META.get('HTTP_X_FORWARDED_FOR')
-        ip = xff.split(',')[0].strip() if xff else (request.META.get('REMOTE_ADDR', '') or '')
-        refresh = ScreenGramRefreshToken.for_user(user, client_ua=ua, client_ip=ip)
 
-        return Response({
-            'status': 'success',
-            'message': 'Account created successfully',
-            'user': {
-                'id': str(user.id),
-                'username': user.username,
-                'email': user.email,
-                'full_name': user.full_name,
-                'role': user.role,
-                'role_display': user.get_role_display(),
-                'is_staff': user.is_staff,
-                'is_superuser': user.is_superuser,
-                'is_2fa_enabled': getattr(user, 'is_2fa_enabled', False),
-            },
-            'tokens': {
-                'refresh': str(refresh),
-                'access': str(refresh.access_token),
-            }
-        }, status=status.HTTP_201_CREATED)
+        if is_email_verification_required():
+            from accounts.email_verification import mask_email, send_user_verification_email
+
+            try:
+                send_user_verification_email(user, request=request)
+            except Exception as e:
+                logger.exception('signup verification email failed: %s', e)
+
+            verification_token = EMAIL_VERIFY_SIGNER.sign(str(user.pk))
+            return Response(
+                {
+                    'status': 'email_verification_required',
+                    'message': 'Account created. Enter the verification code sent to your email.',
+                    'verification_token': verification_token,
+                    'email': mask_email(user.email),
+                },
+                status=status.HTTP_201_CREATED,
+            )
+
+        if not user.is_email_verified:
+            user.is_email_verified = True
+            user.save(update_fields=['is_email_verified'])
+
+        payload = build_login_success_response(user, request)
+        payload['status'] = 'success'
+        payload['message'] = 'Account created successfully.'
+        return Response(payload, status=status.HTTP_201_CREATED)
     
     return error_response(serializer.errors, status.HTTP_400_BAD_REQUEST, default_message='Signup validation failed')
 
@@ -1094,33 +1098,9 @@ class SendVerificationEmail(APIView):
             }, status=status.HTTP_400_BAD_REQUEST)
         
         try:
-            # Generate verification code
-            code = user.generate_verification_code()
-            
-            # Send email
-            subject = 'PixelCast Signage Email Verification Code'
-            message = f'''
-Hello {user.full_name or user.username},
+            from accounts.email_verification import send_user_verification_email
 
-Your email verification code is: {code}
-
-This code will expire in 10 minutes.
-
-If you did not request this code, please ignore this email.
-
-Best regards,
-PixelCast Signage Team
-'''
-            from_email = settings.DEFAULT_FROM_EMAIL
-            recipient_list = [user.email]
-            
-            send_system_email(
-                subject=subject,
-                message=message,
-                recipient_list=recipient_list,
-                from_email=from_email,
-                fail_silently=False,
-            )
+            send_user_verification_email(user, request=request)
             
             # Log audit event
             try:
@@ -1143,8 +1123,8 @@ PixelCast Signage Team
             logger.error(f'Failed to send verification email: {e}')
             return Response({
                 'status': 'error',
-                'message': 'Failed to send verification email. Please try again later.'
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                'message': 'Failed to send verification email. Check SMTP settings or try again later.'
+            }, status=status.HTTP_503_SERVICE_UNAVAILABLE)
 
 
 class VerifyEmail(APIView):

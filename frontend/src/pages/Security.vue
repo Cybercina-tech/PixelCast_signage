@@ -61,7 +61,7 @@
         </form>
       </Card>
 
-      <Card title="Two-factor authentication (TOTP)">
+      <Card v-if="ENABLE_2FA" title="Two-factor authentication (TOTP)">
         <p class="text-sm text-secondary mb-4">
           Add an extra layer of security. Use an authenticator app (Google Authenticator, Authy, etc.).
         </p>
@@ -169,6 +169,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { ENABLE_2FA } from '@/config/features'
 import { useAuthStore } from '@/stores/auth'
 import { useNotification } from '@/composables/useNotification'
 import { authAPI, usersAPI } from '@/services/api'

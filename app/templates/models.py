@@ -722,6 +722,14 @@ class Content(models.Model):
         blank=True,
         help_text="Widget that this content belongs to (optional - allows standalone media library)"
     )
+    uploaded_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='uploaded_contents',
+        help_text="Account that uploaded this content (media library isolation)"
+    )
     
     # Status & Metadata
     is_active = models.BooleanField(
@@ -816,11 +824,13 @@ class Content(models.Model):
             models.Index(fields=['type', 'is_active']),
             models.Index(fields=['download_status', 'downloaded']),
             models.Index(fields=['widget', 'download_status']),
+            models.Index(fields=['uploaded_by', 'widget']),
         ]
     
     def __str__(self):
         """Return string representation: '{widget name} - {content name}'"""
-        return f"{self.widget.name} - {self.name}"
+        widget_name = self.widget.name if self.widget_id else 'Library'
+        return f"{widget_name} - {self.name}"
     
     # Helper Methods for Download Status
     def mark_downloaded(self):

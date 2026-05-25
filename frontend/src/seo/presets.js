@@ -86,6 +86,11 @@ export const SEO_BY_ROUTE_NAME = {
     'Request a secure link to reset your PixelCast account password.',
     { robots: 'noindex, nofollow' }
   ),
+  'verify-email': publicSeo(
+    `Verify Email — ${SITE_NAME}`,
+    'Enter the verification code sent to your email to activate your PixelCast account.',
+    { robots: 'noindex, nofollow' }
+  ),
   'reset-password': publicSeo(
     `Set New Password — ${SITE_NAME}`,
     'Choose a new password to access your digital signage management account.',

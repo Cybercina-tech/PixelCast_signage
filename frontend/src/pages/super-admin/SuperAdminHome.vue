@@ -109,11 +109,11 @@
           <p class="text-sm text-muted">Transactional email and test send</p>
         </router-link>
         <router-link
-          to="/super-admin/recovery"
+          to="/super-admin/billing"
           class="card-base rounded-2xl p-6 hover:border-accent-color/40 hover:-translate-y-0.5 border border-transparent transition-all block"
         >
-          <h2 class="font-semibold text-primary mb-1">Recovery &amp; dunning</h2>
-          <p class="text-sm text-muted">Failed payments and reminders</p>
+          <h2 class="font-semibold text-primary mb-1">Billing &amp; recovery</h2>
+          <p class="text-sm text-muted">Failed payments, dunning, and revenue signals</p>
         </router-link>
       </div>
     </div>

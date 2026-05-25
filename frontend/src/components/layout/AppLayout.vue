@@ -12,15 +12,15 @@
       <Navbar :title="title" @toggle-sidebar="sidebarOpen = !sidebarOpen" />
       <div
         v-if="showWsBanner"
-        class="shrink-0 border-b border-amber-500/30 bg-amber-500/10 px-4 py-2.5 flex items-center gap-3 text-sm text-amber-200"
+        class="app-status-banner app-status-banner--warning shrink-0 border-b px-4 py-2.5 flex items-center gap-3 text-sm"
       >
-        <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
           <path stroke-linecap="round" stroke-linejoin="round" d="M8.288 15.038a5.25 5.25 0 017.424 0M5.106 11.856c3.807-3.808 9.98-3.808 13.788 0M2.924 8.674c5.565-5.565 14.587-5.565 20.152 0M12 18.75h.008v.008H12v-.008z" />
         </svg>
-        <span class="flex-1">{{ wsBannerMessage }}</span>
+        <span class="flex-1 font-medium">{{ wsBannerMessage }}</span>
         <button
           type="button"
-          class="shrink-0 rounded-lg border border-amber-500/40 px-3 py-1 text-xs font-medium text-amber-100 hover:bg-amber-500/20"
+          class="app-status-banner__action shrink-0 rounded-lg border px-3 py-1 text-xs font-semibold transition-colors"
           @click="handleWsReconnect"
         >
           Reconnect
@@ -28,12 +28,12 @@
       </div>
       <div
         v-if="authStore.isRestrictedMode"
-        class="shrink-0 border-b border-rose-500/30 bg-rose-500/10 px-4 py-2.5 flex items-center gap-3 text-sm text-rose-300"
+        class="app-status-banner app-status-banner--danger shrink-0 border-b px-4 py-2.5 flex items-center gap-3 text-sm"
       >
-        <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+        <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
           <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
         </svg>
-        <span class="flex-1">{{ restrictionBannerText }}</span>
+        <span class="flex-1 font-medium">{{ restrictionBannerText }}</span>
       </div>
       <main :class="['flex-1 flex flex-col scroll-container', isEditorRoute ? 'overflow-hidden' : 'overflow-y-auto custom-scrollbar']">
         <div :class="[
@@ -83,11 +83,9 @@ const restrictionBannerText = computed(() => {
 const screensStore = useScreensStore()
 const {
   connect,
-  disconnect,
   reconnect,
   on,
   off,
-  isConnected,
   reconnectExhausted,
   lastCloseReason,
 } = useWebSocket()
@@ -150,11 +148,62 @@ onUnmounted(() => {
   off('reconnect_exhausted', onReconnectExhausted)
   off('connected')
   off('disconnected')
-  disconnect()
+  // Keep the singleton dashboard socket alive across route changes; auth logout disconnects.
 })
 </script>
 
 <style scoped>
+/* Live status banners — WCAG-friendly in light and dark themes */
+.app-status-banner--warning {
+  background: #fffbeb;
+  border-color: #fcd34d;
+  color: #92400e;
+  -webkit-text-fill-color: #92400e;
+}
+
+.app-status-banner--warning .app-status-banner__action {
+  border-color: #d97706;
+  color: #78350f;
+  -webkit-text-fill-color: #78350f;
+  background: #fef3c7;
+}
+
+.app-status-banner--warning .app-status-banner__action:hover {
+  background: #fde68a;
+}
+
+.app-status-banner--danger {
+  background: #fff1f2;
+  border-color: #fda4af;
+  color: #9f1239;
+  -webkit-text-fill-color: #9f1239;
+}
+
+:global(html.dark) .app-status-banner--warning {
+  background: rgba(245, 158, 11, 0.12);
+  border-color: rgba(245, 158, 11, 0.35);
+  color: #fde68a;
+  -webkit-text-fill-color: #fde68a;
+}
+
+:global(html.dark) .app-status-banner--warning .app-status-banner__action {
+  border-color: rgba(251, 191, 36, 0.45);
+  color: #fffbeb;
+  -webkit-text-fill-color: #fffbeb;
+  background: rgba(245, 158, 11, 0.18);
+}
+
+:global(html.dark) .app-status-banner--warning .app-status-banner__action:hover {
+  background: rgba(245, 158, 11, 0.28);
+}
+
+:global(html.dark) .app-status-banner--danger {
+  background: rgba(244, 63, 94, 0.12);
+  border-color: rgba(244, 63, 94, 0.35);
+  color: #fecdd3;
+  -webkit-text-fill-color: #fecdd3;
+}
+
 /* Ensure content has space above footer when scrolling */
 .main-content-wrapper:not(.p-0) {
   padding-bottom: calc(1.5rem + 30px);

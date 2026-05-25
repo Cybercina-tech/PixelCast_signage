@@ -71,3 +71,70 @@ test('template editor mobile: library, widget, inspector', async ({ page }) => {
   await expect(page.getByRole('heading', { name: /position & size/i }).first()).toBeVisible()
   await page.getByRole('button', { name: /^close$/i }).click()
 })
+
+async function openNewTemplateEditor(page, name) {
+  await page.goto(`/templates/new/edit?name=${encodeURIComponent(name)}&width=1280&height=720`)
+  await expect(page.getByText('Widget Library')).toBeVisible()
+}
+
+test('template editor countdown widget shows inspector', async ({ page }) => {
+  test.setTimeout(120000)
+  await login(page)
+  await openNewTemplateEditor(page, 'Countdown E2E')
+
+  await page.getByRole('button', { name: /add countdown/i }).click()
+  await expect(page.locator('.widget-element').first()).toBeVisible()
+  await expect(page.getByText('Countdown').first()).toBeVisible()
+  await expect(page.getByPlaceholder('Spring Festival')).toBeVisible()
+})
+
+test('template editor chart widget shows chart properties', async ({ page }) => {
+  test.setTimeout(120000)
+  await login(page)
+  await openNewTemplateEditor(page, 'Chart E2E')
+
+  await page.getByRole('button', { name: /add chart/i }).click()
+  await expect(page.locator('.widget-element').first()).toBeVisible()
+  await expect(page.getByText('Chart Properties')).toBeVisible()
+  await expect(page.getByText('Chart Type')).toBeVisible()
+})
+
+test('template editor webview widget shows url inspector and preview stub', async ({ page }) => {
+  test.setTimeout(120000)
+  await login(page)
+  await openNewTemplateEditor(page, 'Webview E2E')
+
+  await page.getByRole('button', { name: /add webview/i }).click()
+  await expect(page.locator('.widget-element').first()).toBeVisible()
+  await expect(page.getByText('Webview Properties')).toBeVisible()
+  await expect(page.getByText(/Webview Preview/i)).toBeVisible()
+})
+
+test('template editor widget library smoke: add core widget types', async ({ page }) => {
+  test.setTimeout(180000)
+  await login(page)
+  await openNewTemplateEditor(page, 'Widget Smoke E2E')
+
+  const addButtons = [
+    /add clock/i,
+    /add date/i,
+    /add weekday/i,
+    /add countdown/i,
+    /add text/i,
+    /add marquee/i,
+    /add weather/i,
+    /add qr action/i,
+    /add image/i,
+    /add video/i,
+    /add album playlist/i,
+    /add webview/i,
+    /add chart/i,
+  ]
+
+  for (const pattern of addButtons) {
+    await page.getByRole('button', { name: pattern }).click()
+    await expect(page.locator('.widget-element').last()).toBeVisible()
+  }
+
+  await expect(page.locator('.widget-element')).toHaveCount(addButtons.length)
+})

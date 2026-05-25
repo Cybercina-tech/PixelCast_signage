@@ -54,14 +54,14 @@
           <div class="hidden lg:flex flex-wrap items-center justify-end gap-x-2 gap-y-1 xl:gap-2.5 shrink-0">
             <a
               :href="productDocsUrl"
-              class="landing-nav-link px-2 py-1.5 text-xs sm:text-sm text-white/80 hover:text-white transition-colors whitespace-nowrap"
+              class="landing-nav-link px-2 py-1.5 text-xs sm:text-sm transition-colors whitespace-nowrap"
             >
               Docs
             </a>
             <div class="relative group">
               <button
                 type="button"
-                class="landing-nav-link inline-flex items-center gap-1 px-2 py-1.5 text-xs sm:text-sm text-white/80 hover:text-white transition-colors whitespace-nowrap"
+                class="landing-nav-link inline-flex items-center gap-1 px-2 py-1.5 text-xs sm:text-sm transition-colors whitespace-nowrap"
                 aria-label="Open blog resources"
               >
                 Blog
@@ -105,7 +105,7 @@
             </div>
             <router-link
               to="/pricing"
-              class="landing-nav-link px-2 py-1.5 text-xs sm:text-sm text-white/80 hover:text-white transition-colors whitespace-nowrap"
+              class="landing-nav-link px-2 py-1.5 text-xs sm:text-sm transition-colors whitespace-nowrap"
             >
               Pricing
             </router-link>
@@ -114,14 +114,14 @@
               :href="codecanyonItemUrl"
               target="_blank"
               rel="noopener noreferrer"
-              class="landing-nav-link px-2 py-1.5 text-xs sm:text-sm text-white/80 hover:text-white transition-colors whitespace-nowrap"
+              class="landing-nav-link px-2 py-1.5 text-xs sm:text-sm transition-colors whitespace-nowrap"
             >
               CodeCanyon
             </a>
             <template v-if="isInstalled">
               <router-link
                 to="/login"
-                class="landing-nav-link px-2 py-1.5 text-xs sm:text-sm text-white/80 hover:text-white transition-colors"
+                class="landing-nav-link px-2 py-1.5 text-xs sm:text-sm transition-colors"
               >
                 Login
               </router-link>
@@ -171,7 +171,7 @@
           </h2>
           <button
             type="button"
-            class="rounded-lg p-2 text-white/70 hover:bg-white/10 hover:text-white transition-colors"
+            class="landing-drawer-close rounded-lg p-2 transition-colors"
             aria-label="Close menu"
             @click="closeSectionMenu"
           >
@@ -328,12 +328,10 @@
                 <p class="inline-flex items-center gap-2 rounded-full border border-cyan-400/30 bg-cyan-500/10 px-3 py-1.5 text-[11px] sm:text-xs uppercase tracking-[0.12em] text-cyan-200 font-semibold">
                   Zero-Hardware Cost Positioning
                 </p>
-                <h1 class="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight tracking-tight">
-                  <span class="bg-gradient-to-r from-cyan-400 via-blue-400 to-purple-500 bg-clip-text text-transparent">
-                    Turn Any TV with a Browser
-                  </span>
+                <h1 class="landing-hero-heading text-4xl md:text-5xl lg:text-6xl font-bold leading-tight tracking-tight">
+                  <span class="landing-hero-gradient">Turn Any TV with a Browser</span>
                   <br>
-                  <span class="text-white">into Digital Signage</span>
+                  <span class="landing-hero-title-line">into Digital Signage</span>
                 </h1>
                 <p class="text-lg md:text-xl text-white/70 leading-relaxed max-w-xl mx-auto lg:mx-0">
                   No media players required. Launch commercial digital signage on existing smart TVs and browser-capable displays, then control templates, schedules, and updates centrally with PixelCast.
@@ -912,17 +910,17 @@
             © {{ footerYear }} PixelCast. All rights reserved.
           </p>
           <div class="flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
-            <router-link to="/privacy" class="hover:text-white transition-colors">Privacy</router-link>
-            <router-link to="/terms" class="hover:text-white transition-colors">Terms</router-link>
-            <a :href="productDocsUrl" class="hover:text-white transition-colors">Docs</a>
-            <router-link to="/blog" class="hover:text-white transition-colors">Blog</router-link>
-            <router-link to="/solutions/browser-based-digital-signage-software" class="hover:text-white transition-colors">
+            <router-link to="/privacy" class="landing-footer-link transition-colors">Privacy</router-link>
+            <router-link to="/terms" class="landing-footer-link transition-colors">Terms</router-link>
+            <a :href="productDocsUrl" class="landing-footer-link transition-colors">Docs</a>
+            <router-link to="/blog" class="landing-footer-link transition-colors">Blog</router-link>
+            <router-link to="/solutions/browser-based-digital-signage-software" class="landing-footer-link transition-colors">
               Browser signage
             </router-link>
-            <router-link to="/solutions/free-digital-signage-menu-boards" class="hover:text-white transition-colors">
+            <router-link to="/solutions/free-digital-signage-menu-boards" class="landing-footer-link transition-colors">
               Free menu boards
             </router-link>
-            <router-link to="/data-center" class="hover:text-white transition-colors">Data Center</router-link>
+            <router-link to="/data-center" class="landing-footer-link transition-colors">Data Center</router-link>
           </div>
         </div>
       </footer>
@@ -1262,6 +1260,14 @@ onUnmounted(() => {
   border-radius: 0.55rem;
   font-weight: 600;
   letter-spacing: 0.01em;
+  color: rgba(248, 250, 252, 0.82);
+  -webkit-text-fill-color: rgba(248, 250, 252, 0.82);
+  text-decoration: none;
+}
+
+.landing-nav-link:hover {
+  color: #ffffff;
+  -webkit-text-fill-color: #ffffff;
 }
 
 .landing-nav-dropdown {
@@ -1317,7 +1323,7 @@ onUnmounted(() => {
   --accent-color: #2563eb;
   color: var(--text-body);
   color-scheme: light;
-  background: linear-gradient(135deg, #f8fafc 0%, #eef2ff 42%, #e2e8f0 100%);
+  background: linear-gradient(135deg, var(--bg-main) 0%, #eef2ff 42%, var(--bg-secondary) 100%);
   animation: none;
 }
 
@@ -1368,13 +1374,57 @@ onUnmounted(() => {
   background-image: linear-gradient(90deg, #0284c7 0%, #4f46e5 100%);
 }
 
-.landing-page.landing-light .landing-nav-link {
+.landing-page.landing-light .landing-nav .landing-nav-link,
+html:not(.dark) .landing-page.landing-light .landing-nav .landing-nav-link {
   color: #475569 !important;
+  -webkit-text-fill-color: #475569 !important;
 }
 
-.landing-page.landing-light .landing-nav-link:hover {
+.landing-page.landing-light .landing-nav .landing-nav-link:hover,
+html:not(.dark) .landing-page.landing-light .landing-nav .landing-nav-link:hover,
+html:not(.dark) .landing-page.landing-light .landing-nav a.landing-nav-link.text-white {
   color: #0f172a !important;
+  -webkit-text-fill-color: #0f172a !important;
   background: rgba(148, 163, 184, 0.14);
+}
+
+.landing-drawer-close {
+  color: rgba(248, 250, 252, 0.72);
+  -webkit-text-fill-color: rgba(248, 250, 252, 0.72);
+}
+
+.landing-drawer-close:hover {
+  color: #ffffff;
+  -webkit-text-fill-color: #ffffff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.landing-page.landing-light .landing-drawer-close {
+  color: #64748b;
+  -webkit-text-fill-color: #64748b;
+}
+
+.landing-page.landing-light .landing-drawer-close:hover,
+html:not(.dark) .landing-page.landing-light .landing-drawer-close:hover {
+  color: #0f172a !important;
+  -webkit-text-fill-color: #0f172a !important;
+  background: rgba(148, 163, 184, 0.14);
+}
+
+.landing-footer-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.landing-footer-link:hover {
+  color: #ffffff;
+  -webkit-text-fill-color: #ffffff;
+}
+
+.landing-page.landing-light .landing-footer .landing-footer-link:hover,
+html:not(.dark) .landing-page.landing-light .landing-footer a.landing-footer-link:hover {
+  color: #0f172a !important;
+  -webkit-text-fill-color: #0f172a !important;
 }
 
 .landing-page.landing-light .landing-nav-dropdown {
@@ -1791,6 +1841,30 @@ onUnmounted(() => {
     box-shadow: 0 0 40px rgba(6, 182, 212, 0.7), 0 0 60px rgba(139, 92, 246, 0.5);
     transform: translateY(-3px) scale(1.02);
   }
+}
+
+/* Hero title: global heading / -webkit-text-fill overrides break bg-clip-text gradients. */
+.landing-page .landing-hero-heading .landing-hero-gradient {
+  display: inline;
+  background-image: linear-gradient(90deg, #22d3ee 0%, #60a5fa 50%, #a855f7 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent !important;
+  -webkit-text-fill-color: transparent !important;
+}
+
+.landing-page .landing-hero-heading .landing-hero-title-line {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+.landing-page.landing-light .landing-hero-heading .landing-hero-gradient {
+  background-image: linear-gradient(90deg, #0891b2 0%, #2563eb 50%, #7c3aed 100%);
+}
+
+.landing-page.landing-light .landing-hero-heading .landing-hero-title-line {
+  color: var(--text-heading) !important;
+  -webkit-text-fill-color: var(--text-heading) !important;
 }
 
 /* Hero CTAs: body/link inherit would otherwise use --text-body (dark in light mode). */

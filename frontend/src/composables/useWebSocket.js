@@ -26,6 +26,9 @@ let reconnectTimer = null
 let pingTimer = null
 let intentionalDisconnect = false
 let consecutiveReconnectFailures = 0
+let activeConnectionId = 0
+let reconnectWithTokenTimer = null
+let pendingTokenForReconnect = null
 const eventHandlers = new Map()
 
 function devLog(...args) {
@@ -184,6 +187,58 @@ function clearReconnectTimer() {
   }
 }
 
+function buildDashboardWsUrl(token) {
+  return `${getWebSocketOrigin()}/ws/dashboard/?token=${encodeURIComponent(token)}`
+}
+
+/**
+ * Replace an in-flight or open socket without calling close() while CONNECTING
+ * (avoids "WebSocket is closed before the connection is established" noise).
+ */
+function supersedeSocket(ws, reason = 'Superseded') {
+  if (!ws) return
+
+  ws.onmessage = null
+  ws.onerror = null
+
+  const closeSuperseded = () => {
+    try {
+      if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CLOSING) {
+        ws.close(WS_CLOSE_NORMAL, reason)
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+
+  if (ws.readyState === WebSocket.OPEN) {
+    ws.onopen = null
+    ws.onclose = null
+    closeSuperseded()
+    return
+  }
+
+  if (ws.readyState === WebSocket.CONNECTING) {
+    ws.onopen = () => {
+      ws.onclose = null
+      closeSuperseded()
+    }
+    ws.onclose = null
+    return
+  }
+
+  ws.onopen = null
+  ws.onclose = null
+}
+
+function detachSocketHandlers(ws) {
+  if (!ws) return
+  ws.onopen = null
+  ws.onmessage = null
+  ws.onerror = null
+  ws.onclose = null
+}
+
 async function scheduleReconnect(closeCode) {
   if (intentionalDisconnect || reconnectTimer) return
 
@@ -236,28 +291,44 @@ async function scheduleReconnect(closeCode) {
 async function connect(tokenOrUndefined) {
   intentionalDisconnect = false
 
-  if (socket.value?.readyState === WebSocket.OPEN) {
-    devLog('WebSocket already connected')
-    return
-  }
-
-  if (socket.value?.readyState === WebSocket.CONNECTING) {
-    return
-  }
-
   const token = tokenOrUndefined || (await resolveAccessToken())
   if (!token) {
     devWarn('WebSocket connect skipped: no access token')
     return
   }
 
+  const wsUrl = buildDashboardWsUrl(token)
+  const existing = socket.value
+
+  if (existing?.readyState === WebSocket.OPEN && existing.url === wsUrl) {
+    devLog('WebSocket already connected')
+    return
+  }
+
+  if (existing?.readyState === WebSocket.CONNECTING && existing.url === wsUrl) {
+    devLog('WebSocket connection already in progress')
+    return
+  }
+
   reconnectExhausted.value = false
+  const connectionId = ++activeConnectionId
+
+  if (existing) {
+    supersedeSocket(existing, 'Replacing connection')
+    if (socket.value === existing) {
+      socket.value = null
+    }
+  }
 
   try {
-    const wsUrl = `${getWebSocketOrigin()}/ws/dashboard/?token=${encodeURIComponent(token)}`
-    socket.value = new WebSocket(wsUrl)
+    const ws = new WebSocket(wsUrl)
+    socket.value = ws
 
-    socket.value.onopen = () => {
+    ws.onopen = () => {
+      if (connectionId !== activeConnectionId || socket.value !== ws) {
+        supersedeSocket(ws, 'Stale connection')
+        return
+      }
       devLog('WebSocket connected')
       isConnected.value = true
       consecutiveReconnectFailures = 0
@@ -268,7 +339,8 @@ async function connect(tokenOrUndefined) {
       emit('connected', { timestamp: new Date().toISOString() })
     }
 
-    socket.value.onmessage = (event) => {
+    ws.onmessage = (event) => {
+      if (connectionId !== activeConnectionId || socket.value !== ws) return
       try {
         handleMessage(JSON.parse(event.data))
       } catch (error) {
@@ -276,11 +348,18 @@ async function connect(tokenOrUndefined) {
       }
     }
 
-    socket.value.onerror = () => {
+    ws.onerror = () => {
+      if (connectionId !== activeConnectionId || socket.value !== ws) return
       emit('error', { error: 'WebSocket connection error' })
     }
 
-    socket.value.onclose = (event) => {
+    ws.onclose = (event) => {
+      if (connectionId !== activeConnectionId) {
+        return
+      }
+      if (socket.value === ws) {
+        socket.value = null
+      }
       devLog('WebSocket disconnected', event.code, event.reason)
       isConnected.value = false
       stopPingInterval()
@@ -306,15 +385,33 @@ async function connect(tokenOrUndefined) {
 
 function disconnect() {
   intentionalDisconnect = true
+  activeConnectionId += 1
   clearReconnectTimer()
+  if (reconnectWithTokenTimer) {
+    clearTimeout(reconnectWithTokenTimer)
+    reconnectWithTokenTimer = null
+  }
+  pendingTokenForReconnect = null
   stopPingInterval()
   consecutiveReconnectFailures = 0
 
   if (socket.value) {
-    try {
-      socket.value.close(WS_CLOSE_NORMAL, 'User logout')
-    } catch {
-      /* ignore */
+    const ws = socket.value
+    detachSocketHandlers(ws)
+    if (ws.readyState === WebSocket.OPEN) {
+      try {
+        ws.close(WS_CLOSE_NORMAL, 'User logout')
+      } catch {
+        /* ignore */
+      }
+    } else if (ws.readyState === WebSocket.CONNECTING) {
+      ws.onopen = () => {
+        try {
+          ws.close(WS_CLOSE_NORMAL, 'User logout')
+        } catch {
+          /* ignore */
+        }
+      }
     }
     socket.value = null
   }
@@ -330,16 +427,17 @@ function disconnect() {
 async function reconnect() {
   intentionalDisconnect = false
   clearReconnectTimer()
+  if (reconnectWithTokenTimer) {
+    clearTimeout(reconnectWithTokenTimer)
+    reconnectWithTokenTimer = null
+  }
+  pendingTokenForReconnect = null
   reconnectAttempts.value = 0
   reconnectExhausted.value = false
   consecutiveReconnectFailures = 0
 
   if (socket.value) {
-    try {
-      socket.value.close(WS_CLOSE_NORMAL, 'Reconnecting')
-    } catch {
-      /* ignore */
-    }
+    supersedeSocket(socket.value, 'Reconnecting')
     socket.value = null
   }
 
@@ -349,25 +447,40 @@ async function reconnect() {
   }
 }
 
-/** Called after Axios refreshes the access token. */
-async function reconnectWithToken(accessToken) {
+/** Called after Axios refreshes the access token (debounced). */
+function reconnectWithToken(accessToken) {
   if (!accessToken || intentionalDisconnect) return
-  intentionalDisconnect = false
-  clearReconnectTimer()
-  reconnectAttempts.value = 0
-  reconnectExhausted.value = false
-  consecutiveReconnectFailures = 0
 
-  if (socket.value?.readyState === WebSocket.OPEN) {
-    try {
-      socket.value.close(WS_CLOSE_NORMAL, 'Token refreshed')
-    } catch {
-      /* ignore */
-    }
-    socket.value = null
+  pendingTokenForReconnect = accessToken
+  if (reconnectWithTokenTimer) {
+    clearTimeout(reconnectWithTokenTimer)
   }
 
-  connect(accessToken)
+  reconnectWithTokenTimer = setTimeout(() => {
+    reconnectWithTokenTimer = null
+    const token = pendingTokenForReconnect
+    pendingTokenForReconnect = null
+    if (!token || intentionalDisconnect) return
+
+    intentionalDisconnect = false
+    clearReconnectTimer()
+    reconnectAttempts.value = 0
+    reconnectExhausted.value = false
+    consecutiveReconnectFailures = 0
+
+    const existing = socket.value
+    const nextUrl = buildDashboardWsUrl(token)
+    if (existing?.readyState === WebSocket.OPEN && existing.url === nextUrl) {
+      return
+    }
+
+    if (existing) {
+      supersedeSocket(existing, 'Token refreshed')
+      socket.value = null
+    }
+
+    connect(token)
+  }, 150)
 }
 
 function on(eventType, handler) {

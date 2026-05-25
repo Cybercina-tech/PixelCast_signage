@@ -82,6 +82,8 @@ services:
       - INSTALLATION_STATE_DIR=/app/installation_state
       - PLATFORM_SAAS_ENABLED=${PLATFORM_SAAS_ENABLED:-true}
       - PLATFORM_GATEWAY_ENABLED=${PLATFORM_GATEWAY_ENABLED:-true}
+      - ENABLE_TWO_FACTOR_AUTH=${ENABLE_TWO_FACTOR_AUTH:-false}
+      - REQUIRE_EMAIL_VERIFICATION=${REQUIRE_EMAIL_VERIFICATION:-false}
     volumes:
       - ./app:/app
       - installation_state:/app/installation_state

@@ -54,7 +54,7 @@
               <router-link
                 :to="link.to"
                 class="group flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium transition-all"
-                :class="navClass(link)"
+                :class="[navClass(link), !isDarkTheme && isNavActive(link) ? 'super-admin-nav-active-light' : '']"
                 @click="sidebarOpen = false"
               >
                 <component :is="iconFor(link.icon)" class="w-5 h-5 shrink-0 transition-transform group-hover:scale-105" />
@@ -68,12 +68,7 @@
       <div class="p-3 border-t border-border-color space-y-2">
         <router-link
           to="/dashboard"
-          :class="[
-            'flex items-center justify-center gap-2 w-full rounded-xl px-3 py-2.5 text-sm font-medium border transition-colors',
-            isDarkTheme
-              ? 'text-slate-200 border-slate-700 hover:bg-slate-800/80'
-              : 'text-slate-700 border-slate-200 hover:bg-slate-100',
-          ]"
+          class="flex items-center justify-center gap-2 w-full rounded-xl px-3 py-2.5 text-sm font-medium border border-border-light text-secondary hover:bg-surface-inset hover:text-primary transition-colors"
         >
           <ArrowLeftIcon class="w-4 h-4 shrink-0" />
           Back to app
@@ -88,7 +83,7 @@
           'shrink-0 sticky top-0 z-20 border-b px-4 md:px-6 py-3 flex items-center gap-3 backdrop-blur-md',
           isDarkTheme
             ? 'border-slate-700/70 bg-slate-900/70'
-            : 'border-slate-200 bg-white/75',
+            : 'border-border-light bg-[var(--bg-topbar)]',
         ]"
       >
         <button
@@ -97,7 +92,7 @@
             'lg:hidden p-2 rounded-lg border',
             isDarkTheme
               ? 'border-slate-700 text-slate-200 hover:bg-slate-800'
-              : 'border-slate-200 text-slate-700 hover:bg-slate-100',
+              : 'border-border-light text-secondary hover:bg-surface-inset',
           ]"
           aria-label="Open menu"
           @click="sidebarOpen = true"
@@ -105,9 +100,9 @@
           <Bars3Icon class="w-5 h-5" />
         </button>
         <div class="flex-1 min-w-0">
-          <p :class="['text-[11px] uppercase tracking-wider mb-0.5', isDarkTheme ? 'text-slate-400' : 'text-slate-500']">Control Plane</p>
-          <h1 :class="['text-lg md:text-xl font-bold truncate', isDarkTheme ? 'text-white' : 'text-slate-900']">{{ pageTitle }}</h1>
-          <p v-if="pageSubtitle" :class="['text-xs truncate mt-0.5', isDarkTheme ? 'text-slate-400' : 'text-slate-500']">{{ pageSubtitle }}</p>
+          <p class="text-[11px] uppercase tracking-wider mb-0.5 text-muted">Control Plane</p>
+          <h1 class="text-lg md:text-xl font-bold truncate text-primary">{{ pageTitle }}</h1>
+          <p v-if="pageSubtitle" class="text-xs truncate mt-0.5 text-muted">{{ pageSubtitle }}</p>
         </div>
         <div :class="['hidden md:flex items-center gap-2 text-xs shrink-0', isDarkTheme ? 'text-slate-300' : 'text-slate-600']">
           <router-link
@@ -224,18 +219,20 @@ function navClass(link) {
   if (isNavActive(link)) {
     return isDarkTheme.value
       ? 'bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 shadow-[0_0_0_1px_rgba(56,189,248,.25)]'
-      : 'bg-cyan-50 text-cyan-700 border border-cyan-200 shadow-[0_0_0_1px_rgba(14,116,144,.08)]'
+      : 'border border-border-light shadow-sm'
   }
   return isDarkTheme.value
     ? 'text-slate-300 hover:bg-slate-800/80 hover:text-white border border-transparent'
-    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 border border-transparent'
+    : 'text-muted hover:bg-surface-inset hover:text-primary border border-transparent'
 }
 
 const pageTitle = computed(() => route.meta.superAdminTitle || 'Super Admin')
 const isDarkTheme = computed(() => themeStore.isDarkMode)
 
 const sidebarSurfaceClass = computed(() =>
-  'border-r border-border-color bg-card/95'
+  isDarkTheme.value
+    ? 'border-r border-border-color bg-card/95'
+    : 'border-r border-border-light bg-[var(--bg-sidebar)]'
 )
 
 const pageSubtitle = computed(() => {
@@ -256,3 +253,10 @@ const activeGroupLabel = computed(() => {
   return group?.label || 'Overview'
 })
 </script>
+
+<style scoped>
+.super-admin-nav-active-light {
+  background: var(--nav-active-bg);
+  color: var(--brand-accent);
+}
+</style>

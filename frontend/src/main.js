@@ -5,6 +5,7 @@ import { MotionPlugin } from '@vueuse/motion'
 import App from './App.vue'
 import router from './router'
 import { bootGtm } from './analytics/gtm'
+import '@/assets/auth-cosmic.css'
 // App + widget fonts (bundled for TemplateEditor / WebPlayer text widgets)
 import '@fontsource/inter/400.css'
 import '@fontsource/inter/500.css'

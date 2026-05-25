@@ -94,6 +94,7 @@ LOGGING = {
 # Content storage settings for tests
 CONTENT_STORAGE = {
     'MAX_FILE_SIZE': 10 * 1024 * 1024,  # 10 MB for tests
+    'MEDIA_LIBRARY_QUOTA_BYTES': 500 * 1024 * 1024,
     'ALLOWED_IMAGE_TYPES': ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
     'ALLOWED_VIDEO_TYPES': ['video/mp4', 'video/webm'],
     'ALLOWED_WEBVIEW_TYPES': ['text/html'],

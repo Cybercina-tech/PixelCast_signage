@@ -162,12 +162,33 @@ class ContentAPITests(BaseAPITestCase):
         self.assertResponseSuccess(response)
         self.assertEqual(len(response.data['results']), 2)
 
+    def test_list_contents_download_status_downloading_alias(self):
+        """Dashboard uses download_status=downloading; API maps to pending + not downloaded."""
+        c = self.create_content(name='Pending dl')
+        c.download_status = 'pending'
+        c.downloaded = False
+        c.save(update_fields=['download_status', 'downloaded'])
+
+        url = reverse('content-list')
+        response = self.client.get(url, {'download_status': 'downloading'})
+        self.assertResponseSuccess(response)
+        ids = [row['id'] for row in response.data['results']]
+        self.assertIn(str(c.id), ids)
+
+    def test_storage_stats(self):
+        url = reverse('content-storage-stats')
+        response = self.client.get(url)
+        self.assertResponseSuccess(response)
+        self.assertIn('used_bytes', response.data)
+        self.assertIn('limit_bytes', response.data)
+        self.assertIn('content_count', response.data)
+
     def test_list_contents_library_only_returns_standalone_uploads(self):
         """Media library lists only rows with no widget (not template/widget-bound)."""
         from templates.models import Content
 
         self.create_content(name='Widget bound')
-        Content.objects.create(name='Library upload', type='image', widget=None)
+        Content.objects.create(name='Library upload', type='image', widget=None, uploaded_by=self.user)
 
         url = reverse('content-list')
         response = self.client.get(url, {'library_only': '1'})

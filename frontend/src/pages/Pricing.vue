@@ -394,14 +394,9 @@ onMounted(() => {
 }
 
 .pricing-page.theme-light {
-  --text-body: #334155;
-  --text-main: #1e293b;
-  --text-heading: #0f172a;
-  --text-muted: #64748b;
-  --accent-color: #2563eb;
   color-scheme: light;
   color: var(--text-body);
-  background: linear-gradient(135deg, #f8fafc 0%, #eef2ff 45%, #e2e8f0 100%);
+  background: linear-gradient(135deg, var(--bg-main) 0%, #eef2ff 45%, var(--bg-secondary) 100%);
 }
 
 .pricing-page.theme-light .pricing-header {
@@ -424,10 +419,12 @@ onMounted(() => {
   box-shadow: 0 2px 10px rgba(15, 23, 42, 0.06);
 }
 
-.pricing-page.theme-light .pricing-nav-btn:hover {
+.pricing-page.theme-light .pricing-nav-btn:hover,
+html:not(.dark) .pricing-page.theme-light .pricing-nav-btn:hover {
   border-color: rgba(37, 99, 235, 0.42);
   background: #ffffff;
-  color: #0f172a;
+  color: #0f172a !important;
+  -webkit-text-fill-color: #0f172a !important;
 }
 
 .pricing-page.theme-light .pricing-nav-btn:focus-visible {

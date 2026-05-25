@@ -12,10 +12,8 @@
       <!-- Header -->
       <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
-          <h1 class="text-3xl md:text-4xl font-bold text-primary mb-2">
-            <span class="bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
-              Media Library
-            </span>
+          <h1 class="text-3xl md:text-4xl font-bold text-primary mb-2 dark:bg-gradient-to-r dark:from-indigo-400 dark:via-purple-400 dark:to-pink-400 dark:bg-clip-text dark:text-transparent">
+            Media Library
           </h1>
           <p class="text-muted">Manage and organize your digital assets</p>
         </div>

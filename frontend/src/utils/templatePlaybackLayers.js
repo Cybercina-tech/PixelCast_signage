@@ -18,6 +18,17 @@ export function parseTemplateUnit(raw, total, fallback = 0) {
   return fallback
 }
 
+/** Editor stores rotation on the widget root; player reads content_json.rotation. */
+export function resolveWidgetRotation(configWidget, styleJson = {}) {
+  if (configWidget != null && configWidget.rotation != null && configWidget.rotation !== '') {
+    const fromRoot = Number(configWidget.rotation)
+    if (Number.isFinite(fromRoot)) return fromRoot
+  }
+  const fromStyle = Number(styleJson.rotation ?? styleJson.rotate)
+  if (Number.isFinite(fromStyle)) return fromStyle
+  return 0
+}
+
 /**
  * @param {object|null|undefined} template
  * @returns {Array} Layers for `LayerRenderer` (same order/semantics as WebPlayer `sortedLayers`)
@@ -54,10 +65,12 @@ export function buildPlaybackLayers(template) {
     .map((configWidget, idx) => {
       const widgetId = String(configWidget?.id || '')
       const dbWidget = dbWidgetMap.get(widgetId) || {}
-      const styleJson =
+      const baseStyleJson =
         configWidget?.style && typeof configWidget.style === 'object'
           ? configWidget.style
           : dbWidget?.content_json || {}
+      const rotation = resolveWidgetRotation(configWidget, baseStyleJson)
+      const styleJson = { ...baseStyleJson, rotation }
       return {
         ...dbWidget,
         id: dbWidget.id || configWidget.id || `cfg-${idx}`,
@@ -75,6 +88,7 @@ export function buildPlaybackLayers(template) {
         ),
         z_index: configWidget?.zIndex ?? configWidget?.z_index ?? dbWidget?.z_index ?? idx,
         is_active: configWidget?.visible !== false && dbWidget?.is_active !== false,
+        rotation,
         content_json: styleJson,
         content_url: configWidget?.content || dbWidget?.content_url || '',
         contents: Array.isArray(dbWidget?.contents) ? dbWidget.contents : [],

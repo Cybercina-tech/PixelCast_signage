@@ -233,8 +233,8 @@ onMounted(() => {
 }
 
 .blog-page.theme-light {
-  background: linear-gradient(135deg, #f8fafc 0%, #eef2ff 45%, #e2e8f0 100%);
-  color: #0f172a;
+  background: linear-gradient(135deg, var(--bg-main) 0%, #eef2ff 45%, var(--bg-secondary) 100%);
+  color: var(--text-primary);
 }
 
 .blog-page.theme-light .blog-header {
