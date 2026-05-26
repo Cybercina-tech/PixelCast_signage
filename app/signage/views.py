@@ -1005,6 +1005,9 @@ def bind_pairing_session(request):
             
             # Mark session as paired (this updates status atomically)
             session.mark_paired(screen, request.user)
+
+            from signage.pairing_broadcast import broadcast_pairing_complete
+            broadcast_pairing_complete(session, screen)
             
             # Log audit event
             try:

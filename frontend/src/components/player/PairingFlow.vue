@@ -159,6 +159,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { pairingAPI } from '@/services/api'
+import { usePairingWebSocket } from '@/composables/usePairingWebSocket'
 import * as QRCode from 'qrcode'
 
 const emit = defineEmits(['paired'])
@@ -199,6 +200,14 @@ const statusMessageClass = computed(() => {
 let countdownTimer = null
 let statusPollTimer = null
 let themeObserver = null
+let pairingCompleted = false
+
+const pairingWebSocket = usePairingWebSocket({
+  getToken: () => pairingToken.value,
+  onPaired: () => {
+    fetchActivationAndComplete()
+  },
+})
 
 function clearPairingTimers() {
   if (countdownTimer) {
@@ -209,6 +218,43 @@ function clearPairingTimers() {
     clearInterval(statusPollTimer)
     statusPollTimer = null
   }
+  pairingWebSocket.disconnect()
+}
+
+async function fetchActivationAndComplete() {
+  if (pairingCompleted || !pairingToken.value) return
+
+  try {
+    const response = await pairingAPI.status({ pairing_token: pairingToken.value })
+
+    if (response.data.status === 'paired') {
+      const { screen_id, device_token } = response.data
+      if (!device_token) {
+        return
+      }
+      completePairingSuccess(screen_id, device_token)
+    } else if (response.data.status === 'expired') {
+      handleSessionExpired()
+    }
+  } catch (error) {
+    if (isExpiredStatusError(error)) {
+      handleSessionExpired()
+    }
+  }
+}
+
+function completePairingSuccess(screenId, deviceToken) {
+  if (pairingCompleted) return
+  pairingCompleted = true
+  clearPairingTimers()
+
+  status.value = 'success'
+  statusMessage.value = 'Screen paired successfully!'
+  statusMessageType.value = 'success'
+
+  setTimeout(() => {
+    emit('paired', { screenId, deviceToken })
+  }, 3000)
 }
 
 /** Expired / invalid session: show message on this page only, then refresh session (no global toast). */
@@ -235,6 +281,8 @@ async function generatePairingSession() {
   try {
     status.value = 'loading'
     errorMessage.value = ''
+    pairingCompleted = false
+    pairingWebSocket.disconnect()
     
     const response = await pairingAPI.generate()
     
@@ -258,7 +306,8 @@ async function generatePairingSession() {
       // Start countdown
       startCountdown()
       
-      // Start polling for pairing status
+      // Real-time notify when dashboard binds + HTTP poll fallback
+      pairingWebSocket.connect()
       startStatusPolling()
       
       status.value = 'pairing'
@@ -315,34 +364,8 @@ function startStatusPolling() {
   
   // Poll every 2 seconds
   statusPollTimer = setInterval(async () => {
-    if (!pairingToken.value) return
-    
-    try {
-      const response = await pairingAPI.status({ pairing_token: pairingToken.value })
-      
-      if (response.data.status === 'paired') {
-        clearPairingTimers()
-
-        status.value = 'success'
-        statusMessage.value = 'Screen paired successfully!'
-        statusMessageType.value = 'success'
-
-        const { screen_id, device_token } = response.data
-
-        // Emit to parent (WebPlayer) after the welcome animation
-        setTimeout(() => {
-          emit('paired', { screenId: screen_id, deviceToken: device_token })
-        }, 3000)
-      } else if (response.data.status === 'expired') {
-        handleSessionExpired()
-      }
-    } catch (error) {
-      if (isExpiredStatusError(error)) {
-        handleSessionExpired()
-        return
-      }
-      console.error('Status polling error:', error)
-    }
+    if (!pairingToken.value || pairingCompleted) return
+    await fetchActivationAndComplete()
   }, 2000)
 }
 

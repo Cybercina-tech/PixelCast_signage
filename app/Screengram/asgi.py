@@ -20,16 +20,23 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'Screengram.settings')
 django_asgi_app = get_asgi_application()
 
 # Import routing after Django is initialized
-from Screengram.routing import websocket_urlpatterns
+from Screengram.routing import (
+    authenticated_websocket_urlpatterns,
+    pairing_websocket_urlpatterns,
+)
 
 application = ProtocolTypeRouter({
     # Django's ASGI application to handle traditional HTTP requests
     "http": django_asgi_app,
     
-    # WebSocket handler
+    # WebSocket handler — pairing uses temporary token auth inside the consumer,
+    # not Django session/JWT middleware (avoids AuthFailed on TV wait screen).
     "websocket": AllowedHostsOriginValidator(
-        AuthMiddlewareStack(
-            URLRouter(websocket_urlpatterns)
-        )
+        URLRouter([
+            *pairing_websocket_urlpatterns,
+            AuthMiddlewareStack(
+                URLRouter(authenticated_websocket_urlpatterns)
+            ),
+        ])
     ),
 })

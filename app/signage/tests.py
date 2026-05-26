@@ -156,6 +156,46 @@ class PairingFlowTests(TestCase):
         self.assertEqual(resp.json()['status'], 'pending')
 
 
+class PairingWebSocketTests(TestCase):
+    """TV pairing wait WebSocket: bind notifies channel group."""
+
+    def setUp(self):
+        self.client = APIClient()
+
+    def test_bind_calls_pairing_broadcast(self):
+        gen = self.client.post('/api/pairing/generate/').json()
+        code = gen['pairing_session']['pairing_code']
+        self.client.force_authenticate(user=_make_user('pair_ws_user'))
+
+        with patch('signage.pairing_broadcast.broadcast_pairing_complete') as broadcast_mock:
+            resp = self.client.post('/api/pairing/bind/', {'pairing_code': code})
+            self.assertEqual(resp.status_code, 200)
+            self.assertTrue(broadcast_mock.called)
+            session_arg, screen_arg = broadcast_mock.call_args[0]
+            self.assertEqual(session_arg.pairing_code, code)
+            self.assertIsNotNone(screen_arg.id)
+
+    def test_broadcast_pairing_complete_sends_group_message(self):
+        from signage.pairing_broadcast import broadcast_pairing_complete, pairing_group_name
+
+        gen = self.client.post('/api/pairing/generate/').json()
+        code = gen['pairing_session']['pairing_code']
+        self.client.force_authenticate(user=_make_user('pair_ws_user2'))
+        bind = self.client.post('/api/pairing/bind/', {'pairing_code': code, 'screen_name': 'WS TV'})
+        screen_id = bind.json()['screen']['id']
+        session = PairingSession.objects.get(pairing_code=code)
+
+        with patch('signage.pairing_broadcast.async_to_sync') as async_to_sync_mock:
+            send_mock = async_to_sync_mock.return_value
+            broadcast_pairing_complete(session, session.screen)
+            send_mock.assert_called_once()
+            group_name, message = send_mock.call_args[0]
+            self.assertEqual(group_name, pairing_group_name(session.id))
+            self.assertEqual(message['type'], 'pairing_complete')
+            self.assertEqual(message['data']['event'], 'paired')
+            self.assertEqual(message['data']['screen_id'], str(screen_id))
+
+
 class DeviceAuthEndpointTests(TestCase):
     """IoT endpoints require X-Device-Token after pairing."""
 
