@@ -9,6 +9,7 @@ https://docs.djangoproject.com/en/5.2/howto/deployment/asgi/
 
 import os
 from django.core.asgi import get_asgi_application
+from django.urls import re_path
 from channels.routing import ProtocolTypeRouter, URLRouter
 from channels.auth import AuthMiddlewareStack
 from channels.security.websocket import AllowedHostsOriginValidator
@@ -34,8 +35,12 @@ application = ProtocolTypeRouter({
     "websocket": AllowedHostsOriginValidator(
         URLRouter([
             *pairing_websocket_urlpatterns,
-            AuthMiddlewareStack(
-                URLRouter(authenticated_websocket_urlpatterns)
+            # AuthMiddlewareStack must be wrapped in re_path — not a raw URLRouter child.
+            re_path(
+                r'',
+                AuthMiddlewareStack(
+                    URLRouter(authenticated_websocket_urlpatterns)
+                ),
             ),
         ])
     ),

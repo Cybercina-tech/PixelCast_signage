@@ -142,6 +142,32 @@ docker logs "$(docker ps -aq -f name=backend | head -1)" --tail 80
 
 After pulling the compose fix: **Redeploy → Rebuild** all services. Then open `https://pixelcast.uk/health` (should be `healthy`) and `https://pixelcast.uk/install` on first boot.
 
+### API returns **502** — frontend logs: `connect() failed (111: Connection refused)` to `backend:8000`
+
+**Symptom:** Nginx (frontend) is up (`[pixelcast] production: nginx on :80`) but every `/api/...` returns **502**. Frontend log shows:
+
+`upstream: "http://172.x.x.x:8000/..."` and `Connection refused`.
+
+**Cause:** Django/Gunicorn is **not listening** on port 8000 — usually the `backend` container is still migrating, crashed on boot, or stuck restarting.
+
+**Fix:**
+
+1. In Dokploy, open **backend** container logs (not frontend).
+2. Look for:
+   - `AttributeError: 'CookieMiddleware' object has no attribute 'callback'` → old ASGI routing bug; **pull latest code** and rebuild backend.
+   - `ImproperlyConfigured` / `CHANNEL_LAYERS_BACKEND` → set `CHANNEL_LAYERS_BACKEND=redis` in env.
+   - `password authentication failed` → `DB_PASSWORD` = `POSTGRES_PASSWORD` (match existing Postgres volume).
+   - Still running migrations → wait 5–10 minutes on first deploy, then retry `https://pixelcast.uk/api/health/live/`.
+3. SSH check:
+
+```bash
+docker ps -a | grep backend
+docker logs "$(docker ps -aq -f name=backend | head -1)" --tail 120
+curl -sS -H 'Host: localhost' http://127.0.0.1:8000/api/health/live/   # from inside backend network if needed
+```
+
+When backend is healthy, `https://pixelcast.uk/api/health/` should return JSON (not 502).
+
 ### API returns **400** on `pixelcast.uk` (`/api/setup/status/`, `/api/public/...`)
 
 **Cause:** Django `USE_X_FORWARDED_HOST=True` with an **empty** `X-Forwarded-Host` from Nginx → `DisallowedHost` (shows as 400).
