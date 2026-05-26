@@ -100,6 +100,30 @@ If WS fails with code **1006** in a loop: redeploy **frontend + backend**, sign 
 3. Ensure `BASE_URL` and `PUBLIC_WEB_APP_URL` are `https://pixelcast.uk` (not `http://backend:8000`).
 4. Both services must mount the same volume `backend_media` at `/app/media`.
 
+### Upload returns 200 but media disappears from the library
+
+**Symptoms (backend logs):**
+
+- `Content …: Error getting secure URL: Content has no file_url and no storage_path`
+- `[SYNC] Content … not found, cannot link to widget …` (template still references deleted content)
+
+**Common causes:**
+
+1. **Compose file** — Dokploy must use `compose.yaml` / `docker-compose.prod.yml`, not dev `docker-compose.yml`. Production defines named volume `backend_media` on `backend` and `frontend`.
+2. **Missing shared volume** — `backend` writes to `/app/media`; `frontend` nginx serves `/media/` from the same volume. Without it, files are lost on redeploy and API sets `media_available: false`.
+3. **Wrong env URLs** — `BASE_URL` / `PUBLIC_WEB_APP_URL` must be the public `https://…` origin, not `http://backend:8000`.
+4. **Storage not writable** — backend entrypoint runs `mkdir -p /app/media`; check logs for permission errors after upload.
+
+**On-server checks:**
+
+```bash
+docker volume ls | grep backend_media
+docker exec pixelcast-saas-eqm4aq-backend-1 ls -la /app/media
+docker exec pixelcast-saas-eqm4aq-backend-1 sh -c 'touch /app/media/.write_test && rm /app/media/.write_test && echo OK'
+```
+
+After redeploy, upload again. If persistence fails, the API now returns **500** with a clear storage error instead of a silent 200.
+
 ## Troubleshooting
 
 ### `/health` or the whole site returns **404** (Traefik hits Django instead of Nginx)

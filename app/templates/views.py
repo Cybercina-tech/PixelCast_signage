@@ -1605,6 +1605,11 @@ class ContentViewSet(viewsets.ModelViewSet):
             else:
                 if template_info:
                     response_data['warning'] = f'Template "{template_info["template_name"]}" has no screens assigned. Please assign template to a screen to display content.'
+
+            content.refresh_from_db()
+            response_data['content'] = ContentSerializer(
+                content, context={'request': request}
+            ).data
             
             return Response(response_data, status=status.HTTP_200_OK)
             

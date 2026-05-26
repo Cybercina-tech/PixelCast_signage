@@ -1060,6 +1060,26 @@ class Content(models.Model):
             if self.video_duration:
                 update_fields.append('video_duration')
             self.save(update_fields=update_fields)
+
+            # Fail fast when DB metadata was saved but the file is not on disk (common when
+            # /app/media is not mounted to a persistent volume in production).
+            if not getattr(settings, 'USE_S3_STORAGE', False) and storage_path:
+                from django.core.files.storage import default_storage
+
+                if not default_storage.exists(storage_path):
+                    import logging
+
+                    logger = logging.getLogger(__name__)
+                    logger.error(
+                        'Upload metadata saved but file missing on storage: content=%s path=%s MEDIA_ROOT=%s',
+                        self.id,
+                        storage_path,
+                        getattr(settings, 'MEDIA_ROOT', None),
+                    )
+                    raise StorageError(
+                        'File was not persisted to media storage. '
+                        'Ensure the backend service mounts the backend_media volume at /app/media.'
+                    )
             
             return metadata
             

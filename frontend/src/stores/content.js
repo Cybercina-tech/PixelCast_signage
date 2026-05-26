@@ -144,15 +144,19 @@ export const useContentStore = defineStore('content', {
           data: response.data
         })
         
+        const payload = response.data?.content
+          ? { ...response.data, ...response.data.content }
+          : response.data
+
         // Update content in list
         const index = this.contents.findIndex(c => c.id === id)
         if (index !== -1) {
-          this.contents[index] = { ...this.contents[index], ...response.data }
+          this.contents[index] = { ...this.contents[index], ...payload }
         }
         if (this.currentContent?.id === id) {
-          this.currentContent = { ...this.currentContent, ...response.data }
+          this.currentContent = { ...this.currentContent, ...payload }
         }
-        return response.data
+        return payload
       } catch (error) {
         console.error('[ContentStore] uploadContent error', {
           status: error.response?.status,

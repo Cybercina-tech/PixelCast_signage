@@ -64,12 +64,14 @@ class ContentSerializer(serializers.ModelSerializer):
     estimated_size_mb = serializers.FloatField(read_only=True)
     absolute_file_url = serializers.SerializerMethodField()
     secure_url = serializers.SerializerMethodField()
+    media_available = serializers.SerializerMethodField()
     is_assigned = serializers.SerializerMethodField()
     
     class Meta:
         model = Content
         fields = [
-            'id', 'name', 'description', 'type', 'file_url', 'absolute_file_url', 'secure_url', 'content_json',
+            'id', 'name', 'description', 'type', 'file_url', 'storage_path', 'absolute_file_url',
+            'secure_url', 'media_available', 'content_json',
             'text_content', 'duration', 'autoplay', 'order', 'widget', 'is_active',
             'downloaded', 'download_status', 'last_download_attempt',
             'retry_count', 'is_downloaded', 'needs_download', 'file_extension',
@@ -77,7 +79,7 @@ class ContentSerializer(serializers.ModelSerializer):
             'file_size', 'is_assigned', 'created_at', 'updated_at'
         ]
         read_only_fields = [
-            'id', 'downloaded', 'download_status', 'last_download_attempt',
+            'id', 'storage_path', 'downloaded', 'download_status', 'last_download_attempt',
             'retry_count', 'created_at', 'updated_at', 'image_width', 'image_height', 'video_duration', 'file_size'
         ]
     
@@ -98,6 +100,20 @@ class ContentSerializer(serializers.ModelSerializer):
             return obj.get_secure_url()
         except Exception:
             return obj.absolute_file_url or obj.file_url
+
+    def get_media_available(self, obj):
+        """Whether the stored file is reachable on the configured storage backend."""
+        if getattr(settings, 'USE_S3_STORAGE', False):
+            return bool(obj.file_url or obj.storage_path)
+        path = getattr(obj, 'storage_path', None) or _extract_local_storage_path(
+            getattr(obj, 'file_url', None)
+        )
+        if not path:
+            return False
+        try:
+            return default_storage.exists(path)
+        except Exception:
+            return False
     
     def get_is_assigned(self, obj):
         """Check if content is assigned to a widget"""
@@ -106,10 +122,12 @@ class ContentSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         data = super().to_representation(instance)
         if not _local_file_exists(instance):
-            # Avoid emitting stale URLs when DB points to missing local media files.
-            data['file_url'] = None
+            # Hide playable URLs when the file is gone, but keep metadata so library UIs
+            # can show a "missing file" row instead of making uploads disappear.
             data['absolute_file_url'] = None
             data['secure_url'] = None
+            if not (data.get('storage_path') or data.get('file_url')):
+                data['file_url'] = None
         return data
 
 

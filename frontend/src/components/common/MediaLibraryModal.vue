@@ -530,8 +530,12 @@ const filteredContents = computed(() => {
     filtered = filtered.filter(c => c.type === filterType.value)
   }
 
-  // Only show contents with secure_url (uploaded files)
-  filtered = filtered.filter(c => c.secure_url)
+  // Library rows: uploaded media (preview URL may be null when file is missing on disk)
+  filtered = filtered.filter(
+    (c) =>
+      c.media_available !== false &&
+      (c.secure_url || c.absolute_file_url || c.file_url || c.storage_path)
+  )
 
   // Standalone library uploads only (never widget-bound rows from template sync)
   filtered = filtered.filter(c => c.widget == null || c.widget === '')
